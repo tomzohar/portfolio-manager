@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+"""
+Stock Research Orchestrator
+Central workflow for researching stock portfolio news
+"""
+
+from typing import Dict, List, Tuple
+from .agents.portfolio_parser import parse_portfolio, Portfolio
+from .agents.news_searcher import get_stock_news
+from .agents.llm_analyzer import generate_executive_summaries
+from .config import (
+    GOOGLE_SERVICE_ACCOUNT_FILE,
+    SPREADSHEET_ID,
+    SERPAPI_API_KEY
+)
+
+
+def research_portfolio_news() -> Tuple[List[str], Dict[str, List[Dict]], Dict[str, str], Portfolio]:
+    """
+    Complete stock research workflow:
+    1. Parse portfolio from Google Sheets
+    2. Perform web search for news articles
+    3. Generate AI summaries from LLM
+    
+    Returns:
+        Tuple containing:
+        - List of stock tickers from portfolio
+        - Dict of news articles by ticker
+        - Dict of executive summaries by ticker
+        - Portfolio object with full position data
+    """
+    print("=" * 60)
+    print("STOCK RESEARCH WORKFLOW INITIATED")
+    print("=" * 60)
+    
+    # Agent 1: Parse portfolio from Google Sheets
+    print("\n[Agent 1] Parsing portfolio from Google Sheets...")
+    portfolio = parse_portfolio(GOOGLE_SERVICE_ACCOUNT_FILE, SPREADSHEET_ID)
+    stock_tickers = portfolio.get_symbols()
+    print(f"✅ Loaded portfolio with {len(stock_tickers)} positions")
+    print(f"   Total Portfolio Value: ${portfolio.total_value:,.2f}")
+    
+    # Agent 2: Web search for news articles
+    print(f"\n[Agent 2] Searching for news articles ({len(stock_tickers)} stocks)...")
+    news_data = get_stock_news(stock_tickers, SERPAPI_API_KEY)
+    print(f"✅ Retrieved news for {len(news_data)} stocks")
+    
+    # Agent 3: Generate LLM summaries
+    print(f"\n[Agent 3] Generating AI-powered executive summaries...")
+    executive_summaries = generate_executive_summaries(news_data)
+    print(f"✅ Generated {len(executive_summaries)} summaries")
+    
+    print("\n" + "=" * 60)
+    print("RESEARCH WORKFLOW COMPLETE")
+    print("=" * 60)
+    
+    return stock_tickers, news_data, executive_summaries, portfolio
+
+
+def get_research_summary(tickers: List[str], summaries: Dict[str, str]) -> str:
+    """
+    Format research results into a readable summary
+    
+    Args:
+        tickers: List of stock tickers
+        summaries: Dict of executive summaries by ticker
+        
+    Returns:
+        Formatted string summary
+    """
+    output = []
+    output.append("=" * 80)
+    output.append("EXECUTIVE SUMMARIES - AI-Powered Stock Analysis")
+    output.append("=" * 80)
+    
+    for ticker in tickers:
+        summary = summaries.get(ticker, "No summary available.")
+        output.append(f"\n{'='*80}")
+        output.append(f"📊 {ticker}")
+        output.append('='*80)
+        output.append(summary)
+    
+    return "\n".join(output)
+
+
+# Example usage
+if __name__ == '__main__':
+    try:
+        # Run the complete research workflow
+        tickers, news, summaries, portfolio = research_portfolio_news()
+        
+        # Display results
+        print("\n")
+        print(get_research_summary(tickers, summaries))
+        
+    except Exception as e:
+        print(f"\n❌ Error during research workflow: {e}")
+        raise
+
