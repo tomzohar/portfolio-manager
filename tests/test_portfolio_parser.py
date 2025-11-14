@@ -64,16 +64,20 @@ class TestPortfolio:
 class TestParsePortfolio:
     """Test parse_portfolio function"""
     
+    @patch('stock_researcher.agents.portfolio_parser.get_google_creds')
     @patch('stock_researcher.agents.portfolio_parser.gspread.authorize')
     @patch('stock_researcher.agents.portfolio_parser.Credentials.from_service_account_file')
     def test_parse_portfolio_success(
         self,
         mock_creds,
         mock_authorize,
+        mock_get_creds,
         sample_portfolio_data
     ):
         """Test successful portfolio parsing"""
         # Setup mocks
+        mock_get_creds.return_value = None  # Simulate fallback to file
+        
         mock_spreadsheet = Mock()
         mock_spreadsheet.values_get.return_value = {'values': sample_portfolio_data}
         
@@ -82,7 +86,7 @@ class TestParsePortfolio:
         mock_authorize.return_value = mock_client
         
         # Parse portfolio
-        portfolio = parse_portfolio('service.json', 'sheet_id')
+        portfolio = parse_portfolio()
         
         # Verify results
         assert len(portfolio.positions) == 3
@@ -91,11 +95,14 @@ class TestParsePortfolio:
         assert portfolio.positions[0].price == 278.57
         assert portfolio.positions[0].position == 48
     
+    @patch('stock_researcher.agents.portfolio_parser.get_google_creds')
     @patch('stock_researcher.agents.portfolio_parser.gspread.authorize')
     @patch('stock_researcher.agents.portfolio_parser.Credentials.from_service_account_file')
-    def test_parse_portfolio_empty_data(self, mock_creds, mock_authorize):
+    def test_parse_portfolio_empty_data(self, mock_creds, mock_authorize, mock_get_creds):
         """Test parsing with empty data"""
         # Setup mocks for empty data
+        mock_get_creds.return_value = None  # Simulate fallback to file
+
         mock_spreadsheet = Mock()
         mock_spreadsheet.values_get.return_value = {'values': []}
         
@@ -105,5 +112,5 @@ class TestParsePortfolio:
         
         # Should raise ValueError
         with pytest.raises(ValueError, match="No data found"):
-            parse_portfolio('service.json', 'sheet_id')
+            parse_portfolio()
 
