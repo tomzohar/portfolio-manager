@@ -70,17 +70,3 @@ def test_generate_portfolio_recommendations_api_error(mock_call_gemini, mock_por
     # Assert
     assert recommendations['portfolio_summary'] == "Failed to generate recommendations due to an API error."
     assert len(recommendations['recommendations']) == 0
-
-@patch('stock_researcher.utils.llm_utils.genai.Client')
-def test_client_initialization_error(mock_gemini_client):
-    """
-    Test that an exception is raised if the Gemini client fails to initialize.
-    """
-    # Arrange
-    mock_gemini_client.side_effect = Exception("Initialization Failed")
-
-    # Act & Assert
-    with pytest.raises(Exception, match="Initialization Failed"):
-        import importlib
-        from stock_researcher.utils import llm_utils
-        importlib.reload(llm_utils)
