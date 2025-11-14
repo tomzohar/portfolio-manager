@@ -4,7 +4,7 @@ Tests for Research Orchestrator
 
 import pytest
 from unittest.mock import Mock, patch, ANY
-from stock_researcher.orchestrator import research_portfolio_news
+from stock_researcher.orchestrator import research_portfolio
 
 
 class TestOrchestrator:
@@ -49,7 +49,7 @@ class TestOrchestrator:
         mock_generate_recommendations.return_value = mock_recommendations
         
         # Run workflow
-        tickers, news_data, summaries, portfolio, recommendations = research_portfolio_news()
+        tickers, news_data, summaries, portfolio, recommendations = research_portfolio()
         
         # Verify results
         assert tickers == ['GOOGL', 'PLTR', 'AMZN']
@@ -73,7 +73,7 @@ class TestOrchestrator:
         
         # Should raise exception
         with pytest.raises(Exception, match="Portfolio parsing failed"):
-            research_portfolio_news()
+            research_portfolio()
     
     @patch('stock_researcher.orchestrator.analyze_stock_technicals')
     @patch('stock_researcher.orchestrator.generate_portfolio_recommendations')
@@ -106,7 +106,7 @@ class TestOrchestrator:
         mock_generate_recommendations.side_effect = lambda *args: (call_order.append('recommendations'), {})[1]
         
         # Run workflow
-        research_portfolio_news()
+        research_portfolio()
         
         # Verify correct order: Portfolio → News → LLM
         assert call_order == ['portfolio', 'news', 'llm', 'technicals', 'recommendations']
@@ -134,7 +134,7 @@ class TestOrchestrator:
         mock_analyze_technicals.return_value = {}
         
         # Run workflow
-        result = research_portfolio_news()
+        result = research_portfolio()
         
         # Verify tuple structure
         assert isinstance(result, tuple)

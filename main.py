@@ -10,7 +10,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from stock_researcher.orchestrator import research_portfolio_news
+from stock_researcher.orchestrator import research_portfolio
 from stock_researcher.notifications.whatsapp import send_stock_research_summary, send_whatsapp_message
 from stock_researcher.pre_processor.update_prices import update_gsheet_prices
 
@@ -35,7 +35,7 @@ def main():
 
     try:
         # Run the complete research workflow with portfolio data
-        stock_tickers, news_data, executive_summaries, portfolio, recommendations = research_portfolio_news()
+        stock_tickers, news_data, executive_summaries, portfolio, recommendations = research_portfolio()
     
         # Display portfolio summary if available
         if portfolio:

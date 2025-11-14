@@ -17,7 +17,7 @@ from .config import (
 )
 
 
-def research_portfolio_news() -> Tuple[List[str], Dict[str, List[Dict]], Dict[str, str], Portfolio, Dict]:
+def research_portfolio() -> Tuple[List[str], Dict[str, List[Dict]], Dict[str, str], Portfolio, Dict]:
     """
     Complete stock research workflow:
     1. Parse portfolio from Google Sheets
