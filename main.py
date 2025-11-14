@@ -7,13 +7,13 @@ Entry point for running the complete stock research workflow
 import sys
 from pathlib import Path
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+# Remove the manual path insertion
+# sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from stock_researcher.orchestrator import research_portfolio
 from stock_researcher.notifications.whatsapp import send_stock_research_summary, send_whatsapp_message
 from stock_researcher.pre_processor.update_prices import update_gsheet_prices
-from stock_researcher.config import TWILIO_WHATSAPP_TO
+from stock_researcher.config import TWILIO_WHATSAPP_TO, validate_config
 
 
 def main():
@@ -21,97 +21,99 @@ def main():
     Main entry point for stock research application
     Orchestrates the workflow and handles output/notifications
     """
-    # Attempt to update prices, but don't block the main workflow if it fails
-    try:
-        print("Attempting to update portfolio prices in Google Sheet...")
-        update_gsheet_prices()
-        print("✅ Portfolio prices updated successfully.")
-    except Exception as e:
-        warning_message = f"⚠️ Warning: Automatic price update failed: {e}\nContinuing with last known prices."
-        print(warning_message)
-        try:
-            send_whatsapp_message(f"📈 Stock Researcher Alert:\n{warning_message}")
-        except Exception as e_whatsapp:
-            print(f"⚠️ Failed to send price update failure notification: {e_whatsapp}")
+    print("=" * 60)
+    print("STOCK RESEARCH WORKFLOW INITIATED")
+    print("=" * 60)
 
     try:
-        # Run the complete research workflow with portfolio data
-        stock_tickers, news_data, executive_summaries, portfolio, recommendations = research_portfolio()
-    
-        # Display portfolio summary if available
-        if portfolio:
-            print(portfolio)
+        # Validate that all required environment variables are set
+        validate_config()
         
-        # Display results
-        _display_results(stock_tickers, news_data, executive_summaries, portfolio)
+        # Pre-process: Update stock prices in Google Sheet
+        _update_prices()
         
-        # Display recommendations
-        _display_recommendations(recommendations)
+        # Core logic: Research portfolio and generate recommendations
+        tickers, news, summaries, portfolio, recommendations = research_portfolio()
         
-        # Send WhatsApp notification
+        # Post-process: Display results and send notifications
+        _display_results(portfolio, news, summaries, recommendations)
         _send_whatsapp_notification(recommendations)
         
     except Exception as e:
-        print(f"\n❌ Error in main workflow: {e}")
-        raise
+        print(f"❌ An unexpected error occurred during the main workflow: {e}")
+        # This will send the exception to Sentry if configured
+        raise e
+
+    print("\n" + "=" * 60)
+    print("RESEARCH WORKFLOW COMPLETE")
+    print("=" * 60)
 
 
-def _display_results(tickers, news_data, summaries, portfolio=None):
-    """Display formatted research results to console"""
+def _update_prices():
+    """Update stock prices in Google Sheet, with error handling"""
+    print("\n" + "=" * 60)
+    print("PRE-PROCESSING: UPDATING STOCK PRICES IN GOOGLE SHEET")
+    print("=" * 60)
+    try:
+        update_gsheet_prices()
+        print("✅ Portfolio prices updated successfully.")
+    except Exception as e:
+        print(f"⚠️ Warning: Automatic price update failed: {e}")
+        print("Continuing with last known prices.")
+
+
+def _display_results(portfolio, news_data, summaries, recommendations):
+    """Display the formatted research results and recommendations"""
+    # 1. Display Portfolio Summary
+    print("\n" + "=" * 80)
+    print(f"PORTFOLIO SUMMARY - Total Value: ${portfolio.total_value:,.2f}")
+    print("=" * 80)
+    for pos in portfolio.positions:
+        print(f"{pos.symbol:<8} | {pos.position:>7} shares | ${pos.price:>8.2f} | ${pos.market_value:>10,.2f} | {pos.percent_of_total:>6.2f}%")
+    print("=" * 80)
+
+    # 2. Display Executive Summaries
     print("\n" + "=" * 80)
     print("EXECUTIVE SUMMARIES - AI-Powered Stock Analysis")
     print("=" * 80)
-    
-    for ticker in tickers:
-        print(f"\n{'='*80}")
-        print(f"📊 {ticker}")
-        print('='*80)
-        
-        # Display portfolio position if available
-        if portfolio:
+
+    if not summaries:
+        print("No summaries were generated.")
+    else:
+        for ticker in portfolio.get_symbols():
+            summary_text = summaries.get(ticker, "No summary available.")
             position = portfolio.get_position(ticker)
+            articles = news_data.get(ticker, [])
+
+            print("\n" + "=" * 80)
+            print(f"📊 {ticker}")
+            print("=" * 80)
             if position:
                 print(f"💼 Position: {position.position} shares @ ${position.price:.2f} = ${position.market_value:,.2f} ({position.percent_of_total:.2f}% of portfolio)\n")
-        
-        # Display AI Summary
-        summary = summaries.get(ticker, "No summary available.")
-        print(summary)
-        
-        # Display raw news articles
-        news_articles = news_data.get(ticker, [])
-        if news_articles:
-            print(f"\n📰 Source Articles ({len(news_articles)}):")
-            print("-" * 80)
-            for i, article in enumerate(news_articles, 1):
-                print(f"{i}. {article['title']}")
-                print(f"   Source: {article.get('source', 'N/A')} | Link: {article.get('link', 'N/A')}")
-        else:
-            print("\n📰 Source Articles: None found")
+            
+            print(summary_text)
+
+            if articles:
+                print(f"\n📰 Source Articles ({len(articles)}):")
+                print("-" * 80)
+                for i, article in enumerate(articles, 1):
+                    print(f"{i}. {article['title']}\n   Source: {article['source']} | Link: {article['link']}")
     
-    print("\n" + "=" * 80)
-    print("✅ Research Complete!")
-    print("=" * 80)
-
-
-def _display_recommendations(recommendations):
-    """Display portfolio recommendations"""
+    # 3. Display Recommendations
     print("\n" + "=" * 80)
     print("🤖 PORTFOLIO MANAGER RECOMMENDATIONS")
     print("=" * 80)
-    
-    summary = recommendations.get('portfolio_summary', 'No summary provided.')
-    print(f"Overall Assessment: {summary}")
-    
-    recs = recommendations.get('recommendations', [])
-    if not recs:
-        print("\nNo specific actions recommended at this time.")
+
+    if recommendations:
+        print(recommendations.get('overall_assessment', 'No overall assessment provided.'))
+        
+        for rec in recommendations.get('recommendations', []):
+            print(f"\n- Recommendation for {rec['ticker']}: {rec['recommendation']}")
+            print(f"  - Reasoning: {rec['reasoning']}")
     else:
-        for rec in recs:
-            print(f"\n- Recommendation for {rec.get('ticker')}: {rec.get('recommendation')}")
-            print(f"  - Reasoning: {rec.get('reasoning', 'N/A')}")
-            print(f"  - Suggested Action: {rec.get('suggested_action', 'N/A')}")
-    
-    print("\n" + "=" * 80)
+        print("No recommendations were generated.")
+
+    print("=" * 80)
 
 
 def _send_whatsapp_notification(recommendations):
@@ -124,6 +126,6 @@ def _send_whatsapp_notification(recommendations):
         print(f"⚠️ Could not send WhatsApp message: {e}")
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
 

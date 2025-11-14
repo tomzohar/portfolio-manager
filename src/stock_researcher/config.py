@@ -8,14 +8,37 @@ import os
 import json
 import base64
 from dotenv import load_dotenv
+import sentry_sdk
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Sentry Configuration for Error Monitoring
+SENTRY_DSN = os.getenv('SENTRY_DSN')
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        # Set traces_sample_rate to 1.0 to capture 100%
+        # of transactions for performance monitoring.
+        traces_sample_rate=1.0,
+        # Set profiles_sample_rate to 1.0 to profile 100%
+        # of sampled transactions.
+        # We recommend adjusting this value in production.
+        profiles_sample_rate=1.0,
+        environment=ENVIRONMENT,
+    )
+    print("✅ Sentry initialized for error monitoring.")
+
 
 # Google Sheets Configuration
 GOOGLE_SHEET_CREDS_JSON = os.getenv('GOOGLE_SHEET_CREDS_JSON')
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
 SPREADSHEET_RANGE = os.getenv('SPREADSHEET_RANGE')
+
+# Polygon API Configuration
+POLYGON_API_KEY = os.getenv('POLYGON_API_KEY')
 
 # SerpAPI Configuration
 SERPAPI_API_KEY = os.getenv('SERPAPI_API_KEY')
@@ -53,6 +76,7 @@ def validate_config():
         'GOOGLE_SHEET_CREDS_JSON': GOOGLE_SHEET_CREDS_JSON,
         'SPREADSHEET_ID': SPREADSHEET_ID,
         'SPREADSHEET_RANGE': SPREADSHEET_RANGE,
+        'POLYGON_API_KEY': POLYGON_API_KEY,
         'SERPAPI_API_KEY': SERPAPI_API_KEY,
         'GEMINI_API_KEY': GEMINI_API_KEY,
         'TWILIO_ACCOUNT_SID': TWILIO_ACCOUNT_SID,

@@ -6,5 +6,6 @@ venv/
 __pycache__/
 *.pyc
 .pytest_cache/
+*.egg-info/
 
 stocks-researcher-d9df81878425.json
