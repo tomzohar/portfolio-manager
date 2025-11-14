@@ -66,7 +66,7 @@ class TestParsePortfolio:
     
     @patch('stock_researcher.agents.portfolio_parser.get_google_creds')
     @patch('stock_researcher.agents.portfolio_parser.gspread.authorize')
-    @patch('stock_researcher.agents.portfolio_parser.Credentials.from_service_account_file')
+    @patch('stock_researcher.agents.portfolio_parser.Credentials.from_service_account_info')
     def test_parse_portfolio_success(
         self,
         mock_creds,
@@ -76,7 +76,12 @@ class TestParsePortfolio:
     ):
         """Test successful portfolio parsing"""
         # Setup mocks
-        mock_get_creds.return_value = None  # Simulate fallback to file
+        mock_get_creds.return_value = {
+            "type": "service_account",
+            "project_id": "test-project",
+            "private_key": "test-key",
+            "client_email": "test@test.iam.gserviceaccount.com"
+        }
         
         mock_spreadsheet = Mock()
         mock_spreadsheet.values_get.return_value = {'values': sample_portfolio_data}
@@ -97,11 +102,16 @@ class TestParsePortfolio:
     
     @patch('stock_researcher.agents.portfolio_parser.get_google_creds')
     @patch('stock_researcher.agents.portfolio_parser.gspread.authorize')
-    @patch('stock_researcher.agents.portfolio_parser.Credentials.from_service_account_file')
+    @patch('stock_researcher.agents.portfolio_parser.Credentials.from_service_account_info')
     def test_parse_portfolio_empty_data(self, mock_creds, mock_authorize, mock_get_creds):
         """Test parsing with empty data"""
         # Setup mocks for empty data
-        mock_get_creds.return_value = None  # Simulate fallback to file
+        mock_get_creds.return_value = {
+            "type": "service_account",
+            "project_id": "test-project",
+            "private_key": "test-key",
+            "client_email": "test@test.iam.gserviceaccount.com"
+        }
 
         mock_spreadsheet = Mock()
         mock_spreadsheet.values_get.return_value = {'values': []}
