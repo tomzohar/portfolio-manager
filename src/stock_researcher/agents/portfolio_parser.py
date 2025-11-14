@@ -156,26 +156,3 @@ def parse_portfolio(service_file: str, spreadsheet_id: str, sheet_range: str = '
     
     return Portfolio(positions=positions, total_value=total_value)
 
-
-# Example usage and testing
-if __name__ == '__main__':
-    try:
-        print("Parsing portfolio from Google Sheets...")
-        portfolio = parse_portfolio(GOOGLE_SERVICE_ACCOUNT_FILE, SPREADSHEET_ID)
-        
-        print(portfolio)
-        
-        print("\n📊 Portfolio Statistics:")
-        print(f"   Total Positions: {len(portfolio.positions)}")
-        print(f"   Total Value: ${portfolio.total_value:,.2f}")
-        
-        print("\n🔝 Top 3 Positions:")
-        for i, pos in enumerate(portfolio.get_top_positions(3), 1):
-            print(f"   {i}. {pos}")
-        
-        print(f"\n📋 All Symbols: {', '.join(portfolio.get_symbols())}")
-        
-    except Exception as e:
-        print(f"❌ Error parsing portfolio: {e}")
-        raise
-

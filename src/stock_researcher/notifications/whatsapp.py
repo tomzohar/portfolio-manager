@@ -4,7 +4,7 @@ Send WhatsApp messages using Twilio
 """
 
 from twilio.rest import Client
-from typing import Optional
+from typing import Optional, Dict, Any
 from datetime import datetime
 from ..config import TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM, WHATSAPP_TO
 
@@ -61,63 +61,37 @@ def send_whatsapp_message(
         raise
 
 
-def send_stock_research_summary(summaries: dict, tickers: list) -> str:
+def send_stock_research_summary(recommendations: Dict[str, Any]) -> str:
     """
-    Send stock research summaries via WhatsApp.
+    Sends a concise summary of portfolio recommendations via WhatsApp.
     
     Args:
-        summaries: Dictionary of ticker -> executive summary
-        tickers: List of stock tickers
+        recommendations: A dictionary containing the portfolio summary and a list of recommendations.
     
     Returns:
-        Message SID from Twilio
+        Message SID from Twilio.
     """
-    # Format a concise message (WhatsApp has 1600 char limit)
     current_date = datetime.now().strftime("%B %d, %Y")
-    message_text = f"📊 *Stock Research*\n{current_date}\n\n"
+    message_text = f"📊 *Stock Research & Recommendations*\n_{current_date}_\n\n"
+
+    # Add the overall portfolio summary
+    portfolio_summary = recommendations.get('portfolio_summary')
+    if portfolio_summary:
+        message_text += f"{portfolio_summary}\n\n"
     
-    for ticker in tickers:
-        summary = summaries.get(ticker, "No summary available")
+    # Add the specific, actionable recommendations
+    recs = recommendations.get('recommendations', [])
+    if recs:
+        message_text += "*Key Recommendations:*\n"
+        for rec in recs:
+            ticker = rec.get('ticker', 'N/A')
+            action = rec.get('recommendation', 'N/A')
+            reasoning = rec.get('reasoning', 'N/A')
+            
+            message_text += f"*{ticker}: {action}*\n"
+            message_text += f"_{reasoning}_\n\n"
+    else:
+        message_text += "*No specific actions were recommended based on the latest news.*\n"
         
-        # Extract just the key sentiment and actionable takeaway
-        lines = summary.split('\n')
-        sentiment = ""
-        takeaway = ""
-        
-        for line in lines:
-            if '**Key Sentiment:**' in line or 'Key Sentiment:' in line:
-                sentiment = line.replace('**Key Sentiment:**', '').replace('Key Sentiment:', '').strip()
-                # Get the next line if it's a continuation
-                idx = lines.index(line)
-                if idx + 1 < len(lines) and not lines[idx + 1].startswith('**'):
-                    sentiment += " " + lines[idx + 1].strip()
-            if '**Actionable Takeaway:**' in line or 'Actionable Takeaway:' in line:
-                takeaway = line.replace('**Actionable Takeaway:**', '').replace('Actionable Takeaway:', '').strip()
-        
-        # Extract just the sentiment label (POSITIVE/NEGATIVE/NEUTRAL-MIXED)
-        if sentiment:
-            sentiment_label = sentiment.split('.')[0].split('Justification')[0].strip()
-        else:
-            sentiment_label = "N/A"
-        
-        message_text += f"*{ticker}* - {sentiment_label}\n"
-        if takeaway:
-            message_text += f"{takeaway[:120]}...\n\n"
-        else:
-            message_text += "\n"
-    
     return send_whatsapp_message(message_text)
-
-
-# Example Run:
-if __name__ == '__main__':
-    # Test with a simple message
-    test_message = "Hello from Stock Researcher! 📈"
-    
-    try:
-        message_sid = send_whatsapp_message(test_message)
-        print(f"\nMessage sent with SID: {message_sid}")
-    except Exception as e:
-        print(f"\nFailed to send message. Please check your auth token and Twilio setup.")
-        print(f"Error: {e}")
 

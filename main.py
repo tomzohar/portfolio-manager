@@ -21,7 +21,7 @@ def main():
     """
     try:
         # Run the complete research workflow with portfolio data
-        stock_tickers, news_data, executive_summaries, portfolio = research_portfolio_news()
+        stock_tickers, news_data, executive_summaries, portfolio, recommendations = research_portfolio_news()
     
         # Display portfolio summary if available
         if portfolio:
@@ -30,8 +30,11 @@ def main():
         # Display results
         _display_results(stock_tickers, news_data, executive_summaries, portfolio)
         
+        # Display recommendations
+        _display_recommendations(recommendations)
+        
         # Send WhatsApp notification
-        _send_whatsapp_notification(executive_summaries, stock_tickers)
+        _send_whatsapp_notification(recommendations)
         
     except Exception as e:
         print(f"\n❌ Error in main workflow: {e}")
@@ -75,11 +78,32 @@ def _display_results(tickers, news_data, summaries, portfolio=None):
     print("=" * 80)
 
 
-def _send_whatsapp_notification(summaries, tickers):
+def _display_recommendations(recommendations):
+    """Display portfolio recommendations"""
+    print("\n" + "=" * 80)
+    print("🤖 PORTFOLIO MANAGER RECOMMENDATIONS")
+    print("=" * 80)
+    
+    summary = recommendations.get('portfolio_summary', 'No summary provided.')
+    print(f"Overall Assessment: {summary}")
+    
+    recs = recommendations.get('recommendations', [])
+    if not recs:
+        print("\nNo specific actions recommended at this time.")
+    else:
+        for rec in recs:
+            print(f"\n- Recommendation for {rec.get('ticker')}: {rec.get('recommendation')}")
+            print(f"  - Reasoning: {rec.get('reasoning', 'N/A')}")
+            print(f"  - Suggested Action: {rec.get('suggested_action', 'N/A')}")
+    
+    print("\n" + "=" * 80)
+
+
+def _send_whatsapp_notification(recommendations):
     """Send research summary via WhatsApp"""
     print("\n[Final Step] Sending summary via WhatsApp...")
     try:
-        message_sid = send_stock_research_summary(summaries, tickers)
+        message_sid = send_stock_research_summary(recommendations)
         print(f"✅ WhatsApp message sent! (SID: {message_sid})")
     except Exception as e:
         print(f"⚠️ Could not send WhatsApp message: {e}")

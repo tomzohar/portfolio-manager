@@ -99,3 +99,18 @@ class TestLLMAnalyzer:
         # Verify LLM was called 3 times
         assert mock_client.models.generate_content.call_count == 3
 
+    @patch('stock_researcher.agents.llm_analyzer.genai.Client')
+    def test_client_initialization_error(self, mock_gemini_client):
+        """
+        Test that an exception is raised if the Gemini client fails to initialize.
+        """
+        # Arrange
+        mock_gemini_client.side_effect = Exception("Initialization Failed")
+
+        # Act & Assert
+        with pytest.raises(Exception, match="Initialization Failed"):
+            # We need to reload the module to test the initialization logic
+            import importlib
+            from stock_researcher.agents import llm_analyzer
+            importlib.reload(llm_analyzer)
+

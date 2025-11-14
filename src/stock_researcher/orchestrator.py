@@ -8,6 +8,7 @@ from typing import Dict, List, Tuple
 from .agents.portfolio_parser import parse_portfolio, Portfolio
 from .agents.news_searcher import get_stock_news
 from .agents.llm_analyzer import generate_executive_summaries
+from .agents.portfolio_manager import generate_portfolio_recommendations
 from .config import (
     GOOGLE_SERVICE_ACCOUNT_FILE,
     SPREADSHEET_ID,
@@ -15,12 +16,13 @@ from .config import (
 )
 
 
-def research_portfolio_news() -> Tuple[List[str], Dict[str, List[Dict]], Dict[str, str], Portfolio]:
+def research_portfolio_news() -> Tuple[List[str], Dict[str, List[Dict]], Dict[str, str], Portfolio, Dict]:
     """
     Complete stock research workflow:
     1. Parse portfolio from Google Sheets
     2. Perform web search for news articles
     3. Generate AI summaries from LLM
+    4. Generate portfolio recommendations
     
     Returns:
         Tuple containing:
@@ -28,6 +30,7 @@ def research_portfolio_news() -> Tuple[List[str], Dict[str, List[Dict]], Dict[st
         - Dict of news articles by ticker
         - Dict of executive summaries by ticker
         - Portfolio object with full position data
+        - Dict of portfolio recommendations
     """
     print("=" * 60)
     print("STOCK RESEARCH WORKFLOW INITIATED")
@@ -50,11 +53,16 @@ def research_portfolio_news() -> Tuple[List[str], Dict[str, List[Dict]], Dict[st
     executive_summaries = generate_executive_summaries(news_data)
     print(f"✅ Generated {len(executive_summaries)} summaries")
     
+    # Agent 4: Generate portfolio recommendations
+    print(f"\n[Agent 4] Generating portfolio management recommendations...")
+    recommendations = generate_portfolio_recommendations(portfolio, executive_summaries)
+    print(f"✅ Generated portfolio recommendations.")
+    
     print("\n" + "=" * 60)
     print("RESEARCH WORKFLOW COMPLETE")
     print("=" * 60)
     
-    return stock_tickers, news_data, executive_summaries, portfolio
+    return stock_tickers, news_data, executive_summaries, portfolio, recommendations
 
 
 def get_research_summary(tickers: List[str], summaries: Dict[str, str]) -> str:
@@ -81,19 +89,4 @@ def get_research_summary(tickers: List[str], summaries: Dict[str, str]) -> str:
         output.append(summary)
     
     return "\n".join(output)
-
-
-# Example usage
-if __name__ == '__main__':
-    try:
-        # Run the complete research workflow
-        tickers, news, summaries, portfolio = research_portfolio_news()
-        
-        # Display results
-        print("\n")
-        print(get_research_summary(tickers, summaries))
-        
-    except Exception as e:
-        print(f"\n❌ Error during research workflow: {e}")
-        raise
 

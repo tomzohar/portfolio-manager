@@ -6,4 +6,5 @@ twilio
 python-dotenv
 pytest
 pytest-mock
+tenacity
 

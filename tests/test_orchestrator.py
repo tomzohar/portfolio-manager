@@ -10,6 +10,7 @@ from stock_researcher.orchestrator import research_portfolio_news
 class TestOrchestrator:
     """Test Research Orchestrator"""
     
+    @patch('stock_researcher.orchestrator.generate_portfolio_recommendations')
     @patch('stock_researcher.orchestrator.generate_executive_summaries')
     @patch('stock_researcher.orchestrator.get_stock_news')
     @patch('stock_researcher.orchestrator.parse_portfolio')
@@ -18,6 +19,7 @@ class TestOrchestrator:
         mock_parse_portfolio,
         mock_get_news,
         mock_generate_summaries,
+        mock_generate_recommendations,
         mock_portfolio
     ):
         """Test successful research workflow"""
@@ -38,19 +40,24 @@ class TestOrchestrator:
         }
         mock_generate_summaries.return_value = mock_summaries
         
+        mock_recommendations = {"portfolio_summary": "summary", "recommendations": []}
+        mock_generate_recommendations.return_value = mock_recommendations
+        
         # Run workflow
-        tickers, news_data, summaries, portfolio = research_portfolio_news()
+        tickers, news_data, summaries, portfolio, recommendations = research_portfolio_news()
         
         # Verify results
         assert tickers == ['GOOGL', 'PLTR', 'AMZN']
         assert news_data == mock_news_data
         assert summaries == mock_summaries
         assert portfolio == mock_portfolio
+        assert recommendations == mock_recommendations
         
         # Verify all agents were called in correct order
         mock_parse_portfolio.assert_called_once()
         mock_get_news.assert_called_once_with(['GOOGL', 'PLTR', 'AMZN'], ANY)
         mock_generate_summaries.assert_called_once_with(mock_news_data)
+        mock_generate_recommendations.assert_called_once_with(mock_portfolio, mock_summaries)
     
     @patch('stock_researcher.orchestrator.parse_portfolio')
     def test_research_portfolio_news_portfolio_error(self, mock_parse_portfolio):
@@ -62,6 +69,7 @@ class TestOrchestrator:
         with pytest.raises(Exception, match="Portfolio parsing failed"):
             research_portfolio_news()
     
+    @patch('stock_researcher.orchestrator.generate_portfolio_recommendations')
     @patch('stock_researcher.orchestrator.generate_executive_summaries')
     @patch('stock_researcher.orchestrator.get_stock_news')
     @patch('stock_researcher.orchestrator.parse_portfolio')
@@ -70,6 +78,7 @@ class TestOrchestrator:
         mock_parse_portfolio,
         mock_get_news,
         mock_generate_summaries,
+        mock_generate_recommendations,
         mock_portfolio
     ):
         """Test that agents are called in correct order"""
@@ -77,19 +86,22 @@ class TestOrchestrator:
         mock_parse_portfolio.return_value = mock_portfolio
         mock_get_news.return_value = {}
         mock_generate_summaries.return_value = {}
+        mock_generate_recommendations.return_value = {}
         
         # Track call order
         call_order = []
         mock_parse_portfolio.side_effect = lambda *args: (call_order.append('portfolio'), mock_portfolio)[1]
         mock_get_news.side_effect = lambda *args: (call_order.append('news'), {})[1]
         mock_generate_summaries.side_effect = lambda *args: (call_order.append('llm'), {})[1]
+        mock_generate_recommendations.side_effect = lambda *args: (call_order.append('recommendations'), {})[1]
         
         # Run workflow
         research_portfolio_news()
         
         # Verify correct order: Portfolio → News → LLM
-        assert call_order == ['portfolio', 'news', 'llm']
+        assert call_order == ['portfolio', 'news', 'llm', 'recommendations']
     
+    @patch('stock_researcher.orchestrator.generate_portfolio_recommendations')
     @patch('stock_researcher.orchestrator.generate_executive_summaries')
     @patch('stock_researcher.orchestrator.get_stock_news')
     @patch('stock_researcher.orchestrator.parse_portfolio')
@@ -98,6 +110,7 @@ class TestOrchestrator:
         mock_parse_portfolio,
         mock_get_news,
         mock_generate_summaries,
+        mock_generate_recommendations,
         mock_portfolio
     ):
         """Test that function returns proper tuple structure"""
@@ -105,17 +118,19 @@ class TestOrchestrator:
         mock_parse_portfolio.return_value = mock_portfolio
         mock_get_news.return_value = {'GOOGL': []}
         mock_generate_summaries.return_value = {'GOOGL': 'Summary'}
+        mock_generate_recommendations.return_value = {}
         
         # Run workflow
         result = research_portfolio_news()
         
         # Verify tuple structure
         assert isinstance(result, tuple)
-        assert len(result) == 4
+        assert len(result) == 5
         
-        tickers, news, summaries, portfolio = result
+        tickers, news, summaries, portfolio, recommendations = result
         assert isinstance(tickers, list)
         assert isinstance(news, dict)
         assert isinstance(summaries, dict)
         assert portfolio is not None
+        assert isinstance(recommendations, dict)
 

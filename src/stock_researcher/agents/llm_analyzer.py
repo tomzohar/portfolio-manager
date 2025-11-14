@@ -14,14 +14,7 @@ try:
     LLM_MODEL = 'gemini-2.5-flash'
 except Exception as e:
     print(f"Error initializing Gemini client: {e}")
-    # Fallback to a mock for demonstration if key isn't set
-    class MockClient:
-        def generate_content(self, model, contents):
-            # Simulate a real response structure
-            return type('MockResponse', (object,), {'text': f"**[MOCK]** Summary: LLM not initialized. Check API Key."})()
-    
-    client = MockClient()
-    LLM_MODEL = 'mock'
+    raise
 
 SYSTEM_INSTRUCTION = (
     "You are a highly professional Financial Analyst AI. Your task is to analyze a set of "
@@ -88,30 +81,4 @@ OUTPUT INSTRUCTIONS:
             final_summaries[ticker] = "Summary failed due to LLM processing error."
     
     return final_summaries
-
-
-# Example Run:
-if __name__ == '__main__':
-    # Mock news data for testing
-    mock_news = {
-        'AAPL': [
-            {
-                'title': 'Apple Q4 Earnings Beat Expectations',
-                'source': 'CNBC',
-                'snippet': 'Apple posted strong revenue growth in Q4, beating analyst estimates.'
-            },
-            {
-                'title': 'iPhone Sales Surge',
-                'source': 'Bloomberg',
-                'snippet': 'iPhone 15 sales exceeded projections, driving quarterly revenue.'
-            }
-        ]
-    }
-    
-    summaries = generate_executive_summaries(mock_news)
-    
-    print("\n--- Executive Summaries ---")
-    for ticker, summary in summaries.items():
-        print(f"\n{ticker}:")
-        print(summary)
 
