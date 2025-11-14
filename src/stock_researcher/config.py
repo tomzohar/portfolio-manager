@@ -11,9 +11,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Google Sheets Configuration
-GOOGLE_SERVICE_ACCOUNT_FILE = os.getenv('GOOGLE_SERVICE_ACCOUNT_FILE', 'stocks-researcher-e5932d7175a9.json')
+GOOGLE_SERVICE_ACCOUNT_FILE = os.getenv('GOOGLE_SERVICE_ACCOUNT_FILE')
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
-TICKER_RANGE = os.getenv('TICKER_RANGE', 'Sheet1!A1:A')
+TICKER_RANGE = os.getenv('TICKER_RANGE')
 
 # SerpAPI Configuration
 SERPAPI_API_KEY = os.getenv('SERPAPI_API_KEY')
@@ -24,7 +24,7 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 # Twilio WhatsApp Configuration
 TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
-TWILIO_WHATSAPP_FROM = os.getenv('TWILIO_WHATSAPP_FROM', 'whatsapp:+14155238886')
+TWILIO_WHATSAPP_FROM = os.getenv('TWILIO_WHATSAPP_FROM')
 WHATSAPP_TO = os.getenv('WHATSAPP_TO')
 
 
