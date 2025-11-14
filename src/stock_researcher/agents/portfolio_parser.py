@@ -9,7 +9,7 @@ from google.oauth2.service_account import Credentials
 from typing import List, Dict, Optional
 from dataclasses import dataclass, field
 import json
-from ..config import GOOGLE_SERVICE_ACCOUNT_FILE, SPREADSHEET_ID
+from ..config import SPREADSHEET_ID, SPREADSHEET_RANGE, get_google_creds
 
 
 @dataclass
@@ -76,17 +76,10 @@ class Portfolio:
         return '\n'.join(output)
 
 
-def parse_portfolio(service_file: str, spreadsheet_id: str, sheet_range: str = 'גיליון1!A1:F100') -> Portfolio:
+def parse_portfolio() -> Portfolio:
     """
-    Parse portfolio data from Google Sheets
-    
-    Expected sheet structure:
-    | symbol | price | position | market value | % of total | total |
-    
-    Args:
-        service_file: Path to Google service account JSON file
-        spreadsheet_id: Google Sheets spreadsheet ID
-        sheet_range: Range to read (default: entire sheet)
+    Parse portfolio data from Google Sheets by automatically handling credentials
+    from either a local file or a Base64 encoded environment variable.
     
     Returns:
         Portfolio object with all positions
@@ -97,20 +90,33 @@ def parse_portfolio(service_file: str, spreadsheet_id: str, sheet_range: str = '
         'https://www.googleapis.com/auth/drive'
     ]
     
-    # Authenticate using the service account credentials
-    creds = Credentials.from_service_account_file(service_file, scopes=SCOPES)
+    # Try to get credentials from the decoded environment variable first
+    decoded_creds = get_google_creds()
     
+    if decoded_creds:
+        # Authenticate using the dictionary from the decoded Base64 variable
+        creds = Credentials.from_service_account_info(decoded_creds, scopes=SCOPES)
+        print("Authenticated with Google Sheets using environment variable.")
+    else:
+        # Fallback to the local service account file for local development
+        from ..config import GOOGLE_SHEET_CREDS_JSON
+        if not GOOGLE_SHEET_CREDS_JSON:
+            raise ValueError("Google credentials not found. Set GOOGLE_SHEET_CREDS_JSON env var or service account file.")
+        
+        creds = Credentials.from_service_account_file(GOOGLE_SHEET_CREDS_JSON, scopes=SCOPES)
+        print(f"Authenticated with Google Sheets using local file: {GOOGLE_SHEET_CREDS_JSON}")
+
     # Create a gspread client instance
     client = gspread.authorize(creds)
     
     # Open the spreadsheet by its ID
     try:
-        spreadsheet = client.open_by_key(spreadsheet_id)
+        spreadsheet = client.open_by_key(SPREADSHEET_ID)
     except gspread.exceptions.SpreadsheetNotFound:
         raise ValueError("Spreadsheet not found. Check ID and sharing permissions.")
     
     # Get all values from the range
-    values = spreadsheet.values_get(sheet_range)['values']
+    values = spreadsheet.values_get(SPREADSHEET_RANGE)['values']
     
     if not values or len(values) < 2:
         raise ValueError("No data found in spreadsheet or insufficient rows")

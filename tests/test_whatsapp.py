@@ -14,15 +14,15 @@ from stock_researcher.notifications.whatsapp import (
 class TestWhatsAppNotification:
     """Test WhatsApp Notification System"""
     
-    @patch('stock_researcher.notifications.whatsapp.Client')
-    def test_send_whatsapp_message_success(self, mock_client_class):
+    @patch('stock_researcher.notifications.whatsapp._get_twilio_client')
+    def test_send_whatsapp_message_success(self, mock_get_client):
         """Test sending a simple WhatsApp message"""
         # Setup mock
         mock_client = Mock()
         mock_message = Mock()
         mock_message.sid = 'SM123456789'
         mock_client.messages.create.return_value = mock_message
-        mock_client_class.return_value = mock_client
+        mock_get_client.return_value = mock_client
         
         # Send message
         message_sid = send_whatsapp_message("Test message")
@@ -33,15 +33,15 @@ class TestWhatsAppNotification:
         call_args = mock_client.messages.create.call_args[1]
         assert call_args['body'] == "Test message"
     
-    @patch('stock_researcher.notifications.whatsapp.Client')
-    def test_send_whatsapp_message_with_custom_recipient(self, mock_client_class):
+    @patch('stock_researcher.notifications.whatsapp._get_twilio_client')
+    def test_send_whatsapp_message_with_custom_recipient(self, mock_get_client):
         """Test sending message to custom recipient"""
         # Setup mock
         mock_client = Mock()
         mock_message = Mock()
         mock_message.sid = 'SM123456789'
         mock_client.messages.create.return_value = mock_message
-        mock_client_class.return_value = mock_client
+        mock_get_client.return_value = mock_client
         
         # Send message
         custom_number = 'whatsapp:+1234567890'
@@ -51,27 +51,27 @@ class TestWhatsAppNotification:
         call_args = mock_client.messages.create.call_args[1]
         assert call_args['to'] == custom_number
     
-    @patch('stock_researcher.notifications.whatsapp.Client')
-    def test_send_whatsapp_message_error(self, mock_client_class):
+    @patch('stock_researcher.notifications.whatsapp._get_twilio_client')
+    def test_send_whatsapp_message_error(self, mock_get_client):
         """Test handling of Twilio API errors"""
         # Setup mock to raise exception
         mock_client = Mock()
         mock_client.messages.create.side_effect = Exception("API Error")
-        mock_client_class.return_value = mock_client
+        mock_get_client.return_value = mock_client
         
         # Should raise exception
         with pytest.raises(Exception, match="API Error"):
             send_whatsapp_message("Test message")
     
-    @patch('stock_researcher.notifications.whatsapp.Client')
-    def test_send_stock_research_summary(self, mock_client_class):
+    @patch('stock_researcher.notifications.whatsapp._get_twilio_client')
+    def test_send_stock_research_summary(self, mock_get_client):
         """Test sending a recommendations summary."""
         # Setup mocks
         mock_client = Mock()
         mock_message = Mock()
         mock_message.sid = 'SM123456789'
         mock_client.messages.create.return_value = mock_message
-        mock_client_class.return_value = mock_client
+        mock_get_client.return_value = mock_client
         
         # Prepare test data
         recommendations = {
@@ -91,7 +91,7 @@ class TestWhatsAppNotification:
         }
         
         # Send summary
-        message_sid = send_stock_research_summary(recommendations)
+        message_sid = send_stock_research_summary(recommendations, to_number="whatsapp:+1234567890")
         
         # Verify
         assert message_sid == 'SM123456789'

@@ -8,7 +8,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 from typing import List
 from tenacity import retry, stop_after_attempt, wait_exponential
-from ..config import GOOGLE_SERVICE_ACCOUNT_FILE, SPREADSHEET_ID
+from ..config import SPREADSHEET_ID, get_google_creds
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 def _fetch_prices_batch(tickers: List[str]):
@@ -26,7 +26,18 @@ def update_gsheet_prices(sheet_name: str = 'גיליון1', column_range: str = 
     
     # 1. Authenticate and connect to Google Sheets
     SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-    creds = Credentials.from_service_account_file(GOOGLE_SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+    
+    decoded_creds = get_google_creds()
+    if decoded_creds:
+        creds = Credentials.from_service_account_info(decoded_creds, scopes=SCOPES)
+        print("Authenticated with Google Sheets using environment variable.")
+    else:
+        from ..config import GOOGLE_SHEET_CREDS_JSON
+        if not GOOGLE_SHEET_CREDS_JSON:
+            raise ValueError("Google credentials not found. Set GOOGLE_SHEET_CREDS_JSON env var or service account file.")
+        creds = Credentials.from_service_account_file(GOOGLE_SHEET_CREDS_JSON, scopes=SCOPES)
+        print(f"Authenticated with Google Sheets using local file: {GOOGLE_SHEET_CREDS_JSON}")
+        
     client = gspread.authorize(creds)
     
     try:

@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 from stock_researcher.orchestrator import research_portfolio
 from stock_researcher.notifications.whatsapp import send_stock_research_summary, send_whatsapp_message
 from stock_researcher.pre_processor.update_prices import update_gsheet_prices
+from stock_researcher.config import TWILIO_WHATSAPP_TO
 
 
 def main():
@@ -117,7 +118,7 @@ def _send_whatsapp_notification(recommendations):
     """Send research summary via WhatsApp"""
     print("\n[Final Step] Sending summary via WhatsApp...")
     try:
-        message_sid = send_stock_research_summary(recommendations)
+        message_sid = send_stock_research_summary(recommendations, to_number=TWILIO_WHATSAPP_TO)
         print(f"✅ WhatsApp message sent! (SID: {message_sid})")
     except Exception as e:
         print(f"⚠️ Could not send WhatsApp message: {e}")

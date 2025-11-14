@@ -5,15 +5,17 @@ Loads environment variables from .env file
 """
 
 import os
+import json
+import base64
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Google Sheets Configuration
-GOOGLE_SERVICE_ACCOUNT_FILE = os.getenv('GOOGLE_SERVICE_ACCOUNT_FILE')
+GOOGLE_SHEET_CREDS_JSON = os.getenv('GOOGLE_SHEET_CREDS_JSON')
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
-TICKER_RANGE = os.getenv('TICKER_RANGE')
+SPREADSHEET_RANGE = os.getenv('SPREADSHEET_RANGE')
 
 # SerpAPI Configuration
 SERPAPI_API_KEY = os.getenv('SERPAPI_API_KEY')
@@ -25,18 +27,38 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
 TWILIO_WHATSAPP_FROM = os.getenv('TWILIO_WHATSAPP_FROM')
-WHATSAPP_TO = os.getenv('WHATSAPP_TO')
+TWILIO_WHATSAPP_TO = os.getenv('TWILIO_WHATSAPP_TO')
+
+
+def get_google_creds():
+    """
+    Decodes the Google credentials from Base64 if they are provided as an
+    environment variable, otherwise returns None. This supports passing
+    credentials securely in a CI/CD environment.
+    """
+    if GOOGLE_SHEET_CREDS_JSON:
+        try:
+            # Decode the Base64 string to a JSON string
+            decoded_json_str = base64.b64decode(GOOGLE_SHEET_CREDS_JSON).decode('utf-8')
+            # Parse the JSON string into a Python dictionary
+            return json.loads(decoded_json_str)
+        except (base64.binascii.Error, json.JSONDecodeError, UnicodeDecodeError) as e:
+            raise ValueError(f"Failed to decode GOOGLE_SHEET_CREDS_JSON: {e}")
+    return None
 
 
 def validate_config():
     """Validate that all required environment variables are set"""
     required_vars = {
+        'GOOGLE_SHEET_CREDS_JSON': GOOGLE_SHEET_CREDS_JSON,
         'SPREADSHEET_ID': SPREADSHEET_ID,
+        'SPREADSHEET_RANGE': SPREADSHEET_RANGE,
         'SERPAPI_API_KEY': SERPAPI_API_KEY,
         'GEMINI_API_KEY': GEMINI_API_KEY,
         'TWILIO_ACCOUNT_SID': TWILIO_ACCOUNT_SID,
         'TWILIO_AUTH_TOKEN': TWILIO_AUTH_TOKEN,
-        'WHATSAPP_TO': WHATSAPP_TO,
+        'TWILIO_WHATSAPP_FROM': TWILIO_WHATSAPP_FROM,
+        'TWILIO_WHATSAPP_TO': TWILIO_WHATSAPP_TO,
     }
     
     missing_vars = [var for var, value in required_vars.items() if not value]
@@ -59,7 +81,7 @@ if __name__ == '__main__':
         print(f"   SerpAPI Key: {SERPAPI_API_KEY[:10]}...")
         print(f"   Gemini API Key: {GEMINI_API_KEY[:10]}...")
         print(f"   Twilio SID: {TWILIO_ACCOUNT_SID}")
-        print(f"   WhatsApp To: {WHATSAPP_TO}")
+        print(f"   WhatsApp To: {TWILIO_WHATSAPP_TO}")
     except ValueError as e:
         print(f"❌ Configuration Error: {e}")
 

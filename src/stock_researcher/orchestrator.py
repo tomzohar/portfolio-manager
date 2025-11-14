@@ -10,11 +10,7 @@ from .agents.news_searcher import get_stock_news
 from .agents.llm_analyzer import generate_executive_summaries
 from .agents.portfolio_manager import generate_portfolio_recommendations
 from .agents.technical_analyzer import analyze_stock_technicals
-from .config import (
-    GOOGLE_SERVICE_ACCOUNT_FILE,
-    SPREADSHEET_ID,
-    SERPAPI_API_KEY
-)
+from .config import SERPAPI_API_KEY
 
 
 def research_portfolio() -> Tuple[List[str], Dict[str, List[Dict]], Dict[str, str], Portfolio, Dict]:
@@ -39,7 +35,7 @@ def research_portfolio() -> Tuple[List[str], Dict[str, List[Dict]], Dict[str, st
     
     # Agent 1: Parse portfolio from Google Sheets
     print("\n[Agent 1] Parsing portfolio from Google Sheets...")
-    portfolio = parse_portfolio(GOOGLE_SERVICE_ACCOUNT_FILE, SPREADSHEET_ID)
+    portfolio = parse_portfolio()
     stock_tickers = portfolio.get_symbols()
     print(f"✅ Loaded portfolio with {len(stock_tickers)} positions")
     print(f"   Total Portfolio Value: ${portfolio.total_value:,.2f}")

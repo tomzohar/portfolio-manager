@@ -6,7 +6,21 @@ Send WhatsApp messages using Twilio
 from twilio.rest import Client
 from typing import Optional, Dict, Any
 from datetime import datetime
-from ..config import TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM, WHATSAPP_TO
+from ..config import (
+    TWILIO_ACCOUNT_SID,
+    TWILIO_AUTH_TOKEN,
+    TWILIO_WHATSAPP_FROM,
+    TWILIO_WHATSAPP_TO
+)
+
+_twilio_client = None
+
+
+def _get_twilio_client():
+    global _twilio_client
+    if _twilio_client is None:
+        _twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+    return _twilio_client
 
 
 def send_whatsapp_message(
@@ -29,10 +43,10 @@ def send_whatsapp_message(
     """
     try:
         # Initialize Twilio client
-        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        client = _get_twilio_client()
         
         # Use default recipient if not provided
-        recipient = to_number or WHATSAPP_TO
+        recipient = to_number or TWILIO_WHATSAPP_TO
         
         # Send message with content template if provided
         if content_sid:
@@ -61,12 +75,13 @@ def send_whatsapp_message(
         raise
 
 
-def send_stock_research_summary(recommendations: Dict[str, Any]) -> str:
+def send_stock_research_summary(recommendations: Dict[str, Any], to_number: str) -> str:
     """
     Sends a concise summary of portfolio recommendations via WhatsApp.
     
     Args:
         recommendations: A dictionary containing the portfolio summary and a list of recommendations.
+        to_number: The recipient's WhatsApp number.
     
     Returns:
         Message SID from Twilio.
@@ -93,5 +108,5 @@ def send_stock_research_summary(recommendations: Dict[str, Any]) -> str:
     else:
         message_text += "*No specific actions were recommended based on the latest news.*\n"
         
-    return send_whatsapp_message(message_text)
+    return send_whatsapp_message(message_text, to_number=to_number)
 
