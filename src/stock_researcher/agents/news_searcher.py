@@ -32,7 +32,7 @@ def get_stock_news(tickers: List[str], api_key: str) -> Dict[str, List[Dict]]:
                 "q": query,            # The specific query
                 "tbm": "nws",          # Target only the "News" tab
                 "gl": "us",            # Geolocation for results
-                "num": 5,              # Retrieve the top 5 results
+                "num": 3,              # Retrieve the top 3 results
                 "api_key": api_key     # API key for authentication
             }
             

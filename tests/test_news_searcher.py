@@ -34,7 +34,7 @@ class TestNewsSearcher:
         call_args = mock_google_search.call_args[0][0]
         assert call_args['engine'] == 'google'
         assert call_args['tbm'] == 'nws'
-        assert call_args['num'] == 5
+        assert call_args['num'] == 3
         assert 'AAPL' in call_args['q']
     
     @patch('stock_researcher.agents.news_searcher.GoogleSearch')
