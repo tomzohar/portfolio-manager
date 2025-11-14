@@ -76,10 +76,11 @@ def generate_portfolio_recommendations(
     
     # 3. Call the Gemini API
     try:
-        response_text = call_gemini_api(final_prompt)
+        # Use the more powerful 'gemini-1.5-pro' model for the final, most complex reasoning task
+        response_text = call_gemini_api(final_prompt, model='gemini-2.5-pro')
         
         # Clean up the response text before parsing
-        # The API sometimes returns the JSON wrapped in markdown
+        # The model sometimes returns the JSON wrapped in ```json ... ```
         cleaned_response_text = response_text.strip().replace('```json', '').replace('```', '')
         recommendations = json.loads(cleaned_response_text)
         

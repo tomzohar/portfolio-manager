@@ -11,7 +11,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from stock_researcher.orchestrator import research_portfolio_news
-from stock_researcher.notifications.whatsapp import send_stock_research_summary
+from stock_researcher.notifications.whatsapp import send_stock_research_summary, send_whatsapp_message
+from stock_researcher.pre_processor.update_prices import update_gsheet_prices
 
 
 def main():
@@ -19,6 +20,19 @@ def main():
     Main entry point for stock research application
     Orchestrates the workflow and handles output/notifications
     """
+    # Attempt to update prices, but don't block the main workflow if it fails
+    try:
+        print("Attempting to update portfolio prices in Google Sheet...")
+        update_gsheet_prices()
+        print("✅ Portfolio prices updated successfully.")
+    except Exception as e:
+        warning_message = f"⚠️ Warning: Automatic price update failed: {e}\nContinuing with last known prices."
+        print(warning_message)
+        try:
+            send_whatsapp_message(f"📈 Stock Researcher Alert:\n{warning_message}")
+        except Exception as e_whatsapp:
+            print(f"⚠️ Failed to send price update failure notification: {e_whatsapp}")
+
     try:
         # Run the complete research workflow with portfolio data
         stock_tickers, news_data, executive_summaries, portfolio, recommendations = research_portfolio_news()

@@ -101,7 +101,7 @@ class TestWhatsAppNotification:
         call_args = mock_client.messages.create.call_args[1]
         message_body = call_args['body']
         
-        assert "Stock Research & Recommendations" in message_body
+        assert "Portfolio Manager Update" in message_body
         assert "The portfolio is looking strong." in message_body
         assert "AAPL: INCREASE" in message_body
         assert "Positive news about new products." in message_body
