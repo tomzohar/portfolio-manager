@@ -17,7 +17,8 @@ load_dotenv()
 SENTRY_DSN = os.getenv('SENTRY_DSN')
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
 
-if SENTRY_DSN:
+# Only initialize Sentry in production
+if SENTRY_DSN and ENVIRONMENT == 'production':
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         # Set traces_sample_rate to 1.0 to capture 100%
@@ -29,7 +30,7 @@ if SENTRY_DSN:
         profiles_sample_rate=1.0,
         environment=ENVIRONMENT,
     )
-    print("✅ Sentry initialized for error monitoring.")
+    print("✅ Sentry initialized for error monitoring in PRODUCTION mode.")
 
 
 # Google Sheets Configuration

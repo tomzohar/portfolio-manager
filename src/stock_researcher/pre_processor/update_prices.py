@@ -16,10 +16,6 @@ def update_gsheet_prices(sheet_name: str = 'גיליון1', column_range: str = 
     Fetches the latest closing price for each stock in the Google Sheet and updates it.
     If a price for a ticker cannot be fetched, its existing price in the sheet is preserved.
     """
-    print("=" * 60)
-    print("PRE-PROCESSING: UPDATING STOCK PRICES IN GOOGLE SHEET")
-    print("=" * 60)
-    
     # 1. Authenticate and connect to Google Sheets
     SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
     

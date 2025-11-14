@@ -29,10 +29,6 @@ def research_portfolio() -> Tuple[List[str], Dict[str, List[Dict]], Dict[str, st
         - Portfolio object with full position data
         - Dict of portfolio recommendations
     """
-    print("=" * 60)
-    print("STOCK RESEARCH WORKFLOW INITIATED")
-    print("=" * 60)
-    
     # Agent 1: Parse portfolio from Google Sheets
     print("\n[Agent 1] Parsing portfolio from Google Sheets...")
     portfolio = parse_portfolio()
@@ -59,10 +55,6 @@ def research_portfolio() -> Tuple[List[str], Dict[str, List[Dict]], Dict[str, st
     print(f"\n[Agent 5] Generating portfolio management recommendations...")
     recommendations = generate_portfolio_recommendations(portfolio, executive_summaries, technical_analysis)
     print(f"✅ Generated portfolio recommendations.")
-    
-    print("\n" + "=" * 60)
-    print("RESEARCH WORKFLOW COMPLETE")
-    print("=" * 60)
     
     return stock_tickers, news_data, executive_summaries, portfolio, recommendations
 
