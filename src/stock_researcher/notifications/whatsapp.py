@@ -72,7 +72,7 @@ def send_stock_research_summary(recommendations: Dict[str, Any]) -> str:
         Message SID from Twilio.
     """
     current_date = datetime.now().strftime("%B %d, %Y")
-    message_text = f"📊 *Stock Research & Recommendations*\n_{current_date}_\n\n"
+    message_text = f"📊 *Portfolio Manager Update*\n_{current_date}_\n\n"
 
     # Add the overall portfolio summary
     portfolio_summary = recommendations.get('portfolio_summary')

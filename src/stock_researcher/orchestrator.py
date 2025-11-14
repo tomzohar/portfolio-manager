@@ -9,6 +9,7 @@ from .agents.portfolio_parser import parse_portfolio, Portfolio
 from .agents.news_searcher import get_stock_news
 from .agents.llm_analyzer import generate_executive_summaries
 from .agents.portfolio_manager import generate_portfolio_recommendations
+from .agents.technical_analyzer import analyze_stock_technicals
 from .config import (
     GOOGLE_SERVICE_ACCOUNT_FILE,
     SPREADSHEET_ID,
@@ -53,9 +54,14 @@ def research_portfolio_news() -> Tuple[List[str], Dict[str, List[Dict]], Dict[st
     executive_summaries = generate_executive_summaries(news_data)
     print(f"✅ Generated {len(executive_summaries)} summaries")
     
-    # Agent 4: Generate portfolio recommendations
-    print(f"\n[Agent 4] Generating portfolio management recommendations...")
-    recommendations = generate_portfolio_recommendations(portfolio, executive_summaries)
+    # Agent 4: Generate Technical Analysis
+    print(f"\n[Agent 4] Performing technical analysis...")
+    technical_analysis = analyze_stock_technicals(stock_tickers)
+    print(f"✅ Generated technical analysis for {len(technical_analysis)} stocks.")
+    
+    # Agent 5: Generate portfolio recommendations
+    print(f"\n[Agent 5] Generating portfolio management recommendations...")
+    recommendations = generate_portfolio_recommendations(portfolio, executive_summaries, technical_analysis)
     print(f"✅ Generated portfolio recommendations.")
     
     print("\n" + "=" * 60)

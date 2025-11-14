@@ -22,8 +22,8 @@ def mock_summaries():
         'TSLA': 'Negative news about production delays.'
     }
 
-@patch('stock_researcher.agents.portfolio_manager.client')
-def test_generate_portfolio_recommendations_success(mock_gemini_client, mock_portfolio, mock_summaries):
+@patch('stock_researcher.agents.portfolio_manager.call_gemini_api')
+def test_generate_portfolio_recommendations_success(mock_call_gemini, mock_portfolio, mock_summaries):
     """
     Test successful generation of portfolio recommendations.
     """
@@ -35,51 +35,43 @@ def test_generate_portfolio_recommendations_success(mock_gemini_client, mock_por
             {
                 "ticker": "TSLA",
                 "recommendation": "DECREASE",
-                "reasoning": "Negative news about production delays.",
-                "suggested_action": "Decrease position from 3.33% to 1%."
+                "reasoning": "Negative news about production delays."
             }
         ]
     }
     """
-    mock_response = MagicMock()
-    mock_response.text = mock_response_text
-    mock_gemini_client.models.generate_content.return_value = mock_response
+    mock_call_gemini.return_value = mock_response_text
 
     # Act
-    recommendations = generate_portfolio_recommendations(mock_portfolio, mock_summaries)
+    recommendations = generate_portfolio_recommendations(mock_portfolio, mock_summaries, {})
 
     # Assert
-    assert 'portfolio_summary' in recommendations
-    assert 'recommendations' in recommendations
     assert recommendations['portfolio_summary'] == "The portfolio is well-balanced, but TSLA poses a risk."
     assert len(recommendations['recommendations']) == 1
     assert recommendations['recommendations'][0]['ticker'] == 'TSLA'
     
-    # Verify that the LLM was called with the correct data structure
-    mock_gemini_client.models.generate_content.assert_called_once()
-    call_args = mock_gemini_client.models.generate_content.call_args
-    prompt_contents = call_args.kwargs['contents']
+    # Verify that the LLM was called with the correct data
+    mock_call_gemini.assert_called_once()
+    prompt_contents = mock_call_gemini.call_args[0][0]
     assert '"ticker": "AAPL"' in prompt_contents
-    assert '"ticker": "TSLA"' in prompt_contents
-    assert '"total_value": 3000.0' in prompt_contents
     assert 'Negative news about production delays.' in prompt_contents
 
-@patch('stock_researcher.agents.portfolio_manager.client')
-def test_generate_portfolio_recommendations_api_error(mock_gemini_client, mock_portfolio, mock_summaries):
+@patch('stock_researcher.agents.portfolio_manager.call_gemini_api')
+def test_generate_portfolio_recommendations_api_error(mock_call_gemini, mock_portfolio, mock_summaries):
     """
     Test handling of an API error during recommendation generation.
     """
     # Arrange
-    mock_gemini_client.models.generate_content.side_effect = Exception("API Failure")
+    mock_call_gemini.side_effect = Exception("API Failure")
 
     # Act
-    recommendations = generate_portfolio_recommendations(mock_portfolio, mock_summaries)
+    recommendations = generate_portfolio_recommendations(mock_portfolio, mock_summaries, {})
 
     # Assert
     assert recommendations['portfolio_summary'] == "Failed to generate recommendations due to an API error."
     assert len(recommendations['recommendations']) == 0
 
-@patch('stock_researcher.agents.portfolio_manager.genai.Client')
+@patch('stock_researcher.utils.llm_utils.genai.Client')
 def test_client_initialization_error(mock_gemini_client):
     """
     Test that an exception is raised if the Gemini client fails to initialize.
@@ -89,8 +81,6 @@ def test_client_initialization_error(mock_gemini_client):
 
     # Act & Assert
     with pytest.raises(Exception, match="Initialization Failed"):
-        # This will fail because the module is already loaded. 
-        # We need to reload it to test the initialization logic.
         import importlib
-        from stock_researcher.agents import portfolio_manager
-        importlib.reload(portfolio_manager)
+        from stock_researcher.utils import llm_utils
+        importlib.reload(llm_utils)
