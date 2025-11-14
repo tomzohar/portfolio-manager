@@ -54,41 +54,29 @@ def generate_portfolio_recommendations(
     """
     print(f"\n[Agent 5] Generating Portfolio Recommendations using LLM ({LLM_MODEL})...")
     
-    # 1. Format portfolio data for the prompt
-    portfolio_data = {
-        "total_value": portfolio.total_value,
-        "positions": [
-            {
-                "ticker": pos.symbol,
-                "value": pos.market_value,
-                "percentage": pos.percent_of_total
-            }
-            for pos in portfolio.positions
-        ]
-    }
-    
-    # 2. Create the User Prompt
-    user_prompt = f"""
-    **Portfolio:**
-    ```json
-    {json.dumps(portfolio_data, indent=2)}
-    ```
+    # 2. Build the prompt
+    prompt_parts = [SYSTEM_INSTRUCTION]
+    prompt_parts.append("Current Portfolio:")
+    prompt_parts.append(portfolio.to_json())
 
-    **News Summaries:**
-    ```json
-    {json.dumps(summaries, indent=2)}
-    ```
+    # Add truncated summaries and technical analysis to the prompt
+    for symbol in portfolio.get_symbols():
+        news_summary = summaries.get(symbol, "No news summary available.")
+        tech_analysis = technical_analysis.get(symbol, "No technical analysis available.")
+        
+        # Truncate each input to a max length to keep the prompt size manageable
+        truncated_news = (news_summary[:400] + '...') if len(news_summary) > 400 else news_summary
+        truncated_tech = (tech_analysis[:200] + '...') if len(tech_analysis) > 200 else tech_analysis
+        
+        prompt_parts.append(f"\nAnalysis for {symbol}:")
+        prompt_parts.append(f"News Summary: {truncated_news}")
+        prompt_parts.append(f"Technical Analysis: {truncated_tech}")
 
-    **Technical Analysis:**
-    ```json
-    {json.dumps(technical_analysis, indent=2)}
-    ```
-    """
+    final_prompt = "\n".join(prompt_parts)
     
     # 3. Call the Gemini API
     try:
-        full_prompt = SYSTEM_INSTRUCTION + "\n\n" + user_prompt
-        response_text = call_gemini_api(full_prompt)
+        response_text = call_gemini_api(final_prompt)
         
         # Clean up the response text before parsing
         # The API sometimes returns the JSON wrapped in markdown

@@ -1,5 +1,11 @@
 # Stock Researcher Architecture
 
+## High-Level Overview
+
+This project is designed as a modular, multi-agent system that automates the process of stock research and portfolio analysis. An orchestrator function (`research_portfolio_news`) sequences the calls to various agents, each responsible for a specific task. This design allows for clear separation of concerns, easy testing, and straightforward extensibility.
+
+The workflow is now fully parallelized for performance, with API calls for news summarization and technical analysis running concurrently.
+
 ## Project Structure
 
 ```
@@ -13,20 +19,32 @@ stocks-researcher/
 │       ├── agents/                      # Agent modules
 │       │   ├── __init__.py
 │       │   ├── portfolio_parser.py      # Agent 1: Portfolio parser
-│       │   ├── news_searcher.py         # Agent 2: Web search (SerpAPI)
-│       │   └── llm_analyzer.py          # Agent 3: AI analysis (Gemini)
+│       │   ├── news_searcher.py         # Agent 2: News search (SerpAPI)
+│       │   ├── llm_analyzer.py          # Agent 3: News Summarizer (Gemini)
+│       │   ├── technical_analyzer.py    # Agent 4: Technical Analysis (Gemini)
+│       │   └── portfolio_manager.py     # Agent 5: Recommendations (Gemini)
+│       │
+│       ├── data_fetcher/                # Data retrieval modules
+│       │   └── ohlcv.py                   # OHLCV data from yfinance
+│       │
+│       ├── pre_processor/               # Standalone data preparation scripts
+│       │   └── update_prices.py         # Updates prices in Google Sheet
+│       │
+│       ├── utils/                       # Shared utility functions
+│       │   ├── llm_utils.py               # Centralized Gemini API calls
+│       │   └── technical_analysis_utils.py # TA indicator calculations
 │       │
 │       └── notifications/               # Output modules
-│           ├── __init__.py
 │           └── whatsapp.py              # WhatsApp notifications (Twilio)
 │
-├── main.py                              # Entry point (CLI interface)
+├── main.py                              # Main entry point for analysis
+├── update_prices_main.py                # Standalone script for price updates
+│
+├── tests/                               # Unit and integration tests
 │
 ├── Configuration:
-│   ├── .env                             # Secrets (not in git)
-│   ├── .env.example                     # Template
-│   ├── .gitignore
-│   └── requirements.txt                 # Python dependencies
+│   ├── .env / .env.example
+│   └── requirements.txt
 │
 └── Documentation:
     ├── README.md
@@ -35,120 +53,80 @@ stocks-researcher/
 
 ## Workflow Architecture
 
+The workflow is orchestrated by `main.py`, which calls agents in a sequence. Data fetching and AI analysis tasks are parallelized for performance.
+
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                         main.py                               │
-│                     (Entry Point)                             │
-└────────────────────────┬─────────────────────────────────────┘
-                         │
-                         ▼
-┌──────────────────────────────────────────────────────────────┐
-│              stock_researcher.py                              │
-│           research_portfolio_news()                           │
-│                  (ORCHESTRATOR)                               │
-└──────┬───────────────────┬────────────────────┬──────────────┘
-       │                   │                    │
-       ▼                   ▼                    ▼
-┌─────────────┐    ┌──────────────┐    ┌─────────────────┐
-│   Agent 1   │    │   Agent 2    │    │    Agent 3      │
-│   Google    │───▶│   SerpAPI    │───▶│    Gemini AI    │
-│   Sheets    │    │  News Search │    │   Summaries     │
-└─────────────┘    └──────────────┘    └─────────────────┘
-       │                   │                    │
-       │                   │                    │
-       └───────────────────┴────────────────────┘
-                         │
-                         ▼
-              ┌──────────────────────┐
-              │  Display Results     │
-              │  Send WhatsApp       │
-              └──────────────────────┘
-```
+┌─────────────────────────┐      ┌───────────────────────────┐
+│ update_prices_main.py   │      │         main.py           │
+│ (Optional, Standalone)  │      │       (Entry Point)       │
+└────────────┬────────────┘      └────────────┬──────────────┘
+             │                                 │
+             ▼                                 ▼
+┌─────────────────────────┐      ┌───────────────────────────┐
+│     Google Sheets       │◀────▶│      Orchestrator         │
+│ (Portfolio Data Store)  │      │ (research_portfolio_news) │
+└─────────────────────────┘      └┬──────────┬──────────┬───┘
+                                  │          │          │
+ ─────────────────────────────────┼──────────┼──────────┼──────────────────────────────
+                                  │          │          │
+                                  ▼          │          │
+┌─────────────────────────────────┴────────┐ │          │
+│             Agent 1                      │ │          │
+│      (Parse Portfolio)                   │ │          │
+└──────────────────────────────────────────┘ │          │
+                                  │          │          │
+                                  ▼          │          │
+┌─────────────────────────────────┴────────┐ │          │
+│             Agent 2                      │ │          │
+│       (Search for News)                  │ │          │
+└──────────────────────────────────────────┘ │          │
+                                  │          │          │
+                 ┌────────────────┼──────────┘          │
+                 │                │                     │
+                 ▼                ▼                     ▼
+┌────────────────┴───────┐  ┌─────┴──────────────────┐ ┌─┴────────────────────┐
+│       Agent 3          │  │        Agent 4         │ │       Agent 5        │
+│ (Summarize News - AI)  │  │ (Technical Analyis - AI) │ │ (Recommendations - AI) │
+└────────────────────────┘  └────────────────────────┘ └──────────────────────┘
+                 │                │                     │
+                 └────────────────┼──────────┬──────────┘
+                                  │          │
+                                  ▼          ▼
+                          ┌────────┴────────┐┌──────────┴────────┐
+                          │ Display Results ││ Send Notifications│
+                          │   (Console)     ││    (WhatsApp)     │
+                          └─────────────────┘└───────────────────┘
 
-## Core Function: `research_portfolio_news()`
-
-The central orchestrator function that coordinates all agents:
-
-```python
-def research_portfolio_news() -> Tuple[List[str], Dict, Dict]:
-    """
-    Complete stock research workflow:
-    1. Fetch stock tickers from Google Sheets
-    2. Perform web search for news articles  
-    3. Generate AI summaries from LLM
-    
-    Returns:
-        - List of unique stock tickers
-        - Dict of news articles by ticker
-        - Dict of executive summaries by ticker
-    """
 ```
 
 ## Agent Responsibilities
 
 ### Agent 1: Portfolio Parser (`agents/portfolio_parser.py`)
-- **Input:** Google Sheets credentials, spreadsheet ID
-- **Process:** Parses full portfolio structure with positions, prices, market values
-- **Output:** Portfolio object with:
-  - Stock symbols
-  - Position sizes (number of shares)
-  - Current prices
-  - Market values
-  - Portfolio percentages
-  - Total portfolio value
+- **Process:** Connects to Google Sheets and parses the portfolio data into structured `Portfolio` and `PortfolioPosition` objects.
 
 ### Agent 2: News Searcher (`agents/news_searcher.py`)
-- **Input:** List of stock tickers, SerpAPI key
-- **Process:** Searches for latest news articles for each ticker
-- **Output:** Dict mapping tickers to news articles (title, snippet, source, link)
+- **Process:** Uses the SerpApi to search for recent news articles for each stock ticker in the portfolio.
 
-### Agent 3: AI Analyzer (`agents/llm_analyzer.py`)
-- **Input:** News articles dict, Gemini API key
-- **Process:** Generates executive summaries with sentiment analysis
-- **Output:** Dict mapping tickers to AI-generated summaries
+### Agent 3: News Summarizer (`agents/llm_analyzer.py`)
+- **Process:** For each stock, sends the news articles to the Gemini AI to generate a concise executive summary, sentiment analysis, and an actionable takeaway. Calls are made concurrently.
 
-## Adding New Agents
+### Agent 4: Technical Analyst (`agents/technical_analyzer.py`)
+- **Process:** Fetches 1 year of historical OHLCV data. It then calculates key technical indicators (SMA, RSI, MACD) and sends these indicators to the Gemini AI for a concise technical health summary. Calls are made concurrently.
 
-To add a new agent to the workflow:
+### Agent 5: Portfolio Manager (`agents/portfolio_manager.py`)
+- **Process:** This is the final reasoning engine. It takes the original portfolio structure, all the news summaries, and all the technical analyses, and sends them to the Gemini AI in a single prompt. It asks the model to provide an overall portfolio assessment and generate specific, actionable recommendations (INCREASE/DECREASE).
 
-1. **Create agent module** in `src/stock_researcher/agents/` (e.g., `price_analyzer.py`)
-2. **Add to orchestrator** in `orchestrator.py`:
-   ```python
-   # Agent 4: Price analysis
-   print(f"\n[Agent 4] Analyzing price trends...")
-   price_data = analyze_prices(stock_tickers)
-   ```
-3. **Update return tuple** if needed
-4. **Update main.py** to handle new data
+## Core Utilities
 
-## Configuration Management
+### `utils/llm_utils.py`
+- Centralizes all interactions with the Google Gemini API.
+- Handles client initialization and includes a robust `call_gemini_api` function with `tenacity` for automatic retries with exponential backoff. This makes all AI calls resilient to temporary network failures.
 
-All secrets and configuration are centralized in `config.py`:
+### `utils/technical_analysis_utils.py`
+- Contains the `calculate_technical_indicators` function.
+- Uses the `pandas-ta` library to calculate SMA, RSI, and MACD from raw OHLCV data, providing a clean dictionary of indicators for the Technical Analyst Agent.
 
-```python
-# Loads from .env file
-SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
-SERPAPI_API_KEY = os.getenv('SERPAPI_API_KEY')
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-# ... etc
-```
+## Decoupled Price Updater
 
-## Benefits of This Architecture
-
-✅ **Modular:** Each agent is independent and reusable  
-✅ **Testable:** Easy to test individual agents  
-✅ **Extensible:** Simple to add new agents  
-✅ **Maintainable:** Clear separation of concerns  
-✅ **Secure:** Secrets isolated in .env file  
-✅ **Scalable:** Can run agents in parallel if needed  
-
-## Running the Application
-
-```bash
-# Activate virtual environment
-source venv/bin/activate
-
-# Run complete workflow
-python main.py
-```
+The `update_prices_main.py` script is a standalone utility for updating the stock prices in the Google Sheet. This was intentionally decoupled from the main workflow to ensure that the core analysis can still run even if the `yfinance` API is temporarily unavailable. It uses the same robust, retry-enabled fetching logic.
 

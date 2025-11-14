@@ -6,8 +6,9 @@ Reads portfolio data from Google Sheets with position sizes and market values
 
 import gspread
 from google.oauth2.service_account import Credentials
-from typing import List, Dict
-from dataclasses import dataclass
+from typing import List, Dict, Optional
+from dataclasses import dataclass, field
+import json
 from ..config import GOOGLE_SERVICE_ACCOUNT_FILE, SPREADSHEET_ID
 
 
@@ -41,8 +42,23 @@ class Portfolio:
         return [pos.symbol for pos in self.positions]
     
     def get_top_positions(self, n: int = 5) -> List[PortfolioPosition]:
-        """Get top N positions by market value"""
-        return sorted(self.positions, key=lambda x: x.market_value, reverse=True)[:n]
+        """Returns the top n positions by market value."""
+        return sorted(self.positions, key=lambda p: p.market_value, reverse=True)[:n]
+
+    def to_json(self) -> str:
+        """Serializes the portfolio data to a JSON string for LLM prompts."""
+        portfolio_data = {
+            "total_value": f"${self.total_value:,.2f}",
+            "positions": [
+                {
+                    "ticker": pos.symbol,
+                    "market_value": f"${pos.market_value:,.2f}",
+                    "percentage_of_portfolio": f"{pos.percent_of_total:.2f}%"
+                }
+                for pos in self.positions
+            ]
+        }
+        return json.dumps(portfolio_data, indent=2)
     
     def __repr__(self):
         return f"Portfolio(positions={len(self.positions)}, total_value=${self.total_value:,.2f})"
