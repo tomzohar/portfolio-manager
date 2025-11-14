@@ -1,6 +1,6 @@
 # Stocks Researcher
 
-A Python project for stock research using Google Sheets integration.
+A Python project that automates stock research and portfolio analysis by leveraging a multi-agent system powered by Google's Gemini AI. It fetches portfolio data from Google Sheets, gathers the latest news and financial data, performs technical and fundamental analysis, and delivers actionable recommendations via WhatsApp.
 
 ## Installation
 
@@ -50,15 +50,12 @@ source venv/bin/activate
 python main.py
 ```
 
-**Note:** After activating the venv, `python` = `python3` inside the environment.
+The main script now automatically attempts to update the stock prices in your Google Sheet before running the analysis. If this update fails, it will log a warning, send a notification to your WhatsApp, and then proceed with the analysis using the last known prices, ensuring the core workflow is not blocked.
 
-### Updating Stock Prices
+### Standalone Price Updates
+The `yfinance` library used for fetching stock prices can sometimes be unreliable. If you need to manually refresh the prices in your Google Sheet without running the full analysis, you can use the standalone script.
 
-The `yfinance` library used for fetching stock prices can sometimes be unreliable. If you find that prices are not up-to-date, you can run a separate script to refresh the prices in your Google Sheet.
-
-This script is decoupled from the main workflow, so even if the price update fails, you can still run the main analysis on the last known prices.
-
-To update prices, run:
+To update prices manually, run:
 ```bash
 python update_prices_main.py
 ```
@@ -109,25 +106,25 @@ The test suite includes:
 
 ## Project Structure
 This project follows a standard Python project structure to ensure modularity and ease of maintenance.
-- **`main.py`**: The main entry point for the application.
-- **`update_prices_main.py`**: A standalone script to refresh stock prices in your Google Sheet.
+- **`main.py`**: The main entry point for the application. It handles the initial price update and triggers the research orchestrator.
+- **`update_prices_main.py`**: A standalone script to manually refresh stock prices in your Google Sheet.
 - **`src/stock_researcher/`**: Contains the core application logic.
-  - **`agents/`**: Holds the different AI "agents," each with a specific role (e.g., parsing the portfolio, analyzing news).
-  - **`data_fetcher/`**: Modules for retrieving data from external sources (e.g., news APIs, financial data).
-  - **`notifications/`**: Handles sending notifications (e.g., WhatsApp).
-  - **`pre_processor/`**: Scripts for data preparation tasks, like updating prices.
-  - **`utils/`**: Shared utility functions.
+  - **`agents/`**: Holds the different AI "agents," each with a specific role (parsing the portfolio, searching news, technical analysis, and final recommendations).
+  - **`data_fetcher/`**: Modules for retrieving data from external sources like `yfinance`.
+  - **`notifications/`**: Handles sending notifications via WhatsApp.
+  - **`pre_processor/`**: Contains the logic for the price update pre-processing step.
+  - **`utils/`**: Shared utility functions, including centralized LLM calls and technical analysis calculations.
 - **`tests/`**: Contains all the unit and integration tests for the project.
 - **`requirements.txt`**: A list of all the Python dependencies.
 
 ## Key Technologies
 - **Python 3.11+**
-- **Google Gemini**: For all LLM-powered analysis and summarization.
+- **Google Gemini**: Uses `gemini-2.5-flash` for high-throughput tasks like summarization and `gemini-2.5-pro` for the final, complex reasoning step.
 - **SerpApi**: For fetching news articles.
-- **yfinance**: For fetching historical stock data.
+- **yfinance**: For fetching historical OHLCV stock data.
 - **gspread**: For interacting with Google Sheets.
 - **Twilio**: For sending WhatsApp notifications.
 - **pandas & pandas-ta**: For data manipulation and technical analysis.
 - **tenacity**: For robust, automatic retries on API calls.
-- **pytest**: For testing.
+- **pytest**: For comprehensive testing.
 
