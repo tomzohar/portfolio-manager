@@ -1,34 +1,9 @@
-# Virtual Environment
-venv/
-env/
-ENV/
-
-# Environment Variables
 .env
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-
-# IDE
-.vscode/
+.env.example
 .idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Credentials
-*.json
-!.env.example
+.vscode/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
 
