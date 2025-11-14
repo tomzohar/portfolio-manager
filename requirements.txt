@@ -9,6 +9,6 @@ pytest-mock
 tenacity==8.2.3
 yfinance==0.2.37
 google-generativeai==0.7.2
-pandas-ta
 pandas
+pandas-ta
 
