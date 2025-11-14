@@ -65,9 +65,8 @@ class TestWhatsAppNotification:
     
     @patch('stock_researcher.notifications.whatsapp.Client')
     def test_send_stock_research_summary(self, mock_client_class):
-        """Test sending stock research summary"""
+        """Test sending a recommendations summary."""
         # Setup mocks
-        
         mock_client = Mock()
         mock_message = Mock()
         mock_message.sid = 'SM123456789'
@@ -75,53 +74,37 @@ class TestWhatsAppNotification:
         mock_client_class.return_value = mock_client
         
         # Prepare test data
-        summaries = {
-            'AAPL': """
-**Key Sentiment:** POSITIVE. Strong earnings.
-**Actionable Takeaway:** Buy on earnings beat.
-""",
-            'GOOGL': """
-**Key Sentiment:** NEGATIVE. Concerns about regulation.
-**Actionable Takeaway:** Watch regulatory developments.
-"""
+        recommendations = {
+            "portfolio_summary": "The portfolio is looking strong.",
+            "recommendations": [
+                {
+                    "ticker": "AAPL",
+                    "recommendation": "INCREASE",
+                    "reasoning": "Positive news about new products.",
+                },
+                {
+                    "ticker": "TSLA",
+                    "recommendation": "DECREASE",
+                    "reasoning": "Negative news about production delays.",
+                }
+            ]
         }
-        tickers = ['AAPL', 'GOOGL']
         
         # Send summary
-        message_sid = send_stock_research_summary(summaries, tickers)
+        message_sid = send_stock_research_summary(recommendations)
         
         # Verify
         assert message_sid == 'SM123456789'
         mock_client.messages.create.assert_called_once()
         
-        # Check message contains date and tickers
+        # Check message contains key elements
         call_args = mock_client.messages.create.call_args[1]
         message_body = call_args['body']
-        assert 'November 13, 2025' in message_body or 'Stock Research' in message_body
-        assert 'AAPL' in message_body
-        assert 'GOOGL' in message_body
-    
-    @patch('stock_researcher.notifications.whatsapp.Client')
-    def test_send_stock_research_summary_within_char_limit(self, mock_client_class):
-        """Test that summary respects 1600 character limit"""
-        # Setup mock
-        mock_client = Mock()
-        mock_message = Mock()
-        mock_message.sid = 'SM123456789'
-        mock_client.messages.create.return_value = mock_message
-        mock_client_class.return_value = mock_client
         
-        # Create summaries with long text
-        summaries = {
-            f'STOCK{i}': f"Very long summary " * 50 for i in range(10)
-        }
-        tickers = list(summaries.keys())
-        
-        # Send summary
-        send_stock_research_summary(summaries, tickers)
-        
-        # Verify message length is within limit
-        call_args = mock_client.messages.create.call_args[1]
-        message_body = call_args['body']
-        assert len(message_body) <= 1600, f"Message exceeds 1600 chars: {len(message_body)}"
+        assert "Stock Research & Recommendations" in message_body
+        assert "The portfolio is looking strong." in message_body
+        assert "AAPL: INCREASE" in message_body
+        assert "Positive news about new products." in message_body
+        assert "TSLA: DECREASE" in message_body
+        assert "Negative news about production delays." in message_body
 
