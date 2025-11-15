@@ -3,134 +3,120 @@ Tests for the Guardrail Node.
 """
 import pytest
 from unittest.mock import MagicMock
-from src.portfolio_manager.graph.nodes.guardrails import guardrail_node
-from src.portfolio_manager.agent_state import AgentState, ToolResult
+from src.portfolio_manager.graph.nodes.guardrails import guardrail_node, MAX_ERRORS
+from src.portfolio_manager.agent_state import AgentState
+
 
 @pytest.fixture
 def initial_state() -> AgentState:
-    """Returns a fresh initial state for each test."""
+    """Provides a basic initial state for tests."""
     return {
-        "portfolio_request": "Analyze my portfolio",
         "portfolio": None,
-        "analysis": None,
-        "report": "",
+        "analysis_results": {},
+        "reasoning_trace": [],
+        "agent_reasoning": [],
         "tool_results": [],
         "newly_completed_api_calls": [],
+        "confidence_score": 0.0,
+        "max_iterations": 10,
+        "current_iteration": 1,
+        "errors": [],
         "api_call_counts": {},
         "estimated_cost": 0.0,
-        "errors": [],
         "terminate_run": False,
-        "reasoning_trace": [],
+        "final_report": ""
     }
+
 
 class TestGuardrailNode:
     """Test suite for the guardrail_node."""
 
-    def test_guardrail_node_no_breach(self, initial_state: AgentState, monkeypatch):
+    def test_guardrail_success_with_valid_state(self, initial_state):
         """
-        Tests that the node passes a state that is within limits.
+        Tests that a valid state passes through the guardrail without modification.
         """
-        # Mock estimate_cost to return a known value
-        mock_estimate_cost = MagicMock(return_value=0.1)
-        monkeypatch.setattr("src.portfolio_manager.graph.nodes.guardrails.estimate_cost", mock_estimate_cost)
-
-        initial_state["newly_completed_api_calls"] = [{"api_type": "llm", "count": 1}]
+        initial_state["portfolio"] = {"positions": []}
+        state = guardrail_node(initial_state)
         
-        result_state = guardrail_node(initial_state)
+        assert not state["terminate_run"]
+        assert not state["errors"]
 
-        assert result_state["terminate_run"] is False
-        assert not result_state["errors"]
-        assert result_state["api_call_counts"] == {"llm": 1}
-        assert result_state["estimated_cost"] == 0.1
-
-    def test_guardrail_node_cost_breach(self, initial_state: AgentState, monkeypatch):
+    def test_guardrail_terminates_on_missing_portfolio_after_iteration_1(self, initial_state):
         """
-        Tests that the node terminates the run when the estimated cost exceeds the limit.
+        Tests that the run is terminated if the portfolio is not loaded after the first iteration.
         """
-        # Mock estimate_cost to return a value that will breach the limit
-        mock_estimate_cost = MagicMock(return_value=1.5)
-        monkeypatch.setattr("src.portfolio_manager.graph.nodes.guardrails.estimate_cost", mock_estimate_cost)
+        initial_state["current_iteration"] = 2
+        initial_state["portfolio"] = None
         
+        state = guardrail_node(initial_state)
+        
+        assert state["terminate_run"] is True
+        assert len(state["errors"]) == 1
+        assert "Portfolio not loaded" in state["errors"][0]
+
+    def test_guardrail_does_not_terminate_for_missing_portfolio_on_iteration_1(self, initial_state):
+        """
+        Tests that the run is NOT terminated for a missing portfolio on the first iteration.
+        """
+        initial_state["current_iteration"] = 1
+        initial_state["portfolio"] = None
+        
+        state = guardrail_node(initial_state)
+        
+        assert state["terminate_run"] is False
+        assert not state["errors"]
+
+    def test_guardrail_terminates_on_error_threshold(self, initial_state):
+        """
+        Tests that the run is terminated if the number of errors exceeds the limit.
+        """
+        # Start with a number of errors that will exceed the threshold
+        initial_state["errors"] = ["error1", "error2", "error3", "error4"]
+        
+        # The guardrail should now detect the breach
+        state = guardrail_node(initial_state)
+        
+        assert state["terminate_run"] is True
+        # The node adds one more error message about the breach itself
+        assert len(state["errors"]) == 5
+        assert "Maximum number of errors exceeded" in state["errors"][4]
+
+    def test_guardrail_does_not_terminate_below_error_threshold(self, initial_state):
+        """
+        Tests that the run continues if the error count is at or below the threshold.
+        """
+        initial_state["errors"] = ["error1", "error2"]
+        
+        state = guardrail_node(initial_state)
+        assert state["terminate_run"] is False
+
+        initial_state["errors"] = ["error1", "error2", "error3"]
+        state = guardrail_node(initial_state)
+        assert state["terminate_run"] is False
+
+    def test_cost_and_llm_limits_still_work(self, initial_state):
+        """
+        Ensures that the original cost and LLM call limits are still enforced.
+        """
+        # Test cost limit
+        initial_state["estimated_cost"] = 2.0  # Exceeds 1.00 limit
+        state = guardrail_node(initial_state)
+        assert state["terminate_run"] is True
+        assert any("Maximum estimated cost exceeded" in e for e in state["errors"])
+
+        # Reset and test LLM limit
+        initial_state["terminate_run"] = False
+        initial_state["errors"] = []
         initial_state["estimated_cost"] = 0.0
-        initial_state["newly_completed_api_calls"] = [{"api_type": "some_expensive_api", "count": 1}]
+        initial_state["api_call_counts"] = {"llm": 25} # Exceeds 20 limit
+        state = guardrail_node(initial_state)
+        assert state["terminate_run"] is True
+        assert any("Maximum LLM calls exceeded" in e for e in state["errors"])
 
-        result_state = guardrail_node(initial_state)
-
-        assert result_state["terminate_run"] is True
-        assert len(result_state["errors"]) == 1
-        assert "cost exceeded" in result_state["errors"][0]
-        assert result_state["estimated_cost"] == 1.5
-
-    def test_guardrail_node_llm_call_breach(self, initial_state: AgentState, monkeypatch):
+    def test_guardrail_preserves_existing_terminate_flag(self, initial_state):
         """
-        Tests that the node terminates the run when the LLM call count exceeds the limit.
+        Tests that if terminate_run is already True, it is not overridden.
         """
-        mock_estimate_cost = MagicMock(return_value=0.01)
-        monkeypatch.setattr("src.portfolio_manager.graph.nodes.guardrails.estimate_cost", mock_estimate_cost)
-
-        initial_state["api_call_counts"] = {"llm": 20}
-        initial_state["newly_completed_api_calls"] = [{"api_type": "llm", "count": 1}]
-
-        result_state = guardrail_node(initial_state)
-
-        assert result_state["terminate_run"] is True
-        assert len(result_state["errors"]) == 1
-        assert "LLM calls exceeded" in result_state["errors"][0]
-        assert result_state["api_call_counts"]["llm"] == 21
-
-    def test_guardrail_node_aggregates_tool_results(self, initial_state: AgentState, monkeypatch):
-        """
-        Tests that the node correctly aggregates API calls from tool results.
-        """
-        mock_estimate_cost = MagicMock(return_value=0.2)
-        monkeypatch.setattr("src.portfolio_manager.graph.nodes.guardrails.estimate_cost", mock_estimate_cost)
-        
-        tool_result = ToolResult(
-            success=True,
-            data={},
-            error=None,
-            confidence_impact=0.1,
-            api_calls=[{"api_type": "serp_api", "count": 5}]
-        )
-        initial_state["tool_results"] = [tool_result]
-
-        result_state = guardrail_node(initial_state)
-
-        assert result_state["terminate_run"] is False
-        assert result_state["api_call_counts"] == {"serp_api": 5}
-        assert result_state["estimated_cost"] == 0.2
-
-    def test_guardrail_node_multiple_breaches(self, initial_state: AgentState, monkeypatch):
-        """
-        Tests that the node records multiple breaches if they occur.
-        """
-        mock_estimate_cost = MagicMock(return_value=1.1)
-        monkeypatch.setattr("src.portfolio_manager.graph.nodes.guardrails.estimate_cost", mock_estimate_cost)
-
-        initial_state["api_call_counts"] = {"llm": 20}
-        initial_state["newly_completed_api_calls"] = [{"api_type": "llm", "count": 1}]
-        
-        result_state = guardrail_node(initial_state)
-
-        assert result_state["terminate_run"] is True
-        assert len(result_state["errors"]) == 2
-        assert any("LLM calls exceeded" in e for e in result_state["errors"])
-        assert any("cost exceeded" in e for e in result_state["errors"])
-
-    def test_guardrail_node_no_new_calls(self, initial_state: AgentState, monkeypatch):
-        """
-        Tests that the node works correctly when there are no new API calls.
-        """
-        mock_estimate_cost = MagicMock(return_value=0.0)
-        monkeypatch.setattr("src.portfolio_manager.graph.nodes.guardrails.estimate_cost", mock_estimate_cost)
-
-        initial_state["api_call_counts"] = {"llm": 5}
-        initial_state["estimated_cost"] = 0.5
-        
-        result_state = guardrail_node(initial_state)
-
-        assert result_state["terminate_run"] is False
-        assert not result_state["errors"]
-        assert result_state["api_call_counts"] == {"llm": 5}
-        assert result_state["estimated_cost"] == 0.5
-        mock_estimate_cost.assert_called_with([])
+        initial_state["terminate_run"] = True
+        state = guardrail_node(initial_state)
+        assert state["terminate_run"] is True

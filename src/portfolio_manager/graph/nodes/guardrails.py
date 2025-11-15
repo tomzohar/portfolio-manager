@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 MAX_LLM_CALLS = 20
 MAX_COST = 1.00
+MAX_ERRORS = 3
 
 def _aggregate_api_calls(state: AgentState) -> List[Dict[str, Any]]:
     """Aggregates API calls from the last tool result and the agent's direct calls."""
@@ -43,7 +44,8 @@ def _update_state_with_api_usage(state: AgentState, api_calls: List[Dict[str, An
 def _check_guardrail_limits(state: AgentState) -> AgentState:
     """Checks the state against predefined limits and updates errors and termination flags."""
     errors = state.get("errors", [])
-    terminate_run = False
+    # Do not re-assign terminate_run, as it might already be True from a previous check
+    terminate_run = state.get("terminate_run", False)
     
     # Check LLM calls
     if state.get("api_call_counts", {}).get("llm", 0) > MAX_LLM_CALLS:
@@ -57,6 +59,22 @@ def _check_guardrail_limits(state: AgentState) -> AgentState:
         error_msg = f"Guardrail breached: Maximum estimated cost exceeded (limit: ${MAX_COST:.2f})."
         logger.error(error_msg)
         errors.append(error_msg)
+        terminate_run = True
+    
+    # Check for missing portfolio after the first step
+    if state.get("current_iteration", 0) > 1 and not state.get("portfolio"):
+        error_msg = "Guardrail breached: Portfolio not loaded after initial steps."
+        logger.error(error_msg)
+        errors.append(error_msg)
+        terminate_run = True
+
+    # Check for excessive errors
+    if len(errors) > MAX_ERRORS:
+        error_msg = f"Guardrail breached: Maximum number of errors exceeded (limit: {MAX_ERRORS})."
+        logger.error(error_msg)
+        # Add the error message only if it's not the one causing the breach, to avoid duplicates
+        if error_msg not in errors:
+            errors.append(error_msg)
         terminate_run = True
 
     state["errors"] = errors

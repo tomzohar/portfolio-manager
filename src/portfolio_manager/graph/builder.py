@@ -31,7 +31,7 @@ def build_graph() -> StateGraph:
     workflow.set_entry_point("start")
     
     # Add edges
-    workflow.add_edge("start", "agent")
+    workflow.add_edge("start", "guardrail")
     
     # Conditional edge after agent decision
     workflow.add_conditional_edges(
