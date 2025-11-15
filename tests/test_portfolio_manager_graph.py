@@ -201,5 +201,66 @@ class TestGraphIntegration:
         assert graph is not None
         # Graph should be compiled and ready to invoke
 
+    @patch('src.portfolio_manager.graph.nodes.tool_execution.execute_tool')
+    @patch('src.portfolio_manager.graph.nodes.agent_decision.ChatGoogleGenerativeAI')
+    @patch('src.portfolio_manager.graph.nodes.guardrails.estimate_cost')
+    def test_graph_terminates_on_guardrail_breach(self, mock_estimate_cost, mock_llm, mock_execute_tool):
+        """
+        Integration test to ensure the graph terminates if the guardrail is breached.
+        """
+        # --- Setup ---
+        graph = build_graph()
+        
+        # 1. Initial State
+        initial_state = create_initial_state()
+
+        # 2. Mock Agent Decision to call a tool
+        mock_agent_response = MagicMock()
+        mock_agent_response.content = '{"reasoning": "Gotta check the news.", "action": "analyze_news", "arguments": {"tickers": ["TSLA"]}}'
+        mock_llm.return_value.invoke.return_value = mock_agent_response
+        
+        # 3. Mock Tool Execution to return a result that will breach the cost guardrail
+        mock_tool_result = ToolResult(
+            success=True,
+            data={"summary": "News is good."},
+            error=None,
+            confidence_impact=0.0,
+            api_calls=[{"api_type": "some_expensive_api", "count": 100}] # This will cause a high cost
+        )
+        mock_execute_tool.return_value = mock_tool_result
+        
+        # 4. Mock the cost estimator to return a high cost
+        mock_estimate_cost.return_value = 2.00 # Breaches the $1.00 limit
+
+        # --- Execute ---
+        # We need to manually step through the graph to check the path
+        
+        # Start Node
+        state_after_start = start_node(initial_state)
+        
+        # Agent Decision Node
+        state_after_agent = agent_decision_node(state_after_start)
+        
+        # Tool Execution Node
+        state_after_tool = tool_execution_node(state_after_agent)
+        
+        # --- Verify ---
+        # Now, check the routing after the tool execution, which goes to the guardrail
+        # The guardrail should update the state and the edge should terminate
+        
+        # We don't have direct access to the compiled graph's nodes for isolated testing,
+        # so we'll simulate the next step's logic
+        
+        from src.portfolio_manager.graph.nodes.guardrails import guardrail_node
+        from src.portfolio_manager.graph.edges import route_after_guardrail
+        
+        state_after_guardrail = guardrail_node(state_after_tool)
+        
+        assert state_after_guardrail['terminate_run'] is True
+        
+        final_route = route_after_guardrail(state_after_guardrail)
+        
+        assert final_route == "end"
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

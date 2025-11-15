@@ -26,3 +26,17 @@ def route_after_agent_decision(state: AgentState) -> Literal["execute_tool", "ge
         return "execute_tool"
     else:
         return "generate_report"
+
+
+def route_after_guardrail(state: AgentState) -> Literal["agent", "end"]:
+    """
+    Routes the workflow after the guardrail check.
+
+    - If the guardrail signals termination, end the run.
+    - Otherwise, continue to the agent for the next decision.
+    """
+    if state.get("terminate_run", False):
+        logger.warning("Guardrail triggered termination of the run.")
+        return "end"
+    else:
+        return "agent"

@@ -5,9 +5,10 @@ from .nodes import (
     start_node,
     agent_decision_node,
     tool_execution_node,
-    final_report_node
+    final_report_node,
+    guardrail_node
 )
-from .edges import route_after_agent_decision
+from .edges import route_after_agent_decision, route_after_guardrail
 
 
 def build_graph() -> StateGraph:
@@ -24,6 +25,7 @@ def build_graph() -> StateGraph:
     workflow.add_node("agent", agent_decision_node)
     workflow.add_node("execute_tool", tool_execution_node)
     workflow.add_node("final_report", final_report_node)
+    workflow.add_node("guardrail", guardrail_node)
     
     # Set entry point
     workflow.set_entry_point("start")
@@ -43,7 +45,17 @@ def build_graph() -> StateGraph:
     )
     
     # Edge from tool execution back to agent for the loop
-    workflow.add_edge("execute_tool", "agent")
+    workflow.add_edge("execute_tool", "guardrail")
+
+    # Conditional edge after guardrail
+    workflow.add_conditional_edges(
+        "guardrail",
+        route_after_guardrail,
+        {
+            "agent": "agent",
+            "end": END
+        }
+    )
     
     # Terminal edge
     workflow.add_edge("final_report", END)
