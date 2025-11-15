@@ -132,11 +132,19 @@ def analyze_news_tool(tickers: List[str]) -> ToolResult:
         total_articles = sum(len(articles) for articles in news_dict.values())
         confidence_impact = min(0.3, total_articles / 100)  # More articles = higher confidence, capped at 0.3
         
+        # NEW: Construct the state_patch
+        state_patch = {
+            "analysis_results": {
+                ticker: {"news": summary} for ticker, summary in summaries.items()
+            }
+        }
+        
         return ToolResult(
             success=True,
             data=summaries,
             error=None,
             confidence_impact=confidence_impact,
+            state_patch=state_patch,
         )
     
     except Exception as e:

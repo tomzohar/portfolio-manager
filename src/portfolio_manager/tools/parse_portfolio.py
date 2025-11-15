@@ -120,6 +120,7 @@ def parse_portfolio_tool() -> ToolResult:
             data=portfolio_dict,
             error=None,
             confidence_impact=0.2,  # Having portfolio data is essential
+            state_patch={"portfolio": portfolio_dict},
         )
     
     except Exception as e:

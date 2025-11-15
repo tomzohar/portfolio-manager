@@ -120,3 +120,22 @@ def format_state_for_llm(state: AgentState) -> str:
     except Exception as e:
         logger.error(f"Failed to format state for LLM: {e}", exc_info=True)
         return "Error: Could not format the current state."
+
+
+def deep_merge(source: Dict, destination: Dict) -> Dict:
+    """
+    Recursively merge two dictionaries.
+    
+    Args:
+        source: The dictionary with new data.
+        destination: The dictionary to merge into.
+        
+    Returns:
+        The merged dictionary.
+    """
+    for key, value in source.items():
+        if isinstance(value, dict) and key in destination and isinstance(destination[key], dict):
+            destination[key] = deep_merge(value, destination[key])
+        else:
+            destination[key] = value
+    return destination

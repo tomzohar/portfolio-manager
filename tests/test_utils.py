@@ -12,6 +12,7 @@ from src.portfolio_manager.utils import (
     format_analysis_summary,
     format_reasoning_trace,
     format_state_for_llm,
+    deep_merge,
 )
 
 
@@ -138,3 +139,56 @@ class TestFormattingUtils:
         formatted_state = format_state_for_llm(state)
         assert "Portfolio has not been loaded yet." in formatted_state
         assert "No analysis has been performed yet." in formatted_state
+
+
+class TestDeepMerge:
+    """Test suite for the deep_merge utility function."""
+
+    def test_deep_merge_simple(self):
+        """Should merge non-overlapping dictionaries."""
+        source = {"a": 1}
+        destination = {"b": 2}
+        result = deep_merge(source, destination)
+        assert result == {"a": 1, "b": 2}
+
+    def test_deep_merge_overwrite(self):
+        """Should overwrite existing keys in the destination."""
+        source = {"a": "new"}
+        destination = {"a": "old", "b": 2}
+        result = deep_merge(source, destination)
+        assert result == {"a": "new", "b": 2}
+
+    def test_deep_merge_nested(self):
+        """Should recursively merge nested dictionaries."""
+        source = {"a": {"b": 2}}
+        destination = {"a": {"c": 3}, "d": 4}
+        result = deep_merge(source, destination)
+        assert result == {"a": {"b": 2, "c": 3}, "d": 4}
+        
+    def test_deep_merge_complex(self):
+        """Should handle a complex merge with overwrites and additions."""
+        source = {
+            "analysis_results": {
+                "AAPL": {"news": "new news"}
+            }
+        }
+        destination = {
+            "portfolio": {"total_value": 100},
+            "analysis_results": {
+                "AAPL": {"technicals": "old technicals"},
+                "MSFT": {"news": "msft news"}
+            }
+        }
+        result = deep_merge(source, destination)
+        
+        expected = {
+            "portfolio": {"total_value": 100},
+            "analysis_results": {
+                "AAPL": {
+                    "technicals": "old technicals",
+                    "news": "new news"
+                },
+                "MSFT": {"news": "msft news"}
+            }
+        }
+        assert result == expected

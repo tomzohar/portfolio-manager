@@ -84,6 +84,7 @@ class ToolResult:
     data: Optional[Any]
     error: Optional[str]
     confidence_impact: float  # How much this result affects overall confidence (-1.0 to +1.0)
+    state_patch: Optional[Dict[str, Any]] = None  # NEW: A dictionary to be merged into the agent state
 
 
 def create_initial_state(max_iterations: int = 10) -> AgentState:

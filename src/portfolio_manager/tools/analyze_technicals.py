@@ -133,11 +133,19 @@ def analyze_technicals_tool(tickers: List[str]) -> ToolResult:
         
         logger.info(f"Technical analysis completed for {len(technical_summaries)} tickers")
         
+        # NEW: Construct the state_patch
+        state_patch = {
+            "analysis_results": {
+                ticker: {"technicals": summary} for ticker, summary in technical_summaries.items()
+            }
+        }
+        
         return ToolResult(
             success=True,
             data=technical_summaries,
             error=None,
             confidence_impact=0.2,  # Technical indicators add solid confidence
+            state_patch=state_patch,
         )
     
     except Exception as e:
