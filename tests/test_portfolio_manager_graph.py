@@ -85,6 +85,12 @@ class TestGraphNodes:
         # Verify
         assert updated_state["next_tool_call"]["tool"] == "parse_portfolio"
         assert "Need to parse portfolio" in updated_state["agent_reasoning"][0]["reasoning"]
+        
+        # Verify API call reporting from the node itself
+        assert "newly_completed_api_calls" in updated_state
+        assert len(updated_state["newly_completed_api_calls"]) == 1
+        assert updated_state["newly_completed_api_calls"][0]["api_type"] == "llm_gemini_2_5_pro"
+        
         mock_llm.return_value.invoke.assert_called_once()
     
     @patch('src.portfolio_manager.graph.nodes.agent_decision.ChatGoogleGenerativeAI')

@@ -30,6 +30,19 @@ class TestAgentState:
         assert result.data == {"key": "value"}
         assert result.error is None
         assert result.confidence_impact == 0.1
+        assert result.api_calls == []
+
+    def test_tool_result_with_api_calls(self):
+        """Test ToolResult with API call tracking."""
+        api_calls = [{"api_type": "llm", "count": 1}]
+        result = ToolResult(
+            success=True,
+            data={},
+            error=None,
+            confidence_impact=0.1,
+            api_calls=api_calls
+        )
+        assert result.api_calls == api_calls
 
     def test_tool_result_creation_failure(self):
         """Test failure creation of a ToolResult."""
@@ -43,6 +56,7 @@ class TestAgentState:
         assert result.data is None
         assert result.error == "Something went wrong"
         assert result.confidence_impact == -0.05
+        assert result.api_calls == []
 
     def test_create_initial_state_defaults(self):
         """Test create_initial_state with default values."""
@@ -63,6 +77,7 @@ class TestAgentState:
         assert state["completed_at"] is None
         assert state["api_call_counts"] == {}
         assert state["estimated_cost"] == 0.0
+        assert state["newly_completed_api_calls"] == []
 
     def test_create_initial_state_with_max_iterations(self):
         """Test create_initial_state with a custom max_iterations value."""

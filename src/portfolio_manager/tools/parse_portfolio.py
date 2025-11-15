@@ -121,6 +121,7 @@ def parse_portfolio_tool() -> ToolResult:
             error=None,
             confidence_impact=0.2,  # Having portfolio data is essential
             state_patch={"portfolio": portfolio_dict},
+            api_calls=[],  # No external API calls with cost
         )
     
     except Exception as e:

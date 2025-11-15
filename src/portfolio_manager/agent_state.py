@@ -7,7 +7,7 @@ source of truth for the entire workflow.
 """
 
 from typing import TypedDict, List, Dict, Optional, Any
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 class ToolCall(TypedDict):
@@ -62,6 +62,7 @@ class AgentState(TypedDict):
     # Cost Control Guardrails
     api_call_counts: Dict[str, int]
     estimated_cost: float
+    newly_completed_api_calls: List[Dict[str, Any]] # Staging area for calls from the last step
     
     # Loop control
     max_iterations: int
@@ -89,6 +90,7 @@ class ToolResult:
     error: Optional[str]
     confidence_impact: float  # How much this result affects overall confidence (-1.0 to +1.0)
     state_patch: Optional[Dict[str, Any]] = None  # NEW: A dictionary to be merged into the agent state
+    api_calls: List[Dict[str, Any]] = field(default_factory=list)
 
 
 def create_initial_state(max_iterations: int = 10) -> AgentState:
@@ -119,5 +121,6 @@ def create_initial_state(max_iterations: int = 10) -> AgentState:
         completed_at=None,
         api_call_counts={},
         estimated_cost=0.0,
+        newly_completed_api_calls=[],
     )
 

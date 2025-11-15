@@ -13,6 +13,9 @@ from src.portfolio_manager.utils import (
     format_reasoning_trace,
     format_state_for_llm,
     deep_merge,
+    estimate_cost,
+    API_COSTS,
+    ApiType,
 )
 
 
@@ -192,3 +195,45 @@ class TestDeepMerge:
             }
         }
         assert result == expected
+
+
+class TestCostEstimation:
+    """Test suite for the estimate_cost utility function."""
+
+    def test_estimate_cost_empty_list(self):
+        """Should return 0.0 for an empty list of calls."""
+        assert estimate_cost([]) == 0.0
+
+    def test_estimate_cost_single_call(self):
+        """Should correctly calculate the cost of a single API call."""
+        api_calls = [{"api_type": ApiType.SERP_API.value, "count": 10}]
+        expected_cost = API_COSTS[ApiType.SERP_API] * 10
+        assert estimate_cost(api_calls) == pytest.approx(expected_cost)
+
+    def test_estimate_cost_multiple_calls(self):
+        """Should correctly sum the costs of multiple different API calls."""
+        api_calls = [
+            {"api_type": ApiType.LLM_GEMINI_2_5_FLASH.value, "count": 10000},
+            {"api_type": ApiType.POLYGON_API.value, "count": 5},
+        ]
+        expected_cost = (API_COSTS[ApiType.LLM_GEMINI_2_5_FLASH] * 10000) + (API_COSTS[ApiType.POLYGON_API] * 5)
+        assert estimate_cost(api_calls) == pytest.approx(expected_cost)
+
+    def test_estimate_cost_unknown_api_type(self):
+        """Should ignore unknown API types and not raise an error."""
+        api_calls = [{"api_type": "unknown_api", "count": 100}]
+        assert estimate_cost(api_calls) == 0.0
+
+    def test_estimate_cost_mixed_known_and_unknown(self):
+        """Should calculate cost for known APIs while ignoring unknown ones."""
+        api_calls = [
+            {"api_type": ApiType.SERP_API.value, "count": 3},
+            {"api_type": "unknown_api", "count": 10},
+        ]
+        expected_cost = API_COSTS[ApiType.SERP_API] * 3
+        assert estimate_cost(api_calls) == pytest.approx(expected_cost)
+
+    def test_estimate_cost_call_with_no_count(self):
+        """Should treat a call with a missing 'count' key as a count of 0."""
+        api_calls = [{"api_type": ApiType.POLYGON_API.value}]
+        assert estimate_cost(api_calls) == 0.0

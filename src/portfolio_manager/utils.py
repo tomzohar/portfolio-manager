@@ -10,6 +10,7 @@ without exceeding token limits.
 
 from typing import Dict, List, Any
 import logging
+from enum import Enum
 
 from .agent_state import AgentState
 
@@ -139,3 +140,52 @@ def deep_merge(source: Dict, destination: Dict) -> Dict:
         else:
             destination[key] = value
     return destination
+
+
+# --- Cost Estimation ---
+
+class ApiType(str, Enum):
+    """Enum for API types to ensure consistency."""
+    LLM_GEMINI_2_5_FLASH = "llm_gemini_2_5_flash"
+    LLM_GEMINI_2_5_PRO = "llm_gemini_2_5_pro"
+    SERP_API = "serp_api"
+    POLYGON_API = "polygon_api"
+
+
+API_COSTS = {
+    ApiType.LLM_GEMINI_2_5_FLASH: 0.001 / 1000,
+    ApiType.LLM_GEMINI_2_5_PRO: 0.01 / 1000,
+    ApiType.SERP_API: 0.001,
+    ApiType.POLYGON_API: 0.002,
+}
+
+
+def estimate_cost(api_calls: List[Dict[str, Any]]) -> float:
+    """
+    Estimate the cost of a list of API calls.
+
+    Args:
+        api_calls: A list of dictionaries, where each dictionary represents an API call
+                   and contains 'api_type' and 'count' keys.
+
+    Returns:
+        The total estimated cost in USD.
+    """
+    total_cost = 0.0
+    if not api_calls:
+        return total_cost
+
+    for call in api_calls:
+        api_type_str = call.get("api_type")
+        count = call.get("count", 0)
+        
+        try:
+            api_type = ApiType(api_type_str)
+            if api_type in API_COSTS:
+                total_cost += API_COSTS[api_type] * count
+            else:
+                logger.warning(f"Unknown API type for cost estimation: {api_type}")
+        except ValueError:
+            logger.warning(f"Invalid API type string for cost estimation: {api_type_str}")
+
+    return total_cost

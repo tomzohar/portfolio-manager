@@ -4,7 +4,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from src.portfolio_manager.agent_state import AgentState
 from src.portfolio_manager.tools import generate_tools_prompt
 from src.portfolio_manager.prompts import get_system_prompt
-from src.portfolio_manager.utils import format_state_for_llm, format_reasoning_trace
+from src.portfolio_manager.utils import format_state_for_llm, format_reasoning_trace, ApiType
 from src.portfolio_manager.parsers import parse_agent_decision
 
 logger = logging.getLogger(__name__)
@@ -57,6 +57,11 @@ Based on this information, what should be your next single action?
         
         response = llm.invoke(messages)
         
+        # Report the LLM call for cost tracking
+        state['newly_completed_api_calls'] = [
+            {"api_type": ApiType.LLM_GEMINI_2_5_PRO.value, "count": 1}
+        ]
+        
         # 5. Parse the LLM's decision
         decision = parse_agent_decision(response.content)
         
@@ -86,5 +91,6 @@ Based on this information, what should be your next single action?
         state["errors"].append(f"Agent decision error: {str(e)}")
         state["next_tool_call"] = None  # Stop the workflow on a critical error
         state["reasoning_trace"].append(f"Iteration {iteration}: Agent decision failed critically. Stopping.")
+        state['newly_completed_api_calls'] = [] # Ensure it's cleared on error
     
     return state

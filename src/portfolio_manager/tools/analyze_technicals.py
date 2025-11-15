@@ -17,6 +17,7 @@ import logging
 from stock_researcher.agents.technical_analyzer import analyze_stock_technicals
 from ..agent_state import ToolResult
 from ..tool_registry import tool
+from ..utils import ApiType
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +134,12 @@ def analyze_technicals_tool(tickers: List[str]) -> ToolResult:
         
         logger.info(f"Technical analysis completed for {len(technical_summaries)} tickers")
         
+        # Report API calls for cost tracking
+        api_calls = [
+            {"api_type": ApiType.POLYGON_API.value, "count": 1},
+            {"api_type": ApiType.LLM_GEMINI_2_5_FLASH.value, "count": len(technical_summaries)},
+        ]
+        
         # NEW: Construct the state_patch
         state_patch = {
             "analysis_results": {
@@ -146,6 +153,7 @@ def analyze_technicals_tool(tickers: List[str]) -> ToolResult:
             error=None,
             confidence_impact=0.2,  # Technical indicators add solid confidence
             state_patch=state_patch,
+            api_calls=api_calls,
         )
     
     except Exception as e:

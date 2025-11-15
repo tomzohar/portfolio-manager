@@ -58,6 +58,9 @@ class TestParsePortfolioTool:
         assert pos["unrealized_gain_loss"] == 0.0
         assert pos["unrealized_gain_loss_pct"] == 0.0
         
+        # Verify no API calls
+        assert result.api_calls == []
+        
         mock_parse.assert_called_once()
     
     @patch('src.portfolio_manager.tools.parse_portfolio.parse_portfolio_legacy')

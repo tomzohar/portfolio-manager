@@ -10,6 +10,7 @@ from unittest.mock import Mock, patch
 
 from src.portfolio_manager.tools.analyze_technicals import analyze_technicals_tool
 from src.portfolio_manager.agent_state import ToolResult
+from src.portfolio_manager.utils import ApiType
 
 
 class TestAnalyzeTechnicalsTool:
@@ -34,6 +35,11 @@ class TestAnalyzeTechnicalsTool:
         assert "AAPL" in result.data
         assert "RSI" in result.data["AAPL"]
         
+        # Verify API call reporting
+        assert len(result.api_calls) == 2
+        assert any(call["api_type"] == ApiType.POLYGON_API.value and call["count"] == 1 for call in result.api_calls)
+        assert any(call["api_type"] == ApiType.LLM_GEMINI_2_5_FLASH.value and call["count"] == 1 for call in result.api_calls)
+
         mock_analyze.assert_called_once_with(["AAPL"])
     
     @patch('src.portfolio_manager.tools.analyze_technicals.analyze_stock_technicals')

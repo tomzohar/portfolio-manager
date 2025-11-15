@@ -10,6 +10,7 @@ from unittest.mock import Mock, patch
 
 from src.portfolio_manager.tools.analyze_news import analyze_news_tool
 from src.portfolio_manager.agent_state import ToolResult
+from src.portfolio_manager.utils import ApiType
 
 
 class TestAnalyzeNewsTool:

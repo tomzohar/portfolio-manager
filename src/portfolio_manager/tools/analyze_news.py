@@ -20,6 +20,7 @@ from stock_researcher.agents.llm_analyzer import generate_executive_summaries
 from stock_researcher.config import SERPAPI_API_KEY
 from ..agent_state import ToolResult
 from ..tool_registry import tool
+from ..utils import ApiType
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +133,12 @@ def analyze_news_tool(tickers: List[str]) -> ToolResult:
         total_articles = sum(len(articles) for articles in news_dict.values())
         confidence_impact = min(0.3, total_articles / 100)  # More articles = higher confidence, capped at 0.3
         
+        # Report API calls for cost tracking
+        api_calls = [
+            {"api_type": ApiType.SERP_API.value, "count": len(tickers)},
+            {"api_type": ApiType.LLM_GEMINI_2_5_FLASH.value, "count": len(summaries)},
+        ]
+        
         # NEW: Construct the state_patch
         state_patch = {
             "analysis_results": {
@@ -145,6 +152,7 @@ def analyze_news_tool(tickers: List[str]) -> ToolResult:
             error=None,
             confidence_impact=confidence_impact,
             state_patch=state_patch,
+            api_calls=api_calls,
         )
     
     except Exception as e:
