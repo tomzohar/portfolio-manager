@@ -13,15 +13,40 @@ Usage:
 import logging
 import sys
 from dotenv import load_dotenv
+import os
+from logging.handlers import RotatingFileHandler
+from rich.logging import RichHandler
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-    ]
-)
+def setup_logging():
+    """Set up logging with RichHandler and file output."""
+    log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
+    
+    # Create logs directory if it doesn't exist
+    if not os.path.exists("logs"):
+        os.makedirs("logs")
+
+    # RichHandler for beautiful console output
+    rich_handler = RichHandler(
+        rich_tracebacks=True, 
+        tracebacks_show_locals=True
+    )
+
+    # File handler for persistent logs
+    file_handler = RotatingFileHandler(
+        "logs/portfolio_manager.log", 
+        maxBytes=1024 * 1024 * 5,  # 5 MB
+        backupCount=2
+    )
+    
+    logging.basicConfig(
+        level=log_level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            rich_handler,
+            file_handler
+        ]
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +56,7 @@ def main():
     
     # Load environment variables
     load_dotenv()
+    setup_logging()
     
     logger.info("=" * 70)
     logger.info("AUTONOMOUS PORTFOLIO MANAGER")

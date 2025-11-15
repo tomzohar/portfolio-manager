@@ -117,6 +117,10 @@ This project follows a standard Python project structure to ensure modularity an
 - **`tests/`**: Contains all the unit and integration tests for the project.
 - **`requirements.txt`**: A list of all the Python dependencies.
 
+## Safety & Guardrails
+
+The new Autonomous Portfolio Manager operates with a robust set of safety mechanisms to ensure cost control, data privacy, and operational stability. For a detailed overview of these protections, please see the [Guardrails Documentation](./GUARDRAILS.md).
+
 ## Key Technologies
 - **Python 3.11+**
 - **Google Gemini**: Uses `gemini-2.5-flash` for high-throughput tasks like summarization and `gemini-2.5-pro` for the final, complex reasoning step.
