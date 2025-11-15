@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from inspect import signature, Parameter
 import logging
 
-from .agent_state import ToolResult
+from .agent_state import ToolResult, AgentState
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,7 @@ class ToolMetadata:
     function: Callable
     parameters: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     examples: List[str] = field(default_factory=list)
+    state_aware: bool = False
     
     def get_prompt_description(self) -> str:
         """
@@ -81,12 +82,20 @@ class ToolRegistry:
     def __init__(self):
         self._tools: Dict[str, ToolMetadata] = {}
     
+    def register_tool(self, metadata: ToolMetadata):
+        """Registers a tool using a ToolMetadata object."""
+        if metadata.name in self._tools:
+            logger.warning(f"Tool '{metadata.name}' is being re-registered (overwriting previous)")
+        self._tools[metadata.name] = metadata
+        logger.debug(f"Registered tool: {metadata.name}")
+
     def register(
         self,
         name: str,
         description: str,
         parameters: Optional[Dict[str, Dict[str, Any]]] = None,
         examples: Optional[List[str]] = None,
+        state_aware: bool = False,
     ) -> Callable:
         """
         Decorator for registering a tool.
@@ -96,30 +105,15 @@ class ToolRegistry:
             description: Human-readable description of what the tool does
             parameters: Dict describing each parameter (type, description, required)
             examples: List of example invocations
+            state_aware: If True, the state will be passed to the tool
         
         Returns:
             Decorator function
-        
-        Example:
-            @registry.register(
-                name="analyze_news",
-                description="Fetches and summarizes news for specific tickers",
-                parameters={
-                    "tickers": {
-                        "type": "List[str]",
-                        "description": "List of stock ticker symbols",
-                        "required": True
-                    }
-                },
-                examples=['{"tool": "analyze_news", "args": {"tickers": ["AAPL", "MSFT"]}}']
-            )
-            def analyze_news_tool(tickers: List[str]) -> ToolResult:
-                ...
         """
         def decorator(func: Callable) -> Callable:
             # Extract parameter info from function signature if not provided
             if parameters is None:
-                extracted_params = self._extract_parameters(func)
+                extracted_params = self._extract_parameters(func, state_aware)
             else:
                 extracted_params = parameters
             
@@ -130,19 +124,16 @@ class ToolRegistry:
                 function=func,
                 parameters=extracted_params,
                 examples=examples or [],
+                state_aware=state_aware
             )
             
-            if name in self._tools:
-                logger.warning(f"Tool '{name}' is being re-registered (overwriting previous)")
-            
-            self._tools[name] = metadata
-            logger.debug(f"Registered tool: {name}")
+            self.register_tool(metadata)
             
             return func
         
         return decorator
     
-    def _extract_parameters(self, func: Callable) -> Dict[str, Dict[str, Any]]:
+    def _extract_parameters(self, func: Callable, state_aware: bool) -> Dict[str, Dict[str, Any]]:
         """
         Extract parameter information from function signature using type hints.
         """
@@ -150,7 +141,11 @@ class ToolRegistry:
         sig = signature(func)
         type_hints = get_type_hints(func)
         
-        for param_name, param in sig.parameters.items():
+        for i, (param_name, param) in enumerate(sig.parameters.items()):
+            # Skip the first argument if the tool is state-aware
+            if state_aware and i == 0:
+                continue
+
             param_type = type_hints.get(param_name, Any)
             param_info = {
                 "type": str(param_type).replace("typing.", ""),
@@ -178,7 +173,7 @@ class ToolRegistry:
         """Get all tool metadata"""
         return self._tools.copy()
     
-    def execute_tool(self, name: str, **kwargs) -> ToolResult:
+    def execute_tool(self, name: str, state: Optional[AgentState] = None, **kwargs) -> ToolResult:
         """
         Execute a tool by name with given arguments.
         
@@ -202,8 +197,14 @@ class ToolRegistry:
         
         try:
             logger.info(f"Executing tool: {name} with args: {kwargs}")
-            result = metadata.function(**kwargs)
-            return result
+            
+            # If the tool is state-aware, pass the state as the first argument
+            if metadata.state_aware:
+                if state is None:
+                    raise ValueError(f"Tool '{name}' is state-aware but no state was provided.")
+                return metadata.function(state, **kwargs)
+            else:
+                return metadata.function(**kwargs)
         except TypeError as e:
             logger.error(f"Tool {name} called with invalid arguments: {e}")
             return ToolResult(
@@ -270,6 +271,7 @@ def tool(
     description: str,
     parameters: Optional[Dict[str, Dict[str, Any]]] = None,
     examples: Optional[List[str]] = None,
+    state_aware: bool = False
 ) -> Callable:
     """
     Convenience decorator using the global registry.
@@ -283,7 +285,13 @@ def tool(
         def my_tool(param1: str) -> ToolResult:
             ...
     """
-    return _global_registry.register(name, description, parameters, examples)
+    return _global_registry.register(
+        name=name,
+        description=description,
+        parameters=parameters,
+        examples=examples,
+        state_aware=state_aware
+    )
 
 
 def get_registry() -> ToolRegistry:
@@ -291,9 +299,9 @@ def get_registry() -> ToolRegistry:
     return _global_registry
 
 
-def execute_tool(name: str, **kwargs) -> ToolResult:
+def execute_tool(name: str, state: Optional[AgentState] = None, **kwargs) -> ToolResult:
     """Execute a tool from the global registry"""
-    return _global_registry.execute_tool(name, **kwargs)
+    return _global_registry.execute_tool(name, state=state, **kwargs)
 
 
 def list_tools() -> List[str]:

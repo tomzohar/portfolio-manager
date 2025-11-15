@@ -66,6 +66,7 @@ def main():
         # Import here to ensure env vars are loaded first
         from src.portfolio_manager.graph import run_autonomous_analysis
         from stock_researcher.notifications.whatsapp import send_whatsapp_message
+        from stock_researcher.config import TWILIO_WHATSAPP_TO
         
         # Run the autonomous analysis
         final_state = run_autonomous_analysis(max_iterations=10)
@@ -81,15 +82,35 @@ def main():
                 analyzed = len(final_state["analysis_results"])
                 total = len(final_state["portfolio"]["positions"]) if final_state["portfolio"] else 0
                 
+                # Extract recommendations from the report text
+                report_lines = final_state["final_report"].split('\n')
+                recommendations_section = []
+                in_recommendations = False
+                for line in report_lines:
+                    if "RECOMMENDATIONS:" in line:
+                        in_recommendations = True
+                        continue
+                    if in_recommendations and "Data Coverage:" in line:
+                        break
+                    if in_recommendations and line.strip():
+                        recommendations_section.append(line)
+                
+                recommendations_text = "\n".join(recommendations_section).strip()
+
                 whatsapp_message = (
-                    f"📊 Autonomous Portfolio Analysis Complete\n\n"
-                    f"Confidence: {confidence:.0%}\n"
-                    f"Coverage: {analyzed}/{total} positions\n"
-                    f"Iterations: {final_state['current_iteration']}\n\n"
-                    f"Check console for full report with reasoning trace."
+                    f"📊 *Portfolio Analysis*\n\n"
+                    f"*Confidence:* {confidence:.0%}\n\n"
+                    f"{recommendations_text}"
                 )
                 
-                send_whatsapp_message(whatsapp_message)
+                # Truncate if over 1600 characters
+                if len(whatsapp_message) > 1600:
+                    whatsapp_message = whatsapp_message[:1590] + "...\n(truncated)"
+
+                send_whatsapp_message(
+                    message_body=whatsapp_message, 
+                    to_number=TWILIO_WHATSAPP_TO
+                )
                 logger.info("✓ WhatsApp notification sent")
                 
             except Exception as whatsapp_error:
@@ -118,10 +139,12 @@ def main():
         # Attempt to send error notification
         try:
             from stock_researcher.notifications.whatsapp import send_whatsapp_message
+            from stock_researcher.config import TWILIO_WHATSAPP_TO
             send_whatsapp_message(
                 f"❌ Portfolio Analysis Failed\n\n"
                 f"Error: {str(e)}\n\n"
-                f"Check logs for details."
+                f"Check logs for details.",
+                to_number=TWILIO_WHATSAPP_TO
             )
         except:
             pass

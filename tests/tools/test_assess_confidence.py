@@ -9,7 +9,7 @@ import pytest
 from unittest.mock import patch
 
 from src.portfolio_manager.tools.assess_confidence import assess_confidence_tool
-from src.portfolio_manager.agent_state import ToolResult
+from src.portfolio_manager.agent_state import ToolResult, AgentState, create_initial_state
 
 
 class TestAssessConfidenceTool:
@@ -17,16 +17,18 @@ class TestAssessConfidenceTool:
     
     def test_assess_confidence_no_portfolio(self):
         """Test confidence assessment with no portfolio data"""
-        result = assess_confidence_tool(
-            portfolio=None,
-            analysis_results={}
-        )
+        state = create_initial_state()
+        state["portfolio"] = None
+        state["analysis_results"] = {}
+        
+        result = assess_confidence_tool(state)
         
         # Verify
         assert isinstance(result, ToolResult)
         assert result.success is True
         assert result.error is None
         assert result.confidence_impact == 0.0
+        assert result.state_patch == {"confidence_score": 0.0}
         
         assessment = result.data
         assert assessment["confidence"] == 0.0
@@ -39,40 +41,38 @@ class TestAssessConfidenceTool:
     
     def test_assess_confidence_empty_portfolio(self):
         """Test confidence assessment with empty portfolio (no positions)"""
-        portfolio = {
+        state = create_initial_state()
+        state["portfolio"] = {
             "total_value": 0.0,
             "positions": []
         }
+        state["analysis_results"] = {}
         
-        result = assess_confidence_tool(
-            portfolio=portfolio,
-            analysis_results={}
-        )
+        result = assess_confidence_tool(state)
         
         # Verify
         assert result.success is True
         assessment = result.data
         assert assessment["confidence"] == 0.0  # 0 / 0 = 0
         assert assessment["total_positions"] == 0
+        assert result.state_patch == {"confidence_score": 0.0}
     
     def test_assess_confidence_full_coverage_news_only(self):
         """Test confidence with 100% coverage but only news data"""
-        portfolio = {
+        state = create_initial_state()
+        state["portfolio"] = {
             "total_value": 100000.0,
             "positions": [
                 {"ticker": "AAPL"},
                 {"ticker": "MSFT"},
             ]
         }
-        analysis_results = {
+        state["analysis_results"] = {
             "AAPL": {"news": "News summary"},
             "MSFT": {"news": "News summary"},
         }
         
-        result = assess_confidence_tool(
-            portfolio=portfolio,
-            analysis_results=analysis_results
-        )
+        result = assess_confidence_tool(state)
         
         # Verify calculation: coverage * 0.5 + 0.25 (news) = 1.0 * 0.5 + 0.25 = 0.75
         assert result.success is True
@@ -84,25 +84,24 @@ class TestAssessConfidenceTool:
         assert assessment["has_news"] is True
         assert assessment["has_technicals"] is False
         assert "Ready for final analysis" in assessment["recommendation"]
+        assert result.state_patch == {"confidence_score": 0.75}
     
     def test_assess_confidence_full_coverage_both_types(self):
         """Test confidence with 100% coverage and both news + technicals"""
-        portfolio = {
+        state = create_initial_state()
+        state["portfolio"] = {
             "total_value": 100000.0,
             "positions": [
                 {"ticker": "AAPL"},
                 {"ticker": "MSFT"},
             ]
         }
-        analysis_results = {
+        state["analysis_results"] = {
             "AAPL": {"news": "News", "technicals": "Technicals"},
             "MSFT": {"news": "News", "technicals": "Technicals"},
         }
         
-        result = assess_confidence_tool(
-            portfolio=portfolio,
-            analysis_results=analysis_results
-        )
+        result = assess_confidence_tool(state)
         
         # Verify calculation: 1.0 * 0.5 + 0.25 + 0.25 = 1.0 (capped)
         assert result.success is True
@@ -110,10 +109,12 @@ class TestAssessConfidenceTool:
         assert assessment["confidence"] == 1.0
         assert assessment["has_news"] is True
         assert assessment["has_technicals"] is True
+        assert result.state_patch == {"confidence_score": 1.0}
     
     def test_assess_confidence_partial_coverage(self):
         """Test confidence with partial coverage"""
-        portfolio = {
+        state = create_initial_state()
+        state["portfolio"] = {
             "total_value": 100000.0,
             "positions": [
                 {"ticker": "AAPL"},
@@ -122,16 +123,13 @@ class TestAssessConfidenceTool:
                 {"ticker": "AMZN"},
             ]
         }
-        analysis_results = {
+        state["analysis_results"] = {
             "AAPL": {"news": "News"},
             "MSFT": {"news": "News"},
             # GOOGL and AMZN not analyzed
         }
         
-        result = assess_confidence_tool(
-            portfolio=portfolio,
-            analysis_results=analysis_results
-        )
+        result = assess_confidence_tool(state)
         
         # Verify calculation: 2/4 * 0.5 + 0.25 = 0.5 * 0.5 + 0.25 = 0.5
         assert result.success is True
@@ -141,22 +139,21 @@ class TestAssessConfidenceTool:
         assert assessment["analyzed_tickers"] == 2
         assert assessment["total_positions"] == 4
         assert "insufficient information" in assessment["recommendation"].lower()
+        assert result.state_patch == {"confidence_score": 0.5}
     
     def test_assess_confidence_low_coverage(self):
         """Test low confidence recommendation (<0.60)"""
-        portfolio = {
+        state = create_initial_state()
+        state["portfolio"] = {
             "total_value": 100000.0,
             "positions": [{"ticker": f"TICK{i}"} for i in range(10)]
         }
-        analysis_results = {
+        state["analysis_results"] = {
             "TICK0": {"news": "News"},
             # Only 1 out of 10 analyzed
         }
         
-        result = assess_confidence_tool(
-            portfolio=portfolio,
-            analysis_results=analysis_results
-        )
+        result = assess_confidence_tool(state)
         
         # Verify low confidence
         assert result.success is True
@@ -166,30 +163,24 @@ class TestAssessConfidenceTool:
     
     def test_assess_confidence_medium_coverage(self):
         """Test medium confidence recommendation (0.60-0.74)"""
-        portfolio = {
+        state = create_initial_state()
+        state["portfolio"] = {
             "total_value": 100000.0,
             "positions": [{"ticker": f"TICK{i}"} for i in range(4)]
         }
-        analysis_results = {
+        state["analysis_results"] = {
             "TICK0": {"news": "News"},
             "TICK1": {"news": "News"},
             # 2 out of 4 = 50% coverage, 0.5 * 0.5 + 0.25 = 0.5
-            # But we need to be in 0.60-0.74 range
         }
         
-        result = assess_confidence_tool(
-            portfolio=portfolio,
-            analysis_results=analysis_results
-        )
+        result = assess_confidence_tool(state)
         
         # This actually gives us 0.5, need more for medium range
         # Let's test with 3 out of 4
-        analysis_results["TICK2"] = {"news": "News"}
+        state["analysis_results"]["TICK2"] = {"news": "News"}
         
-        result = assess_confidence_tool(
-            portfolio=portfolio,
-            analysis_results=analysis_results
-        )
+        result = assess_confidence_tool(state)
         
         # 3/4 * 0.5 + 0.25 = 0.625 (in medium range)
         assert result.success is True
@@ -199,22 +190,20 @@ class TestAssessConfidenceTool:
     
     def test_assess_confidence_technicals_only(self):
         """Test confidence with only technical analysis (no news)"""
-        portfolio = {
+        state = create_initial_state()
+        state["portfolio"] = {
             "total_value": 100000.0,
             "positions": [
                 {"ticker": "AAPL"},
                 {"ticker": "MSFT"},
             ]
         }
-        analysis_results = {
+        state["analysis_results"] = {
             "AAPL": {"technicals": "Technicals"},
             "MSFT": {"technicals": "Technicals"},
         }
         
-        result = assess_confidence_tool(
-            portfolio=portfolio,
-            analysis_results=analysis_results
-        )
+        result = assess_confidence_tool(state)
         
         # Verify: 1.0 * 0.5 + 0.25 (technicals) = 0.75
         assert result.success is True
@@ -225,7 +214,8 @@ class TestAssessConfidenceTool:
     
     def test_assess_confidence_mixed_analysis(self):
         """Test with some tickers having news, others having technicals"""
-        portfolio = {
+        state = create_initial_state()
+        state["portfolio"] = {
             "total_value": 100000.0,
             "positions": [
                 {"ticker": "AAPL"},
@@ -233,16 +223,13 @@ class TestAssessConfidenceTool:
                 {"ticker": "GOOGL"},
             ]
         }
-        analysis_results = {
+        state["analysis_results"] = {
             "AAPL": {"news": "News", "technicals": "Technicals"},
             "MSFT": {"news": "News"},
             "GOOGL": {"technicals": "Technicals"},
         }
         
-        result = assess_confidence_tool(
-            portfolio=portfolio,
-            analysis_results=analysis_results
-        )
+        result = assess_confidence_tool(state)
         
         # Verify both flags are True since at least one has each
         assert result.success is True
@@ -254,10 +241,11 @@ class TestAssessConfidenceTool:
     def test_assess_confidence_error_handling(self):
         """Test error handling in confidence assessment"""
         # Passing invalid data structure
-        result = assess_confidence_tool(
-            portfolio={"invalid": "structure"},
-            analysis_results={}
-        )
+        state = create_initial_state()
+        state["portfolio"] = {"invalid": "structure"}
+        state["analysis_results"] = {}
+        
+        result = assess_confidence_tool(state)
         
         # Should handle gracefully - no positions, so confidence is 0
         assert result.success is True
@@ -269,19 +257,17 @@ class TestAssessConfidenceTool:
         """Test that appropriate log messages are generated"""
         import logging
         
-        portfolio = {
+        state = create_initial_state()
+        state["portfolio"] = {
             "total_value": 100000.0,
             "positions": [{"ticker": "AAPL"}]
         }
-        analysis_results = {
+        state["analysis_results"] = {
             "AAPL": {"news": "News", "technicals": "Technicals"}
         }
         
         with caplog.at_level(logging.INFO):
-            result = assess_confidence_tool(
-                portfolio=portfolio,
-                analysis_results=analysis_results
-            )
+            result = assess_confidence_tool(state)
         
         # Verify logging
         assert result.success is True
@@ -293,11 +279,12 @@ class TestAssessConfidenceTool:
         import logging
         
         # Pass something that will cause an error
+        state = create_initial_state()
+        state["portfolio"] = "not a dict"
+        state["analysis_results"] = {}
+        
         with caplog.at_level(logging.ERROR):
-            result = assess_confidence_tool(
-                portfolio="not a dict",
-                analysis_results={}
-            )
+            result = assess_confidence_tool(state)
         
         # Verify
         assert result.success is False

@@ -1,11 +1,12 @@
 """The 'brain' of the agent, responsible for LLM-based decision making."""
 import logging
-from langchain_google_genai import ChatGoogleGenerativeAI
 from src.portfolio_manager.agent_state import AgentState
 from src.portfolio_manager.tools import generate_tools_prompt
 from src.portfolio_manager.prompts import get_system_prompt
 from src.portfolio_manager.utils import format_state_for_llm, format_reasoning_trace, ApiType
 from src.portfolio_manager.parsers import parse_agent_decision
+from src.stock_researcher.utils.llm_utils import call_gemini_api
+
 
 logger = logging.getLogger(__name__)
 
@@ -44,18 +45,10 @@ Current Confidence: {state["confidence_score"]:.2%}
 Based on this information, what should be your next single action?
 """
         
+        full_prompt = f"{system_prompt}\n\n{user_message}"
+        
         # 4. Call the LLM for a decision
-        llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-pro",
-            temperature=0.1,  # Lower temperature for more consistent, predictable decisions
-        )
-        
-        messages = [
-            ("system", system_prompt),
-            ("user", user_message)
-        ]
-        
-        response = llm.invoke(messages)
+        response_text = call_gemini_api(full_prompt, model="gemini-2.5-pro")
         
         # Report the LLM call for cost tracking
         state['newly_completed_api_calls'] = [
@@ -63,28 +56,35 @@ Based on this information, what should be your next single action?
         ]
         
         # 5. Parse the LLM's decision
-        decision = parse_agent_decision(response.content)
+        decision = parse_agent_decision(response_text)
         
         # 6. Store the reasoning and decision in the state
         state["agent_reasoning"].append({
-            "iteration": iteration,
-            "reasoning": decision.get("reasoning", ""),
-            "action": decision.get("action", ""),
-            "raw_response": response.content
+            "iteration": state["current_iteration"],
+            "reasoning": decision["reasoning"],
+            "action": decision["action"],
+            "raw_response": response_text
         })
         
         reasoning_text = f"Iteration {iteration}: {decision.get('reasoning', 'No reasoning provided')}"
         
         # 7. Set the next tool call for the execution node
         if decision["action"] == "generate_report":
-            state["next_tool_call"] = None  # Signal to generate the final report
+            state["next_tool_call"] = None
             state["reasoning_trace"].append(f"{reasoning_text} -> Decided to generate final report.")
         else:
+            # The action is the tool name
+            tool_name = decision["action"]
+            tool_args = decision.get("arguments", {})
+            
             state["next_tool_call"] = {
-                "tool": decision["action"],
-                "args": decision.get("arguments", {})
+                "tool": tool_name,
+                "args": tool_args
             }
-            state["reasoning_trace"].append(f"{reasoning_text} -> Chose tool: {decision['action']}")
+            # Set the keys for the tool_execution_node
+            state["current_tool_name"] = tool_name
+            state["current_tool_args"] = tool_args
+            state["reasoning_trace"].append(f"{reasoning_text} -> Chose tool: {tool_name}")
             
     except Exception as e:
         logger.error(f"Agent decision failed in iteration {iteration}: {e}", exc_info=True)

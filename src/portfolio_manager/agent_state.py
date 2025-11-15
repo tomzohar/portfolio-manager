@@ -8,13 +8,29 @@ source of truth for the entire workflow.
 
 from typing import TypedDict, List, Dict, Optional, Any
 from dataclasses import dataclass, field
+from datetime import datetime
+import uuid
 
 
-class ToolCall(TypedDict):
-    """Represents a tool invocation decision made by the agent"""
+@dataclass
+class ToolResult:
+    """Standardized result format for all tools."""
+    success: bool
+    data: Optional[Any] = None
+    error: Optional[str] = None
+    confidence_impact: float = 0.0
+    state_patch: Dict[str, Any] = field(default_factory=dict)
+    api_calls: List[Dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass
+class ToolCall:
+    """Represents a single call to a tool."""
     tool: str
     args: Dict[str, Any]
     timestamp: str
+    success: bool
+    output: Optional[Any]
 
 
 class AgentState(TypedDict):
@@ -51,6 +67,8 @@ class AgentState(TypedDict):
     # The next tool call decided by the agent, to be executed by the tool_executor_node
     # Format: {"tool": "tool_name", "args": {"param": "value"}}
     next_tool_call: Optional[Dict[str, Any]]
+    current_tool_name: Optional[str] = None
+    current_tool_args: Optional[Dict[str, Any]] = None
     
     # Confidence score (0.0 to 1.0)
     # Updated after each tool execution, used to determine when to stop iterating
@@ -58,6 +76,7 @@ class AgentState(TypedDict):
     
     # Tool call history (for replay and debugging)
     tool_calls: List[ToolCall]
+    latest_tool_result: Optional[ToolResult] = None
     
     # Cost Control Guardrails
     api_call_counts: Dict[str, int]
@@ -79,20 +98,6 @@ class AgentState(TypedDict):
     completed_at: Optional[str]
 
 
-@dataclass
-class ToolResult:
-    """
-    Standardized result structure returned by all tools.
-    This ensures consistent error handling and state updates.
-    """
-    success: bool
-    data: Optional[Any]
-    error: Optional[str]
-    confidence_impact: float  # How much this result affects overall confidence (-1.0 to +1.0)
-    state_patch: Optional[Dict[str, Any]] = None  # NEW: A dictionary to be merged into the agent state
-    api_calls: List[Dict[str, Any]] = field(default_factory=list)
-
-
 def create_initial_state(max_iterations: int = 10) -> AgentState:
     """
     Create a fresh AgentState for a new analysis run.
@@ -103,16 +108,17 @@ def create_initial_state(max_iterations: int = 10) -> AgentState:
     Returns:
         An initialized AgentState with default values
     """
-    from datetime import datetime
-    
     return AgentState(
         portfolio=None,
         analysis_results={},
         reasoning_trace=[],
         agent_reasoning=[],
         next_tool_call=None,
+        current_tool_name=None,
+        current_tool_args={},
         confidence_score=0.0,
         tool_calls=[],
+        latest_tool_result=None,
         max_iterations=max_iterations,
         current_iteration=0,
         final_report=None,

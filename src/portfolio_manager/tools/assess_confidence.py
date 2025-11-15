@@ -17,7 +17,7 @@ Version: 1.0.0
 from typing import Dict, Any
 import logging
 
-from ..agent_state import ToolResult
+from ..agent_state import ToolResult, AgentState
 from ..tool_registry import tool
 
 logger = logging.getLogger(__name__)
@@ -25,32 +25,19 @@ logger = logging.getLogger(__name__)
 
 @tool(
     name="assess_confidence",
-    description="Evaluates confidence level based on data completeness. Use this to determine if more analysis is needed.",
-    parameters={
-        "portfolio": {
-            "type": "Dict[str, Any]",
-            "description": "The portfolio data from parse_portfolio",
-            "required": True
-        },
-        "analysis_results": {
-            "type": "Dict[str, Dict[str, Any]]",
-            "description": "All accumulated analysis results",
-            "required": True
-        }
-    },
+    description="Evaluates confidence level based on data completeness. Use this to determine if more analysis is needed. This tool reads directly from the current state and requires no arguments.",
+    parameters={},
     examples=[
-        '{"tool": "assess_confidence", "args": {"portfolio": "<current_portfolio>", "analysis_results": "<current_results>"}}'
-    ]
+        '{"tool": "assess_confidence", "args": {}}'
+    ],
+    state_aware=True
 )
-def assess_confidence_tool(
-    portfolio: Dict[str, Any],
-    analysis_results: Dict[str, Dict[str, Any]]
-) -> ToolResult:
+def assess_confidence_tool(state: AgentState) -> ToolResult:
     """
     Assess Confidence Tool
     
     Evaluates the agent's confidence in making recommendations based on
-    the completeness and quality of gathered data.
+    the completeness and quality of gathered data from the agent state.
     
     **Confidence Calculation:**
     
@@ -66,19 +53,10 @@ def assess_confidence_tool(
     - 0.60-0.74: "Gathering data" - Making progress but not quite ready
     - ≥0.75: "Ready for final analysis" - Sufficient confidence
     
-    **Args:**
-        portfolio: Portfolio data dict with keys:
-            - total_value: float
-            - positions: List[Dict] with ticker info
-        
-        analysis_results: Dict mapping tickers to their analysis:
-            {
-                "AAPL": {"news": {...}, "technicals": {...}},
-                "MSFT": {"news": {...}},
-                ...
-            }
+    Args:
+        state: The current AgentState, containing all portfolio and analysis data.
     
-    **Returns:**
+    Returns:
         ToolResult with:
         - success: Always True (this tool doesn't fail)
         - data: Dict containing:
@@ -93,10 +71,7 @@ def assess_confidence_tool(
         - confidence_impact: 0.0 (doesn't add new data, just assesses)
     
     **Example:**
-        >>> result = assess_confidence_tool(
-        ...     portfolio=state["portfolio"],
-        ...     analysis_results=state["analysis_results"]
-        ... )
+        >>> result = assess_confidence_tool(state=current_agent_state)
         >>> assessment = result.data
         >>> print(f"Confidence: {assessment['confidence']:.0%}")
         >>> print(f"Recommendation: {assessment['recommendation']}")
@@ -130,6 +105,9 @@ def assess_confidence_tool(
     try:
         logger.info("Tool invoked: assess_confidence")
         
+        portfolio = state.get("portfolio")
+        analysis_results = state.get("analysis_results", {})
+
         # Edge case: No portfolio data yet
         if not portfolio:
             return ToolResult(
@@ -145,6 +123,7 @@ def assess_confidence_tool(
                 },
                 error=None,
                 confidence_impact=0.0,
+                state_patch={"confidence_score": 0.0},
             )
         
         # Calculate metrics
@@ -192,11 +171,16 @@ def assess_confidence_tool(
         
         logger.info(f"Confidence assessment: {confidence:.2%} ({recommendation})")
         
+        # This tool's result isn't complex, but we can update the main confidence score directly
+        # via a state patch, which is cleaner than the node doing it.
+        state_patch = {"confidence_score": confidence}
+        
         return ToolResult(
             success=True,
             data=assessment,
             error=None,
-            confidence_impact=0.0,  # This tool doesn't add new data, just assesses
+            confidence_impact=0.0,  # Confidence is now set via patch, impact is neutral
+            state_patch=state_patch
         )
     
     except Exception as e:
