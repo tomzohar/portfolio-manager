@@ -15,6 +15,9 @@ import pytest
 from typing import List, Optional
 from unittest.mock import Mock, patch
 import logging
+import importlib
+import pkgutil
+import sys
 
 from src.portfolio_manager.tool_registry import (
     ToolMetadata,
@@ -27,6 +30,27 @@ from src.portfolio_manager.tool_registry import (
     _global_registry,
 )
 from src.portfolio_manager.agent_state import ToolResult
+from src.portfolio_manager import tools
+
+
+@pytest.fixture
+def fresh_tool_registry():
+    """
+    Fixture that clears the global registry and reloads all tools from the
+    `src.portfolio_manager.tools` package to ensure integration tests
+    run with a clean, fully-populated set of tools.
+    """
+    _global_registry._tools.clear()
+    
+    # Reloading a package __init__ does not reload the submodules. We must
+    # iterate through them and reload them explicitly to re-run the @tool decorators.
+    package = tools
+    for _, module_name, _ in pkgutil.walk_packages(
+        path=package.__path__, 
+        prefix=package.__name__ + '.'
+    ):
+        if module_name in sys.modules:
+            importlib.reload(sys.modules[module_name])
 
 
 class TestToolMetadata:
@@ -773,6 +797,47 @@ class TestLogging:
             registry.execute_tool("error_log")
         
         assert "Tool error_log execution failed" in caplog.text
+
+
+@pytest.mark.usefixtures("fresh_tool_registry")
+class TestRegistryIntegration:
+    """Tests the global registry with actual project tools."""
+
+    def test_all_tools_are_registered(self):
+        """Test that all core tools are properly registered"""
+        registry = get_registry()
+        registered_tools = registry.list_tools()
+
+        # Check that our core tools are registered
+        assert "parse_portfolio" in registered_tools
+        assert "analyze_news" in registered_tools
+        assert "analyze_technicals" in registered_tools
+        assert "assess_confidence" in registered_tools
+
+        # Check that we can get tool metadata
+        news_tool = registry.get_tool("analyze_news")
+        assert news_tool is not None
+        assert news_tool.name == "analyze_news"
+        assert "tickers" in news_tool.parameters
+
+    def test_execute_unknown_tool_global(self):
+        """Test executing an unknown tool via the global execute_tool"""
+        result = execute_tool("nonexistent_tool")
+
+        assert result.success is False
+        assert "Unknown tool" in result.error
+
+    def test_generate_full_tools_prompt(self):
+        """Test that tool prompt generation works with all tools"""
+        prompt = generate_tools_prompt()
+
+        # Should contain tool descriptions
+        assert "Available Tools" in prompt
+        assert "parse_portfolio" in prompt
+        assert "analyze_news" in prompt
+        assert "analyze_technicals" in prompt
+        assert "assess_confidence" in prompt
+        assert len(prompt) > 100  # Should be a substantial prompt
 
 
 if __name__ == "__main__":
