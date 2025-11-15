@@ -280,7 +280,7 @@ class TestGraphNodes:
         
         updated_state = start_node(state)
         
-        assert updated_state["current_iteration"] == 0
+        assert updated_state["current_iteration"] == 1
         assert len(updated_state["reasoning_trace"]) > 0
         assert "initiated" in updated_state["reasoning_trace"][0].lower()
     
@@ -318,30 +318,27 @@ class TestGraphNodes:
         
         assert result == "agent"
     
-    @patch('src.portfolio_manager.graph.execute_tool')
-    def test_agent_decision_node_no_portfolio(self, mock_execute):
+    @patch('src.portfolio_manager.graph.ChatGoogleGenerativeAI')
+    def test_agent_decision_node_no_portfolio(self, mock_llm):
         """Test agent decision when portfolio not yet loaded"""
         # Setup
         state = create_initial_state()
-        mock_execute.return_value = ToolResult(
-            success=True,
-            data={"total_value": 100000.0, "positions": []},
-            error=None,
-            confidence_impact=0.2
-        )
+        
+        # Mock the LLM response
+        mock_response = MagicMock()
+        mock_response.content = '{"reasoning": "Need to parse portfolio.", "action": "parse_portfolio", "arguments": {}}'
+        mock_llm.return_value.invoke.return_value = mock_response
         
         # Execute
         updated_state = agent_decision_node(state)
         
         # Verify
-        assert updated_state["portfolio"] is not None
-        assert updated_state["current_iteration"] == 1
-        assert len(updated_state["tool_calls"]) == 1
-        assert updated_state["tool_calls"][0]["tool"] == "parse_portfolio"
-        mock_execute.assert_called_once_with("parse_portfolio")
+        assert updated_state["next_tool_call"]["tool"] == "parse_portfolio"
+        assert "Need to parse portfolio" in updated_state["agent_reasoning"][0]["reasoning"]
+        mock_llm.return_value.invoke.assert_called_once()
     
-    @patch('src.portfolio_manager.graph.execute_tool')
-    def test_agent_decision_node_analyze_large_positions(self, mock_execute):
+    @patch('src.portfolio_manager.graph.ChatGoogleGenerativeAI')
+    def test_agent_decision_node_analyze_large_positions(self, mock_llm):
         """Test agent decision to analyze large positions"""
         # Setup
         state = create_initial_state()
@@ -353,19 +350,18 @@ class TestGraphNodes:
             ]
         }
         
-        # Mock tool execution results
-        mock_execute.side_effect = [
-            ToolResult(success=True, data={"AAPL": {"summary": "news"}}, error=None, confidence_impact=0.1),
-            ToolResult(success=True, data={"AAPL": {"rsi": 65}}, error=None, confidence_impact=0.1),
-        ]
+        # Mock the LLM response
+        mock_response = MagicMock()
+        mock_response.content = '{"reasoning": "AAPL is a large position.", "action": "analyze_news", "arguments": {"tickers": ["AAPL"]}}'
+        mock_llm.return_value.invoke.return_value = mock_response
         
         # Execute
         updated_state = agent_decision_node(state)
         
         # Verify
-        assert updated_state["current_iteration"] == 1
-        assert "AAPL" in updated_state["analysis_results"]
-        assert len(updated_state["tool_calls"]) == 2  # News + technicals
+        assert updated_state["next_tool_call"]["tool"] == "analyze_news"
+        assert updated_state["next_tool_call"]["args"] == {"tickers": ["AAPL"]}
+        assert "AAPL is a large position" in updated_state["agent_reasoning"][0]["reasoning"]
     
     @patch('src.portfolio_manager.graph.generate_portfolio_recommendations')
     def test_final_report_node(self, mock_generate):
