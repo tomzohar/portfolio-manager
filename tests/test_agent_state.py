@@ -61,6 +61,8 @@ class TestAgentState:
         assert state["errors"] == []
         assert "started_at" in state
         assert state["completed_at"] is None
+        assert state["api_call_counts"] == {}
+        assert state["estimated_cost"] == 0.0
 
     def test_create_initial_state_with_max_iterations(self):
         """Test create_initial_state with a custom max_iterations value."""

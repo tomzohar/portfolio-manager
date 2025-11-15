@@ -59,6 +59,10 @@ class AgentState(TypedDict):
     # Tool call history (for replay and debugging)
     tool_calls: List[ToolCall]
     
+    # Cost Control Guardrails
+    api_call_counts: Dict[str, int]
+    estimated_cost: float
+    
     # Loop control
     max_iterations: int
     current_iteration: int
@@ -113,5 +117,7 @@ def create_initial_state(max_iterations: int = 10) -> AgentState:
         errors=[],
         started_at=datetime.utcnow().isoformat(),
         completed_at=None,
+        api_call_counts={},
+        estimated_cost=0.0,
     )
 

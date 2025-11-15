@@ -37,19 +37,25 @@ class TestAgentWorkflow:
         """Test a simple end-to-end graph execution flow."""
         # Setup mocks
         mock_graph = MagicMock()
+        # Simulate the streaming behavior
+        mock_final_state = {"final_report": "All done!"}
+        mock_graph.stream.return_value = [{"end": mock_final_state}]
         mock_build.return_value = mock_graph
         
         # Execute the main runner function
         from src.portfolio_manager.graph import run_autonomous_analysis
-        run_autonomous_analysis(max_iterations=5)
+        final_state = run_autonomous_analysis(max_iterations=5)
         
         # Verify
         mock_build.assert_called_once()
-        mock_graph.invoke.assert_called_once()
+        mock_graph.stream.assert_called_once()
         
         # Check that initial state was created with the correct max_iterations
-        invoke_args = mock_graph.invoke.call_args[0][0]
-        assert invoke_args['max_iterations'] == 5
+        stream_args = mock_graph.stream.call_args[0][0]
+        assert stream_args['max_iterations'] == 5
+        
+        # Check that the final state is returned correctly
+        assert final_state == mock_final_state
 
 
 if __name__ == "__main__":
