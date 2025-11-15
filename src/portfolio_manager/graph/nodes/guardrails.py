@@ -79,6 +79,12 @@ def _check_guardrail_limits(state: AgentState) -> AgentState:
 
     state["errors"] = errors
     state["terminate_run"] = terminate_run
+    
+    # Check for max iterations to force a graceful finish
+    if state.get("current_iteration", 0) > state.get("max_iterations", 10):
+        logger.warning(f"Guardrail triggered: Maximum iterations reached (limit: {state.get('max_iterations', 10)}).")
+        state["force_final_report"] = True
+        
     return state
 
 def guardrail_node(state: AgentState) -> AgentState:

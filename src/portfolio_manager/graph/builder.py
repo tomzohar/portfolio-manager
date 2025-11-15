@@ -53,6 +53,7 @@ def build_graph() -> StateGraph:
         route_after_guardrail,
         {
             "agent": "agent",
+            "generate_report": "final_report",
             "end": END
         }
     )

@@ -81,6 +81,8 @@ class AgentState(TypedDict):
     # Cost Control Guardrails
     api_call_counts: Dict[str, int]
     estimated_cost: float
+    terminate_run: bool
+    force_final_report: bool # NEW: Flag to signal graceful termination
     newly_completed_api_calls: List[Dict[str, Any]] # Staging area for calls from the last step
     
     # Loop control
@@ -128,5 +130,7 @@ def create_initial_state(max_iterations: int = 10) -> AgentState:
         api_call_counts={},
         estimated_cost=0.0,
         newly_completed_api_calls=[],
+        terminate_run=False,
+        force_final_report=False,
     )
 

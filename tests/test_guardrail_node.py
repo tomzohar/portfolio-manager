@@ -7,27 +7,6 @@ from src.portfolio_manager.graph.nodes.guardrails import guardrail_node, MAX_ERR
 from src.portfolio_manager.agent_state import AgentState
 
 
-@pytest.fixture
-def initial_state() -> AgentState:
-    """Provides a basic initial state for tests."""
-    return {
-        "portfolio": None,
-        "analysis_results": {},
-        "reasoning_trace": [],
-        "agent_reasoning": [],
-        "tool_results": [],
-        "newly_completed_api_calls": [],
-        "confidence_score": 0.0,
-        "max_iterations": 10,
-        "current_iteration": 1,
-        "errors": [],
-        "api_call_counts": {},
-        "estimated_cost": 0.0,
-        "terminate_run": False,
-        "final_report": ""
-    }
-
-
 class TestGuardrailNode:
     """Test suite for the guardrail_node."""
 

@@ -14,8 +14,16 @@ import logging
 import sys
 from dotenv import load_dotenv
 import os
+import sentry_sdk
 from logging.handlers import RotatingFileHandler
 from rich.logging import RichHandler
+
+# Import application components at the top level for clarity and mockability
+from src.portfolio_manager.graph import run_autonomous_analysis
+from src.portfolio_manager.error_handler import capture_error, capture_message
+from stock_researcher.notifications.whatsapp import send_whatsapp_message
+from stock_researcher.config import TWILIO_WHATSAPP_TO
+
 
 # Configure logging
 def setup_logging():
@@ -55,16 +63,27 @@ def _handle_analysis_output(
     final_state: dict,
     send_whatsapp_message,
     twilio_whatsapp_to: str
-):
+) -> bool:
     """
-    Handles the final output of the analysis, including printing the report,
-    sending notifications, and checking for errors.
+    Handles the final output, sending notifications and checking for errors.
+    Returns True on success, False on failure.
     """
-    if not final_state or not final_state.get("final_report"):
-        logger.error("Analysis finished but no report was generated.")
-        sys.exit(1)
+    if not final_state:
+        logger.error("Analysis did not produce a final state.")
+        capture_message("Analysis finished with no final state.", level="error")
+        return False
 
-    # Print the full report to the console
+    # A report is required to proceed, even if there are errors.
+    if not final_state.get("final_report"):
+        logger.error("Analysis finished but no report was generated.")
+        # If there were also errors, log them as the likely cause.
+        if final_state.get("errors"):
+            logger.error(f"This may be due to the {len(final_state['errors'])} errors encountered.")
+        capture_message("Analysis finished with no final report.", level="error")
+        return False
+
+    # Always print the report if it exists.
+    logger.info("✓ Analysis attempting to complete...")
     print("\n" + final_state["final_report"])
 
     # Send a condensed version of the report to WhatsApp
@@ -108,12 +127,19 @@ def _handle_analysis_output(
             exc_info=True
         )
     
-    # Check for errors during the workflow execution
+    # After sending notifications, check for errors to determine final status.
     if final_state.get("errors"):
         logger.warning(f"Workflow completed with {len(final_state['errors'])} errors:")
         for error in final_state["errors"]:
             logger.warning(f"  - {error}")
-        sys.exit(1)
+        capture_message(
+            f"Portfolio analysis completed with {len(final_state['errors'])} errors.",
+            level="warning"
+        )
+        return False
+
+    logger.info("✓ Analysis completed successfully")
+    return True
 
 
 def main():
@@ -123,27 +149,35 @@ def main():
     load_dotenv()
     setup_logging()
     
+    # Initialize Sentry if DSN is provided
+    sentry_dsn = os.environ.get("SENTRY_DSN")
+    if sentry_dsn:
+        sentry_sdk.init(
+            dsn=sentry_dsn,
+            traces_sample_rate=1.0,
+            profiles_sample_rate=1.0,
+            enable_tracing=True
+        )
+        logger.info("✓ Sentry initialized")
+    
     logger.info("=" * 70)
     logger.info("AUTONOMOUS PORTFOLIO MANAGER")
     logger.info("=" * 70)
     
     try:
-        # Import here to ensure env vars are loaded first
-        from src.portfolio_manager.graph import run_autonomous_analysis
-        from stock_researcher.notifications.whatsapp import send_whatsapp_message
-        from stock_researcher.config import TWILIO_WHATSAPP_TO
-        
         # Run the autonomous analysis
         final_state = run_autonomous_analysis(max_iterations=10)
         
-        _handle_analysis_output(
+        success = _handle_analysis_output(
             final_state,
             send_whatsapp_message,
             TWILIO_WHATSAPP_TO
         )
         
-        logger.info("✓ Analysis completed successfully")
-        sys.exit(0)
+        if success:
+            sys.exit(0)
+        else:
+            sys.exit(1)
         
     except KeyboardInterrupt:
         logger.info("\nAnalysis interrupted by user")
@@ -151,6 +185,17 @@ def main():
         
     except Exception as e:
         logger.error(f"Fatal error: {str(e)}", exc_info=True)
+        try:
+            send_whatsapp_message(
+                f"❌ Portfolio Analysis Failed\n\n"
+                f"Error: {str(e)}\n\n"
+                f"Check logs for details.",
+                to_number=TWILIO_WHATSAPP_TO
+            )
+        except Exception as notify_error:
+            logger.error(f"Failed to send failure notification: {notify_error}")
+        
+        capture_error(e)
         sys.exit(1)
 
 

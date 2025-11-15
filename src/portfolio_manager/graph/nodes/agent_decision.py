@@ -5,6 +5,7 @@ from src.portfolio_manager.tools import generate_tools_prompt
 from src.portfolio_manager.prompts import get_system_prompt
 from src.portfolio_manager.utils import format_state_for_llm, format_reasoning_trace, ApiType
 from src.portfolio_manager.parsers import parse_agent_decision
+from src.portfolio_manager.error_handler import capture_error
 from src.stock_researcher.utils.llm_utils import call_gemini_api
 
 
@@ -88,6 +89,7 @@ Based on this information, what should be your next single action?
             
     except Exception as e:
         logger.error(f"Agent decision failed in iteration {iteration}: {e}", exc_info=True)
+        capture_error(e)
         state["errors"].append(f"Agent decision error: {str(e)}")
         state["next_tool_call"] = None  # Stop the workflow on a critical error
         state["reasoning_trace"].append(f"Iteration {iteration}: Agent decision failed critically. Stopping.")

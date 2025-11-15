@@ -1,72 +1,99 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from stock_researcher.agents.portfolio_manager import generate_portfolio_recommendations
-from stock_researcher.agents.portfolio_parser import Portfolio, PortfolioPosition
+from src.portfolio_manager.agent_state import create_initial_state
+
+# Since we are testing the main entry point, we need to import it carefully
+# We will patch 'run_autonomous_analysis' to avoid running the full graph
+import run_portfolio_manager
+
 
 @pytest.fixture
-def mock_portfolio():
-    """Fixture for a mock portfolio."""
-    positions = [
-        PortfolioPosition('AAPL', 150.0, 10, 1500.0, 50.0),
-        PortfolioPosition('GOOG', 2800.0, 0.5, 1400.0, 46.67),
-        PortfolioPosition('TSLA', 700.0, 0.14, 100.0, 3.33)
-    ]
-    return Portfolio(positions, 3000.0)
+def mock_sys_exit():
+    """Fixture to mock sys.exit to prevent test runner from exiting."""
+    with patch("sys.exit") as mock_exit:
+        yield mock_exit
 
-@pytest.fixture
-def mock_summaries():
-    """Fixture for mock news summaries."""
-    return {
-        'AAPL': 'Positive news about new product launch.',
-        'GOOG': 'Neutral news about regulatory updates.',
-        'TSLA': 'Negative news about production delays.'
-    }
 
-@patch('stock_researcher.agents.portfolio_manager.call_gemini_api')
-def test_generate_portfolio_recommendations_success(mock_call_gemini, mock_portfolio, mock_summaries):
-    """
-    Test successful generation of portfolio recommendations.
-    """
-    # Arrange
-    mock_response_text = """
-    {
-        "portfolio_summary": "The portfolio is well-balanced, but TSLA poses a risk.",
-        "recommendations": [
-            {
-                "ticker": "TSLA",
-                "recommendation": "DECREASE",
-                "reasoning": "Negative news about production delays."
-            }
-        ]
-    }
-    """
-    mock_call_gemini.return_value = mock_response_text
+class TestPortfolioManagerEntryPoint:
+    """Test suite for the main entry point in run_portfolio_manager.py."""
 
-    # Act
-    recommendations = generate_portfolio_recommendations(mock_portfolio, mock_summaries, {})
+    @patch("run_portfolio_manager.run_autonomous_analysis")
+    @patch("run_portfolio_manager.send_whatsapp_message")
+    def test_run_exits_0_on_success(self, mock_whatsapp, mock_run_analysis, mock_sys_exit):
+        """
+        Tests that the main function exits with status 0 on a successful run.
+        """
+        # Arrange: Mock a successful final state
+        successful_state = create_initial_state()
+        successful_state["final_report"] = "This is a successful report."
+        successful_state["errors"] = []
+        mock_run_analysis.return_value = successful_state
 
-    # Assert
-    assert recommendations['portfolio_summary'] == "The portfolio is well-balanced, but TSLA poses a risk."
-    assert len(recommendations['recommendations']) == 1
-    assert recommendations['recommendations'][0]['ticker'] == 'TSLA'
-    
-    # Verify that the LLM was called with the correct data
-    mock_call_gemini.assert_called_once()
-    prompt_contents = mock_call_gemini.call_args[0][0]
-    assert '"ticker": "AAPL"' in prompt_contents
-    assert 'Negative news about production delays.' in prompt_contents
+        # Act
+        run_portfolio_manager.main()
 
-@patch('stock_researcher.agents.portfolio_manager.call_gemini_api')
-def test_generate_portfolio_recommendations_api_error(mock_call_gemini, mock_portfolio, mock_summaries):
-    """
-    Test handling of an API error during recommendation generation.
-    """
-    # Arrange
-    mock_call_gemini.side_effect = Exception("API Failure")
+        # Assert
+        mock_sys_exit.assert_called_once_with(0)
+        mock_whatsapp.assert_called_once()
 
-    # Act
-    recommendations = generate_portfolio_recommendations(mock_portfolio, mock_summaries, {})
+    @patch("run_portfolio_manager.run_autonomous_analysis")
+    @patch("run_portfolio_manager.send_whatsapp_message")
+    @patch("run_portfolio_manager.capture_message")
+    def test_run_exits_1_on_workflow_errors(self, mock_capture_message, mock_whatsapp, mock_run_analysis, mock_sys_exit):
+        """
+        Tests that the main function exits with status 1 if the workflow completes with errors.
+        """
+        # Arrange: Mock a final state with errors
+        error_state = create_initial_state()
+        error_state["final_report"] = "This is a report with errors."
+        error_state["errors"] = ["Tool failed", "Another error"]
+        mock_run_analysis.return_value = error_state
 
-    # Assert
-    assert recommendations['portfolio_summary'] == "Failed to generate recommendations due to an API error."
-    assert len(recommendations['recommendations']) == 0
+        # Act
+        run_portfolio_manager.main()
+
+        # Assert
+        mock_sys_exit.assert_called_once_with(1)
+        mock_capture_message.assert_called_once_with(
+            "Portfolio analysis completed with 2 errors.",
+            level="warning"
+        )
+        mock_whatsapp.assert_called_once()
+
+    @patch("run_portfolio_manager.run_autonomous_analysis")
+    @patch("run_portfolio_manager.capture_error")
+    @patch("run_portfolio_manager.send_whatsapp_message")
+    def test_run_exits_1_on_fatal_exception(self, mock_whatsapp, mock_capture_error, mock_run_analysis, mock_sys_exit):
+        """
+        Tests that the main function exits with status 1 on a fatal exception
+        and reports to Sentry.
+        """
+        # Arrange: Mock the analysis to raise a fatal exception
+        test_exception = ValueError("A fatal error occurred")
+        mock_run_analysis.side_effect = test_exception
+
+        # Act
+        run_portfolio_manager.main()
+
+        # Assert
+        mock_sys_exit.assert_called_once_with(1)
+        mock_capture_error.assert_called_once_with(test_exception)
+        mock_whatsapp.assert_called_once()
+
+    @patch("run_portfolio_manager.run_autonomous_analysis")
+    @patch("run_portfolio_manager.send_whatsapp_message")
+    def test_run_exits_1_if_no_report_is_generated(self, mock_whatsapp, mock_run_analysis, mock_sys_exit):
+        """
+        Tests that the main function exits with status 1 if no final report is generated.
+        """
+        # Arrange: Mock a state with no final report
+        no_report_state = create_initial_state()
+        no_report_state["final_report"] = None
+        mock_run_analysis.return_value = no_report_state
+
+        # Act
+        run_portfolio_manager.main()
+
+        # Assert
+        mock_sys_exit.assert_called_once_with(1)
+        mock_whatsapp.assert_not_called()

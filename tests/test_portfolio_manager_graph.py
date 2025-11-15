@@ -20,6 +20,30 @@ from src.portfolio_manager.graph.nodes import (
 )
 from src.portfolio_manager.graph.edges import route_after_agent_decision
 from src.portfolio_manager.graph.builder import build_graph
+from src.portfolio_manager.agent_state import AgentState
+
+
+@pytest.fixture
+def initial_state() -> AgentState:
+    """Provides a basic, valid initial state for graph integration tests."""
+    return {
+        "portfolio": None,
+        "analysis_results": {},
+        "reasoning_trace": [],
+        "agent_reasoning": [],
+        "tool_results": [],
+        "newly_completed_api_calls": [],
+        "confidence_score": 0.0,
+        "max_iterations": 10,
+        "current_iteration": 1,
+        "errors": [],
+        "api_call_counts": {},
+        "estimated_cost": 0.0,
+        "terminate_run": False,
+        "force_final_report": False,
+        "final_report": "",
+        "started_at": "2023-01-01T12:00:00Z"
+    }
 
 
 class TestGraphNodes:
@@ -263,6 +287,43 @@ class TestGraphIntegration:
         final_route = route_after_guardrail(state_after_guardrail)
         
         assert final_route == "end"
+
+    def test_graph_forces_report_at_max_iterations(self, mocker, initial_state):
+        """
+        Tests that the graph gracefully finishes by forcing a final report
+        when the max_iterations limit is reached.
+        """
+        # Mock the guardrail where it is LOOKED UP, not where it is defined.
+        # The graph builder imports it, so we patch it there.
+        mocker.patch(
+            "src.portfolio_manager.graph.builder.guardrail_node",
+            return_value={"force_final_report": True, "terminate_run": False}
+        )
+        # Mock the final report node to confirm it was called
+        final_report_mock = mocker.patch(
+            "src.portfolio_manager.graph.builder.final_report_node",
+            return_value={"final_report": "Report generated due to max iterations."}
+        )
+
+        graph = build_graph()
+        # Set the iteration counter to exceed the max limit and provide a mock portfolio
+        initial_state["current_iteration"] = initial_state["max_iterations"] + 1
+        initial_state["portfolio"] = {
+            "positions": [],
+            "total_value": 0,
+            "analysis_summary": {}
+        }
+        
+        # We also need to mock the agent node to prevent it from running
+        mocker.patch(
+            "src.portfolio_manager.graph.builder.agent_decision_node",
+            return_value={}
+        )
+
+        result = graph.invoke(initial_state)
+
+        final_report_mock.assert_called_once()
+        assert result["final_report"] == "Report generated due to max iterations."
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
