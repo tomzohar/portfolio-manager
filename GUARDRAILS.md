@@ -15,7 +15,7 @@ To prevent excessive or runaway costs from API usage (LLM, SerpAPI, Polygon), th
 | **Total Estimated Cost**  | $1.00 per analysis                      | Terminate Run       |
 | **Repetitive Tool Calls** | 2 calls with identical arguments        | Terminate Run       |
 
--   **Implementation**: Cost tracking is managed within the `AgentState`. A dedicated `GuardrailNode` inspects the state before each agent decision cycle and enforces these limits. Tools are responsible for reporting their API usage.
+-   **Implementation**: Cost tracking is now managed within the `AgentState`, which has been updated to include `api_call_counts` and `estimated_cost`. A dedicated `GuardrailNode` will inspect the state before each agent decision cycle and enforce these limits. Tools are responsible for reporting their API usage.
 
 ---
 
