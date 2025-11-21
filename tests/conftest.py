@@ -2,8 +2,21 @@
 Pytest configuration and fixtures
 """
 
+import os
 import sys
 from pathlib import Path
+
+# CRITICAL: Set mock environment variables BEFORE any imports
+# This prevents Settings validation errors at module import time
+os.environ.setdefault("GEMINI_API_KEY", "mock-gemini-key")
+os.environ.setdefault("SERPAPI_API_KEY", "mock-serpapi-key")
+os.environ.setdefault("PUSHOVER_API_TOKEN", "mock-pushover-token")
+os.environ.setdefault("PUSHOVER_USER_KEY", "mock-pushover-user-key")
+os.environ.setdefault("POLYGON_API_KEY", "mock-polygon-key")
+os.environ.setdefault("SPREADSHEET_ID", "mock-spreadsheet-id")
+os.environ.setdefault("SPREADSHEET_RANGE", "Sheet1!A1:F100")
+os.environ.setdefault("ENVIRONMENT", "test")
+
 import pytest
 from unittest.mock import MagicMock
 from src.portfolio_manager.schemas import Portfolio, PortfolioPosition
