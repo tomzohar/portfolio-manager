@@ -6,14 +6,21 @@ primarily for formatting and summarizing the agent's state. These functions
 help create concise, readable summaries of the current situation to be
 fed into the LLM prompt, ensuring the agent has the context it needs
 without exceeding token limits.
+
+It also provides centralized LLM API access with retry logic.
 """
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import logging
 from enum import Enum
 
+from google import genai
+from tenacity import retry, stop_after_attempt, wait_exponential
+import sentry_sdk
+
 from .agent_state import AgentState
 from .prompts import get_final_report_prompt
+from .config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -230,3 +237,121 @@ def estimate_cost(api_calls: List[Dict[str, Any]]) -> float:
             logger.warning(f"Invalid API type string for cost estimation: {api_type_str}")
 
     return total_cost
+
+
+# --- LLM API Integration ---
+
+# Using a common, robust model
+LLM_MODEL = 'gemini-2.5-flash'
+
+# Lazy initialization - client is created only when first needed
+_gemini_client: Optional[genai.Client] = None
+
+
+def _get_gemini_client() -> genai.Client:
+    """
+    Lazy initialization of the Gemini client.
+    
+    Only creates the client when first called, not at module import time.
+    This allows tests to import the module without needing API keys.
+    
+    Returns:
+        The initialized Gemini API client.
+        
+    Raises:
+        ValueError: If GEMINI_API_KEY is not configured.
+    """
+    global _gemini_client
+    
+    if _gemini_client is None:
+        if not settings.GEMINI_API_KEY:
+            error_msg = "GEMINI_API_KEY is not set. Please configure it in your environment."
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        
+        logger.debug("Initializing Gemini API client")
+        _gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    
+    return _gemini_client
+
+
+def _call_gemini_api_impl(prompt: str, model: str) -> str:
+    """
+    Internal implementation of Gemini API call.
+    Separated for retry logic.
+    """
+    client = _get_gemini_client()
+    
+    # Make the API call
+    response = client.models.generate_content(
+        model=model,
+        contents=prompt
+    )
+    
+    # Log response metrics if available
+    if hasattr(response, 'usage_metadata') and response.usage_metadata:
+        usage = response.usage_metadata
+        total_tokens = getattr(usage, 'total_token_count', 0)
+        prompt_tokens = getattr(usage, 'prompt_token_count', 0)
+        candidates_tokens = getattr(usage, 'candidates_token_count', 0)
+        
+        logger.debug(
+            f"Gemini API call completed. Tokens: {total_tokens} "
+            f"(prompt: {prompt_tokens}, response: {candidates_tokens})"
+        )
+        
+        # Estimate cost for logging
+        if "gemini-2.5-pro" in model:
+            cost = get_cost(ApiType.LLM_GEMINI_2_5_PRO, total_tokens)
+        else:
+            cost = get_cost(ApiType.LLM_GEMINI_2_5_FLASH, total_tokens)
+        
+        logger.debug(f"Estimated API call cost: ${cost:.6f}")
+    
+    return response.text
+
+
+@retry(
+    stop=stop_after_attempt(3), 
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    reraise=True
+)
+def call_gemini_api(prompt: str, model: Optional[str] = None) -> str:
+    """
+    Calls the Gemini API with a given prompt and handles retries automatically.
+    
+    This function includes:
+    - Automatic retry logic with exponential backoff (3 attempts)
+    - Sentry error tracking for failures
+    - Proper logging of API calls and responses
+    - Token usage tracking
+    
+    Args:
+        prompt: The full prompt to send to the LLM.
+        model: The specific model to use (optional, defaults to LLM_MODEL).
+    
+    Returns:
+        The text response from the LLM.
+        
+    Raises:
+        ValueError: If API key is not configured (not retried).
+        Exception: If the API call fails after all retry attempts.
+    """
+    model_to_use = model or LLM_MODEL
+    logger.info(f"Calling Gemini API with model: {model_to_use}")
+    
+    try:
+        result = _call_gemini_api_impl(prompt, model_to_use)
+        logger.info("Gemini API call successful")
+        return result
+        
+    except ValueError as e:
+        # Configuration error - don't retry, reraise immediately
+        logger.error(f"Gemini API configuration error: {e}")
+        sentry_sdk.capture_exception(e)
+        raise
+        
+    except Exception as e:
+        logger.error(f"Gemini API call failed: {e}", exc_info=True)
+        sentry_sdk.capture_exception(e)
+        raise

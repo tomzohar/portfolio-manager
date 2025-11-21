@@ -4,8 +4,7 @@ from datetime import datetime
 from typing import Dict, Any
 from src.portfolio_manager.agent_state import AgentState
 from src.portfolio_manager.prompts import get_final_report_prompt
-from src.portfolio_manager.utils import format_state_for_final_report, ApiType
-from src.stock_researcher.utils.llm_utils import call_gemini_api
+from src.portfolio_manager.utils import format_state_for_final_report, ApiType, call_gemini_api
 from src.portfolio_manager.config import settings
 
 logger = logging.getLogger(__name__)

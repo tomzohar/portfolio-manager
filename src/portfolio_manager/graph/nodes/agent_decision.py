@@ -3,11 +3,10 @@ import logging
 from src.portfolio_manager.agent_state import AgentState
 from src.portfolio_manager.tools import generate_tools_prompt
 from src.portfolio_manager.prompts import get_system_prompt
-from src.portfolio_manager.utils import format_state_for_llm, format_reasoning_trace, ApiType
+from src.portfolio_manager.utils import format_state_for_llm, format_reasoning_trace, ApiType, call_gemini_api
 from src.portfolio_manager.parsers import parse_agent_decision
 from src.portfolio_manager.error_handler import capture_error
-from src.stock_researcher.utils.llm_utils import call_gemini_api
-from src.portfolio_manager.config import settings  # NEW: Import settings
+from src.portfolio_manager.config import settings
 
 
 logger = logging.getLogger(__name__)
