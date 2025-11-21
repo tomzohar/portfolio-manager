@@ -17,10 +17,10 @@ import logging
 
 from stock_researcher.agents.news_searcher import get_stock_news
 from stock_researcher.agents.llm_analyzer import generate_executive_summaries
-from stock_researcher.config import SERPAPI_API_KEY
 from ..agent_state import ToolResult
 from ..tool_registry import tool
 from ..utils import ApiType
+from ..config import settings  # NEW: Import centralized settings
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +122,8 @@ def analyze_news_tool(tickers: List[str]) -> ToolResult:
             )
         
         # Step 1: Search for news articles using the legacy function
-        news_dict = get_stock_news(tickers, SERPAPI_API_KEY)
+        # Pass the API key from our centralized settings
+        news_dict = get_stock_news(tickers, settings.SERPAPI_API_KEY)
         
         # Step 2: Summarize with LLM using the legacy function
         summaries = generate_executive_summaries(news_dict)

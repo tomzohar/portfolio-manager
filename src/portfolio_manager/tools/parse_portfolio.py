@@ -18,6 +18,7 @@ import logging
 from stock_researcher.agents.portfolio_parser import parse_portfolio as parse_portfolio_legacy
 from ..agent_state import ToolResult
 from ..tool_registry import tool
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,10 @@ def parse_portfolio_tool() -> ToolResult:
     """
     try:
         logger.info("Tool invoked: parse_portfolio")
+        
+        # Call the legacy function, which is now configured via our settings load
+        # No need to pass settings directly, as the legacy function uses gspread
+        # which reads environment variables that pydantic has already loaded.
         portfolio = parse_portfolio_legacy()
         
         # Convert Portfolio object to dict for JSON serialization
