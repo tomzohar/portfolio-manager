@@ -5,6 +5,8 @@ This module defines the master prompt that guides the LLM's behavior,
 structuring its role, responsibilities, and decision-making process.
 """
 
+from typing import Dict, Any
+
 
 def get_system_prompt(tools_description: str) -> str:
     """
@@ -67,4 +69,74 @@ Examples of Good Decisions:
     -   **Your Action**: `{{"reasoning": "I have the news sentiment for the top holdings. Now I need to evaluate their technical indicators to get a more complete picture. I will do this for all three in a single call.", "action": "analyze_technicals", "arguments": {{"tickers": ["AAPL", "MSFT", "GOOG"]}}}}`
 
 Always think step-by-step and provide clear reasoning for your chosen action. Choose the single best next step, and be as efficient as possible by batching your analysis.
+"""
+
+
+def get_final_report_prompt(formatted_state: str) -> str:
+    """
+    Generate the prompt for the final report node.
+    
+    This prompt instructs the LLM to synthesize all collected information
+    into a comprehensive, actionable portfolio analysis report.
+    
+    Args:
+        formatted_state: A string containing all the portfolio and analysis
+                         data gathered during the workflow.
+    
+    Returns:
+        The complete final report prompt as a string.
+    """
+    return f"""
+You are an expert Portfolio Manager AI assistant. Your task is to generate a final, comprehensive portfolio analysis report based on the data provided. The report must be clear, well-structured, and provide actionable recommendations.
+
+Use the following format for your report:
+
+═══════════════════════════════════════════════════════════════
+           AUTONOMOUS PORTFOLIO ANALYSIS REPORT
+═══════════════════════════════════════════════════════════════
+
+**Portfolio Summary:**
+- **Total Value:** [Total Value]
+- **Positions:** [Number of positions]
+- **Analysis Depth:** [Number] deep dives, [Number] quick scans
+- **Confidence:** [Overall Confidence Score]% (e.g., High, Medium, Low)
+
+─────────────────────────────────────────────────────────────
+
+**AGENT REASONING TRACE:**
+[Provide a BRIEF, high-level summary of the key decisions the agent made. For example: "1. Parsed portfolio, identified 3 large positions. 2. Focused analysis on these positions, gathering news and technicals. 3. Generated report based on high confidence in findings."]
+
+─────────────────────────────────────────────────────────────
+
+**ACTIONABLE RECOMMENDATIONS:**
+
+**🔴 DECREASE Position:**
+- **[TICKER] ([Company Name]):** Reduce from [Current Weight]% to [Target Weight]% (~$[Amount] sale)
+  - **Reason:** [Brief, clear reason based on analysis]
+  - **Confidence:** [Confidence Score for this specific recommendation]%
+
+**🟡 MONITOR Closely:**
+- **[TICKER] ([Company Name]):** Currently [Current Weight]% allocation
+  - **Reason:** [Brief, clear reason]
+  - **Confidence:** [Confidence Score]%
+
+**🟢 HOLD All Other Positions:**
+- **[TICKER], [TICKER], etc.**
+  - **Reason:** No concerning signals, balanced allocations.
+  - **Confidence:** [Confidence Score]%
+
+─────────────────────────────────────────────────────────────
+
+**Data Coverage:**
+- **Portfolio structure:** [100% / Incomplete]
+- **News analysis:** [X out of Y stocks] ([Percentage]%)
+- **Technical analysis:** [X out of Y stocks] ([Percentage]%)
+
+═══════════════════════════════════════════════════════════════
+
+Here is the data you must use for the report:
+
+{formatted_state}
+
+Generate the full report based on this data.
 """

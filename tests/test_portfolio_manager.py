@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from src.portfolio_manager.agent_state import create_initial_state
+from src.portfolio_manager.agent_state import AgentState
 
 # Since we are testing the main entry point, we need to import it carefully
 # We will patch 'run_autonomous_analysis' to avoid running the full graph
@@ -26,9 +26,10 @@ class TestPortfolioManagerEntryPoint:
         Tests that the main function exits with status 0 on a successful run.
         """
         # Arrange: Mock a successful final state
-        successful_state = create_initial_state()
-        successful_state["final_report"] = "This is a successful report."
-        successful_state["errors"] = []
+        successful_state = AgentState(
+            final_report="This is a successful report.",
+            errors=[]
+        ).model_dump()
         mock_run_analysis.return_value = successful_state
 
         # Act
@@ -48,9 +49,10 @@ class TestPortfolioManagerEntryPoint:
         Tests that the main function exits with status 1 if the workflow completes with errors.
         """
         # Arrange: Mock a final state with errors
-        error_state = create_initial_state()
-        error_state["final_report"] = "This is a report with errors."
-        error_state["errors"] = ["Tool failed", "Another error"]
+        error_state = AgentState(
+            final_report="This is a report with errors.",
+            errors=["Tool failed", "Another error"]
+        ).model_dump()
         mock_run_analysis.return_value = error_state
 
         # Act
@@ -95,8 +97,7 @@ class TestPortfolioManagerEntryPoint:
         Tests that the main function exits with status 1 if no final report is generated.
         """
         # Arrange: Mock a state with no final report
-        no_report_state = create_initial_state()
-        no_report_state["final_report"] = None
+        no_report_state = AgentState(final_report=None).model_dump()
         mock_run_analysis.return_value = no_report_state
 
         # Act
@@ -115,9 +116,10 @@ class TestPortfolioManagerEntryPoint:
         Tests that running with --no-notification suppresses the Pushover message on success.
         """
         # Arrange: Mock a successful final state
-        successful_state = create_initial_state()
-        successful_state["final_report"] = "This is a successful report."
-        successful_state["errors"] = []
+        successful_state = AgentState(
+            final_report="This is a successful report.",
+            errors=[]
+        ).model_dump()
         mock_run_analysis.return_value = successful_state
 
         # Act

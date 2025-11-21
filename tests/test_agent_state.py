@@ -10,7 +10,6 @@ from datetime import datetime
 
 from src.portfolio_manager.agent_state import (
     ToolResult,
-    create_initial_state,
     AgentState
 )
 
@@ -59,46 +58,46 @@ class TestAgentState:
         assert result.api_calls == []
 
     def test_create_initial_state_defaults(self):
-        """Test create_initial_state with default values."""
-        state = create_initial_state()
+        """Test AgentState creation with default values."""
+        state = AgentState()
 
-        assert state["portfolio"] is None
-        assert state["analysis_results"] == {}
-        assert state["reasoning_trace"] == []
-        assert state["agent_reasoning"] == []
-        assert state["next_tool_call"] is None
-        assert state["confidence_score"] == 0.0
-        assert state["tool_calls"] == []
-        assert state["max_iterations"] == 10
-        assert state["current_iteration"] == 0
-        assert state["final_report"] is None
-        assert state["errors"] == []
-        assert "started_at" in state
-        assert state["completed_at"] is None
-        assert state["api_call_counts"] == {}
-        assert state["estimated_cost"] == 0.0
-        assert state["newly_completed_api_calls"] == []
+        assert state.portfolio is None
+        assert state.analysis_results == {}
+        assert state.reasoning_trace == []
+        assert state.agent_reasoning == []
+        assert state.next_tool_call is None
+        assert state.confidence_score == 0.0
+        assert state.tool_calls == []
+        assert state.max_iterations == 10
+        assert state.current_iteration == 0
+        assert state.final_report is None
+        assert state.errors == []
+        assert state.started_at is not None
+        assert state.completed_at is None
+        assert state.api_call_counts == {}
+        assert state.estimated_cost == 0.0
+        assert state.newly_completed_api_calls == []
 
     def test_create_initial_state_with_max_iterations(self):
-        """Test create_initial_state with a custom max_iterations value."""
-        state = create_initial_state(max_iterations=20)
-        assert state["max_iterations"] == 20
+        """Test AgentState creation with a custom max_iterations value."""
+        state = AgentState(max_iterations=20)
+        assert state.max_iterations == 20
 
     def test_initial_state_structure(self):
         """
-        Test that the initial state contains all the required keys
-        as defined in the AgentState TypedDict.
+        Test that the initial state contains all the required fields
+        as defined in the AgentState Pydantic model.
         """
-        state = create_initial_state()
-        required_keys = AgentState.__annotations__.keys()
+        state = AgentState()
+        required_fields = AgentState.model_fields.keys()
         
-        for key in required_keys:
-            assert key in state, f"Key '{key}' is missing from initial state"
+        for field in required_fields:
+            assert hasattr(state, field), f"Field '{field}' is missing from AgentState"
 
     def test_started_at_is_valid_iso_timestamp(self):
         """Test that 'started_at' is a valid ISO 8601 timestamp."""
-        state = create_initial_state()
+        state = AgentState()
         try:
-            datetime.fromisoformat(state["started_at"])
+            datetime.fromisoformat(state.started_at)
         except (ValueError, TypeError):
             pytest.fail("'started_at' is not a valid ISO 8601 timestamp")

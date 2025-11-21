@@ -122,11 +122,10 @@ class TestFormattingUtils:
     # Tests for format_state_for_llm
     def test_format_state_for_llm_full_state(self, mock_portfolio, mock_analysis_results):
         """Should combine portfolio and analysis summaries."""
-        state: AgentState = {
-            "portfolio": mock_portfolio,
-            "analysis_results": mock_analysis_results,
-            # Other state fields are not used by this function
-        }
+        state = AgentState(
+            portfolio=mock_portfolio,
+            analysis_results=mock_analysis_results
+        )
         formatted_state = format_state_for_llm(state)
         assert "Portfolio Summary:" in formatted_state
         assert "Total Value: $10,000.00" in formatted_state
@@ -135,10 +134,10 @@ class TestFormattingUtils:
 
     def test_format_state_for_llm_initial_state(self):
         """Should handle an initial state with no data."""
-        state: AgentState = {
-            "portfolio": None,
-            "analysis_results": {},
-        }
+        state = AgentState(
+            portfolio=None,
+            analysis_results={}
+        )
         formatted_state = format_state_for_llm(state)
         assert "Portfolio has not been loaded yet." in formatted_state
         assert "No analysis has been performed yet." in formatted_state

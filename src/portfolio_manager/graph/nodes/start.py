@@ -5,11 +5,11 @@ from src.portfolio_manager.agent_state import AgentState
 logger = logging.getLogger(__name__)
 
 
-def start_node(state: AgentState) -> AgentState:
+def start_node(state: dict) -> dict:
     """
-    Entry node - initializes the workflow
+    Initial node in the graph. Logs the start of the analysis.
     """
-    logger.info("=== Starting Autonomous Portfolio Analysis ===")
-    state["reasoning_trace"].append("Workflow initiated")
-    state["current_iteration"] = 1
+    # Pydantic model provides the default state, so we just log and proceed.
+    logger.info("Starting a new analysis run...")
+    _ = AgentState.model_validate(state) # Validate at the start
     return state

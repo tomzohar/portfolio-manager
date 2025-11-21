@@ -23,8 +23,8 @@ class Settings(BaseSettings):
     SENTRY_DSN: str | None = None
 
     # LLM Model Names
-    AGENT_MODEL: str = "gemini-1.5-pro"
-    ANALYSIS_MODEL: str = "gemini-1.5-flash"
+    AGENT_MODEL: str = "gemini-2.5-pro"
+    ANALYSIS_MODEL: str = "gemini-2.5-flash"
     
     # Operational Parameters
     LOG_LEVEL: str = "INFO"

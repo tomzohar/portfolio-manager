@@ -8,7 +8,7 @@ graph, tools, and state management work together as expected.
 import pytest
 from unittest.mock import patch, MagicMock
 
-from src.portfolio_manager.agent_state import create_initial_state
+from src.portfolio_manager.agent_state import AgentState, ToolResult
 from src.portfolio_manager.tools.parse_portfolio import parse_portfolio_tool
 
 
@@ -37,9 +37,9 @@ class TestAgentWorkflow:
         """Test a simple end-to-end graph execution flow."""
         # Setup mocks
         mock_graph = MagicMock()
-        # Simulate the streaming behavior
-        mock_final_state = {"final_report": "All done!"}
-        mock_graph.stream.return_value = [{"end": mock_final_state}]
+        # Simulate the invoke behavior
+        mock_final_state = {"final_report": "All done!", "max_iterations": 5}
+        mock_graph.invoke.return_value = mock_final_state
         mock_build.return_value = mock_graph
         
         # Execute the main runner function
@@ -48,11 +48,11 @@ class TestAgentWorkflow:
         
         # Verify
         mock_build.assert_called_once()
-        mock_graph.stream.assert_called_once()
+        mock_graph.invoke.assert_called_once()
         
         # Check that initial state was created with the correct max_iterations
-        stream_args = mock_graph.stream.call_args[0][0]
-        assert stream_args['max_iterations'] == 5
+        invoke_args = mock_graph.invoke.call_args[0][0]
+        assert invoke_args['max_iterations'] == 5
         
         # Check that the final state is returned correctly
         assert final_state == mock_final_state

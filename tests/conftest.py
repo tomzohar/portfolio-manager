@@ -69,8 +69,8 @@ def mock_portfolio():
 
 
 @pytest.fixture
-def initial_state() -> "AgentState":
-    """Provides a basic initial state for tests."""
+def initial_state() -> dict:
+    """Provides a basic initial state for tests as a dictionary."""
     # Import inside fixture to avoid circular dependency issues
     from src.portfolio_manager.agent_state import AgentState
     
@@ -79,7 +79,6 @@ def initial_state() -> "AgentState":
         analysis_results={},
         reasoning_trace=[],
         agent_reasoning=[],
-        tool_results=[],
         newly_completed_api_calls=[],
         confidence_score=0.0,
         max_iterations=10,
@@ -91,5 +90,5 @@ def initial_state() -> "AgentState":
         force_final_report=False,
         final_report="",
         started_at="2025-11-15T12:00:00Z"
-    )
+    ).model_dump()
 
