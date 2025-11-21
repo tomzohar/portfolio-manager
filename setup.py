@@ -10,7 +10,6 @@ setup(
         "google-auth",
         "google-search-results",
         "google-genai",
-        "twilio",
         "python-dotenv",
         "pytest",
         "pytest-mock",

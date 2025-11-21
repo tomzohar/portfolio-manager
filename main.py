@@ -11,9 +11,9 @@ from pathlib import Path
 # sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from stock_researcher.orchestrator import research_portfolio
-from stock_researcher.notifications.whatsapp import send_stock_research_summary, send_whatsapp_message
+from stock_researcher.notifications.pushover import send_stock_research_summary_pushover
 from stock_researcher.pre_processor.update_prices import update_gsheet_prices
-from stock_researcher.config import TWILIO_WHATSAPP_TO, validate_config
+from stock_researcher.config import validate_config
 
 
 def main():
@@ -37,7 +37,7 @@ def main():
         
         # Post-process: Display results and send notifications
         _display_results(portfolio, news, summaries, recommendations)
-        _send_whatsapp_notification(recommendations)
+        _send_pushover_notification(recommendations)
         
     except Exception as e:
         print(f"❌ An unexpected error occurred during the main workflow: {e}")
@@ -116,14 +116,17 @@ def _display_results(portfolio, news_data, summaries, recommendations):
     print("=" * 80)
 
 
-def _send_whatsapp_notification(recommendations):
-    """Send research summary via WhatsApp"""
-    print("\n[Final Step] Sending summary via WhatsApp...")
+def _send_pushover_notification(recommendations):
+    """Send research summary via Pushover"""
+    print("\n[Final Step] Sending summary via Pushover...")
     try:
-        message_sid = send_stock_research_summary(recommendations, to_number=TWILIO_WHATSAPP_TO)
-        print(f"✅ WhatsApp message sent! (SID: {message_sid})")
+        success = send_stock_research_summary_pushover(recommendations)
+        if success:
+            print(f"✅ Pushover message sent!")
+        else:
+            print(f"⚠️ Failed to send Pushover message.")
     except Exception as e:
-        print(f"⚠️ Could not send WhatsApp message: {e}")
+        print(f"⚠️ Could not send Pushover message: {e}")
 
 
 if __name__ == '__main__':

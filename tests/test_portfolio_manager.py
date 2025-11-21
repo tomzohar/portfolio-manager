@@ -18,8 +18,8 @@ class TestPortfolioManagerEntryPoint:
     """Test suite for the main entry point in run_portfolio_manager.py."""
 
     @patch("run_portfolio_manager.run_autonomous_analysis")
-    @patch("run_portfolio_manager.send_whatsapp_message")
-    def test_run_exits_0_on_success(self, mock_whatsapp, mock_run_analysis, mock_sys_exit):
+    @patch("run_portfolio_manager.send_pushover_message")
+    def test_run_exits_0_on_success(self, mock_pushover, mock_run_analysis, mock_sys_exit):
         """
         Tests that the main function exits with status 0 on a successful run.
         """
@@ -34,12 +34,12 @@ class TestPortfolioManagerEntryPoint:
 
         # Assert
         mock_sys_exit.assert_called_once_with(0)
-        mock_whatsapp.assert_called_once()
+        mock_pushover.assert_called_once()
 
     @patch("run_portfolio_manager.run_autonomous_analysis")
-    @patch("run_portfolio_manager.send_whatsapp_message")
+    @patch("run_portfolio_manager.send_pushover_message")
     @patch("run_portfolio_manager.capture_message")
-    def test_run_exits_1_on_workflow_errors(self, mock_capture_message, mock_whatsapp, mock_run_analysis, mock_sys_exit):
+    def test_run_exits_1_on_workflow_errors(self, mock_capture_message, mock_pushover, mock_run_analysis, mock_sys_exit):
         """
         Tests that the main function exits with status 1 if the workflow completes with errors.
         """
@@ -58,12 +58,12 @@ class TestPortfolioManagerEntryPoint:
             "Portfolio analysis completed with 2 errors.",
             level="warning"
         )
-        mock_whatsapp.assert_called_once()
+        mock_pushover.assert_called_once()
 
     @patch("run_portfolio_manager.run_autonomous_analysis")
     @patch("run_portfolio_manager.capture_error")
-    @patch("run_portfolio_manager.send_whatsapp_message")
-    def test_run_exits_1_on_fatal_exception(self, mock_whatsapp, mock_capture_error, mock_run_analysis, mock_sys_exit):
+    @patch("run_portfolio_manager.send_pushover_message")
+    def test_run_exits_1_on_fatal_exception(self, mock_pushover, mock_capture_error, mock_run_analysis, mock_sys_exit):
         """
         Tests that the main function exits with status 1 on a fatal exception
         and reports to Sentry.
@@ -78,11 +78,11 @@ class TestPortfolioManagerEntryPoint:
         # Assert
         mock_sys_exit.assert_called_once_with(1)
         mock_capture_error.assert_called_once_with(test_exception)
-        mock_whatsapp.assert_called_once()
+        mock_pushover.assert_called_once()
 
     @patch("run_portfolio_manager.run_autonomous_analysis")
-    @patch("run_portfolio_manager.send_whatsapp_message")
-    def test_run_exits_1_if_no_report_is_generated(self, mock_whatsapp, mock_run_analysis, mock_sys_exit):
+    @patch("run_portfolio_manager.send_pushover_message")
+    def test_run_exits_1_if_no_report_is_generated(self, mock_pushover, mock_run_analysis, mock_sys_exit):
         """
         Tests that the main function exits with status 1 if no final report is generated.
         """
@@ -96,4 +96,4 @@ class TestPortfolioManagerEntryPoint:
 
         # Assert
         mock_sys_exit.assert_called_once_with(1)
-        mock_whatsapp.assert_not_called()
+        mock_pushover.assert_not_called()

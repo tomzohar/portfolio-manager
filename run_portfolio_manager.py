@@ -21,8 +21,7 @@ from rich.logging import RichHandler
 # Import application components at the top level for clarity and mockability
 from src.portfolio_manager.graph import run_autonomous_analysis
 from src.portfolio_manager.error_handler import capture_error, capture_message
-from stock_researcher.notifications.whatsapp import send_whatsapp_message
-from stock_researcher.config import TWILIO_WHATSAPP_TO
+from stock_researcher.notifications.pushover import send_pushover_message
 
 
 # Configure logging
@@ -61,8 +60,7 @@ logger = logging.getLogger(__name__)
 
 def _handle_analysis_output(
     final_state: dict,
-    send_whatsapp_message,
-    twilio_whatsapp_to: str
+    send_notification_func
 ) -> bool:
     """
     Handles the final output, sending notifications and checking for errors.
@@ -105,25 +103,25 @@ def _handle_analysis_output(
         
         recommendations_text = "\n".join(recommendations_section).strip()
 
-        whatsapp_message = (
-            f"📊 *Portfolio Analysis*\n\n"
-            f"*Confidence:* {confidence:.0%}\n\n"
+        message_body = (
+            f"<b>Portfolio Analysis</b>\n\n"
+            f"<b>Confidence:</b> {confidence:.0%}\n\n"
             f"{recommendations_text}"
         )
         
-        # Truncate if over 1600 characters
-        if len(whatsapp_message) > 1600:
-            whatsapp_message = whatsapp_message[:1590] + "...\n(truncated)"
+        # Truncate if over 1000 characters (Pushover limit is 1024 usually, but safer to be lower)
+        if len(message_body) > 1000:
+            message_body = message_body[:990] + "...\n(truncated)"
 
-        send_whatsapp_message(
-            message_body=whatsapp_message, 
-            to_number=twilio_whatsapp_to
+        send_notification_func(
+            message_body=message_body,
+            title="Portfolio Analysis Update"
         )
-        logger.info("✓ WhatsApp notification sent")
+        logger.info("✓ Pushover notification sent")
         
-    except Exception as whatsapp_error:
+    except Exception as notification_error:
         logger.warning(
-            f"Failed to send WhatsApp notification: {whatsapp_error}", 
+            f"Failed to send notification: {notification_error}", 
             exc_info=True
         )
     
@@ -170,8 +168,7 @@ def main():
         
         success = _handle_analysis_output(
             final_state,
-            send_whatsapp_message,
-            TWILIO_WHATSAPP_TO
+            send_pushover_message
         )
         
         if success:
@@ -186,11 +183,10 @@ def main():
     except Exception as e:
         logger.error(f"Fatal error: {str(e)}", exc_info=True)
         try:
-            send_whatsapp_message(
-                f"❌ Portfolio Analysis Failed\n\n"
-                f"Error: {str(e)}\n\n"
-                f"Check logs for details.",
-                to_number=TWILIO_WHATSAPP_TO
+            send_pushover_message(
+                message_body=f"Error: {str(e)}\n\nCheck logs for details.",
+                title="❌ Portfolio Analysis Failed",
+                priority=1
             )
         except Exception as notify_error:
             logger.error(f"Failed to send failure notification: {notify_error}")
