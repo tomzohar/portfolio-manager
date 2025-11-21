@@ -57,12 +57,12 @@ def sample_llm_response():
 @pytest.fixture
 def mock_portfolio():
     """Create a mock Portfolio object"""
-    from stock_researcher.agents.portfolio_parser import Portfolio, PortfolioPosition
+    from src.portfolio_manager.integrations.google_sheets import Portfolio, PortfolioPosition
     
     positions = [
-        PortfolioPosition('GOOGL', 278.57, 48, 13371.36, 20.84),
-        PortfolioPosition('PLTR', 172.14, 43, 7402.02, 11.53),
-        PortfolioPosition('AMZN', 237.58, 17, 4038.86, 6.29),
+        PortfolioPosition(symbol='GOOGL', price=278.57, position=48, market_value=13371.36, percent_of_total=20.84),
+        PortfolioPosition(symbol='PLTR', price=172.14, position=43, market_value=7402.02, percent_of_total=11.53),
+        PortfolioPosition(symbol='AMZN', price=237.58, position=17, market_value=4038.86, percent_of_total=6.29),
     ]
     
     return Portfolio(positions=positions, total_value=64172.8)

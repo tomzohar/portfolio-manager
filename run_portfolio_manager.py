@@ -22,8 +22,8 @@ from rich.logging import RichHandler
 from src.portfolio_manager.graph import run_autonomous_analysis
 from src.portfolio_manager.error_handler import capture_error, capture_message
 from src.portfolio_manager.config import settings  # NEW: Import centralized settings
-from stock_researcher.notifications.pushover import send_pushover_message
-from stock_researcher.pre_processor.update_prices import update_gsheet_prices
+from src.portfolio_manager.integrations.pushover import send_pushover_message
+from src.portfolio_manager.integrations.google_sheets import update_gsheet_prices
 
 
 # Configure logging
