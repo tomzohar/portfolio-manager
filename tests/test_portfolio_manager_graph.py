@@ -167,6 +167,23 @@ class TestGraphNodes:
         assert "portfolio" in updated_state
         mock_execute_tool.assert_called_once_with("parse_portfolio", state=state)
 
+    @patch('src.portfolio_manager.graph.nodes.tool_execution.execute_tool')
+    def test_tool_execution_node_increments_iteration(self, mock_execute_tool):
+        """Test that the tool_execution_node increments the iteration counter."""
+        # Setup
+        state = create_initial_state()
+        state["current_iteration"] = 3
+        state["current_tool_name"] = "any_tool"
+        state["current_tool_args"] = {}
+        
+        mock_execute_tool.return_value = ToolResult(success=True)
+        
+        # Execute
+        updated_state = tool_execution_node(state)
+        
+        # Verify
+        assert updated_state["current_iteration"] == 4
+
     @patch('src.portfolio_manager.graph.nodes.final_report.generate_portfolio_recommendations')
     def test_final_report_node(self, mock_generate):
         """Test final report generation"""

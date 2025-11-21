@@ -44,4 +44,6 @@ def tool_execution_node(state: AgentState) -> AgentState:
         # Create a failure ToolResult to ensure consistent state
         state["latest_tool_result"] = ToolResult(success=False, error=str(e))
 
+    # Increment the iteration counter after each tool execution
+    state["current_iteration"] += 1
     return state
