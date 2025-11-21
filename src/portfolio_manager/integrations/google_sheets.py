@@ -16,34 +16,9 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 from ..config import settings
 from ..error_handler import capture_error
+from ..schemas import Portfolio, PortfolioPosition
 
 logger = logging.getLogger(__name__)
-
-
-class PortfolioPosition(BaseModel):
-    """Represents a single stock position in the portfolio."""
-    symbol: str
-    price: float
-    position: int  # number of shares
-    market_value: float
-    percent_of_total: float
-
-    class Config:
-        """Pydantic config."""
-        frozen = True
-
-
-class Portfolio(BaseModel):
-    """Represents the complete portfolio."""
-    positions: List[PortfolioPosition]
-    total_value: float
-
-    def to_dict(self) -> Dict:
-        """Converts portfolio to dictionary format."""
-        return {
-            "total_value": self.total_value,
-            "positions": [pos.model_dump() for pos in self.positions]
-        }
 
 
 def _get_gspread_client() -> gspread.Client:

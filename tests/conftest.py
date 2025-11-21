@@ -5,9 +5,20 @@ Pytest configuration and fixtures
 import sys
 from pathlib import Path
 import pytest
+from unittest.mock import MagicMock
+from src.portfolio_manager.schemas import Portfolio, PortfolioPosition
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+
+@pytest.fixture(autouse=True)
+def disable_sentry(mocker):
+    """Disable Sentry for all tests to prevent network calls and speed up execution."""
+    # Disable Sentry exception capturing
+    mocker.patch("sentry_sdk.capture_exception", return_value=None)
+    # Prevent Sentry initialization
+    mocker.patch("sentry_sdk.init", return_value=None)
 
 
 @pytest.fixture
@@ -56,16 +67,15 @@ def sample_llm_response():
 
 @pytest.fixture
 def mock_portfolio():
-    """Create a mock Portfolio object"""
-    from src.portfolio_manager.integrations.google_sheets import Portfolio, PortfolioPosition
-    
-    positions = [
-        PortfolioPosition(symbol='GOOGL', price=278.57, position=48, market_value=13371.36, percent_of_total=20.84),
-        PortfolioPosition(symbol='PLTR', price=172.14, position=43, market_value=7402.02, percent_of_total=11.53),
-        PortfolioPosition(symbol='AMZN', price=237.58, position=17, market_value=4038.86, percent_of_total=6.29),
-    ]
-    
-    return Portfolio(positions=positions, total_value=64172.8)
+    """Provides a mock portfolio object for testing."""
+    return Portfolio(
+        positions=[
+            PortfolioPosition(symbol='GOOGL', price=278.57, position=48, market_value=13371.36, percent_of_total=20.84),
+            PortfolioPosition(symbol='PLTR', price=172.14, position=43, market_value=7402.02, percent_of_total=11.53),
+            PortfolioPosition(symbol='AMZN', price=237.58, position=17, market_value=4038.86, percent_of_total=6.29),
+        ],
+        total_value=64172.8
+    )
 
 
 @pytest.fixture
