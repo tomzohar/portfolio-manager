@@ -1,12 +1,47 @@
 # Stock Researcher Architecture
 
-## High-Level Overview
+This document describes the two primary architectures in this project: the new **Autonomous Portfolio Manager** and the original **Legacy Sequential Pipeline**.
 
-This project is designed as a modular, multi-agent system that automates the entire workflow of stock research and portfolio analysis, culminating in actionable trading recommendations. An orchestrator function (`research_portfolio_news`) sequences the calls to various agents, each responsible for a specific task. This design allows for clear separation of concerns, easy testing, and straightforward extensibility.
+## 1. Autonomous Portfolio Manager Architecture (LangGraph-Based)
+
+The new autonomous agent is built using `LangGraph` to create a stateful, cyclical, and intelligent workflow. Unlike the rigid sequential pipeline, this architecture allows an AI agent to decide which tools to use and when, based on the evolving state of the analysis.
+
+### High-Level Flow
+
+The system is a graph where the Portfolio Manager agent repeatedly decides on the next best action, calls a tool, updates its state, and loops until it is confident enough to generate a final report.
+
+```mermaid
+graph TD
+    A[Start] --> B(Parse Portfolio);
+    B --> C{Agent Decision};
+    C -- "Needs News" --> D[Tool: News Search & Analysis];
+    C -- "Needs Technicals" --> E[Tool: Technical Analysis];
+    C -- "Needs Risk Assessment" --> F[Tool: Position Sizing & Risk];
+    
+    D --> G(Update State);
+    E --> G;
+    F --> G;
+    
+    G --> C;
+    
+    C -- "Sufficient Confidence" --> H(Generate Final Report);
+    H --> I[Notify User];
+    I --> J[End];
+```
+
+### Key Components
+
+-   **State (`AgentState`)**: A central dictionary that holds all information about the current analysis, including portfolio data, tool results, and reasoning history. It is passed between every step.
+-   **Nodes**: Functions that represent a specific action, such as the agent's decision-making "brain" (`agent_decision_node`) or a tool executor (`tool_execution_node`).
+-   **Edges**: Conditional logic that routes the flow of the graph based on the agent's decisions (e.g., call a tool or generate the final report).
+
+This event-driven architecture makes the system more efficient, adaptable, and intelligent, as it only performs the analysis that is necessary for the given portfolio.
+
+---
+
+## 2. Legacy Sequential Pipeline Architecture
 
 The workflow is heavily optimized for performance, with expensive I/O and API calls (data fetching, news summarization, technical analysis) running concurrently to minimize execution time.
-
-## Workflow Architecture
 
 The process begins in `main.py`, which first attempts a non-blocking price update before handing off to the main orchestrator. The orchestrator then coordinates the agents in a multi-stage, parallelized pipeline.
 

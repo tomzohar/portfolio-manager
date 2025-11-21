@@ -2,48 +2,36 @@
 
 ## 📁 Final Pythonic Folder Structure
 
-This project follows a standard, modular Python structure that separates concerns and makes the codebase clean, scalable, and easy to maintain.
+This project follows a standard, modular Python structure that separates the new autonomous agent from the legacy system.
 
 ```
 stocks-researcher/
 ├── src/                                    # Source code
-│   └── stock_researcher/                   # Main package
-│       ├── __init__.py                     # Package initialization
-│       ├── config.py                       # Configuration and environment variables
-│       ├── orchestrator.py                 # 🎯 Main workflow orchestrator
-│       │
-│       ├── agents/                         # Agent modules with specific roles
-│       │   ├── __init__.py
-│       │   ├── portfolio_parser.py         # Agent 1: Parses portfolio from Google Sheets
-│       │   ├── news_searcher.py            # Agent 2: Fetches news from SerpApi
-│       │   ├── llm_analyzer.py             # Agent 3: Summarizes news with Gemini
-│       │   ├── technical_analyzer.py       # Agent 4: Performs technical analysis with Gemini
-│       │   └── portfolio_manager.py        # Agent 5: Generates final recommendations with Gemini
-│       │
-│       ├── data_fetcher/                   # Modules for retrieving external data
-│       │   ├── __init__.py
-│       │   └── ohlcv.py                      # Fetches OHLCV data from yfinance
-│       │
-│       ├── pre_processor/                  # Standalone data preparation scripts
-│       │   ├── __init__.py
-│       │   └── update_prices.py              # Logic to update prices in Google Sheets
-│       │
-│       ├── utils/                          # Shared utility functions
-│       │   ├── __init__.py
-│       │   ├── llm_utils.py                  # Centralized Gemini API call logic with retries
-│       │   └── technical_analysis_utils.py   # Technical indicator calculation logic
-│       │
-│       └── notifications/                  # Modules for sending notifications
+│   ├── stock_researcher/                   # LEGACY: Main package for the original sequential pipeline
+│   │   ├── __init__.py
+│   │   ├── orchestrator.py                 # Main workflow orchestrator for the legacy system
+│   │   └── agents/                         # Agent modules with specific roles
+│   │       └── ... (and so on)
+│   │
+│   └── portfolio_manager/                  # NEW: Autonomous agent package
+│       ├── __init__.py
+│       ├── agent_state.py                  # Defines the AgentState schema for the graph
+│       ├── tool_registry.py                # Decorator-based system for creating and managing tools
+│       ├── prompts.py                      # Contains the master system prompt for the agent's "brain"
+│       ├── graph/                          # LangGraph implementation
+│       │   ├── builder.py                  # Assembles the graph nodes and edges
+│       │   ├── nodes/                      # Directory containing each node's logic (e.g., agent_decision)
+│       │   └── edges.py                    # Conditional routing logic for the graph
+│       └── tools/                          # Directory for all agent-callable tools
 │           ├── __init__.py
-│           └── pushover.py                 # Pushover integration
+│           ├── parse_portfolio.py
+│           └── ... (other tool files)
 │
 ├── tests/                                  # Unit and integration tests
-│   ├── __init__.py
-│   ├── test_llm_analyzer.py
-│   ├── ... (other test files)
+│   └── ...
 │
-├── main.py                                 # 🚀 Main application entry point
-├── update_prices_main.py                   # Standalone script for price updates
+├── main.py                                 # 🚀 Entry point for the LEGACY sequential pipeline
+├── run_portfolio_manager.py                # 🚀 Entry point for the NEW autonomous agent
 │
 ├── .env                                    # Environment variables (secret, gitignored)
 ├── .env.example                            # Template for .env

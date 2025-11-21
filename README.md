@@ -40,11 +40,23 @@ Then edit `.env` with your actual credentials:
 
 ## Usage
 
-Run the stock research pipeline:
+This project contains two primary execution modes: the original sequential pipeline and the new autonomous agent.
 
+### Autonomous Portfolio Manager (Recommended)
+Run the new intelligent agent that dynamically analyzes your portfolio:
 ```bash
 # Make sure virtual environment is activated first
-source venv/bin/activate
+source v-env/bin/activate
+
+# Run the Autonomous Portfolio Manager
+python run_portfolio_manager.py
+```
+
+### Legacy Sequential Pipeline
+Run the original stock research pipeline, which analyzes all stocks in a fixed sequence:
+```bash
+# Make sure virtual environment is activated first
+source v-env/bin/activate
 
 # Run the main flow
 python main.py
@@ -104,8 +116,14 @@ The test suite includes:
 - pytest-mock: Enhanced mocking support
 
 ## Project Structure
-This project follows a standard Python project structure to ensure modularity and ease of maintenance.
-- **`main.py`**: The main entry point for the application. It handles the initial price update and triggers the research orchestrator.
+This project follows a standard Python project structure that separates the new autonomous agent from the legacy system.
+
+- **`src/portfolio_manager/`**: Contains the new **Autonomous Portfolio Manager**. It uses `LangGraph` to dynamically decide which analyses to perform, making it more efficient and intelligent.
+- **`src/stock_researcher/`**: Contains the original, sequential stock research pipeline. It follows a fixed execution path for every stock.
+
+Key entry points:
+- **`run_portfolio_manager.py`**: The main entry point for the new autonomous agent.
+- **`main.py`**: The main entry point for the legacy application.
 - **`update_prices_main.py`**: A standalone script to manually refresh stock prices in your Google Sheet.
 - **`src/stock_researcher/`**: Contains the core application logic.
   - **`agents/`**: Holds the different AI "agents," each with a specific role (parsing the portfolio, searching news, technical analysis, and final recommendations).
