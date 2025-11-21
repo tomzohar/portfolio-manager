@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="stock_researcher",
-    version="0.1.0",
+    name="portfolio_manager",
+    version="2.0.0",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     install_requires=[
@@ -18,11 +18,13 @@ setup(
         "pandas",
         "pandas-ta",
         "polygon-api-client",
-        "sentry-sdk"
+        "sentry-sdk",
+        "langgraph",
+        "langchain-core",
     ],
     entry_points={
         "console_scripts": [
-            "stock-researcher=stock_researcher.main:main",
+            "portfolio-manager=portfolio_manager.graph.main:main",
         ],
     },
 )
