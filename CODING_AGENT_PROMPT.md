@@ -132,6 +132,8 @@ PROJECT DOCUMENTATION (Read these FIRST before starting any task):
    - When to Update: NEVER unless explicitly requested by the user
    - Authority: Critical safety documentation - DO NOT MODIFY
 
+8. requirements.txt - list of project dependencies
+
 EXTERNAL TOOLS & APIS:
 
 polygon-api-client: Market data retrieval
