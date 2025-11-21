@@ -9,7 +9,7 @@ import pytest
 from unittest.mock import patch
 
 from src.portfolio_manager.tools.assess_confidence import assess_confidence_tool
-from src.portfolio_manager.agent_state import ToolResult, AgentState, create_initial_state
+from src.portfolio_manager.agent_state import AgentState, ToolResult
 
 
 class TestAssessConfidenceTool:
@@ -17,7 +17,7 @@ class TestAssessConfidenceTool:
     
     def test_assess_confidence_no_portfolio(self):
         """Test confidence assessment with no portfolio data"""
-        state = create_initial_state()
+        state = AgentState().model_dump()
         state["portfolio"] = None
         state["analysis_results"] = {}
         
@@ -41,7 +41,7 @@ class TestAssessConfidenceTool:
     
     def test_assess_confidence_empty_portfolio(self):
         """Test confidence assessment with empty portfolio (no positions)"""
-        state = create_initial_state()
+        state = AgentState().model_dump()
         state["portfolio"] = {
             "total_value": 0.0,
             "positions": []
@@ -59,7 +59,7 @@ class TestAssessConfidenceTool:
     
     def test_assess_confidence_full_coverage_news_only(self):
         """Test confidence with 100% coverage but only news data"""
-        state = create_initial_state()
+        state = AgentState().model_dump()
         state["portfolio"] = {
             "total_value": 100000.0,
             "positions": [
@@ -88,7 +88,7 @@ class TestAssessConfidenceTool:
     
     def test_assess_confidence_full_coverage_both_types(self):
         """Test confidence with 100% coverage and both news + technicals"""
-        state = create_initial_state()
+        state = AgentState().model_dump()
         state["portfolio"] = {
             "total_value": 100000.0,
             "positions": [
@@ -113,7 +113,7 @@ class TestAssessConfidenceTool:
     
     def test_assess_confidence_partial_coverage(self):
         """Test confidence with partial coverage"""
-        state = create_initial_state()
+        state = AgentState().model_dump()
         state["portfolio"] = {
             "total_value": 100000.0,
             "positions": [
@@ -143,7 +143,7 @@ class TestAssessConfidenceTool:
     
     def test_assess_confidence_low_coverage(self):
         """Test low confidence recommendation (<0.60)"""
-        state = create_initial_state()
+        state = AgentState().model_dump()
         state["portfolio"] = {
             "total_value": 100000.0,
             "positions": [{"ticker": f"TICK{i}"} for i in range(10)]
@@ -163,7 +163,7 @@ class TestAssessConfidenceTool:
     
     def test_assess_confidence_medium_coverage(self):
         """Test medium confidence recommendation (0.60-0.74)"""
-        state = create_initial_state()
+        state = AgentState().model_dump()
         state["portfolio"] = {
             "total_value": 100000.0,
             "positions": [{"ticker": f"TICK{i}"} for i in range(4)]
@@ -190,7 +190,7 @@ class TestAssessConfidenceTool:
     
     def test_assess_confidence_technicals_only(self):
         """Test confidence with only technical analysis (no news)"""
-        state = create_initial_state()
+        state = AgentState().model_dump()
         state["portfolio"] = {
             "total_value": 100000.0,
             "positions": [
@@ -214,7 +214,7 @@ class TestAssessConfidenceTool:
     
     def test_assess_confidence_mixed_analysis(self):
         """Test with some tickers having news, others having technicals"""
-        state = create_initial_state()
+        state = AgentState().model_dump()
         state["portfolio"] = {
             "total_value": 100000.0,
             "positions": [
@@ -241,7 +241,7 @@ class TestAssessConfidenceTool:
     def test_assess_confidence_error_handling(self):
         """Test error handling in confidence assessment"""
         # Passing invalid data structure
-        state = create_initial_state()
+        state = AgentState().model_dump()
         state["portfolio"] = {"invalid": "structure"}
         state["analysis_results"] = {}
         
@@ -257,7 +257,7 @@ class TestAssessConfidenceTool:
         """Test that appropriate log messages are generated"""
         import logging
         
-        state = create_initial_state()
+        state = AgentState().model_dump()
         state["portfolio"] = {
             "total_value": 100000.0,
             "positions": [{"ticker": "AAPL"}]
@@ -279,7 +279,7 @@ class TestAssessConfidenceTool:
         import logging
         
         # Pass something that will cause an error
-        state = create_initial_state()
+        state = AgentState().model_dump()
         state["portfolio"] = "not a dict"
         state["analysis_results"] = {}
         

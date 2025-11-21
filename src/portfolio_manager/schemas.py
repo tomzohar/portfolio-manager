@@ -8,7 +8,33 @@ reliable tool execution and error handling.
 """
 
 from pydantic import BaseModel, Field
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
+
+
+class PortfolioPosition(BaseModel):
+    """Represents a single stock position in the portfolio."""
+    symbol: str
+    price: float
+    position: int  # number of shares
+    market_value: float
+    percent_of_total: float
+
+    class Config:
+        """Pydantic config."""
+        frozen = True
+
+
+class Portfolio(BaseModel):
+    """Represents the complete portfolio."""
+    positions: List[PortfolioPosition]
+    total_value: float
+
+    def to_dict(self) -> Dict:
+        """Converts portfolio to dictionary format."""
+        return {
+            "total_value": self.total_value,
+            "positions": [pos.model_dump() for pos in self.positions]
+        }
 
 
 class AgentDecision(BaseModel):

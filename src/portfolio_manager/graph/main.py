@@ -1,59 +1,42 @@
 """Main entry point for running the autonomous agent."""
 import logging
-from src.portfolio_manager.agent_state import AgentState, create_initial_state
 from .builder import build_graph
+from ..agent_state import AgentState  # Import the Pydantic model
 
 logger = logging.getLogger(__name__)
 
 
-def run_autonomous_analysis(max_iterations: int = 15) -> AgentState:
+def run_autonomous_analysis(max_iterations: int = 10):
     """
-    Main entry point for running the autonomous portfolio analysis.
+    Run the autonomous portfolio analysis workflow.
     
     Args:
-        max_iterations: Maximum number of agent decision loops.
+        max_iterations: The maximum number of agent decision loops
     
     Returns:
-        The final AgentState after workflow completion.
+        The final state of the workflow
     """
-    initial_state = create_initial_state(max_iterations=max_iterations)
+    logger.info("Building the autonomous agent graph...")
+    app = build_graph()
     
-    graph = build_graph()
+    # Create the initial state using the Pydantic model
+    initial_state = AgentState(max_iterations=max_iterations)
     
-    logger.info("Starting autonomous portfolio analysis workflow")
+    logger.info("Starting analysis...")
     
-    final_state = None
-    # Stream the graph execution to log each step
-    for chunk in graph.stream(initial_state):
-        for key, value in chunk.items():
-            logger.info(f"--- Node '{key}' finished ---")
-            
-            # Log agent decisions and reasoning
-            if "agent_decision" in value:
-                decision = value["agent_decision"]
-                if decision and 'reasoning' in decision and 'tool_calls' in decision:
-                    logger.info(f"Decision: {decision['reasoning']}")
-                    if not decision['tool_calls']:
-                        logger.info("  - No tool calls made.")
-                    else:
-                        for tool_call in decision['tool_calls']:
-                            logger.info(f"  - Tool Call: {tool_call['name']}({tool_call['arguments']})")
-
-            # Log tool execution results
-            if "tool_results" in value and value["tool_results"]:
-                for result in value["tool_results"]:
-                    if result.success:
-                        logger.info(f"Tool '{result.tool_name}' succeeded.")
-                    else:
-                        logger.warning(f"Tool '{result.tool_name}' failed: {result.error}")
-            
-            final_state = value
+    # Calculate LangGraph recursion limit:
+    # Each agent iteration = 4 nodes (guardrail -> agent -> execute_tool -> guardrail)
+    # Plus: 1 start node + 1 final_report node
+    # Formula: (max_iterations * 4) + 10 (buffer for start, final_report, and safety margin)
+    langgraph_recursion_limit = (max_iterations * 4) + 10
     
-    logger.info("Workflow completed")
+    logger.info(f"Setting LangGraph recursion limit to {langgraph_recursion_limit} "
+                f"(max_iterations={max_iterations})")
     
-    # Ensure we return the final state from the last chunk
-    if final_state:
-        return final_state
-        
-    logger.error("Graph execution did not produce a final state.")
-    return initial_state
+    # The input to invoke must be a dictionary
+    final_state = app.invoke(
+        initial_state.model_dump(),
+        config={"recursion_limit": langgraph_recursion_limit}
+    )
+    
+    return final_state

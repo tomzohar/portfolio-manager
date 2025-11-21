@@ -9,3 +9,4 @@ __pycache__/
 *.egg-info/
 
 stocks-researcher-d9df81878425.json
+portfolio_manager.log

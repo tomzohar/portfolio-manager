@@ -13,7 +13,6 @@ Usage:
 import logging
 import sys
 import argparse
-from dotenv import load_dotenv
 import os
 import sentry_sdk
 from logging.handlers import RotatingFileHandler
@@ -22,14 +21,15 @@ from rich.logging import RichHandler
 # Import application components at the top level for clarity and mockability
 from src.portfolio_manager.graph import run_autonomous_analysis
 from src.portfolio_manager.error_handler import capture_error, capture_message
-from stock_researcher.notifications.pushover import send_pushover_message
-from stock_researcher.pre_processor.update_prices import update_gsheet_prices
+from src.portfolio_manager.config import settings  # NEW: Import centralized settings
+from src.portfolio_manager.integrations.pushover import send_pushover_message
+from src.portfolio_manager.integrations.google_sheets import update_gsheet_prices
 
 
 # Configure logging
 def setup_logging():
     """Set up logging with RichHandler and file output."""
-    log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
+    log_level = settings.LOG_LEVEL.upper()
     
     # Create logs directory if it doesn't exist
     if not os.path.exists("logs"):
@@ -158,15 +158,13 @@ def main():
     )
     args = parser.parse_args()
     
-    # Load environment variables
-    load_dotenv()
+    # Load environment variables (Pydantic's BaseSettings does this automatically)
     setup_logging()
     
     # Initialize Sentry if DSN is provided
-    sentry_dsn = os.environ.get("SENTRY_DSN")
-    if sentry_dsn:
+    if settings.SENTRY_DSN:
         sentry_sdk.init(
-            dsn=sentry_dsn,
+            dsn=settings.SENTRY_DSN,
             traces_sample_rate=1.0,
             profiles_sample_rate=1.0,
             enable_tracing=True

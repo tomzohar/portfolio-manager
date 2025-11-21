@@ -1,93 +1,238 @@
-# Stock Researcher Architecture
+# Portfolio Manager Architecture
 
-## High-Level Overview
+This document describes the architecture of the **Autonomous Portfolio Manager**, an intelligent, agent-based system built using `LangGraph` for stateful workflow orchestration.
 
-This project is designed as a modular, multi-agent system that automates the entire workflow of stock research and portfolio analysis, culminating in actionable trading recommendations. An orchestrator function (`research_portfolio_news`) sequences the calls to various agents, each responsible for a specific task. This design allows for clear separation of concerns, easy testing, and straightforward extensibility.
+## Overview
 
-The workflow is heavily optimized for performance, with expensive I/O and API calls (data fetching, news summarization, technical analysis) running concurrently to minimize execution time.
+The new autonomous agent is built using `LangGraph` to create a stateful, cyclical, and intelligent workflow. Unlike the rigid sequential pipeline, this architecture allows an AI agent to decide which tools to use and when, based on the evolving state of the analysis.
 
-## Workflow Architecture
+### High-Level Flow
 
-The process begins in `main.py`, which first attempts a non-blocking price update before handing off to the main orchestrator. The orchestrator then coordinates the agents in a multi-stage, parallelized pipeline.
+The system is a graph where the Portfolio Manager agent repeatedly decides on the next best action, calls a tool, updates its state, and loops until it is confident enough to generate a final report.
 
 ```mermaid
 graph TD
-    subgraph "main.py Entry Point"
-        A[Start] --> B{Attempt Price Update};
-        B -- Success --> C[Run Orchestrator];
-        B -- Failure --> D[Log Warning & Send WhatsApp Alert];
-        D --> C;
-    end
-
-    subgraph "Orchestrator Pipeline"
-        C --> E[Agent 1: Parse Portfolio];
-        E --> F((Data Fetching));
-        F --> G[Agent 2: News Searcher];
-        F --> H[Data Fetcher: OHLCV];
-        
-        subgraph "Parallel AI Analysis"
-            G --> I[Agent 3: Summarize News<br>(gemini-2.5-flash)];
-            H --> J[Agent 4: Analyze Technicals<br>(gemini-2.5-flash)];
-        end
-
-        I --> K((Final Reasoning));
-        J --> K;
-        E --> K;
-        
-        K --> L[Agent 5: Portfolio Manager<br>(gemini-2.5-pro)];
-    end
+    A[Start] --> B(Parse Portfolio);
+    B --> C{Agent Decision};
+    C -- "Needs News" --> D[Tool: News Search & Analysis];
+    C -- "Needs Technicals" --> E[Tool: Technical Analysis];
+    C -- "Needs Risk Assessment" --> F[Tool: Position Sizing & Risk];
     
-    subgraph "Output"
-        L --> M[Display Full Report in Console];
-        L --> N[Send Recommendations via WhatsApp];
-    end
-
+    D --> G(Update State);
+    E --> G;
+    F --> G;
+    
+    G --> C;
+    
+    C -- "Sufficient Confidence" --> H(Generate Final Report);
+    H --> I[Notify User];
+    I --> J[End];
 ```
 
-## Agent Responsibilities
+### Key Components
 
-### Agent 1: Portfolio Parser (`agents/portfolio_parser.py`)
-- **Input**: Google Sheet credentials.
-- **Process**: Connects to Google Sheets using `gspread` and parses the portfolio data into structured `Portfolio` and `PortfolioPosition` data classes.
-- **Output**: A `Portfolio` object containing all positions.
+-   **State (`AgentState`)**: A central dictionary that holds all information about the current analysis, including portfolio data, tool results, and reasoning history. It is passed between every step.
+-   **Nodes**: Functions that represent a specific action, such as the agent's decision-making "brain" (`agent_decision_node`) or a tool executor (`tool_execution_node`).
+-   **Edges**: Conditional logic that routes the flow of the graph based on the agent's decisions (e.g., call a tool or generate the final report).
 
-### Agent 2: News Searcher (`agents/news_searcher.py`)
-- **Input**: A list of stock tickers.
-- **Process**: Uses the `SerpApi` to search for recent news articles for each stock ticker.
-- **Output**: A dictionary mapping each ticker to a list of news articles.
+This event-driven architecture makes the system more efficient, adaptable, and intelligent, as it only performs the analysis that is necessary for the given portfolio.
 
-### Agent 3: News Summarizer (`agents/llm_analyzer.py`)
-- **Input**: The dictionary of news articles.
-- **Process**: For each stock, sends the news articles to the `gemini-1.5-flash` model to generate a concise executive summary, a sentiment score, and an actionable takeaway. These calls are executed concurrently using a `ThreadPoolExecutor` for performance.
-- **Output**: A dictionary mapping each ticker to its AI-generated summary.
+---
 
-### Agent 4: Technical Analyst (`agents/technical_analyzer.py`)
-- **Input**: A list of stock tickers.
-- **Process**: 
-    1. Fetches 1 year of historical OHLCV data using the `yfinance` library.
-    2. Calculates key technical indicators (SMA, RSI, MACD) using `pandas-ta`.
-    3. Sends these indicators to the `gemini-1.5-flash` model for a concise summary of the stock's technical health. These calls are also executed concurrently.
-- **Output**: A dictionary mapping each ticker to its AI-generated technical analysis.
+## Module Architecture
 
-### Agent 5: Portfolio Manager (`agents/portfolio_manager.py`)
-- **Input**: The `Portfolio` object, news summaries, and technical analyses.
-- **Process**: This is the final reasoning engine. It aggregates all the inputs into a single, comprehensive prompt for the more powerful `gemini-2.5-pro` model. It asks the model to provide a holistic portfolio assessment and generate specific, actionable recommendations (e.g., INCREASE/DECREASE position) based on all available data.
-- **Output**: A structured dictionary containing the overall assessment and specific recommendations.
+The Portfolio Manager is organized into logical modules, each with clear responsibilities:
 
-## Core Utilities
+### Core Modules
 
-### `utils/llm_utils.py`
-- Centralizes all interactions with the Google Gemini API.
-- Handles client initialization and provides a robust `call_gemini_api` function that uses the `tenacity` library for automatic retries with exponential backoff. This makes all AI calls resilient to temporary API failures.
+#### `agent_state.py`
+- **Purpose**: Defines the central state schema (`AgentState`) that flows through the entire graph
+- **Key Classes**:
+  - `AgentState`: TypedDict holding portfolio data, analysis results, confidence scores, and reasoning traces
+  - `ToolResult`: Structured result format for all tool executions
+- **State Management**: Immutable state updates ensure predictable behavior throughout the workflow
 
-### `utils/technical_analysis_utils.py`
-- Contains the `calculate_technical_indicators` function.
-- Uses the `pandas-ta` library to calculate SMA, RSI, and MACD from the raw OHLCV data, providing a clean dictionary of indicators for the Technical Analyst Agent.
+#### `tool_registry.py`
+- **Purpose**: Decorator-based tool registration system
+- **Features**:
+  - `@tool` decorator for automatic tool registration
+  - Metadata extraction (parameters, descriptions, examples)
+  - Runtime validation of tool calls
+  - Dynamic prompt generation for LLM context
 
-## Price Update Pre-processing
+#### `schemas.py`
+- **Purpose**: Pydantic models for data validation
+- **Key Models**:
+  - `Portfolio`: Portfolio-level data with total value
+  - `PortfolioPosition`: Individual stock position details
+  - `GuardrailLimits`: Safety constraints and operational limits
 
-The price update logic in `pre_processor/update_prices.py` is called at the beginning of `main.py`. This step ensures the portfolio valuation is based on the latest available data.
+### Graph Components (`graph/`)
 
-- **Robustness**: The process is wrapped in a `try...except` block. If `yfinance` fails to fetch prices, the failure is logged, a WhatsApp alert is sent, and the main application proceeds with the last known prices from the sheet. This prevents data source flakiness from blocking the core analysis.
-- **Manual Override**: For convenience, the `update_prices_main.py` script allows for running the price update process manually without triggering the full research workflow.
+#### `main.py`
+- **Purpose**: Entry point for the autonomous agent workflow
+- **Responsibilities**: Builds and executes the LangGraph workflow, manages error handling
+
+#### `builder.py`
+- **Purpose**: Constructs the state graph with nodes and edges
+- **Features**: Configures recursion limits, adds guardrail checks, compiles the executable graph
+
+#### `nodes/`
+Individual graph nodes representing discrete actions:
+
+- **`start.py`**: Initializes state and loads portfolio data
+- **`agent_decision.py`**: LLM-powered decision node that selects next actions
+- **`tool_execution.py`**: Executes tools requested by the agent
+- **`guardrails.py`**: Safety checks (iteration limits, cost limits, error thresholds)
+- **`final_report.py`**: Generates comprehensive portfolio analysis report
+
+#### `edges.py`
+- **Purpose**: Conditional routing logic
+- **Function**: `should_continue()` decides whether to loop, generate report, or terminate
+
+### Integration Modules (`integrations/`)
+
+External service integrations with retry logic and error handling:
+
+#### `google_sheets.py`
+- **Functions**: `parse_portfolio()`, `update_gsheet_prices()`
+- **Features**: OAuth2 authentication, structured data parsing, price updates
+
+#### `polygon.py`
+- **Functions**: `fetch_ohlcv_data()`
+- **Features**: Historical market data retrieval, DataFrame construction, date range calculation
+
+#### `serp_api.py`
+- **Functions**: `get_stock_news()`
+- **Features**: Google News search, structured article extraction, Pydantic models
+
+#### `pushover.py`
+- **Functions**: `send_pushover_message()`
+- **Features**: Mobile push notifications, error alerts, completion notifications
+
+### Analysis Modules (`analysis/`)
+
+AI-powered analysis with concurrent execution:
+
+#### `news_analyzer.py`
+- **Functions**: `generate_executive_summaries()`, `_generate_summary_for_ticker()`
+- **Features**: LLM-based news summarization, sentiment analysis, concurrent processing
+
+#### `technical_analyzer.py`
+- **Functions**: `analyze_stock_technicals()`, `calculate_technical_indicators()`
+- **Features**: 
+  - Vectorized technical indicator calculations (SMA, RSI, MACD)
+  - LLM-based technical analysis interpretation
+  - Concurrent multi-ticker processing
+
+### Tool Modules (`tools/`)
+
+Agent-callable tools following the decorator pattern:
+
+- **`parse_portfolio.py`**: Loads portfolio from Google Sheets
+- **`analyze_news.py`**: Fetches and analyzes news for specified tickers
+- **`analyze_technicals.py`**: Performs technical analysis on specified tickers
+- **`assess_confidence.py`**: Calculates analysis coverage and confidence score
+
+Each tool:
+- Returns `ToolResult` with success/failure status
+- Includes confidence impact scoring
+- Provides structured data for downstream nodes
+
+### Utility Modules
+
+#### `utils.py`
+- **LLM Functions**: `call_gemini_api()`, `_get_gemini_client()`
+- **Formatting**: `format_state_for_llm()`, `format_portfolio_summary()`
+- **Cost Tracking**: `estimate_cost()` for API usage monitoring
+
+#### `config.py`
+- **Purpose**: Centralized configuration management
+- **Features**: Environment variable loading, Google credentials handling, API key management
+
+#### `prompts.py`
+- **Purpose**: System prompts and instructions for LLM nodes
+- **Features**: Structured prompts for agent decision-making and report generation
+
+#### `error_handler.py`
+- **Purpose**: Global error handling utilities
+- **Features**: Sentry integration, error classification, graceful degradation
+
+---
+
+## Data Flow
+
+### 1. Initialization
+```
+Start → Load Portfolio from Google Sheets → Initialize AgentState
+```
+
+### 2. Agent Loop
+```
+Agent Decision (LLM) → Tool Selection → Tool Execution → State Update → Guardrails Check → Loop
+```
+
+### 3. Termination Conditions
+- **High Confidence**: Analysis coverage meets threshold
+- **Max Iterations**: Safety limit reached
+- **Cost Limit**: Budget constraint exceeded
+- **Critical Errors**: Unrecoverable failures detected
+
+### 4. Report Generation
+```
+Final Report Node (LLM) → Format Comprehensive Analysis → Send Notification → End
+```
+
+---
+
+## Key Design Principles
+
+### 1. Resilience
+- All external API calls wrapped with `@retry` decorator
+- Exponential backoff for transient failures
+- Sentry integration for error tracking
+- Graceful degradation on partial failures
+
+### 2. Observability
+- Structured logging throughout (debug, info, error levels)
+- Sentry exception capture for all I/O operations
+- Cost tracking for API usage
+- Reasoning trace maintained in state
+
+### 3. Performance
+- Concurrent execution for multi-ticker analysis (ThreadPoolExecutor)
+- Vectorized operations for technical indicators (no DataFrame loops)
+- Lazy client initialization for external services
+
+### 4. Safety
+- Guardrail checks at every iteration
+- Cost limits to prevent runaway expenses
+- Iteration limits to prevent infinite loops
+- Error threshold to halt on repeated failures
+
+### 5. Modularity
+- Clear separation of concerns (integrations, analysis, tools)
+- Decorator-based tool registration
+- Pydantic models for data validation
+- Centralized configuration management
+
+---
+
+## External Dependencies
+
+### Required Services
+- **Google Sheets API**: Portfolio data source (OAuth2)
+- **Polygon.io API**: Historical market data (REST)
+- **SerpAPI**: News article search (REST)
+- **Google Gemini API**: LLM for analysis and decision-making
+- **Pushover API**: Mobile push notifications
+- **Sentry**: Error tracking and monitoring
+
+### Key Libraries
+- **LangGraph**: State graph orchestration
+- **Pydantic**: Data validation and schemas
+- **pandas / pandas-ta**: Technical analysis calculations
+- **tenacity**: Retry logic with exponential backoff
+- **gspread**: Google Sheets integration
+- **polygon-api-client**: Market data client
 

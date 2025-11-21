@@ -3,9 +3,11 @@ Tests for Agent Utility Functions
 
 This module contains unit tests for the utility functions used by the
 autonomous agent, primarily focusing on state formatting and summarization.
+It also tests the LLM API integration utilities.
 """
 
 import pytest
+from unittest.mock import MagicMock
 from src.portfolio_manager.agent_state import AgentState
 from src.portfolio_manager.utils import (
     format_portfolio_summary,
@@ -16,6 +18,9 @@ from src.portfolio_manager.utils import (
     estimate_cost,
     API_COSTS,
     ApiType,
+    call_gemini_api,
+    _get_gemini_client,
+    LLM_MODEL,
 )
 
 
@@ -122,11 +127,10 @@ class TestFormattingUtils:
     # Tests for format_state_for_llm
     def test_format_state_for_llm_full_state(self, mock_portfolio, mock_analysis_results):
         """Should combine portfolio and analysis summaries."""
-        state: AgentState = {
-            "portfolio": mock_portfolio,
-            "analysis_results": mock_analysis_results,
-            # Other state fields are not used by this function
-        }
+        state = AgentState(
+            portfolio=mock_portfolio,
+            analysis_results=mock_analysis_results
+        )
         formatted_state = format_state_for_llm(state)
         assert "Portfolio Summary:" in formatted_state
         assert "Total Value: $10,000.00" in formatted_state
@@ -135,10 +139,10 @@ class TestFormattingUtils:
 
     def test_format_state_for_llm_initial_state(self):
         """Should handle an initial state with no data."""
-        state: AgentState = {
-            "portfolio": None,
-            "analysis_results": {},
-        }
+        state = AgentState(
+            portfolio=None,
+            analysis_results={}
+        )
         formatted_state = format_state_for_llm(state)
         assert "Portfolio has not been loaded yet." in formatted_state
         assert "No analysis has been performed yet." in formatted_state
@@ -237,3 +241,226 @@ class TestCostEstimation:
         """Should treat a call with a missing 'count' key as a count of 0."""
         api_calls = [{"api_type": ApiType.POLYGON_API.value}]
         assert estimate_cost(api_calls) == 0.0
+
+
+class TestLLMUtilities:
+    """Test suite for LLM API integration utilities."""
+
+    def test_get_gemini_client_creates_client_once(self, mocker):
+        """Should create client on first call and reuse it."""
+        # Mock the genai.Client class
+        mock_client_class = mocker.patch("src.portfolio_manager.utils.genai.Client")
+        mock_client_instance = MagicMock()
+        mock_client_class.return_value = mock_client_instance
+        
+        # Mock the settings
+        mocker.patch("src.portfolio_manager.utils.settings.GEMINI_API_KEY", "test-api-key")
+        
+        # Reset the global client
+        import src.portfolio_manager.utils as utils_module
+        utils_module._gemini_client = None
+        
+        # First call should create the client
+        client1 = _get_gemini_client()
+        assert client1 == mock_client_instance
+        assert mock_client_class.call_count == 1
+        
+        # Second call should return the same client
+        client2 = _get_gemini_client()
+        assert client2 == mock_client_instance
+        assert mock_client_class.call_count == 1  # Should not create a new client
+        
+        # Clean up
+        utils_module._gemini_client = None
+
+    def test_get_gemini_client_raises_on_missing_key(self, mocker):
+        """Should raise ValueError if API key is not configured."""
+        # Mock empty API key
+        mocker.patch("src.portfolio_manager.utils.settings.GEMINI_API_KEY", None)
+        
+        # Reset the global client
+        import src.portfolio_manager.utils as utils_module
+        utils_module._gemini_client = None
+        
+        # Should raise ValueError
+        with pytest.raises(ValueError, match="GEMINI_API_KEY is not set"):
+            _get_gemini_client()
+        
+        # Clean up
+        utils_module._gemini_client = None
+
+    def test_call_gemini_api_success(self, mocker):
+        """Should successfully call the Gemini API and return response text."""
+        # Mock the client
+        mock_client_instance = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = "This is a test response from Gemini."
+        mock_response.usage_metadata = None
+        
+        mock_client_instance.models.generate_content.return_value = mock_response
+        
+        mocker.patch(
+            "src.portfolio_manager.utils._get_gemini_client",
+            return_value=mock_client_instance
+        )
+        
+        # Call the API
+        result = call_gemini_api("Test prompt")
+        
+        # Assertions
+        assert result == "This is a test response from Gemini."
+        mock_client_instance.models.generate_content.assert_called_once_with(
+            model=LLM_MODEL,
+            contents="Test prompt"
+        )
+
+    def test_call_gemini_api_with_custom_model(self, mocker):
+        """Should use custom model when specified."""
+        # Mock the client
+        mock_client_instance = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = "Response"
+        mock_response.usage_metadata = None
+        
+        mock_client_instance.models.generate_content.return_value = mock_response
+        
+        mocker.patch(
+            "src.portfolio_manager.utils._get_gemini_client",
+            return_value=mock_client_instance
+        )
+        
+        # Call with custom model
+        result = call_gemini_api("Test prompt", model="gemini-2.5-pro")
+        
+        # Assertions
+        assert result == "Response"
+        mock_client_instance.models.generate_content.assert_called_once_with(
+            model="gemini-2.5-pro",
+            contents="Test prompt"
+        )
+
+    def test_call_gemini_api_logs_usage_metadata(self, mocker):
+        """Should log token usage when available in response."""
+        # Mock the client
+        mock_client_instance = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = "Response with usage data"
+        
+        # Mock usage metadata
+        mock_usage = MagicMock()
+        mock_usage.total_token_count = 100
+        mock_usage.prompt_token_count = 60
+        mock_usage.candidates_token_count = 40
+        mock_response.usage_metadata = mock_usage
+        
+        mock_client_instance.models.generate_content.return_value = mock_response
+        
+        mocker.patch(
+            "src.portfolio_manager.utils._get_gemini_client",
+            return_value=mock_client_instance
+        )
+        
+        # Mock logger to verify logging
+        mock_logger = mocker.patch("src.portfolio_manager.utils.logger")
+        
+        # Call the API
+        result = call_gemini_api("Test prompt")
+        
+        # Assertions
+        assert result == "Response with usage data"
+        
+        # Check that debug logging was called with token info
+        debug_calls = [str(call) for call in mock_logger.debug.call_args_list]
+        assert any("Tokens: 100" in call for call in debug_calls)
+
+    def test_call_gemini_api_captures_errors_in_sentry(self, mocker):
+        """Should capture exceptions in Sentry when API call fails."""
+        # Mock the client to raise an exception
+        mock_client_instance = MagicMock()
+        mock_client_instance.models.generate_content.side_effect = Exception("API Error")
+        
+        mocker.patch(
+            "src.portfolio_manager.utils._get_gemini_client",
+            return_value=mock_client_instance
+        )
+        
+        # Mock Sentry
+        mock_sentry = mocker.patch("src.portfolio_manager.utils.sentry_sdk.capture_exception")
+        
+        # Call should raise exception after retries
+        with pytest.raises(Exception, match="API Error"):
+            call_gemini_api("Test prompt")
+        
+        # Sentry should capture the exception on each attempt (3 retries)
+        assert mock_sentry.call_count == 3
+
+    def test_call_gemini_api_retries_on_failure(self, mocker):
+        """Should retry the API call on transient failures."""
+        # Mock the client to fail twice then succeed
+        mock_client_instance = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = "Success after retries"
+        mock_response.usage_metadata = None
+        
+        mock_client_instance.models.generate_content.side_effect = [
+            Exception("Transient error 1"),
+            Exception("Transient error 2"),
+            mock_response,
+        ]
+        
+        mocker.patch(
+            "src.portfolio_manager.utils._get_gemini_client",
+            return_value=mock_client_instance
+        )
+        
+        # Mock Sentry to avoid actual calls
+        mocker.patch("src.portfolio_manager.utils.sentry_sdk.capture_exception")
+        
+        # Call should succeed after retries
+        result = call_gemini_api("Test prompt")
+        
+        # Assertions
+        assert result == "Success after retries"
+        assert mock_client_instance.models.generate_content.call_count == 3
+
+    def test_call_gemini_api_raises_after_max_retries(self, mocker):
+        """Should raise exception after exhausting retry attempts."""
+        # Mock the client to always fail
+        mock_client_instance = MagicMock()
+        mock_client_instance.models.generate_content.side_effect = Exception("Persistent error")
+        
+        mocker.patch(
+            "src.portfolio_manager.utils._get_gemini_client",
+            return_value=mock_client_instance
+        )
+        
+        # Mock Sentry
+        mock_sentry = mocker.patch("src.portfolio_manager.utils.sentry_sdk.capture_exception")
+        
+        # Call should fail after retries
+        with pytest.raises(Exception, match="Persistent error"):
+            call_gemini_api("Test prompt")
+        
+        # Should have retried 3 times
+        assert mock_client_instance.models.generate_content.call_count == 3
+        
+        # Sentry should capture all attempts
+        assert mock_sentry.call_count == 3
+
+    def test_call_gemini_api_propagates_value_error(self, mocker):
+        """Should immediately propagate ValueError without multiple retries on config error."""
+        # Mock _get_gemini_client to raise ValueError
+        mocker.patch(
+            "src.portfolio_manager.utils._get_gemini_client",
+            side_effect=ValueError("API key not configured")
+        )
+        
+        # Mock Sentry
+        mock_sentry = mocker.patch("src.portfolio_manager.utils.sentry_sdk.capture_exception")
+        
+        # Should raise ValueError (though it may retry due to the decorator)
+        with pytest.raises(ValueError, match="API key not configured"):
+            call_gemini_api("Test prompt")
+        
+        # Sentry should capture the exception
+        assert mock_sentry.call_count >= 1

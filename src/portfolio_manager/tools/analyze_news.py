@@ -15,12 +15,12 @@ Version: 1.0.0
 from typing import List, Dict, Any
 import logging
 
-from stock_researcher.agents.news_searcher import get_stock_news
-from stock_researcher.agents.llm_analyzer import generate_executive_summaries
-from stock_researcher.config import SERPAPI_API_KEY
+from ..analysis.news_analyzer import generate_executive_summaries
 from ..agent_state import ToolResult
+from ..integrations.serp_api import get_stock_news
 from ..tool_registry import tool
 from ..utils import ApiType
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -121,8 +121,8 @@ def analyze_news_tool(tickers: List[str]) -> ToolResult:
                 confidence_impact=0.0,
             )
         
-        # Step 1: Search for news articles using the legacy function
-        news_dict = get_stock_news(tickers, SERPAPI_API_KEY)
+        # Step 1: Search for news articles using the portfolio_manager integration
+        news_dict = get_stock_news(tickers)
         
         # Step 2: Summarize with LLM using the legacy function
         summaries = generate_executive_summaries(news_dict)

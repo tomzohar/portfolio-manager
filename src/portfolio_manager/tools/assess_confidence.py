@@ -105,8 +105,15 @@ def assess_confidence_tool(state: AgentState) -> ToolResult:
     try:
         logger.info("Tool invoked: assess_confidence")
         
-        portfolio = state.get("portfolio")
-        analysis_results = state.get("analysis_results", {})
+        # Support both dict and AgentState Pydantic model
+        from src.portfolio_manager.agent_state import AgentState
+        if isinstance(state, dict):
+            state_model = AgentState.model_validate(state)
+        else:
+            state_model = state
+        
+        portfolio = state_model.portfolio
+        analysis_results = state_model.analysis_results if state_model.analysis_results else {}
 
         # Edge case: No portfolio data yet
         if not portfolio:
