@@ -15,7 +15,7 @@ Version: 1.0.0
 from typing import List, Dict, Any
 import logging
 
-from stock_researcher.agents.llm_analyzer import generate_executive_summaries
+from ..analysis.news_analyzer import generate_executive_summaries
 from ..agent_state import ToolResult
 from ..integrations.serp_api import get_stock_news
 from ..tool_registry import tool
