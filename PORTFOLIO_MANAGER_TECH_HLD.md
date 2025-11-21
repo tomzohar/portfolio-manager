@@ -2,9 +2,9 @@
 
 ## 1. Objective
 
-This document outlines the technical implementation plan for refactoring the existing `stock-researcher` pipeline into an autonomous agent system, as specified in `PORTFOLIO_MANAGER.md`. The core of this redesign will be the adoption of `LangGraph` to create a stateful, event-driven workflow orchestrated by a central Portfolio Manager agent.
+This document outlines the technical design of the Autonomous Portfolio Manager, an intelligent agent system built with `LangGraph`. The system uses a stateful, event-driven workflow orchestrated by a central Portfolio Manager agent that dynamically decides which analyses to perform based on portfolio composition and current state.
 
-This new architecture will move away from the rigid, sequential process and enable dynamic, intelligent, and resource-efficient analysis.
+This architecture enables dynamic, intelligent, and resource-efficient analysis by only performing necessary analyses rather than following a fixed sequence.
 
 ## 2. Core Technology: LangGraph
 
@@ -121,7 +121,7 @@ Creating a new tool follows a clear, scalable pattern:
 
 ## 6. Graph & Agent Logic
 
-The LangGraph implementation will reside in `src/stock_researcher/agents/portfolio_manager.py`.
+The LangGraph implementation resides in `src/portfolio_manager/graph/`.
 
 ### Graph Nodes
 
@@ -162,36 +162,62 @@ The graph's primary conditional edge will be after the `agent_node`:
 
 ## 7. Code Structure & Implementation Plan
 
-To ensure the existing production pipeline (`stock-researcher`) remains untouched, we will develop the new autonomous agent in a completely separate source directory. The new agent will reuse logic from the existing application by importing its functions as if it were a library.
+The autonomous agent is implemented as a standalone system with all functionality self-contained in the `portfolio_manager` package.
 
-1.  **New Source Directory**: A new Python package will be created at `src/portfolio_manager`. The existing `src/stock_researcher` package will not be modified.
+### Package Organization
 
-2.  **Code Reuse**: The `portfolio_manager` package will import functions from `stock_researcher` (e.g., `stock_researcher.agents.portfolio_parser.parse`) and wrap them into tools for the LangGraph agent. This avoids code duplication while maintaining strict separation.
+The implementation follows a modular design with clear separation of concerns:
 
-3.  **New Entry Point**: A new top-level script, `run_portfolio_manager.py`, will be created to launch the autonomous agent. The existing `main.py` will continue to run the original sequential pipeline.
+1.  **Main Package**: `src/portfolio_manager/` contains all autonomous agent code
 
-4.  **Proposed New Directory Structure:**
+2.  **Self-Contained Integrations**: All external service integrations are implemented within `portfolio_manager/integrations/` (Google Sheets, Polygon.io, SerpAPI, Pushover)
+
+3.  **Self-Contained Analysis**: All AI-powered analysis modules are in `portfolio_manager/analysis/` (news summarization, technical analysis)
+
+4.  **Entry Point**: `run_portfolio_manager.py` launches the autonomous agent workflow
+
+5.  **Current Directory Structure:**
     ```
     stocks-researcher/
     ├── src/
-    │   ├── stock_researcher/   # (Existing, UNTOUCHED)
-    │   │   └── ...
-    │   └── portfolio_manager/  # (New)
+    │   └── portfolio_manager/
     │       ├── __init__.py
-    │       ├── agent_state.py      # Definition for AgentState
-    │       ├── graph/              # NEW: Modular graph package
+    │       ├── agent_state.py      # AgentState schema and ToolResult
+    │       ├── tool_registry.py    # Tool registration system
+    │       ├── schemas.py          # Pydantic models
+    │       ├── config.py           # Configuration management
+    │       ├── utils.py            # LLM utilities, formatting
+    │       ├── prompts.py          # System prompts
+    │       ├── parsers.py          # JSON parsing utilities
+    │       ├── error_handler.py    # Global error handling
+    │       ├── graph/              # LangGraph workflow
     │       │   ├── __init__.py
+    │       │   ├── main.py         # Entry point for graph execution
     │       │   ├── builder.py      # Graph construction logic
     │       │   ├── edges.py        # Conditional routing logic
-    │       │   ├── main.py         # Main runner for the graph
-    │       │   └── nodes/          # Directory for individual nodes
+    │       │   └── nodes/          # Graph node implementations
     │       │       ├── __init__.py
-    │       │       ├── agent_decision.py
-    │       │       ├── final_report.py
-    │       │       ├── start.py
-    │       │       └── tool_execution.py
-    │       ├── prompts.py          # System prompt for the LLM agent
-    │       ├── parsers.py          # LLM response parsing logic
+    │       │       ├── start.py            # Initialization node
+    │       │       ├── agent_decision.py   # LLM decision node
+    │       │       ├── tool_execution.py   # Tool execution node
+    │       │       ├── guardrails.py       # Safety checks node
+    │       │       └── final_report.py     # Report generation node
+    │       ├── tools/              # Agent-callable tools
+    │       │   ├── __init__.py
+    │       │   ├── parse_portfolio.py
+    │       │   ├── analyze_news.py
+    │       │   ├── analyze_technicals.py
+    │       │   └── assess_confidence.py
+    │       ├── integrations/       # External service integrations
+    │       │   ├── __init__.py
+    │       │   ├── google_sheets.py  # Portfolio data & price updates
+    │       │   ├── polygon.py        # Market data (OHLCV)
+    │       │   ├── serp_api.py       # News article search
+    │       │   └── pushover.py       # Push notifications
+    │       └── analysis/           # AI-powered analysis modules
+    │           ├── __init__.py
+    │           ├── news_analyzer.py        # News summarization
+    │           └── technical_analyzer.py   # Technical indicator calculation
     │       ├── schemas.py          # Pydantic schemas for data validation
     │       └── utils.py            # Utility functions for formatting state
     │
@@ -217,9 +243,9 @@ To ensure the existing production pipeline (`stock-researcher`) remains untouche
     -   [x] In `src/portfolio_manager/agent_state.py`, define the `AgentState` TypedDict with `ToolResult` dataclass.
     -   [x] Implement decorator-based tool registry system in `tool_registry.py` for scalable tool management.
     -   [x] Create individual tool modules:
-        -   [x] `tools/parse_portfolio.py` - Wraps legacy portfolio parser
-        -   [x] `tools/analyze_news.py` - Wraps news search and LLM analyzer
-        -   [x] `tools/analyze_technicals.py` - Wraps technical analyzer
+        -   [x] `tools/parse_portfolio.py` - Loads portfolio from Google Sheets
+        -   [x] `tools/analyze_news.py` - News search and AI-powered summarization
+        -   [x] `tools/analyze_technicals.py` - Technical analysis with indicators
         -   [x] `tools/assess_confidence.py` - Evaluates analysis completeness
 
 4.  **LangGraph Implementation**:

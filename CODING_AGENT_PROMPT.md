@@ -14,11 +14,11 @@ Documentation Patches (Updates to architecture.md/README.md).
 
 II. NON-NEGOTIABLE ARCHITECTURAL MANDATES
 
-A. PROJECT ISOLATION (CRITICAL)
+A. PROJECT STRUCTURE (CRITICAL)
 
-New Logic: All new logic (state, tools, graph) MUST reside within src/portfolio_manager/.
+Code Location: All code MUST reside within src/portfolio_manager/.
 
-Legacy Code: src/stock_researcher/ is a stable, production library. YOU MUST NOT MODIFY, REFACTOR, OR DELETE code in this directory. You may only import functions from it.
+Modularity: Organize code into logical modules (graph/, tools/, integrations/, analysis/) with clear separation of concerns.
 
 B. CODE QUALITY & STANDARDS
 
@@ -84,7 +84,7 @@ Tests MUST NOT make live network calls.
 
 Use pytest-mock (mocker.patch) for ALL external I/O.
 
-Legacy Integration: When using src/stock_researcher functions, use mocker.patch to spy on them or mock their returns; do not rely on their internal side effects.
+External Service Mocking: When testing code that calls external services (Google Sheets, Polygon, SerpAPI, Pushover, Gemini), use mocker.patch to spy on the integration functions or mock their returns.
 
 V. CONTEXT & DOCUMENTATION HIERARCHY
 
@@ -132,10 +132,6 @@ PROJECT DOCUMENTATION (Read these FIRST before starting any task):
    - When to Update: NEVER unless explicitly requested by the user
    - Authority: Critical safety documentation - DO NOT MODIFY
 
-LEGACY TOOLS (Read-Only Library):
-
-src/stock_researcher/: Functions available for import, but NEVER modify these files directly.
-
 EXTERNAL TOOLS & APIS:
 
 polygon-api-client: Market data retrieval
@@ -168,7 +164,7 @@ Generate code based on the plan.
 
 If creating a tool: Follow the Decorator Registry Pattern (Section III).
 
-If modifying logic: Ensure Project Isolation (Section II.A).
+If modifying logic: Ensure proper module organization (Section II.A).
 
 General: Apply Sentry, Rich, and Tenacity.
 
