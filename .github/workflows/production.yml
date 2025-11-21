@@ -25,7 +25,7 @@ jobs:
         pip install -r requirements.txt
 
     - name: Run the main script
-      run: python main.py
+      run: python run_portfolio_manager.py
       env:
         GOOGLE_SHEET_CREDS_JSON: ${{ secrets.GOOGLE_SHEET_CREDS_JSON }}
         SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
@@ -33,9 +33,7 @@ jobs:
         POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
         SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
-        TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
-        TWILIO_WHATSAPP_FROM: ${{ secrets.TWILIO_WHATSAPP_FROM }}
-        TWILIO_WHATSAPP_TO: ${{ secrets.TWILIO_WHATSAPP_TO }}
+        PUSHOVER_USER_KEY: ${{ secrets.PUSHOVER_USER_KEY }}
+        PUSHOVER_API_TOKEN: ${{ secrets.PUSHOVER_API_TOKEN }}
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         ENVIRONMENT: "production"
