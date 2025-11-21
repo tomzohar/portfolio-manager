@@ -35,7 +35,7 @@ stocks-researcher/
 │       │
 │       └── notifications/                  # Modules for sending notifications
 │           ├── __init__.py
-│           └── whatsapp.py                 # WhatsApp integration via Twilio
+│           └── pushover.py                 # Pushover integration
 │
 ├── tests/                                  # Unit and integration tests
 │   ├── __init__.py
@@ -63,4 +63,3 @@ stocks-researcher/
 *   **Testability**: Isolating logic into distinct functions and modules makes it straightforward to write targeted unit tests and mock external dependencies.
 *   **Maintainability**: A logical structure makes it easier for developers to find code, understand its purpose, and fix issues efficiently.
 *   **Standard Convention**: Follows Python community best practices, making it familiar to new contributors.
-

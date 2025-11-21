@@ -47,11 +47,9 @@ SERPAPI_API_KEY = os.getenv('SERPAPI_API_KEY')
 # Google Gemini AI Configuration
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
-# Twilio WhatsApp Configuration
-TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
-TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
-TWILIO_WHATSAPP_FROM = os.getenv('TWILIO_WHATSAPP_FROM')
-TWILIO_WHATSAPP_TO = os.getenv('TWILIO_WHATSAPP_TO')
+# Pushover Configuration
+PUSHOVER_USER_KEY = os.getenv('PUSHOVER_USER_KEY')
+PUSHOVER_API_TOKEN = os.getenv('PUSHOVER_API_TOKEN')
 
 
 def get_google_creds():
@@ -80,10 +78,8 @@ def validate_config():
         'POLYGON_API_KEY': POLYGON_API_KEY,
         'SERPAPI_API_KEY': SERPAPI_API_KEY,
         'GEMINI_API_KEY': GEMINI_API_KEY,
-        'TWILIO_ACCOUNT_SID': TWILIO_ACCOUNT_SID,
-        'TWILIO_AUTH_TOKEN': TWILIO_AUTH_TOKEN,
-        'TWILIO_WHATSAPP_FROM': TWILIO_WHATSAPP_FROM,
-        'TWILIO_WHATSAPP_TO': TWILIO_WHATSAPP_TO,
+        'PUSHOVER_USER_KEY': PUSHOVER_USER_KEY,
+        'PUSHOVER_API_TOKEN': PUSHOVER_API_TOKEN,
     }
     
     missing_vars = [var for var, value in required_vars.items() if not value]
@@ -105,8 +101,7 @@ if __name__ == '__main__':
         print(f"   Spreadsheet ID: {SPREADSHEET_ID}")
         print(f"   SerpAPI Key: {SERPAPI_API_KEY[:10]}...")
         print(f"   Gemini API Key: {GEMINI_API_KEY[:10]}...")
-        print(f"   Twilio SID: {TWILIO_ACCOUNT_SID}")
-        print(f"   WhatsApp To: {TWILIO_WHATSAPP_TO}")
+        print(f"   Pushover User Key: {PUSHOVER_USER_KEY[:5]}...")
     except ValueError as e:
         print(f"❌ Configuration Error: {e}")
 

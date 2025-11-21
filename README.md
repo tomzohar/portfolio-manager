@@ -34,7 +34,7 @@ Then edit `.env` with your actual credentials:
 - Google Sheets: Service account file, Spreadsheet ID, Range
 - SerpAPI: API key for news search
 - Gemini AI: API key for summaries  
-- Twilio: Account SID, Auth Token, WhatsApp numbers
+- Pushover: User Key and API Token for notifications
 
 **Note:** The `.env` file contains secrets and is in `.gitignore` (won't be committed to git)
 
@@ -50,7 +50,7 @@ source venv/bin/activate
 python main.py
 ```
 
-The main script now automatically attempts to update the stock prices in your Google Sheet before running the analysis. If this update fails, it will log a warning, send a notification to your WhatsApp, and then proceed with the analysis using the last known prices, ensuring the core workflow is not blocked.
+The main script now automatically attempts to update the stock prices in your Google Sheet before running the analysis. If this update fails, it will log a warning, send a notification to your Pushover app, and then proceed with the analysis using the last known prices, ensuring the core workflow is not blocked.
 
 ### Standalone Price Updates
 The `yfinance` library used for fetching stock prices can sometimes be unreliable. If you need to manually refresh the prices in your Google Sheet without running the full analysis, you can use the standalone script.
@@ -91,7 +91,7 @@ The test suite includes:
 - ✅ Test code changes without triggering production flows
 - ✅ No API costs during development
 - ✅ Fast feedback loop
-- ✅ No WhatsApp messages sent during testing
+- ✅ No notifications sent during testing
 
 ## Dependencies
 
@@ -99,7 +99,6 @@ The test suite includes:
 - google-auth: Google authentication library
 - google-search-results: SerpAPI integration
 - google-genai: Gemini AI integration
-- twilio: WhatsApp messaging
 - python-dotenv: Environment variable management
 - pytest: Testing framework
 - pytest-mock: Enhanced mocking support
@@ -111,11 +110,15 @@ This project follows a standard Python project structure to ensure modularity an
 - **`src/stock_researcher/`**: Contains the core application logic.
   - **`agents/`**: Holds the different AI "agents," each with a specific role (parsing the portfolio, searching news, technical analysis, and final recommendations).
   - **`data_fetcher/`**: Modules for retrieving data from external sources like `yfinance`.
-  - **`notifications/`**: Handles sending notifications via WhatsApp.
+  - **`notifications/`**: Handles sending notifications via Pushover.
   - **`pre_processor/`**: Contains the logic for the price update pre-processing step.
   - **`utils/`**: Shared utility functions, including centralized LLM calls and technical analysis calculations.
 - **`tests/`**: Contains all the unit and integration tests for the project.
 - **`requirements.txt`**: A list of all the Python dependencies.
+
+## Safety & Guardrails
+
+The new Autonomous Portfolio Manager operates with a robust set of safety mechanisms to ensure cost control, data privacy, and operational stability. For a detailed overview of these protections, please see the [Guardrails Documentation](./GUARDRAILS.md).
 
 ## Key Technologies
 - **Python 3.11+**
@@ -123,7 +126,7 @@ This project follows a standard Python project structure to ensure modularity an
 - **SerpApi**: For fetching news articles.
 - **yfinance**: For fetching historical OHLCV stock data.
 - **gspread**: For interacting with Google Sheets.
-- **Twilio**: For sending WhatsApp notifications.
+- **Pushover**: For sending notifications.
 - **pandas & pandas-ta**: For data manipulation and technical analysis.
 - **tenacity**: For robust, automatic retries on API calls.
 - **pytest**: For comprehensive testing.

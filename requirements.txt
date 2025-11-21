@@ -2,7 +2,6 @@ gspread
 google-auth
 google-search-results
 google-genai
-twilio
 python-dotenv
 pytest
 pytest-mock
@@ -12,4 +11,7 @@ pandas
 pandas-ta
 polygon-api-client
 sentry-sdk
+langgraph
+langchain-google-genai
+rich
 

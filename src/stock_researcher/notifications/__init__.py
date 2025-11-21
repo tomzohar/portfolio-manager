@@ -2,10 +2,9 @@
 Notification modules
 """
 
-from .whatsapp import send_whatsapp_message, send_stock_research_summary
+from .pushover import send_pushover_message, send_stock_research_summary_pushover
 
 __all__ = [
-    "send_whatsapp_message",
-    "send_stock_research_summary",
+    "send_pushover_message",
+    "send_stock_research_summary_pushover",
 ]
-

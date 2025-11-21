@@ -67,3 +67,29 @@ def mock_portfolio():
     
     return Portfolio(positions=positions, total_value=64172.8)
 
+
+@pytest.fixture
+def initial_state() -> "AgentState":
+    """Provides a basic initial state for tests."""
+    # Import inside fixture to avoid circular dependency issues
+    from src.portfolio_manager.agent_state import AgentState
+    
+    return AgentState(
+        portfolio=None,
+        analysis_results={},
+        reasoning_trace=[],
+        agent_reasoning=[],
+        tool_results=[],
+        newly_completed_api_calls=[],
+        confidence_score=0.0,
+        max_iterations=10,
+        current_iteration=1,
+        errors=[],
+        api_call_counts={},
+        estimated_cost=0.0,
+        terminate_run=False,
+        force_final_report=False,
+        final_report="",
+        started_at="2025-11-15T12:00:00Z"
+    )
+

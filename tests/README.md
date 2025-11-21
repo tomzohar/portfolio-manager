@@ -14,7 +14,7 @@ tests/
 ├── test_news_searcher.py          # News search agent tests
 ├── test_llm_analyzer.py           # LLM summarization tests
 ├── test_orchestrator.py           # Workflow orchestration tests
-└── test_whatsapp.py               # WhatsApp notification tests
+└── test_pushover.py               # Pushover notification tests
 ```
 
 ## Test Coverage
@@ -46,12 +46,11 @@ tests/
 - ✅ Agent execution order
 - ✅ Return tuple structure
 
-### WhatsApp Notifications (5 tests)
+### Pushover Notifications (4 tests)
 - ✅ Basic message sending
-- ✅ Custom recipient support
-- ✅ API error handling
+- ✅ Handling of API errors
 - ✅ Research summary formatting
-- ✅ Character limit compliance
+- ✅ No credentials handling
 
 ## Running Tests
 
@@ -85,14 +84,14 @@ Following best practices from the user rules, we **spy on external libraries** i
 - **Google Sheets API**: Mocked `gspread.authorize` and `Credentials.from_service_account_file`
 - **SerpAPI**: Mocked `GoogleSearch` class
 - **Gemini AI**: Mocked the `client` object and its methods
-- **Twilio**: Mocked the `Client` class and message sending
+- **Pushover**: Mocked `http.client.HTTPSConnection`
 
 ## Benefits
 
 1. **No API Costs**: All external calls are mocked, so no charges incurred
 2. **Fast Execution**: All 24 tests run in ~0.6 seconds
 3. **Reliable**: Tests don't depend on external service availability
-4. **Safe**: No production side effects (no WhatsApp messages sent)
+4. **Safe**: No production side effects (no notifications sent)
 5. **Comprehensive**: Covers happy paths, error cases, and edge cases
 
 ## Test Statistics
