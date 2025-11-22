@@ -8,6 +8,7 @@ from .guardrails import guardrail_node
 # Phase 2: Sub-Agent Nodes
 from .macro_agent import macro_agent_node
 from .fundamental_agent import fundamental_agent_node
+from .technical_agent import technical_agent_node
 
 __all__ = [
     "start_node",
@@ -18,4 +19,5 @@ __all__ = [
     # Phase 2
     "macro_agent_node",
     "fundamental_agent_node",
+    "technical_agent_node",
 ]
