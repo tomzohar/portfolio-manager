@@ -11,6 +11,9 @@ from .fundamental_agent import fundamental_agent_node
 from .technical_agent import technical_agent_node
 from .risk_agent import risk_agent_node
 
+# Phase 3: Supervisor & Orchestration Nodes
+from .supervisor import supervisor_node
+
 __all__ = [
     "start_node",
     "agent_decision_node",
@@ -22,4 +25,6 @@ __all__ = [
     "fundamental_agent_node",
     "technical_agent_node",
     "risk_agent_node",
+    # Phase 3
+    "supervisor_node",
 ]

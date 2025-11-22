@@ -18,14 +18,38 @@ stocks-researcher/
 │       ├── agent_state.py                  # Defines the AgentState schema for the graph
 │       ├── tool_registry.py                # Decorator-based system for creating and managing tools
 │       ├── prompts.py                      # Contains the master system prompt for the agent's "brain"
+│       ├── schemas.py                      # Pydantic models for V3 (ExecutionPlan, ConflictResolution, etc.)
+│       ├── integrations/                   # External API integrations
+│       │   ├── polygon.py                  # Polygon.io market data (OHLCV, fundamentals)
+│       │   └── fred.py                     # FRED API for macroeconomic data (GDP, CPI, yields)
+│       ├── analysis/                       # Analysis modules
+│       │   ├── technical_analyzer.py       # Technical indicator calculations
+│       │   └── risk_calculator.py          # Portfolio risk metrics (Sharpe, Beta, VaR)
 │       ├── graph/                          # LangGraph implementation
 │       │   ├── builder.py                  # Assembles the graph nodes and edges
-│       │   ├── nodes/                      # Directory containing each node's logic (e.g., agent_decision)
-│       │   └── edges.py                    # Conditional routing logic for the graph
+│       │   ├── edges.py                    # Conditional routing logic for the graph
+│       │   └── nodes/                      # Directory containing each node's logic
+│       │       ├── __init__.py
+│       │       ├── start.py                # Initial portfolio parsing
+│       │       ├── agent_decision.py       # Legacy: Agent's decision-making "brain"
+│       │       ├── tool_execution.py       # Legacy: Tool executor
+│       │       ├── final_report.py         # Final report generation
+│       │       ├── guardrails.py           # Cost and safety guardrails
+│       │       # Phase 2: Sub-Agent Nodes
+│       │       ├── macro_agent.py          # Market regime analysis (FRED API)
+│       │       ├── fundamental_agent.py    # Company valuation (Polygon.io)
+│       │       ├── technical_agent.py      # Price trend analysis
+│       │       ├── risk_agent.py           # Portfolio risk metrics
+│       │       # Phase 3: Orchestration Nodes
+│       │       ├── supervisor.py           # ✅ Multi-agent orchestration & delegation
+│       │       ├── synthesis.py            # ⏳ Conflict resolution & recommendation synthesis
+│       │       └── reflexion.py            # ⏳ Self-critique & quality assurance
 │       └── tools/                          # Directory for all agent-callable tools
 │           ├── __init__.py
 │           ├── parse_portfolio.py
-│           └── ... (other tool files)
+│           ├── analyze_news.py
+│           ├── analyze_technicals.py
+│           └── assess_confidence.py
 │
 ├── tests/                                  # Unit and integration tests
 │   └── ...
