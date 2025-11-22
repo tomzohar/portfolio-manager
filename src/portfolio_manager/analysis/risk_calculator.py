@@ -358,24 +358,38 @@ def calculate_portfolio_metrics(
         >>> print(f"Beta: {metrics['beta']:.2f}")
     """
     try:
-        # Validate inputs
-        if portfolio_prices.empty or market_prices.empty:
-            raise ValueError("Portfolio or market prices are empty")
+        # Validate portfolio prices
+        if portfolio_prices.empty:
+            raise ValueError("Portfolio prices are empty")
         
-        # Calculate returns
+        # Calculate portfolio returns
         portfolio_returns = portfolio_prices.pct_change().dropna()
-        market_returns = market_prices.pct_change().dropna()
         
-        if len(portfolio_returns) < 30 or len(market_returns) < 30:
+        if len(portfolio_returns) < 30:
             raise ValueError(
-                f"Insufficient return data for metrics calculation: "
-                f"portfolio={len(portfolio_returns)}, market={len(market_returns)} "
-                f"(minimum 30 required)"
+                f"Insufficient portfolio return data for metrics calculation: "
+                f"{len(portfolio_returns)} (minimum 30 required)"
             )
+        
+        # Calculate market returns (if available)
+        if not market_prices.empty:
+            market_returns = market_prices.pct_change().dropna()
+            
+            if len(market_returns) < 30:
+                logger.warning(
+                    f"Insufficient market data ({len(market_returns)} points), "
+                    "using default beta of 1.0"
+                )
+                beta = 1.0
+            else:
+                # Calculate beta using covariance
+                beta = calculate_beta(portfolio_returns, market_returns)
+        else:
+            logger.warning("Market prices unavailable, using default beta of 1.0")
+            beta = 1.0
         
         # Calculate all metrics
         sharpe = calculate_sharpe_ratio(portfolio_returns, risk_free_rate)
-        beta = calculate_beta(portfolio_returns, market_returns)
         var_95 = calculate_var(portfolio_returns, confidence_level=0.95)
         max_dd, peak_date, trough_date = calculate_max_drawdown(portfolio_prices)
         
