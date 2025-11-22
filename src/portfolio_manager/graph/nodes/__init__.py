@@ -13,6 +13,7 @@ from .risk_agent import risk_agent_node
 
 # Phase 3: Supervisor & Orchestration Nodes
 from .supervisor import supervisor_node
+from .synthesis import synthesis_node
 
 __all__ = [
     "start_node",
@@ -27,4 +28,5 @@ __all__ = [
     "risk_agent_node",
     # Phase 3
     "supervisor_node",
+    "synthesis_node",
 ]
