@@ -92,3 +92,126 @@ def initial_state() -> dict:
         started_at="2025-11-15T12:00:00Z"
     ).model_dump()
 
+
+# ============================================================================
+# Phase 2: Sub-Agent Test Fixtures
+# ============================================================================
+
+@pytest.fixture
+def mock_fred_macro_data():
+    """Mock FRED economic indicators for Macro Agent tests."""
+    return {
+        "available": True,
+        "cpi_yoy": 3.2,
+        "gdp_growth": 2.5,
+        "yield_spread": 0.8,
+        "vix": 16.5,
+        "unemployment": 3.8,
+        "date": "2024-11-22"
+    }
+
+
+@pytest.fixture
+def mock_ticker_fundamentals():
+    """Mock Polygon ticker fundamentals for Fundamental Agent tests."""
+    return {
+        "ticker": "AAPL",
+        "name": "Apple Inc.",
+        "market_cap": 3000000000000,
+        "shares_outstanding": 16000000000,
+        "description": "Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide.",
+        "sector": "Technology",
+        "industry": "Consumer Electronics",
+        "exchange": "NASDAQ",
+        "employees": 164000,
+        "homepage_url": "https://www.apple.com"
+    }
+
+
+@pytest.fixture
+def mock_financial_statements():
+    """Mock financial statements for Fundamental Agent tests."""
+    return {
+        "statements": [
+            {
+                "period": "Q4",
+                "fiscal_year": 2024,
+                "revenue": 90000000000,
+                "net_income": 23000000000,
+                "total_assets": 350000000000,
+                "total_liabilities": 280000000000,
+                "operating_cash_flow": 30000000000
+            },
+            {
+                "period": "Q3",
+                "fiscal_year": 2024,
+                "revenue": 85000000000,
+                "net_income": 21000000000,
+                "total_assets": 345000000000,
+                "total_liabilities": 275000000000,
+                "operating_cash_flow": 28000000000
+            }
+        ]
+    }
+
+
+@pytest.fixture
+def mock_ohlcv_data():
+    """Mock OHLCV DataFrame for Technical Agent tests."""
+    import pandas as pd
+    import numpy as np
+    
+    dates = pd.date_range("2024-01-01", periods=90, freq="D")
+    prices = np.linspace(100, 120, 90) + np.random.randn(90) * 2
+    
+    return pd.DataFrame({
+        "timestamp": dates,
+        "open": prices - np.random.rand(90),
+        "high": prices + np.random.rand(90) * 2,
+        "low": prices - np.random.rand(90) * 2,
+        "close": prices,
+        "volume": np.random.randint(1000000, 5000000, 90)
+    })
+
+
+@pytest.fixture
+def sample_portfolio_state():
+    """Sample AgentState with portfolio data for sub-agent tests."""
+    return {
+        "portfolio": {
+            "tickers": ["AAPL", "MSFT", "GOOGL"],
+            "positions": {
+                "AAPL": 0.4,
+                "MSFT": 0.35,
+                "GOOGL": 0.25
+            }
+        },
+        "scratchpad": [],
+        "reasoning_trace": [],
+        "analysis_results": {},
+        "confidence_score": 0.0
+    }
+
+
+@pytest.fixture
+def mock_market_regime():
+    """Mock MarketRegime for testing."""
+    return {
+        "status": "Goldilocks",
+        "signal": "Risk-On",
+        "key_driver": "Moderate growth with low inflation",
+        "confidence": 0.85
+    }
+
+
+@pytest.fixture
+def mock_risk_assessment():
+    """Mock RiskAssessment for testing."""
+    return {
+        "beta": 1.05,
+        "sharpe_projected": 1.2,
+        "max_drawdown_risk": "Moderate",
+        "var_95": 2.5,
+        "portfolio_volatility": 18.5
+    }
+

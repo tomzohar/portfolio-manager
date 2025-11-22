@@ -81,10 +81,10 @@ def risk_agent_node(state: AgentState) -> Dict[str, Any]:
     try:
         logger.info("Risk Agent: Starting portfolio risk assessment")
         
-        # Extract portfolio data from state
+        # Extract portfolio data from state (Pydantic model compatibility)
         portfolio = state.portfolio or {}
-        tickers = portfolio.get("tickers", [])
-        positions = portfolio.get("positions", {})
+        tickers = portfolio.get("tickers", []) if isinstance(portfolio, dict) else []
+        positions = portfolio.get("positions", {}) if isinstance(portfolio, dict) else {}
         
         # Validation: Check if we have portfolio data
         if not tickers:

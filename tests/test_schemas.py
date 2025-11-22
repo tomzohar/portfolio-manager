@@ -15,6 +15,10 @@ from src.portfolio_manager.schemas import (
     PortfolioStrategy,
     RiskAssessment,
     PortfolioReport,
+    # Phase 3 schemas
+    ExecutionPlan,
+    ConflictResolution,
+    ReflexionCritique,
 )
 
 
@@ -628,4 +632,218 @@ def test_portfolio_report_immutable():
     
     with pytest.raises(ValidationError):
         report.confidence_score = 0.90  # Should fail - model is frozen
+
+
+# ============================================================================
+# Phase 3 Schema Tests - ExecutionPlan, ConflictResolution, ReflexionCritique
+# ============================================================================
+
+
+def test_execution_plan_valid():
+    """Test creating ExecutionPlan with valid data."""
+    plan = ExecutionPlan(
+        tasks=[
+            "Invoke Macro Agent",
+            "Invoke Fundamental Agent (batch)",
+            "Invoke Technical Agent (batch)",
+            "Invoke Risk Agent"
+        ],
+        parallel_groups=[["Fundamental Agent", "Technical Agent"]],
+        rationale="Macro first for context, then parallel ticker analysis, then risk"
+    )
+    
+    assert len(plan.tasks) == 4
+    assert len(plan.parallel_groups) == 1
+    assert "Macro first" in plan.rationale
+
+
+def test_execution_plan_empty_tasks():
+    """Test ExecutionPlan requires at least one task."""
+    with pytest.raises(ValidationError) as exc_info:
+        ExecutionPlan(
+            tasks=[],  # Invalid - must have at least 1 task
+            parallel_groups=[],
+            rationale="Test plan with no tasks"
+        )
+    
+    assert "at least 1" in str(exc_info.value).lower()
+
+
+def test_execution_plan_short_rationale():
+    """Test ExecutionPlan requires minimum rationale length."""
+    with pytest.raises(ValidationError) as exc_info:
+        ExecutionPlan(
+            tasks=["Macro Agent"],
+            parallel_groups=[],
+            rationale="Short"  # Invalid - too short (min 20 chars)
+        )
+    
+    assert "at least 20" in str(exc_info.value).lower()
+
+
+def test_execution_plan_no_parallel():
+    """Test ExecutionPlan with no parallel groups (sequential execution)."""
+    plan = ExecutionPlan(
+        tasks=["Macro", "Fundamental", "Technical", "Risk"],
+        parallel_groups=[],  # All sequential
+        rationale="Sequential execution plan for single ticker portfolio"
+    )
+    
+    assert len(plan.parallel_groups) == 0
+    assert plan.tasks == ["Macro", "Fundamental", "Technical", "Risk"]
+
+
+def test_conflict_resolution_valid():
+    """Test creating ConflictResolution with valid data."""
+    conflict = ConflictResolution(
+        conflict_type="Fundamental vs. Technical (AAPL)",
+        conflicting_signals={
+            "Fundamental": "Buy (undervalued, P/E=18)",
+            "Technical": "Sell (downtrend, RSI=35)"
+        },
+        resolution="Weighted to Hold based on long-term horizon",
+        rationale="Long-term fundamentals weighted 60% vs. short-term technicals 30%"
+    )
+    
+    assert "AAPL" in conflict.conflict_type
+    assert "Fundamental" in conflict.conflicting_signals
+    assert "Technical" in conflict.conflicting_signals
+    assert conflict.resolution == "Weighted to Hold based on long-term horizon"
+
+
+def test_conflict_resolution_short_fields():
+    """Test ConflictResolution requires minimum field lengths."""
+    with pytest.raises(ValidationError) as exc_info:
+        ConflictResolution(
+            conflict_type="F v T",  # Invalid - too short (min 5 chars)
+            conflicting_signals={"F": "Buy", "T": "Sell"},
+            resolution="Hold",  # Invalid - too short (min 10 chars)
+            rationale="Weighted"  # Invalid - too short (min 20 chars)
+        )
+    
+    assert "validation error" in str(exc_info.value).lower()
+
+
+def test_conflict_resolution_empty_signals():
+    """Test ConflictResolution with empty conflicting_signals."""
+    # Empty dict is valid for Dict type in Pydantic - this test documents the behavior
+    conflict = ConflictResolution(
+        conflict_type="Test Conflict",
+        conflicting_signals={},  # Empty dict is technically valid
+        resolution="No resolution needed",
+        rationale="Testing edge case with no conflicting signals"
+    )
+    
+    assert len(conflict.conflicting_signals) == 0
+
+
+def test_reflexion_critique_approved():
+    """Test ReflexionCritique for approved synthesis."""
+    critique = ReflexionCritique(
+        approved=True,
+        issues_found=[],  # No issues when approved
+        suggestions=[],
+        confidence_adjustment=0.1  # Slight confidence boost
+    )
+    
+    assert critique.approved is True
+    assert len(critique.issues_found) == 0
+    assert len(critique.suggestions) == 0
+    assert critique.confidence_adjustment == 0.1
+
+
+def test_reflexion_critique_rejected():
+    """Test ReflexionCritique for rejected synthesis."""
+    critique = ReflexionCritique(
+        approved=False,
+        issues_found=[
+            "Macro Risk-Off signal ignored in Buy recommendations",
+            "High portfolio risk (Beta=1.5) but recommending more buys"
+        ],
+        suggestions=[
+            "Downgrade Buy signals to Hold given Risk-Off macro",
+            "Recommend rebalancing before accumulating"
+        ],
+        confidence_adjustment=-0.2
+    )
+    
+    assert critique.approved is False
+    assert len(critique.issues_found) == 2
+    assert len(critique.suggestions) == 2
+    assert critique.confidence_adjustment == -0.2
+
+
+def test_reflexion_critique_confidence_bounds():
+    """Test ReflexionCritique enforces confidence adjustment bounds."""
+    # Valid bounds
+    critique = ReflexionCritique(
+        approved=True,
+        confidence_adjustment=0.3  # Max positive
+    )
+    assert critique.confidence_adjustment == 0.3
+    
+    critique = ReflexionCritique(
+        approved=False,
+        issues_found=["Test issue"],
+        confidence_adjustment=-0.3  # Max negative
+    )
+    assert critique.confidence_adjustment == -0.3
+    
+    # Invalid bounds - too high
+    with pytest.raises(ValidationError) as exc_info:
+        ReflexionCritique(
+            approved=True,
+            confidence_adjustment=0.5  # Invalid - exceeds max 0.3
+        )
+    
+    assert "less than or equal to 0.3" in str(exc_info.value).lower()
+    
+    # Invalid bounds - too low
+    with pytest.raises(ValidationError) as exc_info:
+        ReflexionCritique(
+            approved=False,
+            issues_found=["Test"],
+            confidence_adjustment=-0.5  # Invalid - below min -0.3
+        )
+    
+    assert "greater than or equal to -0.3" in str(exc_info.value).lower()
+
+
+def test_reflexion_critique_default_confidence():
+    """Test ReflexionCritique defaults to 0.0 confidence adjustment."""
+    critique = ReflexionCritique(
+        approved=True
+    )
+    
+    assert critique.confidence_adjustment == 0.0
+    assert len(critique.issues_found) == 0
+    assert len(critique.suggestions) == 0
+
+
+def test_phase3_schemas_immutable():
+    """Test all Phase 3 schemas are frozen (immutable)."""
+    plan = ExecutionPlan(
+        tasks=["Macro Agent"],
+        rationale="Test plan for immutability check"
+    )
+    
+    # Pydantic frozen models prevent attribute assignment
+    with pytest.raises(ValidationError):
+        plan.rationale = "Modified"  # Should fail - model is frozen
+    
+    conflict = ConflictResolution(
+        conflict_type="Test Conflict",
+        conflicting_signals={"A": "Buy", "B": "Sell"},
+        resolution="Test resolution",
+        rationale="Test rationale for immutability check"
+    )
+    
+    with pytest.raises(ValidationError):
+        conflict.resolution = "Modified"  # Should fail - model is frozen
+    
+    critique = ReflexionCritique(approved=True)
+    
+    with pytest.raises(ValidationError):
+        critique.approved = False  # Should fail - model is frozen
+
 

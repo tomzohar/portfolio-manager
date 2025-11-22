@@ -340,3 +340,145 @@ class PortfolioReport(BaseModel):
     class Config:
         frozen = True
 
+
+# ============================================================================
+# Phase 3 Schemas - Supervisor Orchestration & Reflexion
+# ============================================================================
+
+
+class ExecutionPlan(BaseModel):
+    """
+    Supervisor's decomposed execution plan for multi-agent coordination.
+    
+    Defines which sub-agents to invoke, in what order, and which tasks
+    can be executed in parallel.
+    
+    Attributes:
+        tasks: Ordered list of sub-agent tasks to execute
+        parallel_groups: Groups of tasks that can run in parallel
+        rationale: Brief explanation of the planning strategy
+    
+    Examples:
+        >>> plan = ExecutionPlan(
+        ...     tasks=[
+        ...         "Invoke Macro Agent",
+        ...         "Invoke Fundamental Agent (batch)",
+        ...         "Invoke Technical Agent (batch)",
+        ...         "Invoke Risk Agent"
+        ...     ],
+        ...     parallel_groups=[["Fundamental Agent", "Technical Agent"]],
+        ...     rationale="Macro first for context, then parallel ticker analysis, then risk"
+        ... )
+    """
+    tasks: List[str] = Field(
+        min_length=1,
+        description="Ordered list of sub-agent tasks (e.g., 'Invoke Macro Agent')"
+    )
+    parallel_groups: List[List[str]] = Field(
+        default_factory=list,
+        description="Groups of tasks that can run in parallel (e.g., [['Fundamental', 'Technical']])"
+    )
+    rationale: str = Field(
+        min_length=20,
+        description="Planning rationale explaining execution strategy"
+    )
+    
+    class Config:
+        frozen = True
+
+
+class ConflictResolution(BaseModel):
+    """
+    Record of how conflicts between sub-agents were resolved.
+    
+    Tracks divergences between sub-agent recommendations (e.g., Fundamental
+    says "Buy" but Technical says "Sell") and documents how the conflict
+    was resolved by the Synthesis Node.
+    
+    Attributes:
+        conflict_type: Type/description of conflict
+        conflicting_signals: What each agent recommended (keyed by agent name)
+        resolution: How the conflict was resolved
+        rationale: Justification for the resolution approach
+    
+    Examples:
+        >>> conflict = ConflictResolution(
+        ...     conflict_type="Fundamental vs. Technical (AAPL)",
+        ...     conflicting_signals={
+        ...         "Fundamental": "Buy (undervalued, P/E=18)",
+        ...         "Technical": "Sell (downtrend, RSI=35)"
+        ...     },
+        ...     resolution="Weighted to Hold based on long-term horizon",
+        ...     rationale="Long-term fundamentals weighted 60% vs. short-term technicals 30%"
+        ... )
+    """
+    conflict_type: str = Field(
+        min_length=5,
+        description="Type of conflict (e.g., 'Fundamental vs. Technical (AAPL)')"
+    )
+    conflicting_signals: Dict[str, str] = Field(
+        description="What each agent recommended (e.g., {'Fundamental': 'Buy', 'Technical': 'Sell'})"
+    )
+    resolution: str = Field(
+        min_length=10,
+        description="How conflict was resolved (e.g., 'Weighted to Hold')"
+    )
+    rationale: str = Field(
+        min_length=20,
+        description="Justification for resolution approach"
+    )
+    
+    class Config:
+        frozen = True
+
+
+class ReflexionCritique(BaseModel):
+    """
+    Self-critique from Reflexion Node applying "Risk Officer" review.
+    
+    After synthesis generates recommendations, the Reflexion Node assumes
+    a "Senior Risk Officer" persona to critique the analysis for biases,
+    errors, and inconsistencies. This enables self-correction before
+    finalizing recommendations.
+    
+    Attributes:
+        approved: Whether synthesis is approved (True) or rejected (False)
+        issues_found: List of specific issues identified (empty if approved)
+        suggestions: Actionable suggestions for improvement
+        confidence_adjustment: Confidence adjustment factor (-0.3 to +0.3)
+    
+    Examples:
+        >>> critique = ReflexionCritique(
+        ...     approved=False,
+        ...     issues_found=[
+        ...         "Macro Risk-Off signal ignored in Buy recommendations",
+        ...         "High portfolio risk (Beta=1.5) but recommending more buys"
+        ...     ],
+        ...     suggestions=[
+        ...         "Downgrade Buy signals to Hold given Risk-Off macro",
+        ...         "Recommend rebalancing before accumulating"
+        ...     ],
+        ...     confidence_adjustment=-0.2
+        ... )
+    """
+    approved: bool = Field(
+        description="Whether synthesis is approved (True) or needs revision (False)"
+    )
+    issues_found: List[str] = Field(
+        default_factory=list,
+        description="Specific issues identified (empty list if approved)"
+    )
+    suggestions: List[str] = Field(
+        default_factory=list,
+        description="Actionable suggestions for improvement (empty if approved)"
+    )
+    confidence_adjustment: float = Field(
+        ge=-0.3,
+        le=0.3,
+        default=0.0,
+        description="Confidence adjustment factor (-0.3 = reduce, +0.3 = increase)"
+    )
+    
+    class Config:
+        frozen = True
+
