@@ -215,3 +215,167 @@ def get_risk_free_rate() -> float:
         sentry_sdk.capture_exception(e)
         raise
 
+
+def get_latest_cpi_yoy() -> Optional[float]:
+    """
+    Get the latest year-over-year CPI (Consumer Price Index) change.
+    
+    Returns:
+        CPI year-over-year percentage change (e.g., 3.5 for 3.5% inflation)
+        or None if unavailable
+    """
+    try:
+        # Fetch CPI data for last 2 years
+        observation_start = (datetime.now() - timedelta(days=730)).strftime('%Y-%m-%d')
+        cpi_data = fetch_fred_series("CPIAUCSL", observation_start=observation_start)
+        
+        if cpi_data.empty or len(cpi_data) < 12:
+            logger.warning("Insufficient CPI data for YoY calculation")
+            return None
+        
+        # Calculate year-over-year change
+        latest = cpi_data.iloc[-1]
+        year_ago = cpi_data.iloc[-13] if len(cpi_data) >= 13 else cpi_data.iloc[0]
+        
+        if year_ago == 0:
+            return None
+            
+        yoy_change = ((latest - year_ago) / year_ago) * 100
+        
+        logger.info(f"Latest CPI YoY: {yoy_change:.2f}%")
+        return float(yoy_change)
+        
+    except Exception as e:
+        logger.warning(f"Error fetching CPI YoY: {e}")
+        sentry_sdk.capture_exception(e)
+        return None
+
+
+def get_latest_gdp_growth() -> Optional[float]:
+    """
+    Get the latest quarter-over-quarter GDP growth rate.
+    
+    Returns:
+        GDP quarterly growth rate as percentage (e.g., 2.5 for 2.5% growth)
+        or None if unavailable
+    """
+    try:
+        # Fetch GDP data for last 2 years
+        observation_start = (datetime.now() - timedelta(days=730)).strftime('%Y-%m-%d')
+        gdp_data = fetch_fred_series("GDP", observation_start=observation_start)
+        
+        if gdp_data.empty or len(gdp_data) < 2:
+            logger.warning("Insufficient GDP data for growth calculation")
+            return None
+        
+        # Calculate quarter-over-quarter growth
+        latest = gdp_data.iloc[-1]
+        previous = gdp_data.iloc[-2]
+        
+        if previous == 0:
+            return None
+            
+        qoq_growth = ((latest - previous) / previous) * 100
+        
+        logger.info(f"Latest GDP QoQ Growth: {qoq_growth:.2f}%")
+        return float(qoq_growth)
+        
+    except Exception as e:
+        logger.warning(f"Error fetching GDP growth: {e}")
+        sentry_sdk.capture_exception(e)
+        return None
+
+
+def get_yield_curve_spread() -> Optional[float]:
+    """
+    Get the current 10Y-2Y Treasury yield curve spread.
+    
+    A negative spread (inverted yield curve) is often a recession indicator.
+    
+    Returns:
+        Yield spread in basis points (e.g., 50.0 for 50 bps positive spread)
+        or None if unavailable
+    """
+    try:
+        # Fetch yield curve spread for last 30 days
+        observation_start = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+        spread_data = fetch_fred_series("T10Y2Y", observation_start=observation_start)
+        
+        if spread_data.empty:
+            logger.warning("Yield curve spread data unavailable")
+            return None
+        
+        # Get most recent value (already in percentage points)
+        latest_spread = spread_data.dropna().iloc[-1]
+        
+        # Convert to basis points (1% = 100 bps)
+        spread_bps = latest_spread * 100
+        
+        logger.info(f"Latest yield curve spread: {spread_bps:.2f} bps")
+        return float(spread_bps)
+        
+    except Exception as e:
+        logger.warning(f"Error fetching yield curve spread: {e}")
+        sentry_sdk.capture_exception(e)
+        return None
+
+
+def get_vix() -> Optional[float]:
+    """
+    Get the current VIX (Volatility Index) level.
+    
+    VIX > 20 indicates elevated market fear/volatility.
+    
+    Returns:
+        Current VIX level (e.g., 18.5) or None if unavailable
+    """
+    try:
+        # Fetch VIX for last 30 days
+        observation_start = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+        vix_data = fetch_fred_series("VIXCLS", observation_start=observation_start)
+        
+        if vix_data.empty:
+            logger.warning("VIX data unavailable")
+            return None
+        
+        # Get most recent value
+        latest_vix = vix_data.dropna().iloc[-1]
+        
+        logger.info(f"Latest VIX: {latest_vix:.2f}")
+        return float(latest_vix)
+        
+    except Exception as e:
+        logger.warning(f"Error fetching VIX: {e}")
+        sentry_sdk.capture_exception(e)
+        return None
+
+
+def get_unemployment_rate() -> Optional[float]:
+    """
+    Get the current unemployment rate.
+    
+    Returns:
+        Current unemployment rate as percentage (e.g., 4.2 for 4.2%)
+        or None if unavailable
+    """
+    try:
+        # Fetch unemployment rate for last 30 days
+        observation_start = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+        unemployment_data = fetch_fred_series("UNRATE", observation_start=observation_start)
+        
+        if unemployment_data.empty:
+            logger.warning("Unemployment rate data unavailable")
+            return None
+        
+        # Get most recent value
+        latest_unemployment = unemployment_data.dropna().iloc[-1]
+        
+        logger.info(f"Latest unemployment rate: {latest_unemployment:.2f}%")
+        return float(latest_unemployment)
+        
+    except Exception as e:
+        logger.warning(f"Error fetching unemployment rate: {e}")
+        sentry_sdk.capture_exception(e)
+        return None
+
+

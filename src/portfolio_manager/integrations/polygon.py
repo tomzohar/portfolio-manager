@@ -299,6 +299,172 @@ def fetch_market_benchmark(period: str = "1y") -> Dict[str, pd.DataFrame | bool 
         }
 
 
+@retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=2, max=60))
+def fetch_financial_statements(ticker: str, limit: int = 4) -> Dict:
+    """
+    Fetch financial statements from Polygon.io Financials API.
+    
+    Attempts to retrieve quarterly income statements, balance sheets, and cash flows
+    for fundamental analysis. Note: Availability depends on Polygon subscription tier.
+    
+    Args:
+        ticker: Stock ticker symbol (e.g., 'AAPL')
+        limit: Number of quarters to fetch (default 4 = 1 year)
+            Maximum: 100 (API limit)
+    
+    Returns:
+        Dictionary with structure:
+        {
+            "success": bool,
+            "ticker": str,
+            "statements": [
+                {
+                    "period": str (e.g., "Q1", "Q2"),
+                    "fiscal_year": int,
+                    "fiscal_period": str,
+                    "start_date": str,
+                    "end_date": str,
+                    "filing_date": str,
+                    "revenue": float,
+                    "net_income": float,
+                    "total_assets": float,
+                    "total_liabilities": float,
+                    "operating_cash_flow": float,
+                    "eps": float,
+                    "gross_profit": float
+                },
+                ...
+            ],
+            "count": int,
+            "error": Optional[str]
+        }
+        
+        On failure or if data unavailable (e.g., subscription tier restriction):
+        {
+            "success": False,
+            "ticker": ticker,
+            "statements": [],
+            "count": 0,
+            "error": "Error message or 'Not available in subscription tier'"
+        }
+    
+    Example:
+        >>> result = fetch_financial_statements("AAPL", limit=4)
+        >>> if result["success"] and result["statements"]:
+        ...     latest = result["statements"][0]
+        ...     print(f"Revenue: ${latest['revenue']:,.0f}")
+    
+    Notes:
+        - Financials API may not be available in all Polygon subscription tiers
+        - Graceful fallback: Returns success=False if unavailable
+        - Uses quarterly statements (most granular available)
+        - Fundamental Agent should handle missing statements gracefully
+        - Automatically retries on API failures (5 attempts max)
+    """
+    logger.info(f"Fetching financial statements for {ticker} (limit: {limit})")
+    
+    try:
+        # Initialize Polygon REST client
+        api_key = getattr(settings, 'POLYGON_API_KEY', None)
+        if not api_key:
+            import os
+            api_key = os.getenv('POLYGON_API_KEY')
+            if not api_key:
+                raise ValueError("POLYGON_API_KEY not found")
+        
+        client = RESTClient(api_key)
+        
+        # Fetch financial statements
+        # Note: list_ticker_financials() may not be available in all subscription tiers
+        try:
+            financials_response = client.list_ticker_financials(
+                ticker=ticker,
+                limit=limit
+            )
+        except AttributeError:
+            # Method doesn't exist in this version of polygon-api-client
+            logger.warning(f"Financial statements API not available for {ticker}")
+            return {
+                "success": False,
+                "ticker": ticker,
+                "statements": [],
+                "count": 0,
+                "error": "Financial statements API not available in client library"
+            }
+        
+        # Process response into structured format
+        statements = []
+        for financial in financials_response:
+            try:
+                # Extract data with safe access
+                income_statement = getattr(financial, 'financials', {}).get('income_statement', {})
+                balance_sheet = getattr(financial, 'financials', {}).get('balance_sheet', {})
+                cash_flow = getattr(financial, 'financials', {}).get('cash_flow_statement', {})
+                
+                statement = {
+                    "period": getattr(financial, 'fiscal_period', None),
+                    "fiscal_year": getattr(financial, 'fiscal_year', None),
+                    "fiscal_period": getattr(financial, 'fiscal_period', None),
+                    "start_date": getattr(financial, 'start_date', None),
+                    "end_date": getattr(financial, 'end_date', None),
+                    "filing_date": getattr(financial, 'filing_date', None),
+                    # Income statement
+                    "revenue": income_statement.get('revenues', {}).get('value', None),
+                    "net_income": income_statement.get('net_income_loss', {}).get('value', None),
+                    "gross_profit": income_statement.get('gross_profit', {}).get('value', None),
+                    "eps": income_statement.get('basic_earnings_per_share', {}).get('value', None),
+                    # Balance sheet
+                    "total_assets": balance_sheet.get('assets', {}).get('value', None),
+                    "total_liabilities": balance_sheet.get('liabilities', {}).get('value', None),
+                    # Cash flow
+                    "operating_cash_flow": cash_flow.get(
+                        'net_cash_flow_from_operating_activities', 
+                        {}
+                    ).get('value', None),
+                }
+                
+                statements.append(statement)
+            except (AttributeError, KeyError) as e:
+                logger.warning(f"Error parsing financial statement: {e}")
+                continue
+        
+        if not statements:
+            logger.warning(
+                f"No financial statements found for {ticker}. "
+                "This may indicate the ticker is not available or subscription tier limitation."
+            )
+            return {
+                "success": False,
+                "ticker": ticker,
+                "statements": [],
+                "count": 0,
+                "error": "No financial statements available (may be subscription tier limitation)"
+            }
+        
+        logger.info(f"Successfully fetched {len(statements)} financial statements for {ticker}")
+        
+        return {
+            "success": True,
+            "ticker": ticker,
+            "statements": statements,
+            "count": len(statements),
+            "error": None
+        }
+        
+    except Exception as e:
+        error_msg = f"Failed to fetch financial statements for {ticker}: {str(e)}"
+        logger.error(error_msg)
+        sentry_sdk.capture_exception(e)
+        
+        return {
+            "success": False,
+            "ticker": ticker,
+            "statements": [],
+            "count": 0,
+            "error": error_msg
+        }
+
+
 def fetch_technical_indicators(
     ticker: str,
     indicator: str,

@@ -40,11 +40,39 @@ ENFORCEMENT: Any generation of loop-based DataFrame iteration triggers an immedi
 
 D. OBSERVABILITY & LOGGING
 
+Logging: Use Python's standard logging module exclusively. NEVER use rich.console.Console for logging.
+
+Initialization: At the module level:
+import logging
+logger = logging.getLogger(__name__)
+
+
+Log Levels: Use appropriate levels:
+
+logger.info() - Normal operational messages (e.g., "Fetching data for AAPL", "Analysis complete")
+
+logger.warning() - Expected but unusual conditions (e.g., "Missing data, using fallback")
+
+logger.error() - Error conditions (e.g., "API call failed", exc_info=True for tracebacks)
+
+logger.debug() - Detailed diagnostic information (verbose mode only)
+
+
 Sentry Integration: Initialize sentry-sdk with enable_logs=True.
 
-Handled Exceptions: All explicitly caught exceptions in I/O blocks MUST be reported via sentry_sdk.capture_exception(e).
+Handled Exceptions: All explicitly caught exceptions in I/O blocks MUST be reported via sentry_sdk.capture_exception(e) AND logged via logger.error().
 
-Local Debugging: Use the rich library for console logging and structured data display.
+Example:
+
+try:
+    data = fetch_external_api()
+except Exception as e:
+    sentry_sdk.capture_exception(e)
+    logger.error(f"Failed to fetch data: {e}", exc_info=True)
+    # Handle gracefully
+
+
+FORBIDDEN: Using rich.console.Console for logging or print() statements in production code.
 
 E. I/O RESILIENCE
 
