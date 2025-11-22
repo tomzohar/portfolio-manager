@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     PUSHOVER_API_TOKEN: str
     PUSHOVER_USER_KEY: str
     FRED_API_KEY: str  # Federal Reserve Economic Data API
+    POLYGON_API_KEY: str  # Polygon.io Market Data API
 
     # Google Sheets (names updated to match .env file)
     GOOGLE_SERVICE_ACCOUNT_FILE: str
