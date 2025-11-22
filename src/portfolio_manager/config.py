@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     SERPAPI_API_KEY: str
     PUSHOVER_API_TOKEN: str
     PUSHOVER_USER_KEY: str
+    FRED_API_KEY: str  # Federal Reserve Economic Data API
 
     # Google Sheets (names updated to match .env file)
     GOOGLE_SERVICE_ACCOUNT_FILE: str
