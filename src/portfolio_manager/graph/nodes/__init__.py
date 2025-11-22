@@ -14,6 +14,7 @@ from .risk_agent import risk_agent_node
 # Phase 3: Supervisor & Orchestration Nodes
 from .supervisor import supervisor_node
 from .synthesis import synthesis_node
+from .reflexion import reflexion_node, should_loop_back_to_synthesis
 
 __all__ = [
     "start_node",
@@ -29,4 +30,6 @@ __all__ = [
     # Phase 3
     "supervisor_node",
     "synthesis_node",
+    "reflexion_node",
+    "should_loop_back_to_synthesis",
 ]
