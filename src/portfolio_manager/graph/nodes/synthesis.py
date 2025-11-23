@@ -49,6 +49,7 @@ def synthesis_node(state: AgentState) -> Dict[str, Any]:
         technicals = state.technical_analysis if hasattr(state, 'technical_analysis') else {}
         risk = state.risk_assessment if hasattr(state, 'risk_assessment') else None
         portfolio = state.portfolio if hasattr(state, 'portfolio') else None
+        reflexion_feedback = state.reflexion_feedback if hasattr(state, 'reflexion_feedback') else []
         
         # 2. Extract position weights from portfolio
         weights_map = _extract_weights_from_portfolio(portfolio)
@@ -67,10 +68,15 @@ def synthesis_node(state: AgentState) -> Dict[str, Any]:
             logger.info(f"Conflicts detected: {len(conflicts)}")
             for conflict in conflicts:
                 logger.info(f"  • {conflict.conflict_type}")
+                
+        # Check for strict mode from reflexion feedback
+        strict_mode = any("Reduce_Risk" in f or "reduce risk" in f.lower() for f in reflexion_feedback)
+        if strict_mode:
+            logger.info("SYNTHESIS: Strict Mode ENABLED by Reflexion Feedback")
         
         # 5. Generate per-ticker recommendations
         position_actions = _generate_position_actions(
-            fundamentals, technicals, macro, risk, conflicts, weights_map
+            fundamentals, technicals, macro, risk, conflicts, weights_map, strict_mode
         )
         
         # 6. Generate portfolio strategy
@@ -298,6 +304,20 @@ def _detect_conflicts(
                 resolution="Recommend rebalancing before adding positions",
                 rationale="Portfolio already at high risk, adding may increase exposure"
             ))
+            
+    # Conflict Type 4: Portfolio Misalignment (High Beta in Risk-Off)
+    if macro and macro.get("signal") == "Risk-Off":
+        beta = risk.get("beta") if risk else None
+        if beta and isinstance(beta, (int, float)) and beta > 1.1:
+            conflicts.append(ConflictResolution(
+                conflict_type="Portfolio Misalignment",
+                conflicting_signals={
+                    "Macro": "Risk-Off",
+                    "Portfolio": f"High Beta ({beta:.2f})"
+                },
+                resolution="Prioritize reducing exposure (Sell/Trim) to align with regime",
+                rationale="Portfolio is too aggressive for current market regime"
+            ))
     
     return conflicts
 
@@ -308,7 +328,8 @@ def _generate_position_actions(
     macro: Optional[Dict],
     risk: Optional[Dict],
     conflicts: List[ConflictResolution],
-    weights_map: Dict[str, float]
+    weights_map: Dict[str, float],
+    strict_mode: bool = False
 ) -> List[PositionAction]:
     """
     Generate per-ticker recommendations by combining sub-agent signals.
@@ -324,6 +345,7 @@ def _generate_position_actions(
         risk: Risk agent output
         conflicts: Detected conflicts
         weights_map: Dictionary mapping ticker to current portfolio weight
+        strict_mode: Whether to apply stricter risk management
         
     Returns:
         List of PositionAction recommendations
@@ -359,7 +381,7 @@ def _generate_position_actions(
         
         # Resolve recommendation using weights
         final_rec, final_conf = _resolve_recommendation(
-            fund_rec, fund_conf, tech_rec, tech_conf, weights, macro, conflicts, ticker
+            fund_rec, fund_conf, tech_rec, tech_conf, weights, macro, risk, conflicts, ticker, strict_mode
         )
         
         # Build rationale
@@ -394,8 +416,10 @@ def _resolve_recommendation(
     tech_conf: float,
     weights: Dict[str, float],
     macro: Optional[Dict],
+    risk: Optional[Dict],
     conflicts: List[ConflictResolution],
-    ticker: str
+    ticker: str,
+    strict_mode: bool = False
 ) -> tuple:
     """
     Resolve final recommendation using weighted voting.
@@ -413,8 +437,10 @@ def _resolve_recommendation(
         tech_conf: Technical confidence
         weights: Agent weighting scheme
         macro: Macro agent output
+        risk: Risk agent output
         conflicts: List of conflicts
         ticker: Ticker symbol being evaluated
+        strict_mode: Whether to apply stricter risk management
         
     Returns:
         Tuple of (recommendation, confidence)
@@ -439,8 +465,39 @@ def _resolve_recommendation(
     
     # Apply macro override if Risk-Off
     if macro and macro.get("signal") == "Risk-Off":
-        weighted_score *= 0.5  # Reduce bullishness by 50%
-        logger.info(f"{ticker}: Applying Risk-Off dampening (score: {weighted_score:.2f})")
+        if risk and risk.get("beta") is not None:
+            portfolio_beta = risk.get("beta")
+        else:
+            portfolio_beta = 1.0
+            logger.info(f"{ticker}: No risk beta found, using fallback value 1.0")
+        if portfolio_beta is None:
+            portfolio_beta = 1.0
+            
+        # Logic: In Risk-Off, High Beta assets should be trimmed
+        if portfolio_beta > 1.0:
+            logger.info(f"{ticker}: Risk-Off + High Beta ({portfolio_beta:.2f}) -> Applying Sell bias")
+            weighted_score -= 0.5  # Shift towards Sell
+            
+            # If Strict Mode (from Reflexion), apply heavier penalty
+            if strict_mode:
+                logger.info(f"{ticker}: STRICT MODE -> Forcing Sell bias")
+                weighted_score -= 0.5  # Additional shift
+        
+        # Logic: In Risk-Off, Technical weakness should trump Fundamental "Hold"
+        if tech_rec in ["Sell", "Strong Sell"]:
+            if weighted_score > -0.4:
+                logger.info(f"{ticker}: Risk-Off + Technical {tech_rec} overrides score {weighted_score:.2f} -> -0.5")
+                weighted_score = -0.5  # Force to Sell range
+        else:
+            # Standard dampening for non-sell signals
+            weighted_score *= 0.5  # Reduce bullishness by 50%
+            logger.info(f"{ticker}: Applying Risk-Off dampening (score: {weighted_score:.2f})")
+    
+    # Safety Valve: If low confidence in Risk-Off, default to Sell/Trim for safety
+    overall_conf = (fund_conf * weights["fundamental"] + tech_conf * weights["technical"])
+    if macro and macro.get("signal") == "Risk-Off" and overall_conf < 0.4:
+        logger.info(f"{ticker}: Low confidence ({overall_conf:.2f}) in Risk-Off -> Defaulting to Sell")
+        weighted_score = min(weighted_score, -0.5)
     
     # Convert back to recommendation
     if weighted_score > 1.2:

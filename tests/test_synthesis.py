@@ -459,9 +459,10 @@ def test_resolve_recommendation_aligned():
     macro = {"signal": "Risk-On"}
     conflicts = []
     ticker = "AAPL"
+    risk = {"beta": 1.0}
     
     final_rec, final_conf = _resolve_recommendation(
-        fund_rec, fund_conf, tech_rec, tech_conf, weights, macro, conflicts, ticker
+        fund_rec, fund_conf, tech_rec, tech_conf, weights, macro, risk, conflicts, ticker
     )
     
     # Should resolve to Buy with high confidence
@@ -477,6 +478,7 @@ def test_resolve_recommendation_conflicting():
     tech_conf = 0.85
     weights = {"fundamental": 0.6, "technical": 0.3, "macro": 0.1}
     macro = {"signal": "Risk-On"}
+    risk = {"beta": 1.0}
     conflicts = [
         ConflictResolution(
             conflict_type="Fundamental vs. Technical (AAPL)",
@@ -488,7 +490,7 @@ def test_resolve_recommendation_conflicting():
     ticker = "AAPL"
     
     final_rec, final_conf = _resolve_recommendation(
-        fund_rec, fund_conf, tech_rec, tech_conf, weights, macro, conflicts, ticker
+        fund_rec, fund_conf, tech_rec, tech_conf, weights, macro, risk, conflicts, ticker
     )
     
     # Should resolve to something (weighted)
@@ -508,11 +510,12 @@ def test_resolve_recommendation_risk_off_dampening():
     tech_conf = 0.9
     weights = {"fundamental": 0.6, "technical": 0.3, "macro": 0.1}
     macro = {"signal": "Risk-Off"}  # Should dampen
+    risk = {"beta": 0.8} # Low beta, so just dampening, no force sell
     conflicts = []
     ticker = "AAPL"
     
     final_rec, final_conf = _resolve_recommendation(
-        fund_rec, fund_conf, tech_rec, tech_conf, weights, macro, conflicts, ticker
+        fund_rec, fund_conf, tech_rec, tech_conf, weights, macro, risk, conflicts, ticker
     )
     
     # Risk-Off should dampen bullishness

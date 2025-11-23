@@ -137,48 +137,72 @@ def _analyze_ticker_fundamentals(ticker: str) -> Dict[str, Any]:
                 "ticker": ticker,
                 "error": fundamentals.get("error", "Unknown error")
             }
+            
+        # Check if it's an ETF or Fund
+        is_etf = False
+        sector = (fundamentals.get("sector") or "").lower()
+        industry = (fundamentals.get("industry") or "").lower()
+        description = (fundamentals.get("description") or "").lower()
+        
+        if "etf" in sector or "etf" in industry or "exchange traded fund" in description or "etf" in description:
+            is_etf = True
+            logger.info(f"{ticker} identified as ETF/Fund")
         
         # 2. Fetch financial statements from FMP (Polygon Starter tier doesn't support this)
-        logger.info(f"Fetching financial statements for {ticker} from FMP...")
-        fmp_income = fetch_income_statement(ticker, limit=4)
-        fmp_balance = fetch_balance_sheet(ticker, limit=4)
-        fmp_cash = fetch_cash_flow(ticker, limit=4)
+        # Skip for ETFs as traditional financials are often not relevant or structured differently
+        statements = {"success": False, "statements": [], "source": "FMP"}
         
-        if fmp_income and fmp_balance and fmp_cash:
-            # Convert FMP format to standard format
-            normalized_statements = convert_fmp_to_standard_format(
-                fmp_income, fmp_balance, fmp_cash
-            )
+        if not is_etf:
+            logger.info(f"Fetching financial statements for {ticker} from FMP...")
+            fmp_income = fetch_income_statement(ticker, limit=4)
+            fmp_balance = fetch_balance_sheet(ticker, limit=4)
+            fmp_cash = fetch_cash_flow(ticker, limit=4)
             
-            if normalized_statements:
-                logger.info(f"Successfully fetched {len(normalized_statements)} FMP statements for {ticker}")
-                # Wrap in standard structure
-                statements = {
-                    "success": True,
-                    "ticker": ticker,
-                    "statements": normalized_statements,
-                    "count": len(normalized_statements),
-                    "source": "FMP"
-                }
+            if fmp_income and fmp_balance and fmp_cash:
+                # Convert FMP format to standard format
+                normalized_statements = convert_fmp_to_standard_format(
+                    fmp_income, fmp_balance, fmp_cash
+                )
+                
+                if normalized_statements:
+                    logger.info(f"Successfully fetched {len(normalized_statements)} FMP statements for {ticker}")
+                    # Wrap in standard structure
+                    statements = {
+                        "success": True,
+                        "ticker": ticker,
+                        "statements": normalized_statements,
+                        "count": len(normalized_statements),
+                        "source": "FMP"
+                    }
+                else:
+                    logger.warning(f"FMP data fetched but normalization failed for {ticker}")
             else:
-                logger.warning(f"FMP data fetched but normalization failed for {ticker}")
-                statements = {"success": False, "statements": [], "source": "FMP"}
+                logger.warning(f"FMP financial statements unavailable for {ticker}")
         else:
-            logger.warning(f"FMP financial statements unavailable for {ticker}")
-            statements = {"success": False, "statements": [], "source": "FMP"}
+            logger.info(f"Skipping financial statements fetch for ETF {ticker}")
         
         # 3. Compute metrics
         metrics = _compute_fundamental_metrics(fundamentals, statements)
         
         # 4. LLM analysis using centralized utility
-        prompt = _build_fundamental_prompt(ticker, fundamentals, metrics, statements)
+        prompt = _build_fundamental_prompt(ticker, fundamentals, metrics, statements, is_etf)
         response_text = call_gemini_api(prompt, model=settings.ANALYSIS_MODEL)
         
         # 5. Parse assessment
         assessment = _parse_fundamental_assessment(response_text)
         
         # Log confidence for diagnostic purposes
-        logger.info(f"{ticker}: LLM returned confidence: {assessment['confidence']:.2f}")
+        conf = assessment.get('confidence', 0.5)
+        logger.info(f"{ticker}: LLM returned confidence: {conf:.2f}")
+        
+        if conf < 0.5:
+            missing_data = []
+            if not is_etf and not statements.get("success"):
+                missing_data.append("Financial Statements (FMP)")
+            if not fundamentals.get("market_cap"):
+                missing_data.append("Market Cap")
+            
+            logger.warning(f"{ticker}: Low confidence ({conf:.2f}) detected. Missing data: {missing_data}")
         
         logger.info(
             f"{ticker}: {assessment['valuation']} | "
@@ -192,7 +216,8 @@ def _analyze_ticker_fundamentals(ticker: str) -> Dict[str, Any]:
             "fundamentals": fundamentals,
             "metrics": metrics,
             "statements_available": statements.get("success", False),
-            "assessment": assessment
+            "assessment": assessment,
+            "is_etf": is_etf
         }
         
     except Exception as e:
@@ -282,7 +307,8 @@ def _build_fundamental_prompt(
     ticker: str, 
     fundamentals: Dict, 
     metrics: Dict,
-    statements: Dict
+    statements: Dict,
+    is_etf: bool = False
 ) -> str:
     """
     Construct LLM prompt for fundamental analysis.
@@ -292,11 +318,35 @@ def _build_fundamental_prompt(
         fundamentals: Company details
         metrics: Computed metrics
         statements: Financial statements result
+        is_etf: Whether the ticker is an ETF/Fund
         
     Returns:
         Formatted prompt string
     """
-    system_prompt = """You are a Senior Equity Analyst specializing in fundamental analysis.
+    if is_etf:
+        system_prompt = """You are a Senior ETF/Fund Analyst.
+
+Your task: Assess the quality and role of an ETF/Fund in a portfolio.
+
+Assessment Framework:
+1. Valuation: Undervalued, Fair, Overvalued (based on market trend, sector, expense ratio if known)
+2. Quality Score (0-10): Liquidity (Volume), AUM, Track Record
+3. Recommendation: Buy, Hold, Sell
+4. Role: Strategic Hold, Tactical Play, Hedge
+
+Output Format (JSON):
+{
+  "valuation": "Undervalued" | "Fair" | "Overvalued",
+  "quality_score": 0-10,
+  "recommendation": "Buy" | "Hold" | "Sell",
+  "rationale": "Brief explanation (focus on sector exposure/macro fit)",
+  "key_risks": ["Risk 1", "Risk 2"],
+  "confidence": 0.0-1.0
+}
+
+Note: For ETFs, traditional metrics like P/E do not apply directly. Focus on the underlying sector/asset class and macro fit."""
+    else:
+        system_prompt = """You are a Senior Equity Analyst specializing in fundamental analysis.
 
 Your task: Assess the valuation and quality of a company based on provided fundamentals.
 
@@ -334,7 +384,7 @@ Shares Outstanding: {fundamentals.get('shares_outstanding', 'N/A'):,}
 """
 
     # Add financial metrics if available
-    if metrics.get("available"):
+    if metrics.get("available") and not is_etf:
         data_source = statements.get("source", "Polygon")
         user_prompt += f"""
 Financial Metrics (Latest Quarter):
@@ -345,6 +395,8 @@ Operating Cash Flow Trend: {metrics.get('ocf_trend', 'N/A')}
 EPS: {metrics.get('eps', 'N/A')}
 Data Source: {data_source}
 """
+    elif is_etf:
+        user_prompt += "\nNote: Asset is an ETF/Fund. Analyze based on sector description and market cap (liquidity)."
     else:
         user_prompt += f"""
 Note: {metrics.get('note', 'Detailed financial statements not available')}
