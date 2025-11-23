@@ -5,7 +5,7 @@ This module implements a LangGraph node for macroeconomic analysis using FRED da
 The Macro Agent classifies market regimes and determines risk sentiment.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 import logging
 from ...agent_state import AgentState
 from ...schemas import MarketRegime
@@ -40,6 +40,9 @@ def macro_agent_node(state: AgentState) -> Dict[str, Any]:
     try:
         logger.info("Macro Agent: Fetching economic data")
         
+        # Get reasoning trace from state (compatible with both dict and Pydantic)
+        reasoning_trace = _get_reasoning_trace(state)
+        
         # 1. Fetch economic data
         macro_data = _fetch_macro_indicators()
         
@@ -47,7 +50,7 @@ def macro_agent_node(state: AgentState) -> Dict[str, Any]:
             logger.warning("Macro Agent: Economic data unavailable")
             return {
                 "macro_analysis": None,
-                "scratchpad": state.get("scratchpad", []) + [
+                "reasoning_trace": reasoning_trace + [
                     "Macro Agent: Economic data unavailable, skipping macro analysis"
                 ]
             }
@@ -68,7 +71,7 @@ def macro_agent_node(state: AgentState) -> Dict[str, Any]:
         # 5. Update state
         return {
             "macro_analysis": regime.model_dump(),
-            "scratchpad": state.get("scratchpad", []) + [
+            "reasoning_trace": reasoning_trace + [
                 f"Macro Agent: Market regime = {regime.status}, signal = {regime.signal}"
             ]
         }
@@ -76,12 +79,30 @@ def macro_agent_node(state: AgentState) -> Dict[str, Any]:
     except Exception as e:
         sentry_sdk.capture_exception(e)
         logger.error(f"Macro Agent Error: {e}", exc_info=True)
+        reasoning_trace = _get_reasoning_trace(state)
         return {
             "macro_analysis": None,
-            "scratchpad": state.get("scratchpad", []) + [
+            "reasoning_trace": reasoning_trace + [
                 f"Macro Agent: Failed with error: {str(e)}"
             ]
         }
+
+
+def _get_reasoning_trace(state: AgentState) -> List[str]:
+    """
+    Safely extract reasoning_trace from state (handles both dict and Pydantic).
+    
+    Args:
+        state: Agent state (dict or Pydantic AgentState)
+        
+    Returns:
+        List of reasoning trace strings
+    """
+    if isinstance(state, dict):
+        return state.get("reasoning_trace", [])
+    else:
+        # Pydantic model
+        return state.reasoning_trace if state.reasoning_trace else []
 
 
 def _fetch_macro_indicators() -> Dict[str, Any]:

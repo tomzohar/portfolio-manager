@@ -131,11 +131,16 @@ def calculate_beta(
             'market': market_returns
         }).dropna()
         
+        # Debug: Log alignment results
+        logger.debug(f"Beta calculation: portfolio_returns length={len(portfolio_returns)}, market_returns length={len(market_returns)}, aligned length={len(aligned)}")
+        
         if len(aligned) < 30:
-            raise ValueError(
-                f"Insufficient data points for beta calculation: {len(aligned)} "
-                f"(minimum 30 required for statistical significance)"
+            logger.warning(
+                f"Insufficient data points for beta calculation after alignment: {len(aligned)} "
+                f"(portfolio: {len(portfolio_returns)}, market: {len(market_returns)}). "
+                f"Using default beta of 1.0"
             )
+            return 1.0
         
         # Calculate beta using covariance matrix
         covariance = aligned['portfolio'].cov(aligned['market'])

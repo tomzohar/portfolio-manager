@@ -81,19 +81,22 @@ def technical_agent_node(state: AgentState) -> Dict[str, Any]:
         }
         
     Example:
-        >>> state = {"portfolio": {"tickers": ["AAPL", "MSFT"]}, "scratchpad": []}
+        >>> state = {"portfolio": {"tickers": ["AAPL", "MSFT"]}, "reasoning_trace": []}
         >>> result = technical_agent_node(state)
         >>> print(result["technical_analysis"]["AAPL"]["trend"])
         "Uptrend"
     """
     try:
-        tickers = state.get("portfolio", {}).get("tickers", [])
+        # Extract portfolio and tickers (compatible with both dict and Pydantic)
+        portfolio = _get_portfolio(state)
+        tickers = _get_tickers(portfolio)
+        reasoning_trace = _get_reasoning_trace(state)
         
         if not tickers:
             logger.warning("Technical Agent: No tickers to analyze")
             return {
                 "technical_analysis": {},
-                "scratchpad": state.get("scratchpad", []) + [
+                "reasoning_trace": reasoning_trace + [
                     "Technical Agent: No tickers provided for analysis"
                 ]
             }
@@ -114,7 +117,7 @@ def technical_agent_node(state: AgentState) -> Dict[str, Any]:
         
         return {
             "technical_analysis": analyses,
-            "scratchpad": state.get("scratchpad", []) + [
+            "reasoning_trace": reasoning_trace + [
                 f"Technical Agent: Analyzed {len(tickers)} positions ({successful} successful)"
             ]
         }
@@ -122,12 +125,39 @@ def technical_agent_node(state: AgentState) -> Dict[str, Any]:
     except Exception as e:
         sentry_sdk.capture_exception(e)
         logger.error(f"Technical Agent Error: {e}", exc_info=True)
+        reasoning_trace = _get_reasoning_trace(state)
         return {
             "technical_analysis": {},
-            "scratchpad": state.get("scratchpad", []) + [
+            "reasoning_trace": reasoning_trace + [
                 f"Technical Agent: Failed with error: {str(e)}"
             ]
         }
+
+
+def _get_portfolio(state: AgentState) -> Dict[str, Any]:
+    """Safely extract portfolio from state."""
+    if isinstance(state, dict):
+        return state.get("portfolio", {})
+    else:
+        return state.portfolio if state.portfolio else {}
+
+
+def _get_tickers(portfolio: Any) -> List[str]:
+    """Safely extract tickers from portfolio."""
+    if isinstance(portfolio, dict):
+        return portfolio.get("tickers", [])
+    elif hasattr(portfolio, 'tickers'):
+        return portfolio.tickers
+    else:
+        return []
+
+
+def _get_reasoning_trace(state: AgentState) -> List[str]:
+    """Safely extract reasoning_trace from state."""
+    if isinstance(state, dict):
+        return state.get("reasoning_trace", [])
+    else:
+        return state.reasoning_trace if state.reasoning_trace else []
 
 
 def _analyze_ticker_technicals(ticker: str) -> Dict[str, Any]:

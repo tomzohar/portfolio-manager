@@ -49,16 +49,30 @@ def final_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
     try:
         logger.info("FINAL REPORT: GENERATION PHASE")
         
-        # 1. Extract synthesis and reflexion results
-        synthesis = state.get("synthesis_result")
-        reflexion_feedback = state.get("reflexion_feedback", [])
-        confidence_adjustment = state.get("confidence_adjustment", 0.0)
+        # 1. Extract synthesis and reflexion results (handle both dict and Pydantic)
+        if isinstance(state, dict):
+            synthesis = state.get("synthesis_result")
+            reflexion_feedback = state.get("reflexion_feedback", [])
+            confidence_adjustment = state.get("confidence_adjustment", 0.0)
+        else:
+            # Pydantic AgentState
+            synthesis = state.synthesis_result
+            reflexion_feedback = state.reflexion_feedback if state.reflexion_feedback else []
+            confidence_adjustment = state.confidence_adjustment if state.confidence_adjustment else 0.0
         
         if not synthesis:
             logger.error("No synthesis result available")
+            
+            # Get reasoning_trace for error return
+            if isinstance(state, dict):
+                reasoning_trace = state.get("reasoning_trace", state.get("scratchpad", []))
+            else:
+                reasoning_trace = state.reasoning_trace if state.reasoning_trace else []
+            
             return {
                 "final_report": json.dumps({"error": "No synthesis result"}),
-                "error": "Missing synthesis result"
+                "error": "Missing synthesis result",
+                "reasoning_trace": reasoning_trace + ["Final Report: No synthesis result available"]
             }
         
         # 2. Build PortfolioReport components
@@ -74,7 +88,10 @@ def final_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
         reflexion_notes = _format_reflexion_notes(reflexion_feedback)
         
         # 5. Calculate final confidence
-        base_confidence = synthesis.get("confidence_score", 0.5)
+        if isinstance(synthesis, dict):
+            base_confidence = synthesis.get("confidence_score", 0.5)
+        else:
+            base_confidence = getattr(synthesis, "confidence_score", 0.5)
         final_confidence = max(0.0, min(1.0, base_confidence + confidence_adjustment))
         
         # 6. Create PortfolioReport object
@@ -104,9 +121,15 @@ def final_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
         
         logger.info("FINAL REPORT: COMPLETE")
         
+        # Safely get scratchpad/reasoning_trace (note: scratchpad was renamed to reasoning_trace)
+        if isinstance(state, dict):
+            reasoning_trace = state.get("reasoning_trace", state.get("scratchpad", []))
+        else:
+            reasoning_trace = state.reasoning_trace if state.reasoning_trace else []
+        
         return {
             "final_report": report_json_str,
-            "scratchpad": state.get("scratchpad", []) + [
+            "reasoning_trace": reasoning_trace + [
                 f"Final Report: Generated structured JSON output ({len(positions)} positions)"
             ]
         }
@@ -114,21 +137,28 @@ def final_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as e:
         sentry_sdk.capture_exception(e)
         logger.error(f"Final Report Error: {e}", exc_info=True)
+        
+        # Safely get scratchpad/reasoning_trace for error handling
+        if isinstance(state, dict):
+            reasoning_trace = state.get("reasoning_trace", state.get("scratchpad", []))
+        else:
+            reasoning_trace = state.reasoning_trace if state.reasoning_trace else []
+        
         return {
             "final_report": json.dumps({"error": str(e)}),
             "error": str(e),
-            "scratchpad": state.get("scratchpad", []) + [
+            "reasoning_trace": reasoning_trace + [
                 f"Final Report: Failed with error: {str(e)}"
             ]
         }
 
 
-def _extract_market_regime(state: Dict[str, Any]) -> MarketRegime:
+def _extract_market_regime(state) -> MarketRegime:
     """
     Extract MarketRegime from state.
     
     Args:
-        state: Agent state with macro_analysis
+        state: Agent state with macro_analysis (dict or Pydantic)
         
     Returns:
         MarketRegime object
@@ -136,7 +166,11 @@ def _extract_market_regime(state: Dict[str, Any]) -> MarketRegime:
     Raises:
         ValueError: If macro_analysis missing or invalid
     """
-    macro = state.get("macro_analysis")
+    # Handle both dict and Pydantic state
+    if isinstance(state, dict):
+        macro = state.get("macro_analysis")
+    else:
+        macro = state.macro_analysis if hasattr(state, "macro_analysis") else None
     
     if not macro:
         logger.warning("No macro analysis available, using defaults")
@@ -148,12 +182,22 @@ def _extract_market_regime(state: Dict[str, Any]) -> MarketRegime:
         )
     
     try:
-        return MarketRegime(
-            status=macro.get("status", "Goldilocks"),
-            signal=macro.get("signal", "Risk-On"),
-            key_driver=macro.get("key_driver", "N/A"),
-            confidence=macro.get("confidence", 0.5)
-        )
+        # Handle dict macro analysis
+        if isinstance(macro, dict):
+            return MarketRegime(
+                status=macro.get("status", "Goldilocks"),
+                signal=macro.get("signal", "Risk-On"),
+                key_driver=macro.get("key_driver", "N/A"),
+                confidence=macro.get("confidence", 0.5)
+            )
+        else:
+            # Handle Pydantic macro analysis
+            return MarketRegime(
+                status=getattr(macro, "status", "Goldilocks"),
+                signal=getattr(macro, "signal", "Risk-On"),
+                key_driver=getattr(macro, "key_driver", "N/A"),
+                confidence=getattr(macro, "confidence", 0.5)
+            )
     except Exception as e:
         logger.error(f"Failed to extract MarketRegime: {e}")
         # Return default instead of failing
@@ -170,19 +214,46 @@ def _extract_portfolio_strategy(synthesis: Dict[str, Any]) -> PortfolioStrategy:
     Extract PortfolioStrategy from synthesis result.
     
     Args:
-        synthesis: Synthesis result dictionary
+        synthesis: Synthesis result dictionary (or Pydantic object)
         
     Returns:
         PortfolioStrategy object
     """
-    strategy_dict = synthesis.get("portfolio_strategy", {})
+    # Handle None or missing synthesis
+    if not synthesis:
+        return PortfolioStrategy(
+            action="Hold",
+            rationale="No synthesis result available",
+            priority="Low"
+        )
+    
+    # Extract strategy_dict based on type
+    if isinstance(synthesis, dict):
+        strategy_dict = synthesis.get("portfolio_strategy", {})
+    else:
+        strategy_dict = getattr(synthesis, "portfolio_strategy", {})
+    
+    # Handle non-dict strategy_dict
+    if not strategy_dict:
+        return PortfolioStrategy(
+            action="Hold",
+            rationale="No strategy determined",
+            priority="Medium"
+        )
     
     try:
-        return PortfolioStrategy(
-            action=strategy_dict.get("action", "Hold"),
-            rationale=strategy_dict.get("rationale", "No strategy determined"),
-            priority=strategy_dict.get("priority", "Medium")
-        )
+        if isinstance(strategy_dict, dict):
+            return PortfolioStrategy(
+                action=strategy_dict.get("action", "Hold"),
+                rationale=strategy_dict.get("rationale", "No strategy determined"),
+                priority=strategy_dict.get("priority", "Medium")
+            )
+        else:
+            return PortfolioStrategy(
+                action=getattr(strategy_dict, "action", "Hold"),
+                rationale=getattr(strategy_dict, "rationale", "No strategy determined"),
+                priority=getattr(strategy_dict, "priority", "Medium")
+            )
     except Exception as e:
         logger.error(f"Failed to extract PortfolioStrategy: {e}")
         return PortfolioStrategy(
@@ -197,26 +268,50 @@ def _extract_position_actions(synthesis: Dict[str, Any]) -> List[PositionAction]
     Extract position actions from synthesis result.
     
     Args:
-        synthesis: Synthesis result dictionary
+        synthesis: Synthesis result dictionary (or Pydantic object)
         
     Returns:
         List of PositionAction objects
     """
-    positions_list = synthesis.get("position_actions", [])
+    # Handle None or missing synthesis
+    if not synthesis:
+        return []
+    
+    # Extract positions_list based on type
+    if isinstance(synthesis, dict):
+        positions_list = synthesis.get("position_actions", [])
+    else:
+        positions_list = getattr(synthesis, "position_actions", [])
+    
+    if not positions_list:
+        return []
     
     position_actions = []
     for pos_dict in positions_list:
         try:
-            position = PositionAction(
-                ticker=pos_dict.get("ticker", "UNKNOWN"),
-                action=pos_dict.get("action", "Hold"),
-                current_weight=pos_dict.get("current_weight", 0.0),
-                target_weight=pos_dict.get("target_weight", 0.0),
-                rationale=pos_dict.get("rationale", "N/A"),
-                confidence=pos_dict.get("confidence", 0.5),
-                fundamental_signal=pos_dict.get("fundamental_signal"),
-                technical_signal=pos_dict.get("technical_signal")
-            )
+            # Handle both dict and object position entries
+            if isinstance(pos_dict, dict):
+                position = PositionAction(
+                    ticker=pos_dict.get("ticker", "UNKNOWN"),
+                    action=pos_dict.get("action", "Hold"),
+                    current_weight=pos_dict.get("current_weight", 0.0),
+                    target_weight=pos_dict.get("target_weight", 0.0),
+                    rationale=pos_dict.get("rationale", "N/A"),
+                    confidence=pos_dict.get("confidence", 0.5),
+                    fundamental_signal=pos_dict.get("fundamental_signal"),
+                    technical_signal=pos_dict.get("technical_signal")
+                )
+            else:
+                position = PositionAction(
+                    ticker=getattr(pos_dict, "ticker", "UNKNOWN"),
+                    action=getattr(pos_dict, "action", "Hold"),
+                    current_weight=getattr(pos_dict, "current_weight", 0.0),
+                    target_weight=getattr(pos_dict, "target_weight", 0.0),
+                    rationale=getattr(pos_dict, "rationale", "N/A"),
+                    confidence=getattr(pos_dict, "confidence", 0.5),
+                    fundamental_signal=getattr(pos_dict, "fundamental_signal", None),
+                    technical_signal=getattr(pos_dict, "technical_signal", None)
+                )
             position_actions.append(position)
         except Exception as e:
             logger.error(f"Failed to parse position {pos_dict.get('ticker')}: {e}")
@@ -231,12 +326,16 @@ def _extract_risk_assessment(state: Dict[str, Any]) -> RiskAssessment:
     Extract RiskAssessment from state.
     
     Args:
-        state: Agent state with risk_assessment
+        state: Agent state with risk_assessment (dict or Pydantic)
         
     Returns:
         RiskAssessment object
     """
-    risk = state.get("risk_assessment")
+    # Handle both dict and Pydantic state
+    if isinstance(state, dict):
+        risk = state.get("risk_assessment")
+    else:
+        risk = state.risk_assessment if hasattr(state, "risk_assessment") else None
     
     if not risk:
         logger.warning("No risk assessment available, using defaults")
@@ -252,16 +351,30 @@ def _extract_risk_assessment(state: Dict[str, Any]) -> RiskAssessment:
         )
     
     try:
-        return RiskAssessment(
-            beta=risk.get("beta", 1.0),
-            sharpe_ratio=risk.get("sharpe_ratio", 0.0),
-            max_drawdown_risk=risk.get("max_drawdown_risk", "Moderate"),
-            var_95=risk.get("var_95", 0.0),
-            portfolio_volatility=risk.get("portfolio_volatility", 0.0),
-            lookback_period=risk.get("lookback_period", "N/A"),
-            calculation_date=risk.get("calculation_date", datetime.now()),
-            max_drawdown=risk.get("max_drawdown", -0.10)
-        )
+        # Handle dict risk assessment
+        if isinstance(risk, dict):
+            return RiskAssessment(
+                beta=risk.get("beta", 1.0),
+                sharpe_ratio=risk.get("sharpe_ratio", 0.0),
+                max_drawdown_risk=risk.get("max_drawdown_risk", "Moderate"),
+                var_95=risk.get("var_95", 0.0),
+                portfolio_volatility=risk.get("portfolio_volatility", 0.0),
+                lookback_period=risk.get("lookback_period", "N/A"),
+                calculation_date=risk.get("calculation_date", datetime.now()),
+                max_drawdown=risk.get("max_drawdown", -0.10)
+            )
+        else:
+            # Handle Pydantic risk assessment
+            return RiskAssessment(
+                beta=getattr(risk, "beta", 1.0),
+                sharpe_ratio=getattr(risk, "sharpe_ratio", 0.0),
+                max_drawdown_risk=getattr(risk, "max_drawdown_risk", "Moderate"),
+                var_95=getattr(risk, "var_95", 0.0),
+                portfolio_volatility=getattr(risk, "portfolio_volatility", 0.0),
+                lookback_period=getattr(risk, "lookback_period", "N/A"),
+                calculation_date=getattr(risk, "calculation_date", datetime.now()),
+                max_drawdown=getattr(risk, "max_drawdown", -0.10)
+            )
     except Exception as e:
         logger.error(f"Failed to extract RiskAssessment: {e}")
         return RiskAssessment(
@@ -290,26 +403,66 @@ def _generate_executive_summary(
     Returns:
         Executive summary string (2-3 paragraphs)
     """
-    # Extract key components
-    portfolio_strategy = synthesis.get("portfolio_strategy", {})
-    position_actions = synthesis.get("position_actions", [])
-    macro = state.get("macro_analysis", {})
-    risk = state.get("risk_assessment", {})
+    # Handle both dict and Pydantic synthesis
+    if isinstance(synthesis, dict):
+        portfolio_strategy = synthesis.get("portfolio_strategy", {})
+        position_actions = synthesis.get("position_actions", [])
+    else:
+        portfolio_strategy = getattr(synthesis, "portfolio_strategy", {})
+        position_actions = getattr(synthesis, "position_actions", [])
     
-    # Count actions
-    buy_count = sum(1 for p in position_actions if p.get("action") == "Buy")
-    sell_count = sum(1 for p in position_actions if p.get("action") == "Sell")
-    hold_count = sum(1 for p in position_actions if p.get("action") == "Hold")
+    # Handle both dict and Pydantic state
+    if isinstance(state, dict):
+        macro = state.get("macro_analysis", {})
+        risk = state.get("risk_assessment", {})
+    else:
+        macro = state.macro_analysis if state.macro_analysis else {}
+        risk = state.risk_assessment if state.risk_assessment else {}
+    
+    # Count actions (handle both dict and Pydantic position objects)
+    buy_count = 0
+    sell_count = 0
+    hold_count = 0
+    for p in position_actions:
+        action = p.get("action") if isinstance(p, dict) else getattr(p, "action", "Hold")
+        if action == "Buy":
+            buy_count += 1
+        elif action == "Sell":
+            sell_count += 1
+        elif action == "Hold":
+            hold_count += 1
+    
+    # Extract portfolio strategy action
+    if isinstance(portfolio_strategy, dict):
+        strategy_action = portfolio_strategy.get("action", "Hold")
+    else:
+        strategy_action = getattr(portfolio_strategy, "action", "Hold")
+    
+    # Extract macro values
+    if isinstance(macro, dict):
+        macro_status = macro.get("status", "Unknown")
+        macro_signal = macro.get("signal", "Unknown")
+    else:
+        macro_status = getattr(macro, "status", "Unknown")
+        macro_signal = getattr(macro, "signal", "Unknown")
+    
+    # Extract risk values
+    if isinstance(risk, dict):
+        risk_beta = risk.get("beta", "N/A")
+        risk_level = risk.get("max_drawdown_risk", "N/A")
+    else:
+        risk_beta = getattr(risk, "beta", "N/A")
+        risk_level = getattr(risk, "max_drawdown_risk", "N/A")
     
     # Build prompt
     prompt = f"""
 You are a Senior Portfolio Manager writing an executive summary.
 
 ANALYSIS RESULTS:
-- Portfolio Strategy: {portfolio_strategy.get('action', 'Hold')}
-- Market Regime: {macro.get('status', 'Unknown')} / {macro.get('signal', 'Unknown')}
+- Portfolio Strategy: {strategy_action}
+- Market Regime: {macro_status} / {macro_signal}
 - Position Recommendations: {buy_count} Buy, {sell_count} Sell, {hold_count} Hold
-- Portfolio Risk: Beta={risk.get('beta', 'N/A')}, Risk Level={risk.get('max_drawdown_risk', 'N/A')}
+- Portfolio Risk: Beta={risk_beta}, Risk Level={risk_level}
 
 Write a concise executive summary (2-3 paragraphs, max 300 words) covering:
 1. Current market environment and portfolio positioning

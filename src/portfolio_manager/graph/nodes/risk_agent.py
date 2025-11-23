@@ -82,19 +82,29 @@ def risk_agent_node(state: AgentState) -> Dict[str, Any]:
         logger.info("Risk Agent: Starting portfolio risk assessment")
         
         # Extract portfolio data from state (Pydantic model compatibility)
-        portfolio = state.portfolio or {}
-        tickers = portfolio.get("tickers", []) if isinstance(portfolio, dict) else []
-        positions = portfolio.get("positions", {}) if isinstance(portfolio, dict) else {}
+        if isinstance(state, dict):
+            portfolio = state.get("portfolio", {})
+            tickers = portfolio.get("tickers", []) if isinstance(portfolio, dict) else []
+            positions = portfolio.get("positions", {}) if isinstance(portfolio, dict) else {}
+            reasoning_trace = state.get("reasoning_trace", [])
+            errors = state.get("errors", [])
+        else:
+            # Pydantic AgentState
+            portfolio = state.portfolio or {}
+            tickers = portfolio.get("tickers", []) if isinstance(portfolio, dict) else []
+            positions = portfolio.get("positions", {}) if isinstance(portfolio, dict) else {}
+            reasoning_trace = state.reasoning_trace if state.reasoning_trace else []
+            errors = state.errors if state.errors else []
         
         # Validation: Check if we have portfolio data
         if not tickers:
             logger.warning("Risk Agent: No portfolio tickers found in state")
             return {
                 "risk_assessment": None,
-                "reasoning_trace": state.reasoning_trace + [
+                "reasoning_trace": reasoning_trace + [
                     "Risk Agent: Skipped - no portfolio tickers to analyze"
                 ],
-                "errors": state.errors + ["Risk Agent: No portfolio data available"]
+                "errors": errors + ["Risk Agent: No portfolio data available"]
             }
         
         logger.info(f"Risk Agent: Analyzing portfolio with {len(tickers)} positions")
@@ -106,10 +116,10 @@ def risk_agent_node(state: AgentState) -> Dict[str, Any]:
             logger.error("Risk Agent: Failed to fetch portfolio price data")
             return {
                 "risk_assessment": None,
-                "reasoning_trace": state.reasoning_trace + [
+                "reasoning_trace": reasoning_trace + [
                     "Risk Agent: Failed - insufficient portfolio price data"
                 ],
-                "errors": state.errors + ["Risk Agent: Could not fetch portfolio prices"]
+                "errors": errors + ["Risk Agent: Could not fetch portfolio prices"]
             }
         
         # Step 2: Fetch market benchmark (SPY) prices
@@ -153,10 +163,10 @@ def risk_agent_node(state: AgentState) -> Dict[str, Any]:
             sentry_sdk.capture_exception(e)
             return {
                 "risk_assessment": None,
-                "reasoning_trace": state.reasoning_trace + [
+                "reasoning_trace": reasoning_trace + [
                     f"Risk Agent: Failed during metric calculation: {str(e)}"
                 ],
-                "errors": state.errors + [f"Risk Agent: Calculation error - {str(e)}"]
+                "errors": errors + [f"Risk Agent: Calculation error - {str(e)}"]
             }
         
         # Step 5: Create RiskAssessment schema
@@ -182,16 +192,16 @@ def risk_agent_node(state: AgentState) -> Dict[str, Any]:
             sentry_sdk.capture_exception(e)
             return {
                 "risk_assessment": None,
-                "reasoning_trace": state.reasoning_trace + [
+                "reasoning_trace": reasoning_trace + [
                     f"Risk Agent: Failed to create risk assessment schema: {str(e)}"
                 ],
-                "errors": state.errors + [f"Risk Agent: Schema validation error - {str(e)}"]
+                "errors": errors + [f"Risk Agent: Schema validation error - {str(e)}"]
             }
         
         # Step 6: Return updated state
         return {
             "risk_assessment": risk_assessment.model_dump(),
-            "reasoning_trace": state.reasoning_trace + [
+            "reasoning_trace": reasoning_trace + [
                 f"Risk Agent: Completed - {risk_assessment.max_drawdown_risk} risk, "
                 f"Sharpe {risk_assessment.sharpe_ratio:.2f}, Beta {risk_assessment.beta:.2f}"
             ]
@@ -202,12 +212,20 @@ def risk_agent_node(state: AgentState) -> Dict[str, Any]:
         logger.error(f"Risk Agent: Unexpected error: {e}", exc_info=True)
         sentry_sdk.capture_exception(e)
         
+        # Safely get reasoning_trace and errors
+        if isinstance(state, dict):
+            reasoning_trace = state.get("reasoning_trace", [])
+            errors = state.get("errors", [])
+        else:
+            reasoning_trace = state.reasoning_trace if state.reasoning_trace else []
+            errors = state.errors if state.errors else []
+        
         return {
             "risk_assessment": None,
-            "reasoning_trace": state.reasoning_trace + [
+            "reasoning_trace": reasoning_trace + [
                 f"Risk Agent: Unexpected failure - {str(e)}"
             ],
-            "errors": state.errors + [f"Risk Agent: Unexpected error - {str(e)}"]
+            "errors": errors + [f"Risk Agent: Unexpected error - {str(e)}"]
         }
 
 

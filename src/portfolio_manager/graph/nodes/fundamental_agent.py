@@ -32,14 +32,16 @@ def fundamental_agent_node(state: AgentState) -> Dict[str, Any]:
         Updated state with fundamental_analysis field
     """
     try:
-        portfolio = state.get("portfolio", {})
-        tickers = portfolio.get("tickers", [])
+        # Extract portfolio and tickers (compatible with both dict and Pydantic)
+        portfolio = _get_portfolio(state)
+        tickers = _get_tickers(portfolio)
+        reasoning_trace = _get_reasoning_trace(state)
         
         if not tickers:
             logger.warning("Fundamental Agent: No tickers to analyze")
             return {
                 "fundamental_analysis": {},
-                "scratchpad": state.get("scratchpad", []) + [
+                "reasoning_trace": reasoning_trace + [
                     "Fundamental Agent: No tickers provided"
                 ]
             }
@@ -58,7 +60,7 @@ def fundamental_agent_node(state: AgentState) -> Dict[str, Any]:
         
         return {
             "fundamental_analysis": analyses,
-            "scratchpad": state.get("scratchpad", []) + [
+            "reasoning_trace": reasoning_trace + [
                 f"Fundamental Agent: Analyzed {successful}/{len(tickers)} positions"
             ]
         }
@@ -66,12 +68,39 @@ def fundamental_agent_node(state: AgentState) -> Dict[str, Any]:
     except Exception as e:
         sentry_sdk.capture_exception(e)
         logger.error(f"Fundamental Agent Error: {e}", exc_info=True)
+        reasoning_trace = _get_reasoning_trace(state)
         return {
             "fundamental_analysis": {},
-            "scratchpad": state.get("scratchpad", []) + [
+            "reasoning_trace": reasoning_trace + [
                 f"Fundamental Agent: Failed with error: {str(e)}"
             ]
         }
+
+
+def _get_portfolio(state: AgentState) -> Dict[str, Any]:
+    """Safely extract portfolio from state."""
+    if isinstance(state, dict):
+        return state.get("portfolio", {})
+    else:
+        return state.portfolio if state.portfolio else {}
+
+
+def _get_tickers(portfolio: Any) -> List[str]:
+    """Safely extract tickers from portfolio."""
+    if isinstance(portfolio, dict):
+        return portfolio.get("tickers", [])
+    elif hasattr(portfolio, 'tickers'):
+        return portfolio.tickers
+    else:
+        return []
+
+
+def _get_reasoning_trace(state: AgentState) -> List[str]:
+    """Safely extract reasoning_trace from state."""
+    if isinstance(state, dict):
+        return state.get("reasoning_trace", [])
+    else:
+        return state.reasoning_trace if state.reasoning_trace else []
 
 
 def _analyze_ticker_fundamentals(ticker: str) -> Dict[str, Any]:
@@ -320,11 +349,11 @@ def _parse_fundamental_assessment(llm_response: str) -> Dict:
         # Validate and return
         assessment = {
             "valuation": data.get("valuation", "Fair"),
-            "quality_score": int(data.get("quality_score", 5)),
+            "quality_score": int(data.get("quality_score") or 5),  # Handle None explicitly
             "recommendation": data.get("recommendation", "Hold"),
             "rationale": data.get("rationale", "Unable to assess"),
             "key_risks": data.get("key_risks", []),
-            "confidence": float(data.get("confidence", 0.5))
+            "confidence": float(data.get("confidence") or 0.5)  # Handle None explicitly
         }
         
         return assessment

@@ -202,7 +202,13 @@ def get_risk_free_rate() -> float:
         )
 
         # Get the most recent non-null value
-        latest_rate = treasury_data.dropna().iloc[-1]
+        treasury_data_clean = treasury_data.dropna()
+        
+        if len(treasury_data_clean) == 0:
+            logger.warning("No valid treasury data available, using default 4.0%")
+            return 0.04
+        
+        latest_rate = treasury_data_clean.iloc[-1]
 
         # Convert from percentage to decimal (FRED returns percentages)
         rate_decimal = latest_rate / 100.0

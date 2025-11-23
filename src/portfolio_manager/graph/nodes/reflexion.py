@@ -147,7 +147,19 @@ def _apply_risk_officer_critique(
         )
         
         # Parse JSON response
-        critique_dict = json.loads(response_text)
+        # Handle markdown code blocks if present
+        response_text_clean = response_text.strip()
+        
+        if "```json" in response_text_clean:
+            start = response_text_clean.find("```json") + 7
+            end = response_text_clean.find("```", start)
+            response_text_clean = response_text_clean[start:end].strip()
+        elif "```" in response_text_clean:
+            start = response_text_clean.find("```") + 3
+            end = response_text_clean.find("```", start)
+            response_text_clean = response_text_clean[start:end].strip()
+        
+        critique_dict = json.loads(response_text_clean)
         critique = ReflexionCritique(**critique_dict)
         return critique
         
