@@ -348,10 +348,14 @@ def _generate_position_actions(
         
         # Extract recommendations
         fund_rec = fund_analysis.get("assessment", {}).get("recommendation", "Hold")
-        tech_rec = tech_analysis.get("assessment", {}).get("recommendation", "Hold")
+        # Technical agent uses "timing_recommendation" not "recommendation"
+        tech_rec = tech_analysis.get("assessment", {}).get("timing_recommendation", "Hold")
         
         fund_conf = fund_analysis.get("assessment", {}).get("confidence", 0.5)
         tech_conf = tech_analysis.get("assessment", {}).get("confidence", 0.5)
+        
+        # Log confidence extraction for diagnostic purposes
+        logger.info(f"{ticker}: fund_rec={fund_rec}, tech_rec={tech_rec}, fund_conf={fund_conf:.2f}, tech_conf={tech_conf:.2f}")
         
         # Resolve recommendation using weights
         final_rec, final_conf = _resolve_recommendation(

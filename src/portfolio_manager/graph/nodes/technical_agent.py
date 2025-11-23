@@ -421,6 +421,10 @@ def _parse_technical_assessment(llm_response: str) -> Dict[str, Any]:
             raise ValueError("Missing required fields")
         
         logger.info(f"Successfully parsed technical assessment: {assessment.get('timing_recommendation')}")
+        
+        # Log confidence for diagnostic purposes
+        logger.info(f"Technical LLM returned confidence: {assessment.get('confidence'):.2f}")
+        
         return assessment
         
     except (json.JSONDecodeError, ValueError) as e:

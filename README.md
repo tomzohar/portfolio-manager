@@ -40,6 +40,9 @@ Then edit `.env` with your actual credentials:
 - `PUSHOVER_USER_KEY`: Pushover user key for notifications
 - `PUSHOVER_APP_TOKEN`: Pushover app token for notifications
 
+**Required for V3 Fundamental Analysis:**
+- `FMP_API_KEY`: Financial Modeling Prep API key for financial statements (income, balance sheet, cash flow) - Get at https://site.financialmodelingprep.com/developer/docs/pricing (Starter plan $14/month required - free tier does NOT include financial statements)
+
 **Optional:**
 - `SERP_API_KEY`: SerpAPI key for news search (V2 workflow only)
 - `SENTRY_DSN`: Sentry DSN for error tracking (optional, for production monitoring)

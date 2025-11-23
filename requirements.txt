@@ -19,4 +19,5 @@ langchain>=0.1.5
 langchain-core>=0.1.15
 fredapi>=0.5.1
 scipy>=1.11.0
+requests>=2.31.0
 

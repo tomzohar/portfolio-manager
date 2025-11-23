@@ -10,8 +10,13 @@ import logging
 from ...agent_state import AgentState
 from ...config import settings
 from ...integrations.polygon import (
-    fetch_ticker_details,
-    fetch_financial_statements
+    fetch_ticker_details
+)
+from ...integrations.fmp import (
+    fetch_income_statement,
+    fetch_balance_sheet,
+    fetch_cash_flow,
+    convert_fmp_to_standard_format
 )
 from src.stock_researcher.utils.llm_utils import call_gemini_api
 import sentry_sdk
@@ -133,8 +138,34 @@ def _analyze_ticker_fundamentals(ticker: str) -> Dict[str, Any]:
                 "error": fundamentals.get("error", "Unknown error")
             }
         
-        # 2. Fetch financial statements (may not be available in subscription)
-        statements = fetch_financial_statements(ticker, limit=4)
+        # 2. Fetch financial statements from FMP (Polygon Starter tier doesn't support this)
+        logger.info(f"Fetching financial statements for {ticker} from FMP...")
+        fmp_income = fetch_income_statement(ticker, limit=4)
+        fmp_balance = fetch_balance_sheet(ticker, limit=4)
+        fmp_cash = fetch_cash_flow(ticker, limit=4)
+        
+        if fmp_income and fmp_balance and fmp_cash:
+            # Convert FMP format to standard format
+            normalized_statements = convert_fmp_to_standard_format(
+                fmp_income, fmp_balance, fmp_cash
+            )
+            
+            if normalized_statements:
+                logger.info(f"Successfully fetched {len(normalized_statements)} FMP statements for {ticker}")
+                # Wrap in standard structure
+                statements = {
+                    "success": True,
+                    "ticker": ticker,
+                    "statements": normalized_statements,
+                    "count": len(normalized_statements),
+                    "source": "FMP"
+                }
+            else:
+                logger.warning(f"FMP data fetched but normalization failed for {ticker}")
+                statements = {"success": False, "statements": [], "source": "FMP"}
+        else:
+            logger.warning(f"FMP financial statements unavailable for {ticker}")
+            statements = {"success": False, "statements": [], "source": "FMP"}
         
         # 3. Compute metrics
         metrics = _compute_fundamental_metrics(fundamentals, statements)
@@ -145,6 +176,9 @@ def _analyze_ticker_fundamentals(ticker: str) -> Dict[str, Any]:
         
         # 5. Parse assessment
         assessment = _parse_fundamental_assessment(response_text)
+        
+        # Log confidence for diagnostic purposes
+        logger.info(f"{ticker}: LLM returned confidence: {assessment['confidence']:.2f}")
         
         logger.info(
             f"{ticker}: {assessment['valuation']} | "
@@ -301,6 +335,7 @@ Shares Outstanding: {fundamentals.get('shares_outstanding', 'N/A'):,}
 
     # Add financial metrics if available
     if metrics.get("available"):
+        data_source = statements.get("source", "Polygon")
         user_prompt += f"""
 Financial Metrics (Latest Quarter):
 Revenue Growth (QoQ): {metrics.get('revenue_growth_qoq', 'N/A')}%
@@ -308,6 +343,7 @@ Net Income Margin: {metrics.get('net_income_margin', 'N/A')}%
 Debt-to-Assets: {metrics.get('debt_to_assets', 'N/A')}%
 Operating Cash Flow Trend: {metrics.get('ocf_trend', 'N/A')}
 EPS: {metrics.get('eps', 'N/A')}
+Data Source: {data_source}
 """
     else:
         user_prompt += f"""

@@ -703,3 +703,140 @@ def test_synthesis_multiple_tickers():
     tickers = {pa["ticker"] for pa in position_actions}
     assert tickers == {"AAPL", "MSFT", "GOOGL"}
 
+
+def test_signal_extraction_from_agents():
+    """
+    Test that synthesis correctly extracts signals from both agents.
+    
+    Critical test for bug fix: Technical agent uses "timing_recommendation"
+    while fundamental agent uses "recommendation".
+    
+    Regression test for signal mismatch bug (Nov 23, 2025).
+    """
+    state = AgentState(
+        portfolio={
+            "tickers": ["AAPL", "MSFT"],
+            "positions": {"AAPL": 0.5, "MSFT": 0.5}
+        },
+        reasoning_trace=[],
+        macro_analysis={
+            "status": "Goldilocks",
+            "signal": "Risk-On",
+            "confidence": 0.8
+        },
+        fundamental_analysis={
+            "AAPL": {
+                "assessment": {
+                    "recommendation": "Hold",  # Fundamental uses "recommendation"
+                    "confidence": 0.6
+                }
+            },
+            "MSFT": {
+                "assessment": {
+                    "recommendation": "Buy",
+                    "confidence": 0.7
+                }
+            }
+        },
+        technical_analysis={
+            "AAPL": {
+                "assessment": {
+                    "timing_recommendation": "Buy",  # Technical uses "timing_recommendation"
+                    "confidence": 0.8
+                }
+            },
+            "MSFT": {
+                "assessment": {
+                    "timing_recommendation": "Sell",
+                    "confidence": 0.9
+                }
+            }
+        },
+        risk_assessment={"beta": 1.0, "max_drawdown_risk": "Moderate"}
+    )
+    
+    result = synthesis_node(state)
+    position_actions = result["synthesis_result"]["position_actions"]
+    
+    # Find actions for each ticker
+    aapl_action = next(pa for pa in position_actions if pa["ticker"] == "AAPL")
+    msft_action = next(pa for pa in position_actions if pa["ticker"] == "MSFT")
+    
+    # Verify AAPL signals are correctly extracted
+    assert aapl_action["fundamental_signal"] == "Hold", \
+        "Should extract 'recommendation' from fundamental analysis"
+    assert aapl_action["technical_signal"] == "Buy", \
+        "Should extract 'timing_recommendation' from technical analysis (not default to 'Hold')"
+    
+    # Verify MSFT signals are correctly extracted
+    assert msft_action["fundamental_signal"] == "Buy", \
+        "Should extract 'recommendation' from fundamental analysis"
+    assert msft_action["technical_signal"] == "Sell", \
+        "Should extract 'timing_recommendation' from technical analysis (not default to 'Hold')"
+    
+    # Verify confidence is calculated correctly (long-term: 60% fund, 30% tech)
+    # AAPL: 0.6 * 0.6 + 0.3 * 0.8 = 0.36 + 0.24 = 0.60
+    assert abs(aapl_action["confidence"] - 0.60) < 0.01, \
+        f"Expected confidence ~0.60, got {aapl_action['confidence']}"
+    
+    # MSFT: 0.6 * 0.7 + 0.3 * 0.9 = 0.42 + 0.27 = 0.69
+    assert abs(msft_action["confidence"] - 0.69) < 0.01, \
+        f"Expected confidence ~0.69, got {msft_action['confidence']}"
+
+
+def test_confidence_calculation_with_low_fundamental():
+    """
+    Test confidence calculation when fundamental agent returns low confidence.
+    
+    Simulates the real-world scenario where Polygon Starter tier lacks
+    financial statements, causing fundamental agent to return 0.10 confidence.
+    
+    Tests that the weighting formula works correctly:
+    confidence = 0.6 * fund_conf + 0.3 * tech_conf (long-term)
+    """
+    state = AgentState(
+        portfolio={
+            "tickers": ["TSLA"],
+            "positions": {"TSLA": 0.3}
+        },
+        reasoning_trace=[],
+        macro_analysis={
+            "status": "Inflationary",
+            "signal": "Risk-Off",
+            "confidence": 0.8
+        },
+        fundamental_analysis={
+            "TSLA": {
+                "assessment": {
+                    "recommendation": "Hold",
+                    "confidence": 0.10  # Low due to missing financial data
+                }
+            }
+        },
+        technical_analysis={
+            "TSLA": {
+                "assessment": {
+                    "timing_recommendation": "Sell",
+                    "confidence": 0.85  # Good technical confidence
+                }
+            }
+        },
+        risk_assessment={"beta": 1.2, "max_drawdown_risk": "High"}
+    )
+    
+    result = synthesis_node(state)
+    position_actions = result["synthesis_result"]["position_actions"]
+    
+    tsla_action = next(pa for pa in position_actions if pa["ticker"] == "TSLA")
+    
+    # Expected: 0.6 * 0.10 + 0.3 * 0.85 = 0.06 + 0.255 = 0.315
+    expected_confidence = 0.6 * 0.10 + 0.3 * 0.85
+    
+    assert abs(tsla_action["confidence"] - expected_confidence) < 0.01, \
+        f"Expected confidence {expected_confidence:.3f}, got {tsla_action['confidence']}"
+    
+    # This demonstrates why overall confidence is low:
+    # Low fundamental confidence (60% weight) dominates the calculation
+    assert tsla_action["confidence"] < 0.35, \
+        "Low fundamental confidence should result in low overall confidence"
+

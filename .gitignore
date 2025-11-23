@@ -10,3 +10,4 @@ __pycache__/
 
 stocks-researcher-d9df81878425.json
 portfolio_manager.log
+/logs/

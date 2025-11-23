@@ -88,6 +88,89 @@ def mock_financial_statements_unavailable():
 
 
 @pytest.fixture
+def mock_fmp_income_statements():
+    """Mock FMP income statement response."""
+    return [
+        {
+            "date": "2024-06-30",
+            "symbol": "AAPL",
+            "period": "Q3",
+            "fiscalYear": "2024",
+            "revenue": 90000000000,
+            "netIncome": 23000000000,
+            "eps": 1.45,
+            "grossProfit": 40000000000,
+            "operatingIncome": 25000000000
+        },
+        {
+            "date": "2024-03-31",
+            "symbol": "AAPL",
+            "period": "Q2",
+            "fiscalYear": "2024",
+            "revenue": 85000000000,
+            "netIncome": 22000000000,
+            "eps": 1.38,
+            "grossProfit": 38000000000,
+            "operatingIncome": 23000000000
+        }
+    ]
+
+
+@pytest.fixture
+def mock_fmp_balance_sheets():
+    """Mock FMP balance sheet response."""
+    return [
+        {
+            "date": "2024-06-30",
+            "symbol": "AAPL",
+            "period": "Q3",
+            "fiscalYear": "2024",
+            "totalAssets": 350000000000,
+            "totalLiabilities": 280000000000,
+            "totalStockholdersEquity": 70000000000,
+            "cashAndCashEquivalents": 30000000000,
+            "totalDebt": 100000000000
+        },
+        {
+            "date": "2024-03-31",
+            "symbol": "AAPL",
+            "period": "Q2",
+            "fiscalYear": "2024",
+            "totalAssets": 345000000000,
+            "totalLiabilities": 275000000000,
+            "totalStockholdersEquity": 70000000000,
+            "cashAndCashEquivalents": 28000000000,
+            "totalDebt": 98000000000
+        }
+    ]
+
+
+@pytest.fixture
+def mock_fmp_cash_flows():
+    """Mock FMP cash flow response."""
+    return [
+        {
+            "date": "2024-06-30",
+            "symbol": "AAPL",
+            "period": "Q3",
+            "fiscalYear": "2024",
+            "operatingCashFlow": 25000000000,
+            "freeCashFlow": 22000000000,
+            "capitalExpenditure": -3000000000
+        },
+        {
+            "date": "2024-03-31",
+            "symbol": "AAPL",
+            "period": "Q2",
+            "fiscalYear": "2024",
+            "operatingCashFlow": 23000000000,
+            "freeCashFlow": 20200000000,
+            "capitalExpenditure": -2800000000
+        }
+    ]
+
+
+@pytest.fixture
 def initial_state_multi_ticker():
     """Initial agent state with multiple tickers."""
     return {
@@ -108,16 +191,28 @@ def initial_state_single_ticker():
 class TestFundamentalAgentNode:
     """Tests for the fundamental_agent_node function."""
 
-    def test_multiple_tickers_processing(self, initial_state_multi_ticker, mock_ticker_details_apple, mock_financial_statements_success, mocker):
+    def test_multiple_tickers_processing(self, initial_state_multi_ticker, mock_ticker_details_apple, 
+                                         mock_fmp_income_statements, mock_fmp_balance_sheets, 
+                                         mock_fmp_cash_flows, mocker):
         """Test Fundamental Agent processes multiple tickers correctly."""
-        # Mock Polygon API
+        # Mock Polygon API (company details only)
         mocker.patch(
             'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_ticker_details',
             return_value=mock_ticker_details_apple
         )
+        
+        # Mock FMP API (financial statements)
         mocker.patch(
-            'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_financial_statements',
-            return_value=mock_financial_statements_success
+            'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_income_statement',
+            return_value=mock_fmp_income_statements
+        )
+        mocker.patch(
+            'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_balance_sheet',
+            return_value=mock_fmp_balance_sheets
+        )
+        mocker.patch(
+            'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_cash_flow',
+            return_value=mock_fmp_cash_flows
         )
         
         # Mock LLM response
@@ -137,16 +232,28 @@ class TestFundamentalAgentNode:
         assert "MSFT" in result["fundamental_analysis"]
         assert "GOOGL" in result["fundamental_analysis"]
 
-    def test_undervalued_assessment(self, initial_state_single_ticker, mock_ticker_details_apple, mock_financial_statements_success, mocker):
+    def test_undervalued_assessment(self, initial_state_single_ticker, mock_ticker_details_apple,
+                                    mock_fmp_income_statements, mock_fmp_balance_sheets,
+                                    mock_fmp_cash_flows, mocker):
         """Test handling of undervalued stock assessment."""
-        # Mock Polygon API
+        # Mock Polygon API (company details only)
         mocker.patch(
             'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_ticker_details',
             return_value=mock_ticker_details_apple
         )
+        
+        # Mock FMP API (financial statements)
         mocker.patch(
-            'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_financial_statements',
-            return_value=mock_financial_statements_success
+            'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_income_statement',
+            return_value=mock_fmp_income_statements
+        )
+        mocker.patch(
+            'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_balance_sheet',
+            return_value=mock_fmp_balance_sheets
+        )
+        mocker.patch(
+            'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_cash_flow',
+            return_value=mock_fmp_cash_flows
         )
         
         # Mock LLM response - undervalued
@@ -165,16 +272,28 @@ class TestFundamentalAgentNode:
         assert result["fundamental_analysis"]["AAPL"]["assessment"]["valuation"] == "Undervalued"
         assert result["fundamental_analysis"]["AAPL"]["assessment"]["recommendation"] == "Buy"
 
-    def test_overvalued_assessment(self, initial_state_single_ticker, mock_ticker_details_apple, mock_financial_statements_success, mocker):
+    def test_overvalued_assessment(self, initial_state_single_ticker, mock_ticker_details_apple,
+                                   mock_fmp_income_statements, mock_fmp_balance_sheets,
+                                   mock_fmp_cash_flows, mocker):
         """Test handling of overvalued stock assessment."""
-        # Mock Polygon API
+        # Mock Polygon API (company details only)
         mocker.patch(
             'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_ticker_details',
             return_value=mock_ticker_details_apple
         )
+        
+        # Mock FMP API (financial statements)
         mocker.patch(
-            'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_financial_statements',
-            return_value=mock_financial_statements_success
+            'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_income_statement',
+            return_value=mock_fmp_income_statements
+        )
+        mocker.patch(
+            'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_balance_sheet',
+            return_value=mock_fmp_balance_sheets
+        )
+        mocker.patch(
+            'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_cash_flow',
+            return_value=mock_fmp_cash_flows
         )
         
         # Mock LLM response - overvalued
@@ -192,16 +311,26 @@ class TestFundamentalAgentNode:
         assert result["fundamental_analysis"]["AAPL"]["assessment"]["valuation"] == "Overvalued"
         assert result["fundamental_analysis"]["AAPL"]["assessment"]["recommendation"] == "Sell"
 
-    def test_missing_financial_data_handling(self, initial_state_single_ticker, mock_ticker_details_apple, mock_financial_statements_unavailable, mocker):
+    def test_missing_financial_data_handling(self, initial_state_single_ticker, mock_ticker_details_apple, mocker):
         """Test graceful handling when financial statements are unavailable."""
-        # Mock Polygon API
+        # Mock Polygon API (company details only)
         mocker.patch(
             'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_ticker_details',
             return_value=mock_ticker_details_apple
         )
+        
+        # Mock FMP API (returns empty to simulate unavailability)
         mocker.patch(
-            'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_financial_statements',
-            return_value=mock_financial_statements_unavailable
+            'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_income_statement',
+            return_value=[]
+        )
+        mocker.patch(
+            'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_balance_sheet',
+            return_value=[]
+        )
+        mocker.patch(
+            'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_cash_flow',
+            return_value=[]
         )
         
         # Mock LLM response - limited analysis
@@ -246,16 +375,28 @@ class TestFundamentalAgentNode:
         assert result["fundamental_analysis"] == {}
         assert "No tickers" in result["reasoning_trace"][0]
 
-    def test_llm_parsing_error(self, initial_state_single_ticker, mock_ticker_details_apple, mock_financial_statements_success, mocker):
+    def test_llm_parsing_error(self, initial_state_single_ticker, mock_ticker_details_apple,
+                               mock_fmp_income_statements, mock_fmp_balance_sheets,
+                               mock_fmp_cash_flows, mocker):
         """Test handling of invalid LLM JSON response."""
-        # Mock Polygon API
+        # Mock Polygon API (company details only)
         mocker.patch(
             'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_ticker_details',
             return_value=mock_ticker_details_apple
         )
+        
+        # Mock FMP API (financial statements)
         mocker.patch(
-            'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_financial_statements',
-            return_value=mock_financial_statements_success
+            'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_income_statement',
+            return_value=mock_fmp_income_statements
+        )
+        mocker.patch(
+            'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_balance_sheet',
+            return_value=mock_fmp_balance_sheets
+        )
+        mocker.patch(
+            'src.portfolio_manager.graph.nodes.fundamental_agent.fetch_cash_flow',
+            return_value=mock_fmp_cash_flows
         )
         
         # Mock invalid LLM response
