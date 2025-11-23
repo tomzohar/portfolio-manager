@@ -16,6 +16,7 @@ from pydantic import ValidationError
 
 from ...agent_state import AgentState
 from ...schemas import ReflexionCritique
+from ...config import settings
 from src.stock_researcher.utils.llm_utils import call_gemini_api
 
 logger = logging.getLogger(__name__)
@@ -142,7 +143,7 @@ def _apply_risk_officer_critique(
     try:
         response_text = call_gemini_api(
             prompt,
-            model="gemini-2.5-pro-latest",  # Use Pro for critical thinking
+            model=settings.AGENT_MODEL,  # Use Pro for critical thinking
             temperature=0.2  # Lower temperature for consistency
         )
         

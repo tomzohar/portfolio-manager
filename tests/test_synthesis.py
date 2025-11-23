@@ -434,9 +434,10 @@ def test_generate_position_actions():
     macro = {"signal": "Risk-On"}
     risk = {"max_drawdown_risk": "Moderate"}
     conflicts = []
+    weights_map = {"AAPL": 0.5}  # 50% portfolio weight
     
     position_actions = _generate_position_actions(
-        fundamentals, technicals, macro, risk, conflicts
+        fundamentals, technicals, macro, risk, conflicts, weights_map
     )
     
     # Should generate one position action
@@ -445,6 +446,7 @@ def test_generate_position_actions():
     assert position_actions[0].action in ["Buy", "Strong Buy"]
     assert position_actions[0].confidence > 0.7
     assert len(position_actions[0].rationale) > 0
+    assert position_actions[0].current_weight == 0.5  # Verify weight is set
 
 
 def test_resolve_recommendation_aligned():

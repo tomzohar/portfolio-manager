@@ -31,10 +31,18 @@ cp .env.example .env
 ```
 
 Then edit `.env` with your actual credentials:
-- Google Sheets: Service account file, Spreadsheet ID, Range
-- SerpAPI: API key for news search
-- Gemini AI: API key for summaries  
-- Pushover: User Key and API Token for notifications
+
+**Required for V3 Workflow:**
+- `GOOGLE_APPLICATION_CREDENTIALS`: Path to Google Cloud service account JSON file
+- `POLYGON_API_KEY`: Polygon.io API key for market data (company fundamentals, technical indicators)
+- `FRED_API_KEY`: Federal Reserve Economic Data API key (macroeconomic indicators) - Get free key at https://fred.stlouisfed.org/docs/api/api_key.html
+- `GOOGLE_API_KEY`: Google Gemini AI API key for LLM analysis
+- `PUSHOVER_USER_KEY`: Pushover user key for notifications
+- `PUSHOVER_APP_TOKEN`: Pushover app token for notifications
+
+**Optional:**
+- `SERP_API_KEY`: SerpAPI key for news search (V2 workflow only)
+- `SENTRY_DSN`: Sentry DSN for error tracking (optional, for production monitoring)
 
 **Note:** The `.env` file contains secrets and is in `.gitignore` (won't be committed to git)
 
@@ -42,15 +50,84 @@ Then edit `.env` with your actual credentials:
 
 This project contains two primary execution modes: the original sequential pipeline and the new autonomous agent.
 
-### Autonomous Portfolio Manager (Recommended)
-Run the new intelligent agent that dynamically analyzes your portfolio:
+### Autonomous Portfolio Manager V3 (Recommended)
+
+The Portfolio Manager V3 features a **supervisor-based multi-agent architecture** with specialized sub-agents, conflict resolution, and self-critique capabilities.
+
+#### Basic Usage
+
+Run the V3 supervisor workflow (default):
+
 ```bash
 # Make sure virtual environment is activated first
-source v-env/bin/activate
+source venv/bin/activate
 
-# Run the Autonomous Portfolio Manager
+# Run with V3 workflow (default)
 python run_portfolio_manager.py
+
+# Or explicitly specify V3
+python run_portfolio_manager.py --version v3
 ```
+
+#### Advanced Usage
+
+```bash
+# Run with V2 legacy single-agent workflow
+python run_portfolio_manager.py --version v2
+
+# Auto-detect workflow based on portfolio data
+python run_portfolio_manager.py --version auto
+
+# Output in human-readable text format
+python run_portfolio_manager.py --format text
+
+# Save output to file
+python run_portfolio_manager.py --output report.json
+
+# Run with verbose logging
+python run_portfolio_manager.py --verbose
+
+# Disable notifications (useful for development)
+python run_portfolio_manager.py --no-notification
+
+# Disable file logging (console only)
+python run_portfolio_manager.py --no-file-logging
+
+# Combine options
+python run_portfolio_manager.py --version v3 --format text --output report.txt --verbose
+```
+
+#### V3 Features
+
+- **Supervisor Orchestration**: Intelligent delegation to specialized sub-agents
+- **Specialized Sub-Agents**:
+  - **Macro Agent**: Market regime analysis (inflation, growth, risk sentiment)
+  - **Fundamental Agent**: Company valuation and quality assessment
+  - **Technical Agent**: Trend analysis and timing signals
+  - **Risk Agent**: Portfolio risk metrics (Sharpe, Beta, VaR, Max Drawdown)
+- **Synthesis**: Conflict resolution and multi-signal integration
+- **Reflexion**: Self-critique loop to check for biases and errors
+- **Structured Output**: JSON format with Pydantic schema validation
+
+#### CLI Help
+
+For full CLI documentation and options:
+
+```bash
+python run_portfolio_manager.py --help
+```
+
+#### Logging Behavior
+
+**Production Mode:**
+- Logs are written to both console and files:
+  - `logs/portfolio_manager.log` (rotating log, 5MB max, 2 backups)
+  - `logs/portfolio_manager_YYYYMMDD_HHMMSS.log` (timestamped run log)
+
+**Test Mode:**
+- File logging is automatically disabled (console only)
+- No log files are created in the `logs/` folder
+- Use `--no-file-logging` flag to manually disable file logging in production
 
 ### Legacy Sequential Pipeline
 Run the original stock research pipeline, which analyzes all stocks in a fixed sequence:

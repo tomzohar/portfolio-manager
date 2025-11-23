@@ -282,6 +282,30 @@ class TestFetchMacroIndicators:
 class TestBuildMacroAnalysisPrompt:
     """Tests for _build_macro_analysis_prompt helper function."""
 
+    def test_prompt_handles_none_values(self):
+        """Test that prompt handles None values gracefully (Issue #1 fix)."""
+        # Arrange - data with None values
+        macro_data = {
+            "cpi_yoy": 3.5,
+            "gdp_growth": 2.2,
+            "yield_spread": None,  # Missing
+            "vix": None,  # Missing
+            "unemployment": None,  # Missing
+            "date": "2025-11-23"
+        }
+        
+        # Execute - should not raise TypeError
+        prompt = _build_macro_analysis_prompt(macro_data)
+        
+        # Assert - prompt generated and contains N/A for missing values
+        assert prompt is not None
+        assert "CPI (YoY): 3.50%" in prompt
+        assert "GDP Growth (QoQ): 2.20%" in prompt
+        assert "Yield Curve (10Y-2Y): N/A" in prompt
+        assert "VIX: N/A" in prompt
+        assert "Unemployment: N/A" in prompt
+        assert "Some indicators may show as N/A" in prompt
+
     def test_prompt_contains_all_indicators(self, mock_fred_data_goldilocks):
         """Test that prompt includes all economic indicators."""
         prompt = _build_macro_analysis_prompt(mock_fred_data_goldilocks)

@@ -84,17 +84,36 @@ def risk_agent_node(state: AgentState) -> Dict[str, Any]:
         # Extract portfolio data from state (Pydantic model compatibility)
         if isinstance(state, dict):
             portfolio = state.get("portfolio", {})
-            tickers = portfolio.get("tickers", []) if isinstance(portfolio, dict) else []
-            positions = portfolio.get("positions", {}) if isinstance(portfolio, dict) else {}
             reasoning_trace = state.get("reasoning_trace", [])
             errors = state.get("errors", [])
         else:
             # Pydantic AgentState
             portfolio = state.portfolio or {}
-            tickers = portfolio.get("tickers", []) if isinstance(portfolio, dict) else []
-            positions = portfolio.get("positions", {}) if isinstance(portfolio, dict) else {}
             reasoning_trace = state.reasoning_trace if state.reasoning_trace else []
             errors = state.errors if state.errors else []
+        
+        # Extract tickers from portfolio (explicit field takes precedence)
+        if isinstance(portfolio, dict):
+            tickers = portfolio.get("tickers", [])
+            positions_raw = portfolio.get("positions", [])
+            
+            # Convert positions to Dict[str, float] format
+            # Positions can be either:
+            # - List[Dict] format: [{"ticker": "AAPL", "weight": 0.5}, ...]
+            # - Dict[str, float] format: {"AAPL": 0.5, ...}
+            # - Empty dict/list for equal weighting
+            if isinstance(positions_raw, list):
+                # List[Dict] format - convert to dict
+                positions = {pos.get("ticker"): pos.get("weight", 0.0) for pos in positions_raw if pos.get("ticker")}
+            elif isinstance(positions_raw, dict):
+                # Already in correct format
+                positions = positions_raw
+            else:
+                # Empty or invalid - use empty dict (equal weighting will be applied)
+                positions = {}
+        else:
+            tickers = []
+            positions = {}
         
         # Validation: Check if we have portfolio data
         if not tickers:

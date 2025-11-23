@@ -24,6 +24,7 @@ import json
 import sentry_sdk
 from ...agent_state import AgentState
 from ...schemas import ExecutionPlan
+from ...config import settings
 from .macro_agent import macro_agent_node
 from .fundamental_agent import fundamental_agent_node
 from .technical_agent import technical_agent_node
@@ -185,7 +186,7 @@ Output only valid JSON."""
     
     try:
         # Call LLM using centralized utility
-        response_text = call_gemini_api(prompt, model="gemini-1.5-pro-latest")
+        response_text = call_gemini_api(prompt, model=settings.AGENT_MODEL)
         
         # Parse JSON response
         plan_dict = json.loads(response_text)

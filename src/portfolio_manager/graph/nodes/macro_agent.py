@@ -9,6 +9,7 @@ from typing import Dict, Any, List
 import logging
 from ...agent_state import AgentState
 from ...schemas import MarketRegime
+from ...config import settings
 from ...integrations.fred import (
     get_latest_cpi_yoy,
     get_latest_gdp_growth,
@@ -61,7 +62,7 @@ def macro_agent_node(state: AgentState) -> Dict[str, Any]:
         prompt = _build_macro_analysis_prompt(macro_data)
         
         # 3. Call LLM using centralized utility
-        response_text = call_gemini_api(prompt, model='gemini-2.5-flash')
+        response_text = call_gemini_api(prompt, model=settings.ANALYSIS_MODEL)
         
         # 4. Parse response into MarketRegime schema
         regime = _parse_market_regime(response_text)
@@ -169,15 +170,23 @@ Output Format (JSON):
 
 Be concise, data-driven, and avoid speculation."""
 
+    # Helper function to format values, handling None gracefully
+    def fmt(value, suffix=""):
+        if value is None:
+            return "N/A"
+        return f"{value:.2f}{suffix}"
+    
     user_prompt = f"""Analyze the current market regime based on these indicators:
 
-CPI (YoY): {macro_data['cpi_yoy']:.2f}%
-GDP Growth (QoQ): {macro_data['gdp_growth']:.2f}%
-Yield Curve (10Y-2Y): {macro_data['yield_spread']:.2f} bps
-VIX: {macro_data['vix']:.2f}
-Unemployment: {macro_data['unemployment']:.2f}%
+CPI (YoY): {fmt(macro_data['cpi_yoy'], '%')}
+GDP Growth (QoQ): {fmt(macro_data['gdp_growth'], '%')}
+Yield Curve (10Y-2Y): {fmt(macro_data['yield_spread'], ' bps')}
+VIX: {fmt(macro_data['vix'])}
+Unemployment: {fmt(macro_data['unemployment'], '%')}
 
 Date: {macro_data['date']}
+
+Note: Some indicators may show as N/A if data is temporarily unavailable.
 
 Provide your analysis in JSON format."""
 

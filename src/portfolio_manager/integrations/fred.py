@@ -15,14 +15,18 @@ from typing import Dict, Optional
 import pandas as pd
 import sentry_sdk
 from fredapi import Fred
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_not_exception_type
 
 from ..config import settings
 
 logger = logging.getLogger(__name__)
 
 
-@retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=2, max=60))
+@retry(
+    stop=stop_after_attempt(5), 
+    wait=wait_exponential(multiplier=1, min=2, max=60),
+    retry=retry_if_not_exception_type(ValueError)  # Don't retry config errors
+)
 def fetch_fred_series(
     series_id: str,
     observation_start: Optional[str] = None,
@@ -34,6 +38,8 @@ def fetch_fred_series(
     This function retrieves a time series of economic data from the Federal Reserve
     Economic Data (FRED) API. It includes automatic retry logic for resilience
     against transient network failures.
+    
+    Configuration errors (ValueError) are not retried - only network/API errors.
 
     Args:
         series_id: FRED series identifier (e.g., 'CPIAUCSL' for CPI, 'GDP' for GDP).
@@ -44,14 +50,14 @@ def fetch_fred_series(
         Pandas Series with the requested economic data, indexed by date.
 
     Raises:
-        ValueError: If FRED_API_KEY is not configured in settings.
+        ValueError: If FRED_API_KEY is not configured in settings (not retried).
         Exception: If FRED API request fails after all retry attempts.
 
     Example:
         >>> cpi_data = fetch_fred_series('CPIAUCSL', observation_start='2023-01-01')
         >>> print(cpi_data.tail())
     """
-    # Validate API key presence
+    # Validate API key presence (raise immediately without retry)
     api_key = getattr(settings, 'FRED_API_KEY', None)
     if not api_key:
         error_msg = "FRED_API_KEY not found in settings. Please configure it in your .env file."

@@ -13,6 +13,7 @@ import pandas as pd
 import sentry_sdk
 
 from ...agent_state import AgentState
+from ...config import settings
 from ...integrations.polygon import fetch_ohlcv_data
 from ...analysis.technical_analyzer import (
     classify_trend,
@@ -265,7 +266,7 @@ def _analyze_ticker_technicals(ticker: str) -> Dict[str, Any]:
         )
         
         try:
-            response_text = call_gemini_api(prompt, model='gemini-2.5-flash')
+            response_text = call_gemini_api(prompt, model=settings.ANALYSIS_MODEL)
             assessment = _parse_technical_assessment(response_text)
         except Exception as llm_error:
             logger.error(f"LLM call failed for {ticker}: {llm_error}")

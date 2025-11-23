@@ -48,12 +48,19 @@ def synthesis_node(state: AgentState) -> Dict[str, Any]:
         fundamentals = state.fundamental_analysis if hasattr(state, 'fundamental_analysis') else {}
         technicals = state.technical_analysis if hasattr(state, 'technical_analysis') else {}
         risk = state.risk_assessment if hasattr(state, 'risk_assessment') else None
+        portfolio = state.portfolio if hasattr(state, 'portfolio') else None
         
-        # 2. Validate we have sufficient data
+        # 2. Extract position weights from portfolio
+        weights_map = _extract_weights_from_portfolio(portfolio)
+        logger.info(f"Extracted weights for {len(weights_map)} positions")
+        for ticker, weight in weights_map.items():
+            logger.info(f"  {ticker}: {weight:.1%}")
+        
+        # 3. Validate we have sufficient data
         if not _validate_inputs(macro, fundamentals, technicals, risk):
             logger.warning("Incomplete sub-agent data for synthesis")
         
-        # 3. Detect conflicts
+        # 4. Detect conflicts
         conflicts = _detect_conflicts(macro, fundamentals, technicals, risk)
         
         if conflicts:
@@ -61,22 +68,22 @@ def synthesis_node(state: AgentState) -> Dict[str, Any]:
             for conflict in conflicts:
                 logger.info(f"  • {conflict.conflict_type}")
         
-        # 4. Generate per-ticker recommendations
+        # 5. Generate per-ticker recommendations
         position_actions = _generate_position_actions(
-            fundamentals, technicals, macro, risk, conflicts
+            fundamentals, technicals, macro, risk, conflicts, weights_map
         )
         
-        # 5. Generate portfolio strategy
+        # 6. Generate portfolio strategy
         portfolio_strategy = _generate_portfolio_strategy(
             macro, risk, position_actions
         )
         
-        # 6. Calculate overall confidence
+        # 7. Calculate overall confidence
         confidence_score = _calculate_overall_confidence(
             macro, fundamentals, technicals, risk
         )
         
-        # 7. Create synthesis result
+        # 8. Create synthesis result
         synthesis_result = {
             "position_actions": [p.model_dump() for p in position_actions],
             "portfolio_strategy": portfolio_strategy.model_dump(),
@@ -84,12 +91,12 @@ def synthesis_node(state: AgentState) -> Dict[str, Any]:
             "confidence_score": confidence_score
         }
         
-        # 8. Log summary
+        # 9. Log summary
         logger.info(f"Synthesis: Generated recommendations for {len(position_actions)} positions")
         logger.info(f"Synthesis: Detected and resolved {len(conflicts)} conflicts")
         logger.info(f"Synthesis: Overall confidence: {confidence_score:.0%}")
         
-        # 9. Update scratchpad
+        # 10. Update scratchpad
         scratchpad_entries = [
             f"Synthesis: Generated recommendations for {len(position_actions)} positions",
             f"Synthesis: Detected and resolved {len(conflicts)} conflicts",
@@ -111,6 +118,58 @@ def synthesis_node(state: AgentState) -> Dict[str, Any]:
                 f"Synthesis: Failed with error: {str(e)}"
             ]
         }
+
+
+def _extract_weights_from_portfolio(portfolio: Optional[Dict]) -> Dict[str, float]:
+    """
+    Extract position weights from portfolio data.
+    
+    Handles two portfolio formats:
+    1. List format: {"positions": [{"ticker": "AAPL", "weight": 0.3}, ...]}
+    2. Dict format: {"positions": {"AAPL": 0.3, "MSFT": 0.7}} (legacy test format)
+    
+    Args:
+        portfolio: Portfolio dict with 'positions' list or dict
+        
+    Returns:
+        Dictionary mapping ticker to weight (0.0 to 1.0)
+        
+    Example:
+        >>> portfolio = {
+        ...     "positions": [
+        ...         {"ticker": "AAPL", "weight": 0.30},
+        ...         {"ticker": "MSFT", "weight": 0.70}
+        ...     ]
+        ... }
+        >>> weights = _extract_weights_from_portfolio(portfolio)
+        >>> assert weights == {"AAPL": 0.30, "MSFT": 0.70}
+    """
+    weights_map = {}
+    
+    if not portfolio:
+        logger.warning("No portfolio data available for weight extraction")
+        return weights_map
+    
+    positions = portfolio.get("positions", [])
+    if not positions:
+        logger.warning("Portfolio has no positions")
+        return weights_map
+    
+    # Handle dict format (legacy tests): {"AAPL": 0.5, "MSFT": 0.5}
+    if isinstance(positions, dict):
+        return positions
+    
+    # Handle list format: [{"ticker": "AAPL", "weight": 0.3}, ...]
+    for position in positions:
+        ticker = position.get("ticker")
+        weight = position.get("weight", 0.0)
+        
+        if ticker:
+            weights_map[ticker] = weight
+        else:
+            logger.warning(f"Position missing ticker: {position}")
+    
+    return weights_map
 
 
 def _validate_inputs(
@@ -248,7 +307,8 @@ def _generate_position_actions(
     technicals: Dict,
     macro: Optional[Dict],
     risk: Optional[Dict],
-    conflicts: List[ConflictResolution]
+    conflicts: List[ConflictResolution],
+    weights_map: Dict[str, float]
 ) -> List[PositionAction]:
     """
     Generate per-ticker recommendations by combining sub-agent signals.
@@ -263,6 +323,7 @@ def _generate_position_actions(
         macro: Macro agent output
         risk: Risk agent output
         conflicts: Detected conflicts
+        weights_map: Dictionary mapping ticker to current portfolio weight
         
     Returns:
         List of PositionAction recommendations
@@ -302,11 +363,14 @@ def _generate_position_actions(
             ticker, fund_rec, tech_rec, final_rec, conflicts
         )
         
+        # Get current weight from portfolio
+        current_weight = weights_map.get(ticker, 0.0)
+        
         # Create PositionAction
         position_action = PositionAction(
             ticker=ticker,
             action=final_rec,
-            current_weight=0.0,  # TODO: Extract from portfolio
+            current_weight=current_weight,
             target_weight=0.0,   # TODO: Calculate based on recommendation
             rationale=rationale,
             confidence=final_conf,

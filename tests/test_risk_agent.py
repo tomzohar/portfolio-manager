@@ -517,3 +517,34 @@ def test_risk_agent_node_zero_weights(sample_state, mock_portfolio_ohlcv, mock_m
                 # Should fallback to equal weighting
                 assert result["risk_assessment"] is not None
 
+
+def test_risk_agent_node_list_dict_positions_format(mock_portfolio_ohlcv, mock_market_ohlcv):
+    """Test risk agent with List[Dict] positions format (Issue #2 fix)."""
+    # Use List[Dict] format (from parse_portfolio tool)
+    state = AgentState(
+        portfolio={
+            "tickers": ["AAPL", "MSFT", "GOOGL"],
+            "positions": [
+                {"ticker": "AAPL", "weight": 0.4},
+                {"ticker": "MSFT", "weight": 0.35},
+                {"ticker": "GOOGL", "weight": 0.25}
+            ]
+        },
+        reasoning_trace=[],
+        errors=[]
+    )
+    
+    with patch('src.portfolio_manager.graph.nodes.risk_agent.fetch_ohlcv_data') as mock_fetch_ohlcv:
+        with patch('src.portfolio_manager.graph.nodes.risk_agent.fetch_market_benchmark') as mock_fetch_market:
+            with patch('src.portfolio_manager.graph.nodes.risk_agent.get_risk_free_rate') as mock_rfr:
+                mock_fetch_ohlcv.return_value = mock_portfolio_ohlcv
+                mock_fetch_market.return_value = mock_market_ohlcv
+                mock_rfr.return_value = 0.04
+                
+                result = risk_agent_node(state)
+                
+                # Should successfully handle List[Dict] format
+                assert result["risk_assessment"] is not None
+                assert isinstance(result["risk_assessment"]["beta"], float)
+                assert "Risk Agent: Completed" in result["reasoning_trace"][0]
+

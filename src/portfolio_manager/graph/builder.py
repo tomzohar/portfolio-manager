@@ -1,6 +1,7 @@
 """Builds the autonomous agent graph."""
+import logging
 from langgraph.graph import StateGraph, END
-from typing import TypedDict, Any, Optional, Annotated
+from typing import TypedDict, Any, Optional, Annotated, Literal
 from src.portfolio_manager.agent_state import AgentState
 from src.portfolio_manager.utils import deep_merge
 from .nodes import (
@@ -22,6 +23,8 @@ from .edges import (
     route_after_start,
     route_after_supervisor,
 )
+
+logger = logging.getLogger(__name__)
 
 def merge_analysis_results(left: dict[str, dict[str, Any]], right: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
     """Custom reducer for analysis_results that deep-merges nested dictionaries."""
@@ -72,13 +75,12 @@ class GraphState(TypedDict, total=False):
     reflexion_approved: bool
     confidence_adjustment: float
 
-def build_graph() -> StateGraph:
+def build_graph(version: str = "v3") -> StateGraph:
     """
     Construct the LangGraph for the autonomous portfolio manager.
     
     This function builds the graph for both V2 (legacy single-agent) and
-    V3 (supervisor multi-agent) workflows. The routing decision is made
-    at the start node based on portfolio data.
+    V3 (supervisor multi-agent) workflows.
     
     V2 Legacy Workflow (Single Agent):
         START → GUARDRAIL → AGENT → EXECUTE_TOOL → GUARDRAIL (loop) → FINAL_REPORT → END
@@ -86,9 +88,22 @@ def build_graph() -> StateGraph:
     V3 Supervisor Workflow (Multi-Agent):
         START → SUPERVISOR → SYNTHESIS → REFLEXION → [Loop or Continue] → FINAL_REPORT → END
     
+    Args:
+        version: Workflow version to build. Options:
+            - "v3" (default): Supervisor multi-agent workflow
+            - "v2": Legacy single-agent workflow
+            - "auto": Auto-detect based on portfolio data (legacy behavior)
+    
     Returns:
         Compiled StateGraph ready for execution
+        
+    Raises:
+        ValueError: If version is not "v2", "v3", or "auto"
     """
+    if version not in ["v2", "v3", "auto"]:
+        raise ValueError(f"Invalid version: {version}. Must be 'v2', 'v3', or 'auto'")
+    
+    logger.info(f"Building workflow graph with version: {version}")
     workflow = StateGraph(GraphState)
     
     # =============================
@@ -117,13 +132,35 @@ def build_graph() -> StateGraph:
     # =============================
     
     # Conditional edge after start: route to V3 supervisor or V2 agent
-    workflow.add_conditional_edges(
-        "start",
-        route_after_start,
-        {
+    # If version is explicitly set, create a routing function that respects it
+    if version == "v3":
+        # Force V3 workflow
+        def route_after_start_v3(state: dict) -> Literal["supervisor"]:
+            """Force V3 supervisor workflow."""
+            logging.getLogger(__name__).info("Using V3 Supervisor Multi-Agent workflow (forced).")
+            return "supervisor"
+        routing_func = route_after_start_v3
+        routing_map = {"supervisor": "supervisor"}
+    elif version == "v2":
+        # Force V2 workflow
+        def route_after_start_v2(state: dict) -> Literal["agent"]:
+            """Force V2 legacy workflow."""
+            logging.getLogger(__name__).info("Using V2 Legacy single-agent workflow (forced).")
+            return "agent"
+        routing_func = route_after_start_v2
+        routing_map = {"agent": "guardrail"}
+    else:  # version == "auto"
+        # Auto-detect based on portfolio data
+        routing_func = route_after_start
+        routing_map = {
             "supervisor": "supervisor",  # V3 workflow
             "agent": "guardrail",        # V2 workflow (via guardrail first)
         }
+    
+    workflow.add_conditional_edges(
+        "start",
+        routing_func,
+        routing_map
     )
     
     # Conditional edge after agent decision (V2 legacy)

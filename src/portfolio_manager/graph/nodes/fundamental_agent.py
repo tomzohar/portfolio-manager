@@ -8,6 +8,7 @@ The Fundamental Agent assesses intrinsic value and quality of portfolio companie
 from typing import Dict, Any, List
 import logging
 from ...agent_state import AgentState
+from ...config import settings
 from ...integrations.polygon import (
     fetch_ticker_details,
     fetch_financial_statements
@@ -140,7 +141,7 @@ def _analyze_ticker_fundamentals(ticker: str) -> Dict[str, Any]:
         
         # 4. LLM analysis using centralized utility
         prompt = _build_fundamental_prompt(ticker, fundamentals, metrics, statements)
-        response_text = call_gemini_api(prompt, model='gemini-2.5-flash')
+        response_text = call_gemini_api(prompt, model=settings.ANALYSIS_MODEL)
         
         # 5. Parse assessment
         assessment = _parse_fundamental_assessment(response_text)
