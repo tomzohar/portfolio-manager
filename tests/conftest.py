@@ -5,9 +5,52 @@ Pytest configuration and fixtures
 import sys
 from pathlib import Path
 import pytest
+from unittest.mock import patch
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+
+# ============================================================================
+# Global Fixtures to Prevent Real API Calls During Tests
+# ============================================================================
+
+def pytest_configure(config):
+    """
+    Hook that runs before test collection.
+    Set mock environment variables to prevent real Pushover notifications.
+    """
+    import os
+    os.environ['PUSHOVER_USER_KEY'] = 'mock_test_user_key'
+    os.environ['PUSHOVER_API_TOKEN'] = 'mock_test_app_token'
+
+
+@pytest.fixture(autouse=True)
+def mock_pushover_globally(mocker):
+    """
+    Automatically mock Pushover notifications for ALL tests to prevent
+    real notifications from being sent during test runs.
+    
+    This fixture is auto-used (autouse=True) so it applies to every test
+    without needing to be explicitly included.
+    """
+    # Mock the credentials at the source module level
+    mocker.patch('src.stock_researcher.config.PUSHOVER_USER_KEY', 'mock_test_user_key')
+    mocker.patch('src.stock_researcher.config.PUSHOVER_API_TOKEN', 'mock_test_app_token')
+    
+    # Also mock directly in the pushover module since it imports at load time
+    mocker.patch('stock_researcher.notifications.pushover.PUSHOVER_USER_KEY', 'mock_test_user_key')
+    mocker.patch('stock_researcher.notifications.pushover.PUSHOVER_API_TOKEN', 'mock_test_app_token')
+    
+    # Mock the actual HTTP connection to ensure NO network calls are made
+    mock_conn = mocker.MagicMock()
+    mock_response = mocker.MagicMock()
+    mock_response.status = 200
+    mock_conn.getresponse.return_value = mock_response
+    mocker.patch('http.client.HTTPSConnection', return_value=mock_conn)
+    
+    # Mock the print function in the pushover module to silence output
+    mocker.patch('builtins.print', side_effect=lambda *args, **kwargs: None)
 
 
 @pytest.fixture

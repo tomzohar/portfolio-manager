@@ -183,43 +183,63 @@ class TestGraphNodes:
 
     @patch('src.portfolio_manager.graph.nodes.final_report.call_gemini_api')
     def test_final_report_node(self, mock_llm):
-        """Test final report generation"""
-        # Setup
+        """Test final report generation (V3 structured JSON output)"""
+        # Setup - V3 state with synthesis result
         state = AgentState().model_dump()
-        state["portfolio"] = {
-            "total_value": 100000.0,
-            "positions": [
+        state["synthesis_result"] = {
+            "position_actions": [
                 {
                     "ticker": "AAPL",
-                    "shares": 10.0,
-                    "avg_price": 150.0,
-                    "current_price": 160.0,
-                    "market_value": 1600.0,
-                    "unrealized_gain_loss": 100.0,
-                    "unrealized_gain_loss_pct": 6.67,
-                    "weight": 0.016,
+                    "action": "Hold",
+                    "current_weight": 0.5,
+                    "target_weight": 0.5,
+                    "rationale": "Strong fundamentals justify holding position",
+                    "confidence": 0.8
                 }
-            ]
+            ],
+            "portfolio_strategy": {
+                "action": "Hold",
+                "rationale": "Maintain current allocation based on market conditions",
+                "priority": "Medium"
+            },
+            "confidence_score": 0.8
         }
-        state["analysis_results"] = {
-            "AAPL": {
-                "news": {"summary": "positive"},
-                "technicals": {"rsi": 65}
-            }
+        state["macro_analysis"] = {
+            "status": "Goldilocks",
+            "signal": "Risk-On",
+            "key_driver": "Strong economic data",
+            "confidence": 0.8
         }
-        state["confidence_score"] = 0.8
-        state["reasoning_trace"] = ["Step 1", "Step 2"]
+        state["risk_assessment"] = {
+            "beta": 1.0,
+            "sharpe_ratio": 1.2,
+            "max_drawdown_risk": "Moderate",
+            "var_95": -0.05,
+            "portfolio_volatility": 0.18,
+            "lookback_period": "1y",
+            "calculation_date": "2025-11-22",
+            "max_drawdown": -0.15
+        }
+        state["reflexion_feedback"] = ["Analysis approved"]
+        state["confidence_adjustment"] = 0.0
         
-        mock_llm.return_value = "# PORTFOLIO ANALYSIS\n\nHOLD all positions based on positive sentiment and technical indicators."
+        mock_llm.return_value = "Portfolio positioned well for current market conditions with balanced risk profile and positive outlook."
         
         # Execute
         patch = final_report_node(state)
         
-        # Verify - returns a patch with final_report and completed_at
+        # Verify - V3 returns JSON string, not completed_at
         assert "final_report" in patch
-        assert "completed_at" in patch
-        assert patch["final_report"] is not None
-        mock_llm.assert_called_once()
+        assert patch.get("error") is None
+        
+        # Parse and validate JSON
+        import json
+        report_dict = json.loads(patch["final_report"])
+        assert "executive_summary" in report_dict
+        assert "market_regime" in report_dict
+        assert "portfolio_strategy" in report_dict
+        assert "positions" in report_dict
+        assert "confidence_score" in report_dict
 
 
 class TestGraphIntegration:
