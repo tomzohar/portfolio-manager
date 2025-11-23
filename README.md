@@ -74,7 +74,11 @@ python update_prices_main.py
 
 ## Testing
 
-Run the comprehensive test suite to verify functionality without making actual API calls:
+The project includes a comprehensive test suite with both **unit tests** (fast, isolated component tests) and **integration tests** (end-to-end workflow validation).
+
+### Running All Tests
+
+Run the complete test suite to verify all functionality:
 
 ```bash
 # Make sure virtual environment is activated
@@ -85,25 +89,75 @@ pytest
 
 # Run with verbose output
 pytest -v
+```
 
-# Run specific test file
+### Running Unit Tests Only
+
+Unit tests are fast, isolated tests that verify individual components without external dependencies. They run in under 1 minute:
+
+```bash
+# Run only unit tests (excludes integration tests)
+pytest -m "not integration"
+
+# Run unit tests with coverage report
+pytest -m "not integration" --cov=src --cov-report=html
+
+# Run unit tests for a specific module
+pytest tests/test_portfolio_parser.py -v
+```
+
+### Running Integration Tests Only
+
+Integration tests validate the complete V3 workflow end-to-end. They take 5-10 minutes:
+
+```bash
+# Run only integration tests
+pytest -m integration
+
+# Run integration tests with verbose output
+pytest -m integration -v
+
+# Run specific integration test scenario
+pytest tests/integration/test_end_to_end_v3.py::TestHappyPathWorkflow -v
+```
+
+### Running Specific Tests
+
+```bash
+# Run tests in a specific file
 pytest tests/test_portfolio_parser.py
 
 # Run tests matching a pattern
 pytest -k "test_portfolio"
+
+# Run a specific test class
+pytest tests/test_schemas.py::TestPortfolioReport
+
+# Run a specific test method
+pytest tests/test_schemas.py::TestPortfolioReport::test_valid_report
 ```
 
+### Test Coverage
+
 The test suite includes:
-- **24 comprehensive tests** covering all agents and workflow
+- **470+ unit tests** covering all agents, tools, and core workflow
+- **24 integration tests** validating end-to-end V3 workflow scenarios
 - **Mocked external dependencies** (no real API calls, no charges)
-- **Unit tests** for Portfolio Parser, News Searcher, LLM Analyzer, WhatsApp notifications
-- **Integration tests** for the research orchestrator workflow
+- **100% pass rate** maintained across all tests
+
+**Test Organization:**
+- `tests/` - Unit tests for individual components
+- `tests/integration/` - End-to-end integration tests
+- `tests/analysis/` - Technical analysis and risk calculator tests
+- `tests/integrations/` - API integration tests (FRED, Polygon)
+- `tests/tools/` - Tool functionality tests
 
 **Benefits:**
 - ✅ Test code changes without triggering production flows
 - ✅ No API costs during development
-- ✅ Fast feedback loop
+- ✅ Fast feedback loop (unit tests < 1 min)
 - ✅ No notifications sent during testing
+- ✅ Separate unit and integration test execution
 
 ## Dependencies
 

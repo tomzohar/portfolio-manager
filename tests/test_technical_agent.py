@@ -35,7 +35,7 @@ def initial_state():
                 "MSFT": 0.5
             }
         },
-        "scratchpad": []
+        "reasoning_trace": []
     }
 
 
@@ -192,35 +192,35 @@ def test_technical_agent_node_success(initial_state, mocker):
     assert "assessment" in aapl_analysis
     assert aapl_analysis["assessment"]["timing_recommendation"] == "Buy"
     
-    # Check scratchpad updated
-    assert len(result["scratchpad"]) == 1
-    assert "Technical Agent" in result["scratchpad"][0]
+    # Check reasoning_trace updated
+    assert len(result["reasoning_trace"]) == 1
+    assert "Technical Agent" in result["reasoning_trace"][0]
 
 
 def test_technical_agent_node_no_tickers():
     """Test Technical Agent node with no tickers."""
     state = {
         "portfolio": {},
-        "scratchpad": []
+        "reasoning_trace": []
     }
     
     result = technical_agent_node(state)
     
     assert result["technical_analysis"] == {}
-    assert "No tickers" in result["scratchpad"][0]
+    assert "No tickers" in result["reasoning_trace"][0]
 
 
 def test_technical_agent_node_empty_tickers():
     """Test Technical Agent node with empty ticker list."""
     state = {
         "portfolio": {"tickers": []},
-        "scratchpad": []
+        "reasoning_trace": []
     }
     
     result = technical_agent_node(state)
     
     assert result["technical_analysis"] == {}
-    assert len(result["scratchpad"]) == 1
+    assert len(result["reasoning_trace"]) == 1
 
 
 def test_technical_agent_node_ohlcv_fetch_failure(initial_state, mocker):
@@ -566,6 +566,6 @@ def test_full_technical_agent_workflow(initial_state, sample_ohlcv_data, mocker)
         assert analysis["assessment"]["timing_recommendation"] in ["Buy", "Sell", "Hold"]
         assert 0 <= analysis["assessment"]["confidence"] <= 1
     
-    assert "scratchpad" in result
-    assert len(result["scratchpad"]) > 0
+    assert "reasoning_trace" in result
+    assert len(result["reasoning_trace"]) > 0
 

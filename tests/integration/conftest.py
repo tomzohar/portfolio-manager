@@ -375,7 +375,6 @@ tech exposure provides growth potential while managing concentration risk.
 
 @pytest.fixture(scope="class")
 def mock_all_external_apis(
-    mocker,
     mock_fred_responses,
     mock_polygon_ticker_details,
     mock_polygon_ohlcv_data,
@@ -384,47 +383,70 @@ def mock_all_external_apis(
     """
     Comprehensive mocking of all external APIs for integration tests.
     
-    Returns:
+    Uses unittest.mock instead of mocker to support class-scoped fixtures.
+    
+    Yields:
         Dict of mock objects for inspection and verification
     """
+    from unittest.mock import patch, MagicMock
+    
     mocks = {}
+    patches = []
     
     # ===== FRED API Mocks =====
     def mock_fetch_fred_series(series_id: str, **kwargs):
         return mock_fred_responses.get(series_id, pd.Series([]))
     
-    mocks["fred_fetch"] = mocker.patch(
+    fred_patch = patch(
         'src.portfolio_manager.integrations.fred.fetch_fred_series',
         side_effect=mock_fetch_fred_series
     )
+    mocks["fred_fetch"] = fred_patch.start()
+    patches.append(fred_patch)
     
     # Mock FRED helper functions
-    mocks["fred_cpi"] = mocker.patch(
+    fred_cpi_patch = patch(
         'src.portfolio_manager.integrations.fred.get_latest_cpi_yoy',
         return_value=3.2
     )
-    mocks["fred_gdp"] = mocker.patch(
+    mocks["fred_cpi"] = fred_cpi_patch.start()
+    patches.append(fred_cpi_patch)
+    
+    fred_gdp_patch = patch(
         'src.portfolio_manager.integrations.fred.get_latest_gdp_growth',
         return_value=2.5
     )
-    mocks["fred_yield"] = mocker.patch(
+    mocks["fred_gdp"] = fred_gdp_patch.start()
+    patches.append(fred_gdp_patch)
+    
+    fred_yield_patch = patch(
         'src.portfolio_manager.integrations.fred.get_yield_curve_spread',
         return_value=0.8
     )
-    mocks["fred_vix"] = mocker.patch(
+    mocks["fred_yield"] = fred_yield_patch.start()
+    patches.append(fred_yield_patch)
+    
+    fred_vix_patch = patch(
         'src.portfolio_manager.integrations.fred.get_vix',
         return_value=16.5
     )
-    mocks["fred_unemployment"] = mocker.patch(
+    mocks["fred_vix"] = fred_vix_patch.start()
+    patches.append(fred_vix_patch)
+    
+    fred_unemployment_patch = patch(
         'src.portfolio_manager.integrations.fred.get_unemployment_rate',
         return_value=3.8
     )
+    mocks["fred_unemployment"] = fred_unemployment_patch.start()
+    patches.append(fred_unemployment_patch)
     
     # ===== Polygon.io API Mocks =====
-    mocks["polygon_details"] = mocker.patch(
+    polygon_details_patch = patch(
         'src.portfolio_manager.integrations.polygon.fetch_ticker_details',
         side_effect=mock_polygon_ticker_details
     )
+    mocks["polygon_details"] = polygon_details_patch.start()
+    patches.append(polygon_details_patch)
     
     # Wrapper for OHLCV data to return correct format
     def mock_fetch_ohlcv(tickers: List[str], period: str = "1y", **kwargs):
@@ -433,49 +455,66 @@ def mock_all_external_apis(
             data[ticker] = mock_polygon_ohlcv_data(ticker, period=period)
         return {"success": True, "data": data, "error": None}
     
-    mocks["polygon_ohlcv"] = mocker.patch(
+    polygon_ohlcv_patch = patch(
         'src.portfolio_manager.integrations.polygon.fetch_ohlcv_data',
         side_effect=mock_fetch_ohlcv
     )
+    mocks["polygon_ohlcv"] = polygon_ohlcv_patch.start()
+    patches.append(polygon_ohlcv_patch)
     
     # Wrapper for benchmark data to return correct format
     def mock_fetch_benchmark(period: str = "1y", **kwargs):
         df = mock_polygon_ohlcv_data("SPY", period=period)
         return {"success": True, "data": df, "error": None}
     
-    mocks["polygon_benchmark"] = mocker.patch(
+    polygon_benchmark_patch = patch(
         'src.portfolio_manager.integrations.polygon.fetch_market_benchmark',
         side_effect=mock_fetch_benchmark
     )
+    mocks["polygon_benchmark"] = polygon_benchmark_patch.start()
+    patches.append(polygon_benchmark_patch)
     
     # Mock financial statements (optional, may not be available)
-    mocks["polygon_financials"] = mocker.patch(
+    polygon_financials_patch = patch(
         'src.portfolio_manager.integrations.polygon.fetch_financial_statements',
         return_value={"success": False, "statements": []}  # Empty for simplicity
     )
+    mocks["polygon_financials"] = polygon_financials_patch.start()
+    patches.append(polygon_financials_patch)
     
     # ===== Gemini LLM Mocks =====
     def mock_call_gemini(prompt: str, **kwargs):
         return mock_gemini_responses(prompt)
     
-    mocks["gemini"] = mocker.patch(
+    gemini_patch = patch(
         'src.stock_researcher.utils.llm_utils.call_gemini_api',
         side_effect=mock_call_gemini
     )
+    mocks["gemini"] = gemini_patch.start()
+    patches.append(gemini_patch)
     
     # ===== Pushover Notification Mocks =====
-    mocks["pushover"] = mocker.patch(
+    pushover_patch = patch(
         'src.stock_researcher.notifications.pushover.send_pushover_message',
         return_value=True
     )
+    mocks["pushover"] = pushover_patch.start()
+    patches.append(pushover_patch)
     
     # ===== Google Sheets Mock (for portfolio loading) =====
-    mocks["gspread"] = mocker.patch(
+    gspread_patch = patch(
         'gspread.authorize',
         return_value=MagicMock()
     )
+    mocks["gspread"] = gspread_patch.start()
+    patches.append(gspread_patch)
     
-    return mocks
+    # Yield mocks for test use
+    yield mocks
+    
+    # Cleanup: Stop all patches
+    for p in patches:
+        p.stop()
 
 
 @pytest.fixture(scope="session")

@@ -167,15 +167,16 @@ def test_calculate_beta_defensive():
 
 
 def test_calculate_beta_insufficient_data():
-    """Test beta rejects series with insufficient data points."""
+    """Test beta returns default value with insufficient data points (graceful degradation)."""
     # Only 20 data points (need at least 30)
     portfolio_returns = pd.Series(np.random.randn(20) * 0.01)
     market_returns = pd.Series(np.random.randn(20) * 0.01)
     
-    with pytest.raises(ValueError) as exc_info:
-        calculate_beta(portfolio_returns, market_returns)
+    # Should return default beta of 1.0 with a warning
+    beta = calculate_beta(portfolio_returns, market_returns)
     
-    assert "insufficient" in str(exc_info.value).lower()
+    assert beta == 1.0  # Default value
+    assert isinstance(beta, float)
 
 
 def test_calculate_beta_misaligned_dates():

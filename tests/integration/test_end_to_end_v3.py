@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 # =====================================================================
 
 
+@pytest.mark.integration
 class TestHappyPathWorkflow:
     """
     Tests for complete V3 workflow success scenarios.
@@ -49,7 +50,7 @@ class TestHappyPathWorkflow:
         """
         Class-scoped fixture that runs the workflow once and caches the result.
         
-        All test methods in this class will share this result.
+        All test methods in this class will share this result for performance.
         """
         logger.info("=" * 80)
         logger.info("RUNNING HAPPY PATH WORKFLOW (once for all tests in class)")
@@ -265,6 +266,7 @@ class TestHappyPathWorkflow:
 # =====================================================================
 
 
+@pytest.mark.integration
 class TestReflexionLoopBehavior:
     """Tests for reflexion loop self-critique and revision behavior."""
     
@@ -427,6 +429,7 @@ class TestReflexionLoopBehavior:
 # =====================================================================
 
 
+@pytest.mark.integration
 class TestErrorHandlingWorkflow:
     """Tests for graceful degradation with sub-agent failures."""
     
@@ -599,6 +602,7 @@ class TestErrorHandlingWorkflow:
 # =====================================================================
 
 
+@pytest.mark.integration
 class TestOutputValidation:
     """Tests for structured JSON output compliance."""
     
@@ -758,6 +762,7 @@ class TestOutputValidation:
 # =====================================================================
 
 
+@pytest.mark.integration
 class TestPerformanceMetrics:
     """Tests for execution time and resource usage."""
     
@@ -853,6 +858,7 @@ class TestPerformanceMetrics:
 # =====================================================================
 
 
+@pytest.mark.integration
 class TestWorkflowRouting:
     """Tests for correct routing between nodes."""
     

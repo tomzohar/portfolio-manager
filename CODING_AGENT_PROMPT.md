@@ -114,6 +114,51 @@ Use pytest-mock (mocker.patch) for ALL external I/O.
 
 Legacy Integration: When using src/stock_researcher functions, use mocker.patch to spy on them or mock their returns; do not rely on their internal side effects.
 
+TEST ORGANIZATION:
+
+The test suite is organized into two categories:
+
+1. **Unit Tests** (Fast, Isolated)
+   - Location: All tests except tests/integration/
+   - Purpose: Test individual components in isolation
+   - Execution: `pytest -m "not integration"`
+   - Speed: < 1 minute for full suite
+   - Use: During development, before commits
+
+2. **Integration Tests** (End-to-End)
+   - Location: tests/integration/
+   - Purpose: Validate complete V3 workflow
+   - Marking: Use `@pytest.mark.integration` on test classes
+   - Execution: `pytest -m integration`
+   - Speed: 5-10 minutes for full suite
+   - Use: Before major commits, in CI/CD
+
+TEST EXECUTION COMMANDS:
+
+```bash
+# Run unit tests only (fast)
+pytest -m "not integration"
+
+# Run integration tests only
+pytest -m integration
+
+# Run all tests
+pytest
+
+# Run specific test file
+pytest tests/test_portfolio_parser.py
+
+# Run with coverage
+pytest -m "not integration" --cov=src --cov-report=html
+```
+
+DEVELOPMENT WORKFLOW:
+
+1. **During Development:** Run unit tests frequently (`pytest -m "not integration"`)
+2. **Before Committing:** Run full unit test suite
+3. **Before Push:** Run integration tests (`pytest -m integration`)
+4. **CI/CD:** Run all tests (`pytest`)
+
 V. CONTEXT & DOCUMENTATION HIERARCHY
 
 PROJECT DOCUMENTATION (Read these FIRST before starting any task):

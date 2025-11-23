@@ -237,14 +237,14 @@ class TestFundamentalAgentNode:
 
     def test_empty_portfolio(self, mocker):
         """Test handling of empty portfolio."""
-        state = {"portfolio": {"tickers": []}, "scratchpad": []}
+        state = {"portfolio": {"tickers": []}, "reasoning_trace": []}
         
         # Execute
         result = fundamental_agent_node(state)
         
         # Assert
         assert result["fundamental_analysis"] == {}
-        assert "No tickers" in result["scratchpad"][0]
+        assert "No tickers" in result["reasoning_trace"][0]
 
     def test_llm_parsing_error(self, initial_state_single_ticker, mock_ticker_details_apple, mock_financial_statements_success, mocker):
         """Test handling of invalid LLM JSON response."""

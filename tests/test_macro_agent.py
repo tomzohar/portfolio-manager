@@ -61,7 +61,7 @@ def mock_fred_data_goldilocks():
 def initial_state():
     """Initial agent state with minimal data."""
     return {
-        "scratchpad": [],
+        "reasoning_trace": [],
         "portfolio": {"tickers": ["AAPL", "MSFT"]},
         "reasoning_trace": []
     }
@@ -93,7 +93,7 @@ class TestMacroAgentNode:
         assert result["macro_analysis"] is not None
         assert result["macro_analysis"]["status"] == "Inflationary"
         assert result["macro_analysis"]["signal"] == "Risk-Off"
-        assert "Macro Agent" in result["scratchpad"][0]
+        assert "Macro Agent" in result["reasoning_trace"][0]
 
     def test_deflationary_regime_detection(self, initial_state, mock_fred_data_deflationary, mocker):
         """Test Macro Agent correctly identifies deflationary regime."""
@@ -156,7 +156,7 @@ class TestMacroAgentNode:
         
         # Assert graceful degradation
         assert result["macro_analysis"] is None
-        assert "unavailable" in result["scratchpad"][0].lower()
+        assert "unavailable" in result["reasoning_trace"][0].lower()
 
     def test_llm_parsing_error_handling(self, initial_state, mock_fred_data_goldilocks, mocker):
         """Test handling of invalid LLM JSON response."""
@@ -183,7 +183,7 @@ class TestMacroAgentNode:
         assert result["macro_analysis"]["status"] == "Goldilocks"
 
     def test_state_integration(self, initial_state, mock_fred_data_goldilocks, mocker):
-        """Test that macro_analysis and scratchpad are correctly updated in state."""
+        """Test that macro_analysis and reasoning_trace are correctly updated in state."""
         # Mock FRED functions
         mocker.patch(
             'src.portfolio_manager.graph.nodes.macro_agent._fetch_macro_indicators',
@@ -203,9 +203,9 @@ class TestMacroAgentNode:
         
         # Assert state updates
         assert "macro_analysis" in result
-        assert "scratchpad" in result
-        assert len(result["scratchpad"]) == 1
-        assert "Market regime" in result["scratchpad"][0]
+        assert "reasoning_trace" in result
+        assert len(result["reasoning_trace"]) == 1
+        assert "Market regime" in result["reasoning_trace"][0]
 
 
 class TestFetchMacroIndicators:

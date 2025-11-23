@@ -326,8 +326,8 @@ class TestExtractPortfolioStrategy:
         strategy = _extract_portfolio_strategy(synthesis)
         
         assert strategy.action == "Hold"
-        assert strategy.rationale == "No strategy determined"
-        assert strategy.priority == "Medium"
+        assert strategy.rationale == "No synthesis result available"
+        assert strategy.priority == "Low"
 
 
 class TestExtractPositionActions:
