@@ -37,59 +37,63 @@ graph TD
 
 This event-driven architecture makes the system more efficient, adaptable, and intelligent, as it only performs the analysis that is necessary for the given portfolio.
 
-### V3 Multi-Agent Supervisor Architecture (Phase 3 - In Progress)
+### V3 Multi-Agent Supervisor Architecture (Phase 4 - Complete)
 
-**Status:** Phase 3 Week 1 - Supervisor Node Complete ✅
+**Status:** Production Ready ✅
 
-The V3 architecture introduces a **Supervisor-based Multi-Agent System** where specialized sub-agents handle different analysis domains, coordinated by a central Supervisor Node.
+The V3 architecture implements a **Supervisor-based Multi-Agent System** where specialized sub-agents handle different analysis domains, coordinated by a central Supervisor Node.
 
 ```mermaid
 graph TD
     A[Start] --> B(Parse Portfolio);
-    B --> C{Supervisor Node<br/>Planning Phase};
+    B --> C{Supervisor Node<br/>(Orchestrator)};
     
-    C --> D[Create Execution Plan];
-    D --> E{Delegate to Sub-Agents};
+    subgraph "Sub-Agent Execution (Internal to Supervisor)"
+        D[Macro Agent]
+        E[Fundamental Agent]
+        F[Technical Agent]
+        G[Risk Agent]
+    end
     
-    E --> F[Macro Agent<br/>Market Regime];
-    E --> G[Fundamental Agent<br/>Company Valuation];
-    E --> H[Technical Agent<br/>Price Trends];
-    E --> I[Risk Agent<br/>Portfolio Metrics];
+    C -- "Delegates To" --> D
+    C -- "Delegates To" --> E
+    C -- "Delegates To" --> F
+    C -- "Delegates To" --> G
     
-    F --> J{Synthesis Node<br/>Conflict Resolution};
-    G --> J;
-    H --> J;
-    I --> J;
+    D & E & F & G -- "Results" --> C
     
-    J --> K{Reflexion Node<br/>Self-Critique};
-    K -- "Rejected" --> J;
-    K -- "Approved" --> L[Final Report];
-    L --> M[End];
+    C --> H{Synthesis Node<br/>Conflict Resolution};
+    
+    H --> I{Reflexion Node<br/>Self-Critique};
+    I -- "Rejected (Loop)" --> H;
+    I -- "Approved" --> J[Final Report];
+    J --> K[End];
 ```
 
-**Sub-Agent Nodes (Phase 2 - Complete):**
-- **Macro Agent** (`macro_agent.py`): Analyzes macroeconomic conditions using FRED API (GDP, CPI, yield curve, VIX). Determines market regime (Goldilocks/Inflationary/Deflationary) and risk sentiment (Risk-On/Risk-Off).
-- **Fundamental Agent** (`fundamental_agent.py`): Assesses company valuation using Polygon.io fundamentals. Analyzes market cap, sector positioning, and financial health per ticker.
-- **Technical Agent** (`technical_agent.py`): Evaluates price trends and timing using technical indicators. Analyzes SMA, RSI, MACD, Bollinger Bands, and trend classification.
-- **Risk Agent** (`risk_agent.py`): Calculates portfolio risk metrics including Sharpe Ratio, Beta, VaR (95%), Max Drawdown, and portfolio volatility.
+**Sub-Agent Modules (Implemented as Callable Agents):**
+- **Macro Agent** (`macro_agent.py`): Analyzes macroeconomic conditions using FRED API.
+- **Fundamental Agent** (`fundamental_agent.py`): Assesses company valuation using Polygon.io.
+- **Technical Agent** (`technical_agent.py`): Evaluates price trends and timing.
+- **Risk Agent** (`risk_agent.py`): Calculates portfolio risk metrics (Sharpe, Beta, VaR).
 
-**Orchestration Nodes (Phase 3):**
-- **Supervisor Node** (`supervisor.py`) ✅ **Complete**: Orchestrates the multi-agent workflow by creating execution plans and delegating to specialized sub-agents. Implements graceful degradation when agents fail. Tracks completion status and aggregates results for synthesis.
-- **Synthesis Node** (`synthesis.py`) ⏳ **Next**: Combines sub-agent outputs, detects conflicts (e.g., Fundamental says "Buy" but Technical says "Sell"), and resolves divergences using weighted decision logic.
-- **Reflexion Node** (`reflexion.py`) ⏳ **Planned**: Applies self-critique with "Risk Officer" persona to review synthesis output for biases, errors, and inconsistencies before finalizing recommendations.
+**Orchestration Nodes:**
+- **Supervisor Node** (`supervisor.py`): The central brain. Decomposes queries, creates execution plans, and calls sub-agents. It handles the execution logic (currently sequential/batch) and aggregates results.
+- **Synthesis Node** (`synthesis.py`): Combines sub-agent outputs, resolves conflicts (e.g., Bullish Fundamental vs. Bearish Technical), and generates position strategies.
+- **Reflexion Node** (`reflexion.py`): A self-critique loop where a "Risk Officer" persona reviews the synthesis output for biases and errors before approval.
 
 **Key Features:**
-- **Graceful Degradation**: If one sub-agent fails, the supervisor continues with remaining agents
-- **State Tracking**: Monitors completion status of each sub-agent (`sub_agent_status` field)
-- **Execution Planning**: LLM-based planning determines optimal agent invocation order
-- **Fallback Logic**: Default execution plan used if LLM planning fails
-- **Comprehensive Testing**: 16 supervisor tests, 373 total tests passing
+- **Single Entry Point**: `run_portfolio_manager.py` handles both V3 (default) and V2 (legacy) workflows.
+- **Graceful Degradation**: If one sub-agent fails, the supervisor continues with remaining agents.
+- **Structured Output**: Generates comprehensive JSON reports with confidence scores.
+- **Recursion Management**: LangGraph recursion limits are dynamically set based on workflow version.
 
 ---
 
 ## 2. Legacy Sequential Pipeline Architecture
 
-The workflow is heavily optimized for performance, with expensive I/O and API calls (data fetching, news summarization, technical analysis) running concurrently to minimize execution time.
+*Note: This architecture is preserved for backward compatibility and can be run using `python run_portfolio_manager.py --version v2`.*
+
+The workflow is heavily optimized for performance, with expensive I/O and API calls running concurrently.
 
 The process begins in `main.py`, which first attempts a non-blocking price update before handing off to the main orchestrator. The orchestrator then coordinates the agents in a multi-stage, parallelized pipeline.
 

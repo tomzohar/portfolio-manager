@@ -1,5 +1,8 @@
 # Portfolio Manager: Autonomous Agent Evolution
 
+> **⚠️ NOTE:** This document describes the initial transition to the V2 Autonomous Agent.
+> For the current **V3 Supervisor Multi-Agent System**, please refer to `MANAGER_V3.md`.
+
 ## Product Vision
 
 Transform the Stock Researcher from a rigid, sequential pipeline into an intelligent, autonomous agent system where the Portfolio Manager acts as the central decision-making entity. The Portfolio Manager will dynamically determine what information it needs, request specific analyses, and iteratively refine its understanding before delivering actionable recommendations.

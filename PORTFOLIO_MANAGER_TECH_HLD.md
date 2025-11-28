@@ -1,5 +1,8 @@
 # Portfolio Manager: Technical High-Level Design
 
+> **⚠️ NOTE:** This document details the V2 technical implementation (LangGraph migration).
+> For the **V3 Supervisor Architecture**, refer to `MANAGER_V3.md` and `ARCHITECTURE.md`.
+
 ## 1. Objective
 
 This document outlines the technical implementation plan for refactoring the existing `stock-researcher` pipeline into an autonomous agent system, as specified in `PORTFOLIO_MANAGER.md`. The core of this redesign will be the adoption of `LangGraph` to create a stateful, event-driven workflow orchestrated by a central Portfolio Manager agent.

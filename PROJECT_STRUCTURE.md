@@ -13,7 +13,7 @@ stocks-researcher/
 │   │   └── agents/                         # Agent modules with specific roles
 │   │       └── ... (and so on)
 │   │
-│   └── portfolio_manager/                  # NEW: Autonomous agent package
+│   └── portfolio_manager/                  # NEW: Autonomous agent package (V3)
 │       ├── __init__.py
 │       ├── agent_state.py                  # Defines the AgentState schema for the graph
 │       ├── tool_registry.py                # Decorator-based system for creating and managing tools
@@ -21,7 +21,8 @@ stocks-researcher/
 │       ├── schemas.py                      # Pydantic models for V3 (ExecutionPlan, ConflictResolution, etc.)
 │       ├── integrations/                   # External API integrations
 │       │   ├── polygon.py                  # Polygon.io market data (OHLCV, fundamentals)
-│       │   └── fred.py                     # FRED API for macroeconomic data (GDP, CPI, yields)
+│       │   ├── fred.py                     # FRED API for macroeconomic data (GDP, CPI, yields)
+│       │   └── fmp.py                      # FMP API (optional fallback)
 │       ├── analysis/                       # Analysis modules
 │       │   ├── technical_analyzer.py       # Technical indicator calculations
 │       │   └── risk_calculator.py          # Portfolio risk metrics (Sharpe, Beta, VaR)
@@ -31,19 +32,19 @@ stocks-researcher/
 │       │   └── nodes/                      # Directory containing each node's logic
 │       │       ├── __init__.py
 │       │       ├── start.py                # Initial portfolio parsing
-│       │       ├── agent_decision.py       # Legacy: Agent's decision-making "brain"
-│       │       ├── tool_execution.py       # Legacy: Tool executor
+│       │       ├── agent_decision.py       # Legacy V2: Agent's decision-making "brain"
+│       │       ├── tool_execution.py       # Legacy V2: Tool executor
 │       │       ├── final_report.py         # Final report generation
 │       │       ├── guardrails.py           # Cost and safety guardrails
-│       │       # Phase 2: Sub-Agent Nodes
+│       │       # V3 Sub-Agents
 │       │       ├── macro_agent.py          # Market regime analysis (FRED API)
 │       │       ├── fundamental_agent.py    # Company valuation (Polygon.io)
 │       │       ├── technical_agent.py      # Price trend analysis
 │       │       ├── risk_agent.py           # Portfolio risk metrics
-│       │       # Phase 3: Orchestration Nodes
-│       │       ├── supervisor.py           # ✅ Multi-agent orchestration & delegation
-│       │       ├── synthesis.py            # ⏳ Conflict resolution & recommendation synthesis
-│       │       └── reflexion.py            # ⏳ Self-critique & quality assurance
+│       │       # V3 Orchestration
+│       │       ├── supervisor.py           # Multi-agent orchestration & delegation
+│       │       ├── synthesis.py            # Conflict resolution & recommendation synthesis
+│       │       └── reflexion.py            # Self-critique & quality assurance
 │       └── tools/                          # Directory for all agent-callable tools
 │           ├── __init__.py
 │           ├── parse_portfolio.py
@@ -54,8 +55,8 @@ stocks-researcher/
 ├── tests/                                  # Unit and integration tests
 │   └── ...
 │
-├── main.py                                 # 🚀 Entry point for the LEGACY sequential pipeline
-├── run_portfolio_manager.py                # 🚀 Entry point for the NEW autonomous agent
+├── run_portfolio_manager.py                # 🚀 Universal entry point (V3 default / V2 legacy)
+├── update_prices_main.py                   # Utility for price updates
 │
 ├── .env                                    # Environment variables (secret, gitignored)
 ├── .env.example                            # Template for .env
@@ -65,7 +66,9 @@ stocks-researcher/
 └── Documentation/
     ├── README.md                           # Main project documentation
     ├── ARCHITECTURE.md                     # High-level architecture details
-    └── PROJECT_STRUCTURE.md                # This file
+    ├── PROJECT_STRUCTURE.md                # This file
+    ├── MANAGER_V3.md                       # V3 Supervisor Spec
+    └── PORTFOLIO_MANAGER.md                # Original Product Spec
 ```
 
 ## 🎯 Benefits of This Structure
