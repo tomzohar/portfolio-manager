@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from src.portfolio_manager.agent_state import AgentState
+from src.portfolio_manager.agent_state import AgentState
 
 # Since we are testing the main entry point, we need to import it carefully
 # We will patch 'run_autonomous_analysis' to avoid running the full graph

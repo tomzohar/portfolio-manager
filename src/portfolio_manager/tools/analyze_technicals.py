@@ -14,7 +14,7 @@ Version: 1.0.0
 from typing import List, Dict, Any
 import logging
 
-from stock_researcher.agents.technical_analyzer import analyze_stock_technicals
+from ..analysis.technical_analyzer import analyze_stock_technicals
 from ..agent_state import ToolResult
 from ..tool_registry import tool
 from ..utils import ApiType

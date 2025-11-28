@@ -18,6 +18,7 @@ import logging
 from stock_researcher.agents.news_searcher import get_stock_news
 from stock_researcher.agents.llm_analyzer import generate_executive_summaries
 from ..agent_state import ToolResult
+from ..integrations.serp_api import get_stock_news
 from ..tool_registry import tool
 from ..utils import ApiType
 from ..config import settings  # NEW: Import centralized settings

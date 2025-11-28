@@ -1,6 +1,6 @@
 # Project Structure
 
-## 📁 Final Pythonic Folder Structure
+## 📁 Pythonic Folder Structure
 
 This project follows a standard, modular Python structure that separates the new autonomous agent from the legacy system.
 
@@ -62,6 +62,8 @@ stocks-researcher/
 ├── .env.example                            # Template for .env
 ├── .gitignore                              # Git ignore rules
 ├── requirements.txt                        # Python dependencies
+├── setup.py                                # Package configuration
+├── pytest.ini                              # Pytest configuration
 │
 └── Documentation/
     ├── README.md                           # Main project documentation

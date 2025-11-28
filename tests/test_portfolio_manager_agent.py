@@ -15,14 +15,14 @@ from src.portfolio_manager.tools.parse_portfolio import parse_portfolio_tool
 class TestAgentWorkflow:
     """Tests for the complete agent workflow and error handling."""
 
-    @patch('src.portfolio_manager.tools.parse_portfolio.parse_portfolio_legacy')
-    def test_tool_error_is_handled_gracefully(self, mock_parse):
+    @patch("src.portfolio_manager.tools.parse_portfolio.parse_portfolio", side_effect=Exception("API Error"))
+    def test_tool_error_is_handled_gracefully(self, mock_parse_portfolio):
         """
         Test that a tool returning an error result is handled gracefully
         and doesn't crash the system.
         """
         # Setup
-        mock_parse.side_effect = Exception("API error")
+        mock_parse_portfolio.side_effect = Exception("API error")
         
         # Execute tool to simulate a failing tool call within the agent
         result = parse_portfolio_tool()
@@ -40,17 +40,22 @@ class TestAgentWorkflow:
         # Simulate the invoke behavior
         mock_final_state = {"final_report": "All done!", "max_iterations": 5}
         mock_graph.invoke.return_value = mock_final_state
+        # Simulate the invoke behavior
+        mock_final_state = {"final_report": "All done!", "max_iterations": 5}
+        mock_graph.invoke.return_value = mock_final_state
         mock_build.return_value = mock_graph
         
         # Execute the main runner function
-        from src.portfolio_manager.graph import run_autonomous_analysis
         final_state = run_autonomous_analysis(max_iterations=5)
         
         # Verify
         mock_build.assert_called_once()
         mock_graph.invoke.assert_called_once()
+        mock_graph.invoke.assert_called_once()
         
         # Check that initial state was created with the correct max_iterations
+        invoke_args = mock_graph.invoke.call_args[0][0]
+        assert invoke_args['max_iterations'] == 5
         invoke_args = mock_graph.invoke.call_args[0][0]
         assert invoke_args['max_iterations'] == 5
         

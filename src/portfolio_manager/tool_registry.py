@@ -89,7 +89,7 @@ class ToolRegistry:
         self._tools[metadata.name] = metadata
         logger.debug(f"Registered tool: {metadata.name}")
 
-    def register(
+    def register(   
         self,
         name: str,
         description: str,

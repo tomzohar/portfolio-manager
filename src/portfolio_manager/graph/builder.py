@@ -4,6 +4,7 @@ from langgraph.graph import StateGraph, END
 from typing import TypedDict, Any, Optional, Annotated, Literal
 from src.portfolio_manager.agent_state import AgentState
 from src.portfolio_manager.utils import deep_merge
+from src.portfolio_manager.utils import deep_merge
 from .nodes import (
     start_node,
     agent_decision_node,
