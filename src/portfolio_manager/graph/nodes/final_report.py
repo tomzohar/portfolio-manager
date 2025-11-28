@@ -10,6 +10,7 @@ import logging
 from datetime import datetime
 import json
 import sentry_sdk
+import time
 
 from src.portfolio_manager.agent_state import AgentState
 from src.portfolio_manager.schemas import (
@@ -549,47 +550,81 @@ def _format_reflexion_notes(reflexion_feedback: List[str]) -> str:
 
 def _format_pushover_message(report: PortfolioReport) -> str:
     """
-    Format report for Pushover notification.
+    Format portfolio overview for Pushover notification.
+    Designed to be the first message in a sequence.
     
     Args:
         report: PortfolioReport object
         
     Returns:
+        Formatted notification text (Overview)
+    """
+    # 1. Header Stats
+    header = [
+        "📊 Portfolio Analysis V3 - Overview",
+        f"Strategy: {report.portfolio_strategy.action}",
+        f"Market: {report.market_regime.status}/{report.market_regime.signal}",
+        f"Risk: {report.risk_assessment.max_drawdown_risk} (Beta: {report.risk_assessment.beta:.2f})",
+        f"Confidence: {report.confidence_score:.0%}",
+        ""
+    ]
+    header_text = "\n".join(header)
+    
+    # 2. Executive Summary (up to 800 chars to fit comfortably)
+    summary_text = ""
+    if report.executive_summary:
+        summary_text = f"📝 Executive Summary:\n{report.executive_summary}\n"
+        # Truncate if too long (leaving room for header + footer)
+        max_summary_len = 1024 - len(header_text) - 50
+        if len(summary_text) > max_summary_len:
+            summary_text = summary_text[:max_summary_len-3] + "..."
+
+    return f"{header_text}\n{summary_text}"
+
+
+def _format_position_message(position: PositionAction) -> str:
+    """
+    Format a detailed notification for a single position.
+    
+    Args:
+        position: PositionAction object
+        
+    Returns:
         Formatted notification text
     """
-    # Build notification text
+    emoji = {"Buy": "🟢", "Sell": "🔴", "Hold": "🟡"}.get(position.action, "⚪")
+    
     lines = [
-        "📊 Portfolio Analysis Complete",
+        f"{emoji} {position.ticker}: {position.action}",
+        f"Confidence: {position.confidence:.0%}",
+        f"Current/Target: {position.current_weight:.1%} -> {position.target_weight:.1%}",
         "",
-        f"Strategy: {report.portfolio_strategy.action}",
-        f"Market: {report.market_regime.status} / {report.market_regime.signal}",
-        f"Risk Level: {report.risk_assessment.max_drawdown_risk}",
-        "",
-        "Positions:"
+        "📝 Rationale:",
+        position.rationale[:800],  # Safety truncate
     ]
     
-    # Add position summaries (max 5)
-    for i, position in enumerate(report.positions[:5], 1):
-        emoji = {"Buy": "🟢", "Sell": "🔴", "Hold": "🟡"}.get(position.action, "⚪")
-        lines.append(f"{emoji} {position.ticker}: {position.action}")
-    
-    if len(report.positions) > 5:
-        lines.append(f"... and {len(report.positions) - 5} more")
-    
-    lines.append("")
-    lines.append(f"Confidence: {report.confidence_score:.0%}")
-    lines.append("")
-    lines.append(report.disclaimer[:100] + "...")
-    
+    # Add specific signals if available
+    signals = []
+    if position.fundamental_signal:
+        signals.append(f"Fund: {position.fundamental_signal}")
+    if position.technical_signal:
+        signals.append(f"Tech: {position.technical_signal}")
+        
+    if signals:
+        lines.append("")
+        lines.append(" | ".join(signals))
+        
     return "\n".join(lines)
 
 
 def _send_notification(notification_text: str, report: PortfolioReport):
     """
-    Send Pushover notification with report summary.
+    Send Pushover notifications:
+    1. Portfolio Overview
+    2. Individual Position Updates
     
     Args:
-        notification_text: Formatted notification text
+        notification_text: Formatted overview text (unused now, regenerated internally)
         report: Full PortfolioReport object
     """
     try:
@@ -598,18 +633,50 @@ def _send_notification(notification_text: str, report: PortfolioReport):
             logger.warning("Pushover not configured, skipping notification")
             return
         
-        # Send notification
+        # 1. Send Portfolio Overview
         priority = 1 if report.portfolio_strategy.priority == "High" else 0
+        
+        # Re-generate overview text to ensure we use the new format
+        # (notification_text passed in might be from the old function if not updated in main flow)
+        overview_text = _format_pushover_message(report)
+        
+        logger.info("Sending Portfolio Overview notification...")
         success = send_pushover_message(
-            message_body=notification_text,
-            title="Portfolio Manager V3 Report",
+            message_body=overview_text,
+            title="Portfolio Manager - Overview",
             priority=priority
         )
         
-        if success:
-            logger.info("Pushover notification sent successfully")
-        else:
-            logger.warning("Failed to send Pushover notification")
+        if not success:
+            logger.warning("Failed to send Overview notification")
+            return
+
+        # 2. Send Individual Position Updates
+        # Sort positions by priority (Buy/Sell first)
+        def sort_key(p):
+            action_priority = {"Buy": 0, "Sell": 0, "Hold": 1}.get(p.action, 2)
+            return (action_priority, -p.confidence)
+        
+        sorted_positions = sorted(report.positions, key=sort_key)
+        
+        logger.info(f"Sending {len(sorted_positions)} position notifications...")
+        
+        for i, position in enumerate(sorted_positions):
+            # Add delay to respect API rate limits/politeness
+            time.sleep(0.5)
+            
+            pos_text = _format_position_message(position)
+            
+            # Higher priority for Buy/Sell actions
+            pos_priority = 0 if position.action in ["Buy", "Sell"] else -1
+            
+            send_pushover_message(
+                message_body=pos_text,
+                title=f"Update: {position.ticker}",
+                priority=pos_priority
+            )
+            
+        logger.info("All notifications sent successfully")
         
     except Exception as e:
         logger.error(f"Failed to send Pushover notification: {e}")

@@ -17,6 +17,7 @@ from src.portfolio_manager.graph.nodes.final_report import (
     _generate_template_summary,
     _format_reflexion_notes,
     _format_pushover_message,
+    _format_position_message,
     _send_notification
 )
 from src.portfolio_manager.schemas import (
@@ -542,8 +543,8 @@ class TestReflexionNotes:
 class TestPushoverFormatting:
     """Tests for Pushover message formatting."""
     
-    def test_format_pushover_message_basic(self):
-        """Test basic Pushover message formatting."""
+    def test_format_pushover_message_overview(self):
+        """Test Pushover overview message formatting."""
         report = PortfolioReport(
             executive_summary="This is a comprehensive executive summary that meets the minimum length requirement of 50 characters.",
             market_regime=MarketRegime(
@@ -582,113 +583,79 @@ class TestPushoverFormatting:
         
         message = _format_pushover_message(report)
         
-        assert "📊 Portfolio Analysis Complete" in message
+        assert "📊 Portfolio Analysis V3 - Overview" in message
         assert "Strategy: Hold" in message
-        assert "Market: Goldilocks / Risk-On" in message
-        assert "🟢 AAPL: Buy" in message
+        assert "Market: Goldilocks/Risk-On" in message
+        assert "Risk: Moderate (Beta: 1.00)" in message
+        assert "Executive Summary" in message
+        # Should NOT contain position details anymore
+        assert "AAPL: Buy" not in message
     
-    def test_format_pushover_message_truncation(self):
-        """Test message formatting with many positions (no truncation needed)."""
-        # Create report with many positions
-        positions = [
-            PositionAction(
-                ticker=f"TICK{i}",
-                action="Hold",
-                current_weight=0.1,
-                target_weight=0.1,
-                rationale="Test rationale for position",  # Meets min length
-                confidence=0.7
-            )
-            for i in range(20)
-        ]
+    def test_format_position_message(self):
+        """Test formatting of individual position messages."""
+        position = PositionAction(
+            ticker="AAPL",
+            action="Buy",
+            current_weight=0.3,
+            target_weight=0.35,
+            rationale="Strong fundamentals and positive outlook",
+            confidence=0.85,
+            fundamental_signal="Buy",
+            technical_signal="Hold"
+        )
         
-        # Generate very long summary that meets min length
+        message = _format_position_message(position)
+        
+        assert "🟢 AAPL: Buy" in message
+        assert "Confidence: 85%" in message
+        assert "Current/Target: 30.0% -> 35.0%" in message
+        assert "Strong fundamentals" in message
+        assert "Fund: Buy" in message
+        assert "Tech: Hold" in message
+
+    def test_format_pushover_message_summary_truncation(self):
+        """Test overview summary truncation."""
+        # Generate very long summary
         long_summary = " ".join(["Very long executive summary text"] * 50)
         
         report = PortfolioReport(
-            executive_summary=long_summary,  # Very long summary
-            market_regime=MarketRegime(
-                status="Goldilocks",
-                signal="Risk-On",
-                key_driver="Test driver for market conditions",
-                confidence=0.8
-            ),
+            executive_summary=long_summary,
+            market_regime=MarketRegime(status="Goldilocks", signal="Risk-On", key_driver="N/A", confidence=0.8),
             portfolio_strategy=PortfolioStrategy(
-                action="Hold",
-                rationale="Maintain current portfolio allocation based on analysis",
+                action="Hold", 
+                rationale="Valid rationale string that is long enough to pass validation", 
                 priority="Medium"
             ),
-            positions=positions,
-            risk_assessment=RiskAssessment(
-                beta=1.0,
-                sharpe_ratio=1.2,
-                portfolio_volatility=0.18,
-                var_95=-0.05,
-                max_drawdown=-0.15,
-                max_drawdown_risk="Moderate",
-                calculation_date=datetime.now()
-            ),
-            reflexion_notes="Analysis reviewed and approved successfully",
+            positions=[
+                PositionAction(
+                    ticker="TEST", 
+                    action="Hold", 
+                    rationale="Test position for validation",
+                    confidence=0.5,
+                    current_weight=0.0,
+                    target_weight=0.0
+                )
+            ],
+            risk_assessment=RiskAssessment(beta=1.0, sharpe_ratio=1.0, max_drawdown_risk="Low", var_95=0, portfolio_volatility=0, max_drawdown=0, calculation_date=datetime.now()),
+            reflexion_notes="Valid reflexion notes that meet the minimum length requirement.",
             confidence_score=0.80
         )
         
         message = _format_pushover_message(report)
         
-        # Message should be generated without truncation
-        assert "📊 Portfolio Analysis Complete" in message
-        assert "... and 15 more" in message  # Shows more than 5 positions
-    
-    def test_format_pushover_message_shows_max_5_positions(self):
-        """Test only shows top 5 positions."""
-        positions = [
-            PositionAction(
-                ticker=f"TICK{i}",
-                action="Hold",
-                current_weight=0.1,
-                target_weight=0.1,
-                rationale="Test rationale for position",
-                confidence=0.7
-            )
-            for i in range(10)
-        ]
-        
-        report = PortfolioReport(
-            executive_summary="This is a comprehensive executive summary that meets the minimum length requirement.",
-            market_regime=MarketRegime(
-                status="Goldilocks",
-                signal="Risk-On",
-                key_driver="Balanced economic conditions",
-                confidence=0.8
-            ),
-            portfolio_strategy=PortfolioStrategy(
-                action="Hold",
-                rationale="Maintain current allocation based on analysis",
-                priority="Medium"
-            ),
-            positions=positions,
-            risk_assessment=RiskAssessment(
-                beta=1.0,
-                sharpe_ratio=1.2,
-                portfolio_volatility=0.18,
-                var_95=-0.05,
-                max_drawdown=-0.15,
-                max_drawdown_risk="Moderate",
-                calculation_date=datetime.now()
-            ),
-            reflexion_notes="Analysis reviewed and approved successfully",
-            confidence_score=0.80
-        )
-        
-        message = _format_pushover_message(report)
-        
-        assert "... and 5 more" in message
+        assert "📊 Portfolio Analysis V3 - Overview" in message
+        assert len(message) <= 1024
+        assert "..." in message
 
 
 class TestPushoverNotification:
     """Tests for Pushover notification sending."""
     
     def test_send_notification_success(self, mocker, mock_pushover):
-        """Test successful notification sending."""
+        """Test successful notification sending (multiple messages)."""
+        # Mock time.sleep to speed up tests
+        mocker.patch('time.sleep')
+        
         # Mock settings
         mocker.patch('src.portfolio_manager.graph.nodes.final_report.settings.PUSHOVER_USER_KEY', 'test_user')
         mocker.patch('src.portfolio_manager.graph.nodes.final_report.settings.PUSHOVER_API_TOKEN', 'test_token')
@@ -714,6 +681,14 @@ class TestPushoverNotification:
                     target_weight=0.5,
                     rationale="Strong fundamentals justify holding",
                     confidence=0.7
+                ),
+                PositionAction(
+                    ticker="MSFT",
+                    action="Buy",
+                    current_weight=0.0,
+                    target_weight=0.1,
+                    rationale="Good entry point",
+                    confidence=0.8
                 )
             ],
             risk_assessment=RiskAssessment(
@@ -731,8 +706,10 @@ class TestPushoverNotification:
         
         _send_notification("Test message", report)
         
-        # Verify HTTP connection was made (mocked)
-        mock_pushover.request.assert_called_once()
+        # Verify HTTP connection was made multiple times
+        # 1 Overview + 2 Positions = 3 calls
+        # Since mock_pushover is the connection object, we check request calls
+        assert mock_pushover.request.call_count >= 3
     
     def test_send_notification_not_configured(self, mocker, mock_pushover):
         """Test skips notification when not configured."""
