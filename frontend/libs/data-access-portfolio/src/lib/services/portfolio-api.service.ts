@@ -1,103 +1,44 @@
-import { Injectable } from '@angular/core';
-import { Observable, of, delay } from 'rxjs';
-import { DashboardPortfolio, DashboardAsset } from '@stocks-researcher/types';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
+import { 
+  DashboardPortfolio, 
+  DashboardAsset, 
+  CreatePortfolioDto, 
+  AddAssetDto,
+  PortfolioWithAssets 
+} from '@stocks-researcher/types';
 
 /**
  * PortfolioApiService
  * 
- * Simulates API calls for portfolio and asset data.
- * In production, this would make actual HTTP requests to the backend.
+ * HTTP service for portfolio and asset data operations.
+ * Communicates with the NestJS backend API.
  */
 @Injectable({
   providedIn: 'root'
 })
 export class PortfolioApiService {
-  
-  private readonly mockPortfolios: DashboardPortfolio[] = [
-    { id: '1', name: 'Retirement Fund' },
-    { id: '2', name: 'Tech Growth Speculation' },
-    { id: '3', name: 'Dividend Income' }
-  ];
-
-  private readonly mockAssets: Record<string, DashboardAsset[]> = {
-    '1': [
-      { 
-        ticker: 'VOO', 
-        quantity: 50, 
-        avgPrice: 350.20, 
-        currentPrice: 410.50, 
-        marketValue: 20525, 
-        pl: 3015, 
-        plPercent: 0.17 
-      },
-      { 
-        ticker: 'BND', 
-        quantity: 100, 
-        avgPrice: 75.10, 
-        currentPrice: 72.30, 
-        marketValue: 7230, 
-        pl: -280, 
-        plPercent: -0.03 
-      }
-    ],
-    '2': [
-      { 
-        ticker: 'NVDA', 
-        quantity: 20, 
-        avgPrice: 450.00, 
-        currentPrice: 920.00, 
-        marketValue: 18400, 
-        pl: 9400, 
-        plPercent: 1.04 
-      },
-      { 
-        ticker: 'TSLA', 
-        quantity: 15, 
-        avgPrice: 220.00, 
-        currentPrice: 180.00, 
-        marketValue: 2700, 
-        pl: -600, 
-        plPercent: -0.18 
-      },
-      { 
-        ticker: 'AMD', 
-        quantity: 30, 
-        avgPrice: 105.00, 
-        currentPrice: 170.00, 
-        marketValue: 5100, 
-        pl: 1950, 
-        plPercent: 0.61 
-      }
-    ],
-    '3': [
-      { 
-        ticker: 'KO', 
-        quantity: 200, 
-        avgPrice: 58.50, 
-        currentPrice: 61.20, 
-        marketValue: 12240, 
-        pl: 540, 
-        plPercent: 0.04 
-      },
-      { 
-        ticker: 'JNJ', 
-        quantity: 80, 
-        avgPrice: 160.00, 
-        currentPrice: 155.00, 
-        marketValue: 12400, 
-        pl: -400, 
-        plPercent: -0.03 
-      }
-    ]
-  };
+  private http = inject(HttpClient);
+  private readonly apiUrl = '/api/portfolios'; // Adjust based on your API prefix
 
   /**
-   * Fetches all portfolios
-   * Simulates network delay
+   * Fetches all portfolios for the current user
    */
   getPortfolios(): Observable<DashboardPortfolio[]> {
-    return of(this.mockPortfolios).pipe(
-      delay(300) // Simulate network latency
+    return this.http.get<DashboardPortfolio[]>(this.apiUrl).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Fetches a single portfolio by ID with its assets
+   * @param portfolioId - The portfolio ID
+   */
+  getPortfolio(portfolioId: string): Observable<PortfolioWithAssets> {
+    return this.http.get<PortfolioWithAssets>(`${this.apiUrl}/${portfolioId}`).pipe(
+      catchError(this.handleError)
     );
   }
 
@@ -106,10 +47,65 @@ export class PortfolioApiService {
    * @param portfolioId - The portfolio ID to fetch assets for
    */
   getAssets(portfolioId: string): Observable<DashboardAsset[]> {
-    const assets = this.mockAssets[portfolioId] || [];
-    return of(assets).pipe(
-      delay(200) // Simulate network latency
+    return this.getPortfolio(portfolioId).pipe(
+      map(portfolio => portfolio.assets || []),
+      catchError(this.handleError)
     );
+  }
+
+  /**
+   * Creates a new portfolio
+   * @param dto - Portfolio creation data
+   */
+  createPortfolio(dto: CreatePortfolioDto): Observable<DashboardPortfolio> {
+    return this.http.post<DashboardPortfolio>(this.apiUrl, dto).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Adds an asset to a portfolio
+   * @param portfolioId - The portfolio ID
+   * @param dto - Asset data
+   */
+  addAsset(portfolioId: string, dto: AddAssetDto): Observable<PortfolioWithAssets> {
+    return this.http.post<PortfolioWithAssets>(`${this.apiUrl}/${portfolioId}/assets`, dto).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Removes an asset from a portfolio
+   * @param portfolioId - The portfolio ID
+   * @param assetId - The asset ID to remove
+   */
+  removeAsset(portfolioId: string, assetId: string): Observable<PortfolioWithAssets> {
+    return this.http.delete<PortfolioWithAssets>(`${this.apiUrl}/${portfolioId}/assets/${assetId}`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Centralized error handling
+   * @param error - HTTP error response
+   */
+  private handleError(error: HttpErrorResponse): Observable<never> {
+    let errorMessage = 'An unknown error occurred';
+
+    if (error.error instanceof ErrorEvent) {
+      // Client-side or network error
+      errorMessage = `Error: ${error.error.message}`;
+    } else {
+      // Backend returned an unsuccessful response code
+      errorMessage = `Server Error: ${error.status} - ${error.message}`;
+      
+      if (error.error?.message) {
+        errorMessage = error.error.message;
+      }
+    }
+
+    console.error('Portfolio API Error:', errorMessage);
+    return throwError(() => new Error(errorMessage));
   }
 }
 
