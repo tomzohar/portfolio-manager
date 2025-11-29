@@ -61,7 +61,6 @@
     "@ngrx/entity": "^20.1.0",
     "@ngrx/store": "^20.1.0",
     "@ngrx/store-devtools": "^20.1.0",
-    "rxjs": "~7.8.0",
-    "zone.js": "~0.15.0"
+    "rxjs": "~7.8.0"
   }
 }
