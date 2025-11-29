@@ -18,7 +18,10 @@
       "@stocks-researcher/types": ["libs/types/src/index.ts"],
       "@stocks-researcher/styles": ["libs/styles/src/index.ts"],
       "@frontend/feature-dashboard": ["libs/feature-dashboard/src/index.ts"],
-      "@frontend/ui-dashboard": ["libs/ui-dashboard/src/index.ts"]
+      "@frontend/ui-dashboard": ["libs/ui-dashboard/src/index.ts"],
+      "@frontend/data-access-portfolio": [
+        "libs/data-access-portfolio/src/index.ts"
+      ]
     }
   },
   "exclude": ["node_modules", "tmp"]

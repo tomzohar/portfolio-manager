@@ -7,21 +7,7 @@ import {
   SelectOption, 
   ColumnDef 
 } from '@stocks-researcher/styles';
-
-export interface DashboardPortfolio {
-  id: string;
-  name: string;
-}
-
-export interface DashboardAsset {
-  ticker: string;
-  quantity: number;
-  avgPrice: number;
-  currentPrice?: number;
-  marketValue?: number;
-  pl?: number;
-  plPercent?: number;
-}
+import { DashboardPortfolio, DashboardAsset } from '@stocks-researcher/types';
 
 @Component({
   selector: 'lib-ui-dashboard',
