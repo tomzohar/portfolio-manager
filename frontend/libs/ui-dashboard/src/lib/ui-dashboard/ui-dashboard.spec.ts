@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { UiDashboardComponent, DashboardPortfolio, DashboardAsset } from './ui-dashboard';
+import { UiDashboardComponent } from './ui-dashboard';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideAnimations } from '@angular/platform-browser/animations';
+import { DashboardAsset, DashboardPortfolio } from '@stocks-researcher/types';
 
 describe('UiDashboardComponent', () => {
   let component: UiDashboardComponent;
