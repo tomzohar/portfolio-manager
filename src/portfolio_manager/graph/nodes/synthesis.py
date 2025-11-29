@@ -243,11 +243,24 @@ def _detect_conflicts(
     
     # Conflict Type 1: Fundamental vs. Technical divergence
     for ticker in fundamentals.keys():
-        if ticker not in technicals:
-            continue
+        fund_data = fundamentals.get(ticker)
+        tech_data = technicals.get(ticker)
         
-        fund_rec = fundamentals[ticker].get("assessment", {}).get("recommendation")
-        tech_rec = technicals[ticker].get("assessment", {}).get("recommendation")
+        # Ensure both data dictionaries exist and are valid
+        if not fund_data or not isinstance(fund_data, dict) or not tech_data or not isinstance(tech_data, dict):
+            continue
+            
+        # Safe extraction with nested checking
+        fund_assessment = fund_data.get("assessment")
+        if not fund_assessment or not isinstance(fund_assessment, dict):
+            continue
+            
+        tech_assessment = tech_data.get("assessment")
+        if not tech_assessment or not isinstance(tech_assessment, dict):
+            continue
+            
+        fund_rec = fund_assessment.get("recommendation")
+        tech_rec = tech_assessment.get("recommendation")
         
         # Check for Buy vs. Sell conflict
         if fund_rec in ["Buy", "Strong Buy"] and tech_rec in ["Sell", "Strong Sell"]:
@@ -365,16 +378,24 @@ def _generate_position_actions(
     tickers = set(fundamentals.keys()) | set(technicals.keys())
     
     for ticker in tickers:
-        fund_analysis = fundamentals.get(ticker, {})
-        tech_analysis = technicals.get(ticker, {})
+        fund_analysis = fundamentals.get(ticker) or {}
+        tech_analysis = technicals.get(ticker) or {}
         
         # Extract recommendations
-        fund_rec = fund_analysis.get("assessment", {}).get("recommendation", "Hold")
+        fund_assessment = fund_analysis.get("assessment") or {}
+        if not isinstance(fund_assessment, dict):
+            fund_assessment = {}
+            
+        tech_assessment = tech_analysis.get("assessment") or {}
+        if not isinstance(tech_assessment, dict):
+            tech_assessment = {}
+            
+        fund_rec = fund_assessment.get("recommendation", "Hold")
         # Technical agent uses "timing_recommendation" not "recommendation"
-        tech_rec = tech_analysis.get("assessment", {}).get("timing_recommendation", "Hold")
+        tech_rec = tech_assessment.get("timing_recommendation", "Hold")
         
-        fund_conf = fund_analysis.get("assessment", {}).get("confidence", 0.5)
-        tech_conf = tech_analysis.get("assessment", {}).get("confidence", 0.5)
+        fund_conf = fund_assessment.get("confidence", 0.5)
+        tech_conf = tech_assessment.get("confidence", 0.5)
         
         # Log confidence extraction for diagnostic purposes
         logger.info(f"{ticker}: fund_rec={fund_rec}, tech_rec={tech_rec}, fund_conf={fund_conf:.2f}, tech_conf={tech_conf:.2f}")
@@ -659,12 +680,12 @@ def _calculate_overall_confidence(
     
     # Average fundamental confidences
     for ticker, analysis in fundamentals.items():
-        if "assessment" in analysis and "confidence" in analysis["assessment"]:
+        if analysis and "assessment" in analysis and "confidence" in analysis["assessment"]:
             confidences.append(analysis["assessment"]["confidence"])
     
     # Average technical confidences
     for ticker, analysis in technicals.items():
-        if "assessment" in analysis and "confidence" in analysis["assessment"]:
+        if analysis and "assessment" in analysis and "confidence" in analysis["assessment"]:
             confidences.append(analysis["assessment"]["confidence"])
     
     # Risk always has high confidence (it's deterministic)

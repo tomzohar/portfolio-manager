@@ -8,9 +8,8 @@ import pytest
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from typing import Dict, Any, List
-from unittest.mock import MagicMock
-
+from typing import Dict, Any
+from unittest.mock import MagicMock, patch
 
 @pytest.fixture(scope="session")
 def realistic_portfolio():
@@ -145,9 +144,10 @@ def mock_polygon_ticker_details():
                 "market_cap": 3000000000000,
                 "shares_outstanding": 16000000000,
                 "description": "Apple Inc. designs, manufactures, and markets smartphones.",
-                "sector": "Technology",
-                "industry": "Consumer Electronics",
-                "exchange": "NASDAQ"
+                "sic_description": "Technology", # used for sector/industry
+                "primary_exchange": "NASDAQ",
+                "total_employees": 164000,
+                "homepage_url": "https://www.apple.com"
             },
             "MSFT": {
                 "ticker": "MSFT",
@@ -155,9 +155,10 @@ def mock_polygon_ticker_details():
                 "market_cap": 2800000000000,
                 "shares_outstanding": 7500000000,
                 "description": "Microsoft Corporation develops software.",
-                "sector": "Technology",
-                "industry": "Software",
-                "exchange": "NASDAQ"
+                "sic_description": "Technology",
+                "primary_exchange": "NASDAQ",
+                "total_employees": 221000,
+                "homepage_url": "https://www.microsoft.com"
             },
             "GOOGL": {
                 "ticker": "GOOGL",
@@ -165,9 +166,10 @@ def mock_polygon_ticker_details():
                 "market_cap": 1800000000000,
                 "shares_outstanding": 6000000000,
                 "description": "Alphabet Inc. offers online advertising.",
-                "sector": "Technology",
-                "industry": "Internet Services",
-                "exchange": "NASDAQ"
+                "sic_description": "Technology",
+                "primary_exchange": "NASDAQ",
+                "total_employees": 182000,
+                "homepage_url": "https://abc.xyz"
             },
             "AMZN": {
                 "ticker": "AMZN",
@@ -175,9 +177,10 @@ def mock_polygon_ticker_details():
                 "market_cap": 1600000000000,
                 "shares_outstanding": 10500000000,
                 "description": "Amazon.com Inc. engages in e-commerce.",
-                "sector": "Consumer Cyclical",
-                "industry": "Internet Retail",
-                "exchange": "NASDAQ"
+                "sic_description": "Retail Trade",
+                "primary_exchange": "NASDAQ",
+                "total_employees": 1541000,
+                "homepage_url": "https://www.amazon.com"
             },
             "NVDA": {
                 "ticker": "NVDA",
@@ -185,9 +188,21 @@ def mock_polygon_ticker_details():
                 "market_cap": 2200000000000,
                 "shares_outstanding": 2500000000,
                 "description": "NVIDIA Corporation designs graphics processors.",
-                "sector": "Technology",
-                "industry": "Semiconductors",
-                "exchange": "NASDAQ"
+                "sic_description": "Semiconductors",
+                "primary_exchange": "NASDAQ",
+                "total_employees": 29600,
+                "homepage_url": "https://www.nvidia.com"
+            },
+            "SPY": {
+                "ticker": "SPY",
+                "name": "SPDR S&P 500 ETF Trust",
+                "market_cap": 500000000000,
+                "shares_outstanding": 900000000,
+                "description": "Standard and Poors 500 Index",
+                "sic_description": "Exchange Traded Fund",
+                "primary_exchange": "NYSE Arca",
+                "total_employees": 0,
+                "homepage_url": "https://www.ssga.com"
             }
         }
         return details.get(ticker, {})
@@ -260,8 +275,23 @@ def mock_gemini_responses():
     Returns a function that provides context-aware responses.
     """
     def _get_response(context: str) -> str:
+        # Executive Summary - Check first to avoid matching partial keywords
+        if "executive summary" in context.lower():
+            return """
+Portfolio Analysis Summary
+
+The portfolio is well-positioned for the current "Goldilocks" market environment. Our analysis 
+recommends selective accumulation, with strong buy signals across major technology holdings. 
+
+The macro backdrop supports risk-on positioning, with moderate GDP growth and declining 
+inflation. Individual positions demonstrate strong fundamentals and positive technical momentum.
+
+Risk metrics indicate moderate portfolio volatility with acceptable drawdown risk. The diversified 
+tech exposure provides growth potential while managing concentration risk.
+"""
+
         # Macro Agent Response
-        if "macro" in context.lower() or "market regime" in context.lower():
+        elif "macro" in context.lower() or "market regime" in context.lower():
             return """
 **Market Regime Assessment**
 
@@ -351,21 +381,6 @@ No significant biases detected. Recommendations are well-supported by data and a
 the stated market regime. Risk considerations are adequately addressed.
 """
         
-        # Executive Summary
-        elif "executive summary" in context.lower():
-            return """
-Portfolio Analysis Summary
-
-The portfolio is well-positioned for the current "Goldilocks" market environment. Our analysis 
-recommends selective accumulation, with strong buy signals across major technology holdings. 
-
-The macro backdrop supports risk-on positioning, with moderate GDP growth and declining 
-inflation. Individual positions demonstrate strong fundamentals and positive technical momentum.
-
-Risk metrics indicate moderate portfolio volatility with acceptable drawdown risk. The diversified 
-tech exposure provides growth potential while managing concentration risk.
-"""
-        
         # Default response
         else:
             return "Analysis complete. Data processed successfully."
@@ -388,12 +403,11 @@ def mock_all_external_apis(
     Yields:
         Dict of mock objects for inspection and verification
     """
-    from unittest.mock import patch, MagicMock
-    
     mocks = {}
     patches = []
     
     # ===== FRED API Mocks =====
+    # We keep function patches for FRED as the helper functions are what is used
     def mock_fetch_fred_series(series_id: str, **kwargs):
         return mock_fred_responses.get(series_id, pd.Series([]))
     
@@ -404,94 +418,101 @@ def mock_all_external_apis(
     mocks["fred_fetch"] = fred_patch.start()
     patches.append(fred_patch)
     
-    # Mock FRED helper functions
-    fred_cpi_patch = patch(
-        'src.portfolio_manager.integrations.fred.get_latest_cpi_yoy',
-        return_value=3.2
-    )
-    mocks["fred_cpi"] = fred_cpi_patch.start()
-    patches.append(fred_cpi_patch)
-    
-    fred_gdp_patch = patch(
-        'src.portfolio_manager.integrations.fred.get_latest_gdp_growth',
-        return_value=2.5
-    )
-    mocks["fred_gdp"] = fred_gdp_patch.start()
-    patches.append(fred_gdp_patch)
-    
-    fred_yield_patch = patch(
-        'src.portfolio_manager.integrations.fred.get_yield_curve_spread',
-        return_value=0.8
-    )
-    mocks["fred_yield"] = fred_yield_patch.start()
-    patches.append(fred_yield_patch)
-    
-    fred_vix_patch = patch(
-        'src.portfolio_manager.integrations.fred.get_vix',
-        return_value=16.5
-    )
-    mocks["fred_vix"] = fred_vix_patch.start()
-    patches.append(fred_vix_patch)
-    
-    fred_unemployment_patch = patch(
-        'src.portfolio_manager.integrations.fred.get_unemployment_rate',
-        return_value=3.8
-    )
-    mocks["fred_unemployment"] = fred_unemployment_patch.start()
-    patches.append(fred_unemployment_patch)
-    
     # ===== Polygon.io API Mocks =====
-    polygon_details_patch = patch(
-        'src.portfolio_manager.integrations.polygon.fetch_ticker_details',
-        side_effect=mock_polygon_ticker_details
+    # Mock the RESTClient class itself to avoid import issues
+    
+    # Helper class to mimic Polygon response objects
+    class MockPolygonResponse:
+        def __init__(self, **kwargs):
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+    
+    # Mock Client Instance
+    mock_poly_client = MagicMock()
+    
+    # Mock get_ticker_details
+    def side_effect_get_details(ticker):
+        details = mock_polygon_ticker_details(ticker)
+        if not details:
+            # Polygon client raises exception or returns empty object on failure?
+            # We'll assume it returns empty-ish object or raises.
+            # Let's return object with None attributes
+            return MockPolygonResponse(
+                name=None, market_cap=None, share_class_shares_outstanding=None,
+                description=None, sic_description=None, primary_exchange=None,
+                total_employees=None, homepage_url=None
+            )
+        return MockPolygonResponse(
+            name=details.get('name'),
+            market_cap=details.get('market_cap'),
+            share_class_shares_outstanding=details.get('shares_outstanding'),
+            description=details.get('description'),
+            sic_description=details.get('sic_description'),
+            primary_exchange=details.get('primary_exchange'),
+            total_employees=details.get('employees'),
+            homepage_url=details.get('homepage_url')
+        )
+    
+    mock_poly_client.get_ticker_details.side_effect = side_effect_get_details
+    
+    # Mock get_aggs (OHLCV)
+    def side_effect_get_aggs(ticker, **kwargs):
+        # Return enough data for technical analysis (e.g., 300+ points for SMA200)
+        df = mock_polygon_ohlcv_data(ticker, limit=365) 
+        aggs = []
+        for idx, row in df.iterrows():
+            # Polygon Agg object has timestamp (ms), open, high, low, close, volume
+            agg = MockPolygonResponse(
+                timestamp=int(idx.timestamp() * 1000),
+                open=row['open'],
+                high=row['high'],
+                low=row['low'],
+                close=row['close'],
+                volume=row['volume']
+            )
+            aggs.append(agg)
+        return aggs
+    
+    mock_poly_client.get_aggs.side_effect = side_effect_get_aggs
+    
+    # Mock list_ticker_financials
+    mock_poly_client.list_ticker_financials.return_value = [] # Return empty list for now
+    
+    # Patch the RESTClient class in the integration module
+    polygon_client_patch = patch(
+        'src.portfolio_manager.integrations.polygon.RESTClient',
+        return_value=mock_poly_client
     )
-    mocks["polygon_details"] = polygon_details_patch.start()
-    patches.append(polygon_details_patch)
+    mocks["polygon_client_class"] = polygon_client_patch.start()
+    patches.append(polygon_client_patch)
+    mocks["polygon_client_instance"] = mock_poly_client
     
-    # Wrapper for OHLCV data to return correct format
-    def mock_fetch_ohlcv(tickers: List[str], period: str = "1y", **kwargs):
-        data = {}
-        for ticker in tickers:
-            data[ticker] = mock_polygon_ohlcv_data(ticker, period=period)
-        return {"success": True, "data": data, "error": None}
-    
-    polygon_ohlcv_patch = patch(
-        'src.portfolio_manager.integrations.polygon.fetch_ohlcv_data',
-        side_effect=mock_fetch_ohlcv
-    )
-    mocks["polygon_ohlcv"] = polygon_ohlcv_patch.start()
-    patches.append(polygon_ohlcv_patch)
-    
-    # Wrapper for benchmark data to return correct format
-    def mock_fetch_benchmark(period: str = "1y", **kwargs):
-        df = mock_polygon_ohlcv_data("SPY", period=period)
-        return {"success": True, "data": df, "error": None}
-    
-    polygon_benchmark_patch = patch(
-        'src.portfolio_manager.integrations.polygon.fetch_market_benchmark',
-        side_effect=mock_fetch_benchmark
-    )
-    mocks["polygon_benchmark"] = polygon_benchmark_patch.start()
-    patches.append(polygon_benchmark_patch)
-    
-    # Mock financial statements (optional, may not be available)
-    polygon_financials_patch = patch(
-        'src.portfolio_manager.integrations.polygon.fetch_financial_statements',
-        return_value={"success": False, "statements": []}  # Empty for simplicity
-    )
-    mocks["polygon_financials"] = polygon_financials_patch.start()
-    patches.append(polygon_financials_patch)
     
     # ===== Gemini LLM Mocks =====
-    def mock_call_gemini(prompt: str, **kwargs):
-        return mock_gemini_responses(prompt)
+    # Patch the google.genai.Client class to intercept all calls
+    mock_gemini_client = MagicMock()
     
-    gemini_patch = patch(
-        'src.stock_researcher.utils.llm_utils.call_gemini_api',
-        side_effect=mock_call_gemini
+    def side_effect_generate_content(model, contents, **kwargs):
+        prompt = str(contents)
+        response_text = mock_gemini_responses(prompt)
+        
+        # Return an object with .text attribute
+        response = MagicMock()
+        response.text = response_text
+        return response
+        
+    mock_gemini_client.models.generate_content.side_effect = side_effect_generate_content
+    
+    # Patch genai.Client in the llm_utils module
+    # Note: llm_utils does 'from google import genai' -> '_client = genai.Client(...)'
+    gemini_client_patch = patch(
+        'src.stock_researcher.utils.llm_utils.genai.Client',
+        return_value=mock_gemini_client
     )
-    mocks["gemini"] = gemini_patch.start()
-    patches.append(gemini_patch)
+    mocks["gemini_client_class"] = gemini_client_patch.start()
+    patches.append(gemini_client_patch)
+    mocks["gemini_client_instance"] = mock_gemini_client
+    
     
     # ===== Pushover Notification Mocks =====
     pushover_patch = patch(
@@ -576,4 +597,3 @@ def expected_sub_agent_output():
             "lookback_period": "1y"
         }
     }
-
