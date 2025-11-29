@@ -21,7 +21,8 @@
       "@frontend/ui-dashboard": ["libs/ui-dashboard/src/index.ts"],
       "@frontend/data-access-portfolio": [
         "libs/data-access-portfolio/src/index.ts"
-      ]
+      ],
+      "@frontend/util-dialog": ["libs/util-dialog/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
