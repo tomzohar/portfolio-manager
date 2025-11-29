@@ -15,12 +15,12 @@ Version: 1.0.0
 from typing import List, Dict, Any
 import logging
 
-from stock_researcher.agents.news_searcher import get_stock_news
-from stock_researcher.agents.llm_analyzer import generate_executive_summaries
 from ..agent_state import ToolResult
+from ..integrations.serp_api import get_stock_news
+from ..analysis.news_analyzer import generate_executive_summaries
 from ..tool_registry import tool
 from ..utils import ApiType
-from ..config import settings  # NEW: Import centralized settings
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -121,11 +121,10 @@ def analyze_news_tool(tickers: List[str]) -> ToolResult:
                 confidence_impact=0.0,
             )
         
-        # Step 1: Search for news articles using the legacy function
-        # Pass the API key from our centralized settings
-        news_dict = get_stock_news(tickers, settings.SERPAPI_API_KEY)
+        # Step 1: Search for news articles using the integration function
+        news_dict = get_stock_news(tickers)
         
-        # Step 2: Summarize with LLM using the legacy function
+        # Step 2: Summarize with LLM using the analysis function
         summaries = generate_executive_summaries(news_dict)
         
         logger.info(f"News analysis completed for {len(summaries)} tickers")

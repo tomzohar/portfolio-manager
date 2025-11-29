@@ -15,14 +15,14 @@ from src.portfolio_manager.tools.parse_portfolio import parse_portfolio_tool
 class TestAgentWorkflow:
     """Tests for the complete agent workflow and error handling."""
 
-    @patch('src.portfolio_manager.tools.parse_portfolio.parse_portfolio_legacy')
-    def test_tool_error_is_handled_gracefully(self, mock_parse):
+    @patch("src.portfolio_manager.tools.parse_portfolio.parse_portfolio", side_effect=Exception("API Error"))
+    def test_tool_error_is_handled_gracefully(self, mock_parse_portfolio):
         """
         Test that a tool returning an error result is handled gracefully
         and doesn't crash the system.
         """
         # Setup
-        mock_parse.side_effect = Exception("API error")
+        mock_parse_portfolio.side_effect = Exception("API error")
         
         # Execute tool to simulate a failing tool call within the agent
         result = parse_portfolio_tool()
@@ -35,6 +35,8 @@ class TestAgentWorkflow:
     @patch('src.portfolio_manager.graph.main.build_graph')
     def test_graph_execution_simple_flow(self, mock_build):
         """Test a simple end-to-end graph execution flow."""
+        from src.portfolio_manager.graph.main import run_autonomous_analysis
+        
         # Setup mocks
         mock_graph = MagicMock()
         # Simulate the invoke behavior
@@ -43,7 +45,6 @@ class TestAgentWorkflow:
         mock_build.return_value = mock_graph
         
         # Execute the main runner function
-        from src.portfolio_manager.graph import run_autonomous_analysis
         final_state = run_autonomous_analysis(max_iterations=5)
         
         # Verify

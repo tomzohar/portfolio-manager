@@ -3,12 +3,10 @@ import logging
 from src.portfolio_manager.agent_state import AgentState
 from src.portfolio_manager.tools import generate_tools_prompt
 from src.portfolio_manager.prompts import get_system_prompt
-from src.portfolio_manager.utils import format_state_for_llm, format_reasoning_trace, ApiType
+from src.portfolio_manager.utils import format_state_for_llm, format_reasoning_trace, ApiType, call_gemini_api
 from src.portfolio_manager.parsers import parse_agent_decision
 from src.portfolio_manager.error_handler import capture_error
-from src.stock_researcher.utils.llm_utils import call_gemini_api
-from src.portfolio_manager.config import settings  # NEW: Import settings
-
+from src.portfolio_manager.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -54,33 +52,31 @@ Based on this information, what should be your next single action?
         # 4. Call the LLM for a decision using the model from settings
         response_text = call_gemini_api(full_prompt, model=settings.AGENT_MODEL)
         
-        # Report the LLM call for cost tracking
-        state_model.newly_completed_api_calls = [
-            {"api_type": ApiType.LLM_GEMINI_2_5_PRO.value, "count": 1}
-        ]
-        
-        # 6. Parse the decision
+        # 5. Parse the decision
         decision = parse_agent_decision(response_text)
-        state_model.agent_reasoning.append(
-            {"iteration": iteration, "prompt": full_prompt, "decision": response_text}
-        )
         
-        # 7. Prepare the state patch
+        # 6. Prepare the state patch
         patch = {
-            "agent_reasoning": state_model.agent_reasoning,
+            "agent_reasoning": state_model.agent_reasoning + [
+                {"iteration": iteration, "prompt": full_prompt, "decision": response_text}
+            ],
             "newly_completed_api_calls": [
-                {"api_type": ApiType.LLM_GEMINI_2_5_PRO, "model": settings.AGENT_MODEL, "cost": 0.01} # placeholder
+                {"api_type": ApiType.LLM_GEMINI_2_5_PRO.value, "count": 1}
             ]
         }
 
         if decision["action"] == "generate_report":
             patch["next_tool_call"] = None
-            patch["reasoning_trace"] = state_model.reasoning_trace + [f"Iteration {iteration}: Decided to generate final report."]
+            patch["reasoning_trace"] = state_model.reasoning_trace + [
+                f"Iteration {iteration}: Decided to generate final report."
+            ]
         else:
             tool_name = decision["action"]
             tool_args = decision.get("arguments", {})
             patch["next_tool_call"] = {"tool": tool_name, "args": tool_args}
-            patch["reasoning_trace"] = state_model.reasoning_trace + [f"Iteration {iteration}: Chose tool: {tool_name}"]
+            patch["reasoning_trace"] = state_model.reasoning_trace + [
+                f"Iteration {iteration}: Chose tool: {tool_name}"
+            ]
 
         # Increment the iteration counter for the next loop
         patch["current_iteration"] = state_model.current_iteration + 1

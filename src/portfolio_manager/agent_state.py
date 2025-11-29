@@ -75,6 +75,54 @@ class AgentState(BaseModel):
     # Metadata
     started_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
     completed_at: Optional[str] = None
+    
+    # Phase 2: Sub-Agent Outputs (V3 Multi-Agent Architecture)
+    macro_analysis: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Macro Agent output (market regime, risk appetite)"
+    )
+    fundamental_analysis: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Fundamental Agent outputs per ticker"
+    )
+    technical_analysis: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Technical Agent outputs per ticker"
+    )
+    risk_assessment: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Risk Agent output (portfolio risk metrics)"
+    )
+    
+    # Phase 3: Supervisor Orchestration & Reflexion
+    execution_plan: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Supervisor's decomposed execution plan"
+    )
+    sub_agent_status: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Completion status of each sub-agent (e.g., {'macro_agent': 'completed'})"
+    )
+    synthesis_result: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Synthesis Node's combined recommendations"
+    )
+    reflexion_iteration: int = Field(
+        default=0,
+        description="Current reflexion loop iteration count"
+    )
+    reflexion_feedback: List[str] = Field(
+        default_factory=list,
+        description="Critique feedback from Reflexion Node"
+    )
+    reflexion_approved: bool = Field(
+        default=False,
+        description="Whether Reflexion Node approved synthesis"
+    )
+    confidence_adjustment: float = Field(
+        default=0.0,
+        description="Confidence adjustment from reflexion critique"
+    )
 
     class Config:
         """Allow extra fields for LangGraph internal state."""

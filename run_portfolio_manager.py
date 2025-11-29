@@ -1,229 +1,41 @@
 #!/usr/bin/env python3
 """
-Autonomous Portfolio Manager - Entry Point
+Autonomous Portfolio Manager V3 - Main Entry Script
 
-This script runs the new autonomous agent system that intelligently analyzes
-stock portfolios using LangGraph. Unlike the legacy sequential pipeline, this
-agent dynamically decides what data to gather and which analyses to perform.
+This script runs the Portfolio Manager with the new V3 supervisor multi-agent
+architecture. It maintains backward compatibility with the V2 legacy workflow.
+
+The V3 workflow features:
+- Supervisor-based multi-agent orchestration
+- Specialized sub-agents (Macro, Fundamental, Technical, Risk)
+- Synthesis and conflict resolution
+- Self-critique via Reflexion loop
+- Structured JSON output
 
 Usage:
-    python run_portfolio_manager.py [--no-notification]
+  # Run with V3 supervisor workflow (default)
+  python run_portfolio_manager.py
+  
+  # Run with V2 legacy workflow
+  python run_portfolio_manager.py --version v2
+  
+  # Run with custom options
+  python run_portfolio_manager.py --format text --output report.txt --verbose
+  
+  # Disable notifications
+  python run_portfolio_manager.py --no-notification
+
+For full CLI documentation, run:
+  python run_portfolio_manager.py --help
 """
 
-import logging
 import sys
-import argparse
 import os
-import sentry_sdk
-from logging.handlers import RotatingFileHandler
-from rich.logging import RichHandler
 
-# Import application components at the top level for clarity and mockability
-from src.portfolio_manager.graph import run_autonomous_analysis
-from src.portfolio_manager.error_handler import capture_error, capture_message
-from src.portfolio_manager.config import settings  # NEW: Import centralized settings
-from stock_researcher.notifications.pushover import send_pushover_message
-from stock_researcher.pre_processor.update_prices import update_gsheet_prices
+# Add project root to Python path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-
-# Configure logging
-def setup_logging():
-    """Set up logging with RichHandler and file output."""
-    log_level = settings.LOG_LEVEL.upper()
-    
-    # Create logs directory if it doesn't exist
-    if not os.path.exists("logs"):
-        os.makedirs("logs")
-
-    # RichHandler for beautiful console output
-    rich_handler = RichHandler(
-        rich_tracebacks=True, 
-        tracebacks_show_locals=True
-    )
-
-    # File handler for persistent logs
-    file_handler = RotatingFileHandler(
-        "logs/portfolio_manager.log", 
-        maxBytes=1024 * 1024 * 5,  # 5 MB
-        backupCount=2
-    )
-    
-    logging.basicConfig(
-        level=log_level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            rich_handler,
-            file_handler
-        ]
-    )
-
-logger = logging.getLogger(__name__)
-
-
-def _handle_analysis_output(
-    final_state: dict,
-    send_notification_func,
-    send_notifications: bool = True
-) -> bool:
-    """
-    Handles the final output, sending notifications and checking for errors.
-    Returns True on success, False on failure.
-    """
-    if not final_state:
-        logger.error("Analysis did not produce a final state.")
-        capture_message("Analysis finished with no final state.", level="error")
-        return False
-
-    # A report is required to proceed, even if there are errors.
-    if not final_state.get("final_report"):
-        logger.error("Analysis finished but no report was generated.")
-        # If there were also errors, log them as the likely cause.
-        if final_state.get("errors"):
-            logger.error(f"This may be due to the {len(final_state['errors'])} errors encountered.")
-        capture_message("Analysis finished with no final report.", level="error")
-        return False
-
-    # Always print the report if it exists.
-    logger.info("✓ Analysis attempting to complete...")
-    print("\n" + final_state["final_report"])
-
-    if send_notifications:
-        # Send a condensed version of the report to Pushover
-        try:
-            confidence = final_state.get("confidence_score", 0.0)
-            
-            # Extract recommendations from the report text
-            report_lines = final_state["final_report"].split('\n')
-            recommendations_section = []
-            in_recommendations = False
-            for line in report_lines:
-                if "RECOMMENDATIONS:" in line:
-                    in_recommendations = True
-                    continue
-                if in_recommendations and "Data Coverage:" in line:
-                    break
-                if in_recommendations and line.strip():
-                    recommendations_section.append(line)
-            
-            recommendations_text = "\n".join(recommendations_section).strip()
-
-            message_body = (
-                f"<b>Portfolio Analysis</b>\n\n"
-                f"<b>Confidence:</b> {confidence:.0%}\n\n"
-                f"{recommendations_text}"
-            )
-            
-            # Truncate if over 1000 characters (Pushover limit is 1024 usually, but safer to be lower)
-            if len(message_body) > 1000:
-                message_body = message_body[:990] + "...\n(truncated)"
-
-            send_notification_func(
-                message_body=message_body,
-                title="Portfolio Analysis Update"
-            )
-            logger.info("✓ Pushover notification sent")
-            
-        except Exception as notification_error:
-            logger.warning(
-                f"Failed to send notification: {notification_error}", 
-                exc_info=True
-            )
-    else:
-        logger.info("ℹ️  Notifications disabled via --no-notification flag")
-    
-    # After sending notifications, check for errors to determine final status.
-    if final_state.get("errors"):
-        logger.warning(f"Workflow completed with {len(final_state['errors'])} errors:")
-        for error in final_state["errors"]:
-            logger.warning(f"  - {error}")
-        capture_message(
-            f"Portfolio analysis completed with {len(final_state['errors'])} errors.",
-            level="warning"
-        )
-        return False
-
-    logger.info("✓ Analysis completed successfully")
-    return True
-
-
-def main():
-    """Main entry point for the autonomous portfolio manager"""
-    
-    # Parse command line arguments
-    parser = argparse.ArgumentParser(description="Autonomous Portfolio Manager")
-    parser.add_argument(
-        "--no-notification", 
-        action="store_true", 
-        help="Disable sending notifications (useful for development)"
-    )
-    args = parser.parse_args()
-    
-    # Load environment variables (Pydantic's BaseSettings does this automatically)
-    setup_logging()
-    
-    # Initialize Sentry if DSN is provided
-    if settings.SENTRY_DSN:
-        sentry_sdk.init(
-            dsn=settings.SENTRY_DSN,
-            traces_sample_rate=1.0,
-            profiles_sample_rate=1.0,
-            enable_tracing=True
-        )
-        logger.info("✓ Sentry initialized")
-    
-    logger.info("=" * 70)
-    logger.info("AUTONOMOUS PORTFOLIO MANAGER")
-    if args.no_notification:
-        logger.info("Running in development mode: Notifications DISABLED")
-    logger.info("=" * 70)
-    
-    try:
-        # Pre-process: Update stock prices in Google Sheet
-        logger.info("PRE-PROCESSING: UPDATING STOCK PRICES...")
-        try:
-            update_gsheet_prices()
-            logger.info("✓ Portfolio prices updated successfully.")
-        except Exception as price_error:
-            logger.warning(f"⚠️ Warning: Automatic price update failed: {price_error}")
-            logger.warning("Continuing with last known prices.")
-
-        # Run the autonomous analysis
-        final_state = run_autonomous_analysis(max_iterations=10)
-        
-        success = _handle_analysis_output(
-            final_state,
-            send_pushover_message,
-            send_notifications=not args.no_notification
-        )
-        
-        if success:
-            sys.exit(0)
-        else:
-            sys.exit(1)
-        
-    except KeyboardInterrupt:
-        logger.info("\nAnalysis interrupted by user")
-        sys.exit(130)
-        
-    except Exception as e:
-        logger.error(f"Fatal error: {str(e)}", exc_info=True)
-        
-        # Only send failure notification if notifications are enabled
-        if not args.no_notification:
-            try:
-                send_pushover_message(
-                    message_body=f"Error: {str(e)}\n\nCheck logs for details.",
-                    title="❌ Portfolio Analysis Failed",
-                    priority=1
-                )
-            except Exception as notify_error:
-                logger.error(f"Failed to send failure notification: {notify_error}")
-        else:
-            logger.info("ℹ️  Failure notification suppressed (--no-notification)")
-        
-        capture_error(e)
-        sys.exit(1)
-
+from src.portfolio_manager.graph.main import main
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

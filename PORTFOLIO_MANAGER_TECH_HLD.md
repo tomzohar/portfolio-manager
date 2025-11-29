@@ -1,5 +1,8 @@
 # Portfolio Manager: Technical High-Level Design
 
+> **⚠️ NOTE:** This document details the V2 technical implementation (LangGraph migration).
+> For the **V3 Supervisor Architecture**, refer to `MANAGER_V3.md` and `ARCHITECTURE.md`.
+
 ## 1. Objective
 
 This document outlines the technical implementation plan for refactoring the existing `stock-researcher` pipeline into an autonomous agent system, as specified in `PORTFOLIO_MANAGER.md`. The core of this redesign will be the adoption of `LangGraph` to create a stateful, event-driven workflow orchestrated by a central Portfolio Manager agent.
@@ -13,6 +16,53 @@ We will use `LangGraph`, a library for building stateful, multi-agent applicatio
 -   **Stateful Graphs**: The agent's state (e.g., portfolio data, analysis results, conversation history) is explicitly managed and passed between nodes.
 -   **Nodes**: Nodes represent functions or tools that can be invoked.
 -   **Edges**: Edges connect nodes, allowing for conditional logic and complex, cyclical workflows, which are essential for the agent's iterative reasoning process.
+
+### 2.1 LLM Integration Pattern
+
+**Important**: All LLM calls in this project use the centralized `call_gemini_api()` utility from `src.stock_researcher.utils.llm_utils`. This provides:
+
+- Consistent retry logic with exponential backoff via `tenacity`
+- Centralized API key management
+- Lazy client initialization for test-friendly imports
+- Standardized error handling
+
+**Do NOT use** LangChain's `ChatGoogleGenerativeAI` directly. Instead:
+
+```python
+from src.stock_researcher.utils.llm_utils import call_gemini_api
+
+# Correct usage
+response_text = call_gemini_api(prompt, model='gemini-2.5-flash')
+
+# ❌ Incorrect - Don't do this
+llm = ChatGoogleGenerativeAI(model="...")
+response = llm.invoke(prompt)
+```
+
+This pattern ensures all LLM interactions are consistent, resilient, and easily mockable for testing.
+
+### 2.2 Logging Pattern
+
+**Important**: All logging in this project uses Python's standard `logging` module. **NEVER** use `rich.console.Console` or `print()` statements.
+
+**Correct Pattern:**
+
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Use appropriate log levels
+logger.info("Starting analysis for AAPL")
+logger.warning("Missing data, using fallback value")
+logger.error(f"API call failed: {e}", exc_info=True)
+```
+
+**Log Level Guidelines:**
+- `logger.info()` - Normal operational messages
+- `logger.warning()` - Expected but unusual conditions
+- `logger.error()` - Error conditions (always include `exc_info=True` for exceptions)
+- `logger.debug()` - Detailed diagnostic information
 
 ## 3. High-Level Architecture
 
@@ -407,28 +457,19 @@ Current Confidence: {state["confidence_score"]:.2%}
 Based on this information, what should be your next action?
 """
         
-        # Call LLM for decision
-        llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash",
-            temperature=0.1,  # Lower temperature for consistent decisions
-        )
-        
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message}
-        ]
-        
-        response = llm.invoke(messages)
+        # Call LLM for decision using the centralized utility
+        full_prompt = f"{system_prompt}\n\n{user_message}"
+        response_text = call_gemini_api(full_prompt, model="gemini-2.5-flash")
         
         # Parse LLM decision
-        decision = parse_agent_decision(response.content)
+        decision = parse_agent_decision(response_text)
         
         # Store reasoning and decision
         state["agent_reasoning"].append({
             "iteration": iteration,
             "reasoning": decision.get("reasoning", ""),
             "action": decision.get("action", ""),
-            "raw_response": response.content
+            "raw_response": response_text
         })
         
         # Store next tool call

@@ -9,7 +9,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from stock_researcher.pre_processor.update_prices import update_gsheet_prices
+from portfolio_manager.integrations.google_sheets import update_gsheet_prices
 
 def main():
     """
