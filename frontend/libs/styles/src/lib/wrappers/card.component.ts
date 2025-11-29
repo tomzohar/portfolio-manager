@@ -25,11 +25,7 @@ import { MatCardModule } from '@angular/material/card';
       }
     </mat-card>
   `,
-  styles: [`
-    .lib-card {
-      margin-bottom: 16px;
-    }
-  `]
+  styleUrl: './card.component.scss'
 })
 export class CardComponent {
   title = input<string>();

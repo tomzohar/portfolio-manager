@@ -12,11 +12,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
       <ng-content></ng-content>
     </mat-toolbar>
   `,
-  styles: [`
-    .spacer {
-      flex: 1 1 auto;
-    }
-  `]
+  styleUrl: './toolbar.component.scss'
 })
 export class ToolbarComponent {
   title = input('');

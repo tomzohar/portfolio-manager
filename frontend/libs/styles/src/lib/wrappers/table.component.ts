@@ -37,11 +37,7 @@ export interface ColumnDef {
       <tr mat-row *matRowDef="let row; columns: displayedColumns();"></tr>
     </table>
   `,
-  styles: [`
-    .lib-table {
-      width: 100%;
-    }
-  `]
+  styleUrl: './table.component.scss'
 })
 export class TableComponent {
   data = input<any[]>([]);

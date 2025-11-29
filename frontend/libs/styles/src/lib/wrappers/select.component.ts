@@ -22,11 +22,7 @@ export interface SelectOption {
       </mat-select>
     </mat-form-field>
   `,
-  styles: [`
-    .lib-select {
-      width: 100%;
-    }
-  `]
+  styleUrl: './select.component.scss'
 })
 export class SelectComponent {
   label = input('');
