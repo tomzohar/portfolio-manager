@@ -1,1 +1,6 @@
-<lib-ui-dashboard></lib-ui-dashboard>
+<lib-ui-dashboard
+  [portfolios]="portfolios()"
+  [assets]="currentAssets()"
+  [selectedPortfolioId]="selectedPortfolioId()"
+  (portfolioSelected)="onPortfolioSelected($event)">
+</lib-ui-dashboard>

@@ -1,0 +1,10 @@
+@use 'scss' as *;
+
+.dashboard-container {
+  @include flex-column($gap: 0);
+  height: 100%;
+}
+
+.dashboard-content {
+  @include container-center($max-width: $max-width-container, $padding: $spacing-lg);
+}

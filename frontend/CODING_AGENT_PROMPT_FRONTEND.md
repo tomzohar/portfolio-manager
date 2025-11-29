@@ -22,6 +22,8 @@ libs/data-access-*: State (NgRx), Services, and Facades.
 
 libs/util-*: Pure functions and helpers.
 
+libs/styles: Centralized SCSS framework (design tokens, mixins) and Material wrapper components.
+
 Strict Imports: You MUST NOT import a Feature library into a UI library. Circular dependencies are FORBIDDEN.
 
 B. CODE QUALITY & STANDARDS
@@ -30,6 +32,8 @@ Language: TypeScript 5.2+ (Strict Mode Enabled).
 Framework: Angular 18+ (Zoneless Enabled).
 
 Style: Strict adherence to Angular Signal patterns.
+
+Styling: All components MUST use the centralized SCSS framework from libs/styles for consistency. Import design tokens and mixins via @use '@stocks-researcher/styles/src/lib/scss' as *;.
 
 Typing: any is FORBIDDEN. Use Interfaces/Types for all data structures.
 
@@ -112,6 +116,15 @@ Smart (Container) Components: Inject Facades. Read Signals. Dispatch Actions.
 Dumb (Presentational) Components: Receive data via input(). Emit events via output().
 
 Models: Use model() for two-way binding scenarios (e.g., checkbox state).
+
+3. Styling Standards
+SCSS Framework: All component styles MUST use the centralized SCSS framework located at libs/styles/src/lib/scss/.
+
+Design Tokens: Use variables for spacing ($spacing-md), colors ($color-primary), borders ($border-radius-md), etc. NEVER hardcode values.
+
+Mixins: Use mixins for common patterns (container-center, flex-column, card-surface).
+
+Wrapper Components: Leverage pre-built wrapper components from @stocks-researcher/styles (CardComponent, SelectComponent, TableComponent, ToolbarComponent) for consistent UI.
 
 IV. TESTING PROTOCOL
 Framework: Jest (Unit), Cypress (E2E).

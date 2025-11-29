@@ -1,0 +1,74 @@
+@use './variables' as *;
+
+// Mixin: Centered Container
+@mixin container-center($max-width: $max-width-container, $padding: $spacing-lg) {
+  max-width: $max-width;
+  margin: 0 auto;
+  padding: $padding;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+// Mixin: Flexbox Column Layout
+@mixin flex-column($gap: $spacing-md) {
+  display: flex;
+  flex-direction: column;
+  gap: $gap;
+}
+
+// Mixin: Flexbox Row Layout
+@mixin flex-row($gap: $spacing-md, $align: center) {
+  display: flex;
+  flex-direction: row;
+  align-items: $align;
+  gap: $gap;
+}
+
+// Mixin: Card/Surface styling
+@mixin card-surface {
+  background-color: $color-surface;
+  border-radius: $border-radius-md;
+  box-shadow: $shadow-sm;
+  padding: $spacing-md;
+}
+
+// Mixin: Standard Border
+@mixin border($color: $border-color, $width: $border-width-thin, $radius: $border-radius-sm) {
+  border: $width solid $color;
+  border-radius: $radius;
+}
+
+// Mixin: Responsive Breakpoint
+@mixin respond-to($breakpoint) {
+  @if $breakpoint == 'sm' {
+    @media (min-width: $breakpoint-sm) { @content; }
+  }
+  @else if $breakpoint == 'md' {
+    @media (min-width: $breakpoint-md) { @content; }
+  }
+  @else if $breakpoint == 'lg' {
+    @media (min-width: $breakpoint-lg) { @content; }
+  }
+  @else if $breakpoint == 'xl' {
+    @media (min-width: $breakpoint-xl) { @content; }
+  }
+}
+
+// Mixin: Truncate text with ellipsis
+@mixin text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Mixin: Reset button styles
+@mixin button-reset {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
