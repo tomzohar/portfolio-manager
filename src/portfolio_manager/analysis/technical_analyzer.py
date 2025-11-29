@@ -439,3 +439,90 @@ def calculate_technical_indicators(df: pd.DataFrame) -> Dict[str, Any]:
         logger.error(f"Error calculating technical indicators: {e}", exc_info=True)
         return {"error": f"Failed to calculate indicators: {str(e)}"}
 
+
+def analyze_stock_technicals(tickers: List[str]) -> Dict[str, str]:
+    """
+    Analyze technical indicators for multiple tickers and generate interpretations.
+    
+    This function provides a simple interface for the analyze_technicals tool
+    by fetching OHLCV data, calculating indicators, and generating summaries.
+    
+    Args:
+        tickers: List of stock ticker symbols
+        
+    Returns:
+        Dictionary mapping ticker to analysis summary:
+        {
+            "AAPL": "Stock shows bullish momentum with RSI at 65...",
+            "MSFT": "..."
+        }
+    """
+    from ..integrations.polygon import fetch_ohlcv_data
+    
+    results = {}
+    
+    try:
+        # Fetch OHLCV data for all tickers (1 year)
+        ohlcv_result = fetch_ohlcv_data(tickers, period="1y")
+        
+        if not ohlcv_result.get("success"):
+            logger.error(f"Failed to fetch OHLCV data: {ohlcv_result.get('error')}")
+            return {ticker: f"Error: {ohlcv_result.get('error')}" for ticker in tickers}
+        
+        ohlcv_data = ohlcv_result.get("data", {})
+        
+        for ticker in tickers:
+            try:
+                df = ohlcv_data.get(ticker, pd.DataFrame())
+                
+                if df.empty:
+                    results[ticker] = f"No historical data available for {ticker}"
+                    continue
+                
+                # Calculate indicators
+                indicators = calculate_technical_indicators(df)
+                
+                if "error" in indicators:
+                    results[ticker] = f"Error calculating indicators: {indicators['error']}"
+                    continue
+                
+                # Generate simple summary
+                rsi = indicators.get('RSI', 0)
+                macd_hist = indicators.get('MACD_hist', 0)
+                price_vs_sma50 = indicators.get('price_vs_SMA50', 'unknown')
+                price_vs_sma200 = indicators.get('price_vs_SMA200', 'unknown')
+                
+                # Determine momentum
+                if rsi > 70:
+                    rsi_note = "overbought (RSI > 70)"
+                elif rsi < 30:
+                    rsi_note = "oversold (RSI < 30)"
+                else:
+                    rsi_note = f"neutral (RSI: {rsi:.1f})"
+                
+                # Determine trend
+                if price_vs_sma50 == "above" and price_vs_sma200 == "above":
+                    trend_note = "bullish trend (above both SMAs)"
+                elif price_vs_sma50 == "below" and price_vs_sma200 == "below":
+                    trend_note = "bearish trend (below both SMAs)"
+                else:
+                    trend_note = "mixed signals on trend"
+                
+                # MACD momentum
+                macd_note = "positive momentum" if macd_hist > 0 else "negative momentum"
+                
+                summary = f"{trend_note}. Stock is {rsi_note}. MACD shows {macd_note}."
+                results[ticker] = summary
+                
+            except Exception as e:
+                sentry_sdk.capture_exception(e)
+                logger.error(f"Error analyzing {ticker}: {e}", exc_info=True)
+                results[ticker] = f"Analysis error: {str(e)}"
+        
+        return results
+        
+    except Exception as e:
+        sentry_sdk.capture_exception(e)
+        logger.error(f"Fatal error in analyze_stock_technicals: {e}", exc_info=True)
+        return {ticker: f"Fatal error: {str(e)}" for ticker in tickers}
+

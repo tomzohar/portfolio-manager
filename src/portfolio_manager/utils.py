@@ -20,11 +20,11 @@ import sentry_sdk
 
 from .agent_state import AgentState
 from .prompts import get_final_report_prompt
+from .config import settings
 
 logger = logging.getLogger(__name__)
 
 
-def format_portfolio_summary(portfolio: Dict[str, Any] | None) -> str:
 def format_portfolio_summary(portfolio: Dict[str, Any] | None) -> str:
     """
     Generate a concise, human-readable summary of the portfolio.
@@ -53,8 +53,6 @@ def format_portfolio_summary(portfolio: Dict[str, Any] | None) -> str:
     )[:5]
     
     for pos in sorted_positions:
-        # Support both 'weight' and 'percentage_of_portfolio' keys
-        percentage = pos.get('weight', pos.get('percentage_of_portfolio', 0)) * 100
         # Support both 'weight' and 'percentage_of_portfolio' keys
         percentage = pos.get('weight', pos.get('percentage_of_portfolio', 0)) * 100
         summary.append(
@@ -116,14 +114,11 @@ def format_state_for_llm(state: AgentState) -> str:
     
     Args:
         state: The current agent state model.
-        state: The current agent state model.
         
     Returns:
         A formatted string summarizing the entire state.
     """
     try:
-        portfolio_summary = format_portfolio_summary(state.portfolio)
-        analysis_summary = format_analysis_summary(state.analysis_results)
         portfolio_summary = format_portfolio_summary(state.portfolio)
         analysis_summary = format_analysis_summary(state.analysis_results)
         
@@ -135,40 +130,6 @@ def format_state_for_llm(state: AgentState) -> str:
     except Exception as e:
         logger.error(f"Failed to format state for LLM: {e}", exc_info=True)
         return "Error: Could not format the current state."
-
-
-def format_state_for_final_report(state: AgentState) -> str:
-    """
-    Create a detailed summary of the final state for the final report LLM.
-    
-    Args:
-        state: The final agent state model.
-        
-    Returns:
-        A formatted string summarizing the portfolio and all analyses performed.
-    """
-    if not state.portfolio:
-        return "ERROR: No portfolio was loaded."
-
-    portfolio_summary = (
-        f"Portfolio Value: ${state.portfolio.get('total_value', 0):,.2f}\n"
-        f"Number of Positions: {len(state.portfolio.get('positions', []))}"
-    )
-
-    analysis_details = []
-    for ticker, analyses in state.analysis_results.items():
-        details = [f"--- {ticker} ---"]
-        if "news" in analyses:
-            details.append(f"News Analysis:\n{analyses['news']}")
-        if "technicals" in analyses:
-            details.append(f"Technical Analysis:\n{analyses['technicals']}")
-        analysis_details.append("\n".join(details))
-
-    return (
-        f"{portfolio_summary}\n\n"
-        "--- Detailed Analysis Results ---\n"
-        f"{'\n\n'.join(analysis_details)}"
-    )
 
 
 def format_state_for_final_report(state: AgentState) -> str:
@@ -250,14 +211,6 @@ def get_cost(api_type: ApiType, count: int) -> float:
     return 0.0
 
 
-def get_cost(api_type: ApiType, count: int) -> float:
-    """Calculate the cost for a specific API call."""
-    if api_type in API_COSTS:
-        return API_COSTS[api_type] * count
-    logger.warning(f"Unknown API type for cost estimation: {api_type}")
-    return 0.0
-
-
 def estimate_cost(api_calls: List[Dict[str, Any]]) -> float:
     """
     Estimate the cost of a list of API calls.
@@ -279,7 +232,6 @@ def estimate_cost(api_calls: List[Dict[str, Any]]) -> float:
         
         try:
             api_type = ApiType(api_type_str)
-            total_cost += get_cost(api_type, count)
             total_cost += get_cost(api_type, count)
         except ValueError:
             logger.warning(f"Invalid API type string for cost estimation: {api_type_str}")

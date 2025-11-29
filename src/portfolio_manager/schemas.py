@@ -29,6 +29,77 @@ class AgentDecision(BaseModel):
 
 
 # ============================================================================
+# Portfolio Data Schemas
+# ============================================================================
+
+
+class PortfolioPosition(BaseModel):
+    """
+    Schema for a single portfolio position from Google Sheets.
+    
+    Attributes:
+        symbol: Stock ticker symbol (e.g., 'AAPL')
+        price: Current price per share
+        position: Number of shares held
+        market_value: Total value of position (price * position)
+        percent_of_total: Position percentage of total portfolio (0-100)
+    
+    Examples:
+        >>> pos = PortfolioPosition(
+        ...     symbol="AAPL",
+        ...     price=150.0,
+        ...     position=100,
+        ...     market_value=15000.0,
+        ...     percent_of_total=10.0
+        ... )
+    """
+    symbol: str = Field(description="Stock ticker symbol")
+    price: float = Field(ge=0.0, description="Current price per share")
+    position: int = Field(ge=0, description="Number of shares held")
+    market_value: float = Field(ge=0.0, description="Total value of position")
+    percent_of_total: float = Field(
+        ge=0.0, 
+        le=100.0, 
+        description="Position percentage of total portfolio"
+    )
+    
+    class Config:
+        frozen = True
+
+
+class Portfolio(BaseModel):
+    """
+    Schema for complete portfolio data from Google Sheets.
+    
+    Attributes:
+        positions: List of portfolio positions
+        total_value: Total portfolio value across all positions
+    
+    Examples:
+        >>> portfolio = Portfolio(
+        ...     positions=[
+        ...         PortfolioPosition(symbol="AAPL", price=150.0, position=100, 
+        ...                           market_value=15000.0, percent_of_total=50.0),
+        ...         PortfolioPosition(symbol="MSFT", price=300.0, position=50,
+        ...                           market_value=15000.0, percent_of_total=50.0)
+        ...     ],
+        ...     total_value=30000.0
+        ... )
+    """
+    positions: List[PortfolioPosition] = Field(
+        min_length=1,
+        description="List of portfolio positions"
+    )
+    total_value: float = Field(
+        ge=0.0,
+        description="Total portfolio value"
+    )
+    
+    class Config:
+        frozen = True
+
+
+# ============================================================================
 # V3 Schemas - Supervisor Multi-Agent Architecture
 # ============================================================================
 

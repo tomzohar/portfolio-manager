@@ -14,11 +14,65 @@ from polygon import RESTClient
 from pydantic import BaseModel
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from ..config import settings
 from ..error_handler import capture_error
 from ..schemas import Portfolio, PortfolioPosition
+from ..config import settings, get_google_creds
 
 logger = logging.getLogger(__name__)
+
+
+def _get_last_trading_day(polygon_client: RESTClient, reference_ticker: str = "SPY", max_days_back: int = 10) -> str:
+    """
+    Finds the last trading day by checking backwards from today.
+    
+    Uses SPY (S&P 500 ETF) as a reference since it always trades when the market is open.
+    Handles weekends and holidays automatically.
+    
+    Args:
+        polygon_client: Initialized Polygon REST client
+        reference_ticker: Ticker to use for checking trading days (default: SPY)
+        max_days_back: Maximum number of days to check backwards
+    
+    Returns:
+        Last trading day in YYYY-MM-DD format
+        
+    Raises:
+        ValueError: If no trading day found within max_days_back
+    """
+    from datetime import datetime
+    
+    for days_back in range(1, max_days_back + 1):
+        check_date = (date.today() - timedelta(days=days_back))
+        
+        # Skip weekends (Saturday=5, Sunday=6)
+        if check_date.weekday() >= 5:
+            continue
+            
+        date_str = check_date.strftime('%Y-%m-%d')
+        
+        try:
+            # Try to get data for this date
+            resp = polygon_client.get_daily_open_close_agg(reference_ticker, date_str)
+            
+            if hasattr(resp, 'close') and resp.close is not None:
+                logger.info(f"Found last trading day: {date_str}")
+                return date_str
+        except Exception as e:
+            # If data not found for this date, continue checking
+            logger.debug(f"No trading data for {date_str}: {e}")
+            continue
+    
+    # Fallback: if we couldn't find trading data, return the last weekday
+    days_back = 1
+    while days_back <= max_days_back:
+        check_date = date.today() - timedelta(days=days_back)
+        if check_date.weekday() < 5:  # Monday-Friday
+            logger.warning(f"Could not verify trading day via API, using last weekday: {check_date.strftime('%Y-%m-%d')}")
+            return check_date.strftime('%Y-%m-%d')
+        days_back += 1
+    
+    raise ValueError(f"Could not find a valid trading day within the last {max_days_back} days")
+
 
 
 def _get_gspread_client() -> gspread.Client:
@@ -29,7 +83,7 @@ def _get_gspread_client() -> gspread.Client:
     ]
     
     # 1. Try Base64 encoded credentials first (Settings handles decoding)
-    creds_dict = settings.get_google_creds()
+    creds_dict = get_google_creds()
     
     if creds_dict:
         creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
@@ -171,6 +225,7 @@ def update_gsheet_prices(sheet_name: str = 'גיליון1', column_range: str = 
     """
     try:
         client = _get_gspread_client()
+        logger.info(f"Authenticated with Google Sheets using file: {settings.GOOGLE_SERVICE_ACCOUNT_FILE}")
         polygon_client = RESTClient(settings.POLYGON_API_KEY)
         
         try:
@@ -194,8 +249,12 @@ def update_gsheet_prices(sheet_name: str = 'גיליון1', column_range: str = 
 
         logger.info(f"Found {len(tickers)} tickers. Fetching latest prices from Polygon...")
 
-        # Get previous trading day
-        previous_day = (date.today() - timedelta(days=1)).strftime('%Y-%m-%d')
+        # Get last trading day (handles weekends and holidays)
+        try:
+            last_trading_day = _get_last_trading_day(polygon_client)
+        except ValueError as e:
+            logger.error(f"Failed to find last trading day: {e}")
+            raise
         
         prices_to_update = []
         
@@ -209,7 +268,7 @@ def update_gsheet_prices(sheet_name: str = 'גיליון1', column_range: str = 
             
             try:
                 # Fetch daily open/close agg
-                resp = polygon_client.get_daily_open_close_agg(ticker, previous_day)
+                resp = polygon_client.get_daily_open_close_agg(ticker, last_trading_day)
                 
                 if hasattr(resp, 'close'):
                     latest_price = resp.close
@@ -217,7 +276,7 @@ def update_gsheet_prices(sheet_name: str = 'גיליון1', column_range: str = 
                     logger.debug(f"Updated {ticker} to ${latest_price:.2f}")
                 else:
                     prices_to_update.append([current_price])
-                    logger.warning(f"No data for {ticker} on {previous_day}. Keeping old price.")
+                    logger.warning(f"No data for {ticker} on {last_trading_day}. Keeping old price.")
             except Exception as e:
                 # Don't fail the whole batch for one ticker error
                 prices_to_update.append([current_price])

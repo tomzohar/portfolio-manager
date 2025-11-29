@@ -21,7 +21,7 @@ from src.portfolio_manager.schemas import (
     RiskAssessment
 )
 from src.portfolio_manager.config import settings
-from src.stock_researcher.notifications.pushover import send_pushover_message
+from src.portfolio_manager.integrations.pushover import send_pushover_message
 from src.stock_researcher.utils.llm_utils import call_gemini_api
 
 logger = logging.getLogger(__name__)

@@ -7,7 +7,6 @@ logger = logging.getLogger(__name__)
 
 
 def start_node(state: dict) -> dict:
-def start_node(state: dict) -> dict:
     """
     Initial node in the graph. 
     

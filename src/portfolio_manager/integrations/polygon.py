@@ -75,11 +75,60 @@ def fetch_ohlcv_data(
     logger.info(f"Fetching OHLCV data for {len(tickers)} tickers (period: {period})")
     
     try:
-        # Import legacy fetcher (read-only)
-        from ...stock_researcher.data_fetcher.ohlcv import fetch_ohlcv_data as legacy_fetch
+        # Parse period string (e.g., "1y" -> 1 year)
+        years = int(period.rstrip('y'))
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=years * 365)
         
-        # Delegate to legacy implementation (we must not modify it)
-        ohlcv_data = legacy_fetch(tickers, period)
+        # Initialize Polygon REST client
+        api_key = getattr(settings, 'POLYGON_API_KEY', None)
+        if not api_key:
+            import os
+            api_key = os.getenv('POLYGON_API_KEY')
+            if not api_key:
+                raise ValueError("POLYGON_API_KEY not found in settings or environment")
+        
+        client = RESTClient(api_key)
+        
+        # Fetch data for each ticker
+        ohlcv_data = {}
+        for ticker in tickers:
+            try:
+                # Fetch aggregates (daily bars) from Polygon
+                aggs = client.get_aggs(
+                    ticker=ticker,
+                    multiplier=1,
+                    timespan="day",
+                    from_=start_date.strftime("%Y-%m-%d"),
+                    to=end_date.strftime("%Y-%m-%d")
+                )
+                
+                # Convert to pandas DataFrame
+                if aggs and len(aggs) > 0:
+                    data = []
+                    for agg in aggs:
+                        data.append({
+                            'Open': agg.open,
+                            'High': agg.high,
+                            'Low': agg.low,
+                            'Close': agg.close,
+                            'Volume': agg.volume,
+                        })
+                    
+                    df = pd.DataFrame(data)
+                    # Set index to timestamps
+                    timestamps = [datetime.fromtimestamp(agg.timestamp / 1000) for agg in aggs]
+                    df.index = pd.DatetimeIndex(timestamps)
+                    ohlcv_data[ticker] = df
+                    logger.info(f"Fetched {len(df)} data points for {ticker}")
+                else:
+                    # Empty DataFrame for ticker with no data
+                    ohlcv_data[ticker] = pd.DataFrame()
+                    logger.warning(f"No data returned for {ticker}")
+                    
+            except Exception as ticker_error:
+                logger.warning(f"Failed to fetch data for {ticker}: {str(ticker_error)}")
+                ohlcv_data[ticker] = pd.DataFrame()
         
         logger.info(f"Successfully fetched OHLCV data for {len(ohlcv_data)} tickers")
         

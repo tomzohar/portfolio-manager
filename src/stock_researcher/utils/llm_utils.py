@@ -6,7 +6,7 @@ Provides a centralized, retry-enabled function for calling the Gemini API.
 
 from google import genai
 from tenacity import retry, stop_after_attempt, wait_exponential
-from ..config import GEMINI_API_KEY
+from src.portfolio_manager.config import settings
 
 # Using a common, robust model
 LLM_MODEL = 'gemini-2.5-flash'
@@ -22,9 +22,9 @@ def _get_gemini_client():
     """
     global _client
     if _client is None:
-        if not GEMINI_API_KEY:
+        if not settings.GEMINI_API_KEY:
             raise ValueError("GEMINI_API_KEY is not set. Please configure it in your environment.")
-        _client = genai.Client(api_key=GEMINI_API_KEY)
+        _client = genai.Client(api_key=settings.GEMINI_API_KEY)
     return _client
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))

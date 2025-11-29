@@ -516,7 +516,7 @@ class TestCLIMain:
         mock_run = mocker.patch('src.portfolio_manager.graph.main.run_autonomous_analysis')
         mock_run.return_value = mock_v2_state
         
-        mock_notification = mocker.patch('src.stock_researcher.notifications.pushover.send_pushover_message')
+        mock_notification = mocker.patch('src.portfolio_manager.integrations.pushover.send_pushover_message')
         mocker.patch('builtins.print')
         
         result = main()
@@ -531,7 +531,7 @@ class TestCLIMain:
         mock_run = mocker.patch('src.portfolio_manager.graph.main.run_autonomous_analysis')
         mock_run.return_value = mock_v2_state
         
-        mock_notification = mocker.patch('src.stock_researcher.notifications.pushover.send_pushover_message')
+        mock_notification = mocker.patch('src.portfolio_manager.integrations.pushover.send_pushover_message')
         mocker.patch('builtins.print')
         
         result = main()

@@ -10,7 +10,6 @@ from unittest.mock import Mock, patch, MagicMock
 
 from src.portfolio_manager.agent_state import (
     AgentState,
-    AgentState,
     ToolResult,
 )
 from src.portfolio_manager.graph.nodes import (
@@ -21,7 +20,6 @@ from src.portfolio_manager.graph.nodes import (
 )
 from src.portfolio_manager.graph.edges import route_after_agent_decision
 from src.portfolio_manager.graph.builder import build_graph
-from src.portfolio_manager.agent_state import AgentState
 
 
 @pytest.fixture
@@ -66,7 +64,6 @@ class TestGraphNodes:
     def test_should_continue_max_iterations(self):
         """Test termination condition: max iterations reached"""
         state = AgentState(max_iterations=5).model_dump()
-        state = AgentState(max_iterations=5).model_dump()
         state["current_iteration"] = 6
         state["portfolio"] = {"positions": []}
         
@@ -76,7 +73,6 @@ class TestGraphNodes:
     
     def test_should_continue_high_confidence(self):
         """Test termination condition: high confidence achieved"""
-        state = AgentState().model_dump()
         state = AgentState().model_dump()
         state["current_iteration"] = 2
         state["portfolio"] = {"positions": []}
@@ -88,7 +84,6 @@ class TestGraphNodes:
     
     def test_should_continue_low_confidence(self):
         """Test continuation condition: low confidence"""
-        state = AgentState().model_dump()
         state = AgentState().model_dump()
         state["current_iteration"] = 2
         state["portfolio"] = {"positions": []}
@@ -104,25 +99,18 @@ class TestGraphNodes:
         """Test agent decision when portfolio not yet loaded"""
         # Setup
         state = AgentState().model_dump()
-        state = AgentState().model_dump()
         
         # Mock the LLM response
         mock_call_gemini.return_value = '{"reasoning": "Need to parse portfolio.", "action": "parse_portfolio", "arguments": {}}'
         
         # Execute - returns a patch
         patch = agent_decision_node(state)
-        # Execute - returns a patch
-        patch = agent_decision_node(state)
         
         # Verify
         assert patch["next_tool_call"]["tool"] == "parse_portfolio"
         assert "Need to parse portfolio" in patch["agent_reasoning"][0]["decision"]
-        assert patch["next_tool_call"]["tool"] == "parse_portfolio"
-        assert "Need to parse portfolio" in patch["agent_reasoning"][0]["decision"]
         
         # Verify API call reporting from the node itself
-        assert "newly_completed_api_calls" in patch
-        assert len(patch["newly_completed_api_calls"]) == 1
         assert "newly_completed_api_calls" in patch
         assert len(patch["newly_completed_api_calls"]) == 1
         
@@ -132,7 +120,6 @@ class TestGraphNodes:
     def test_agent_decision_node_analyze_large_positions(self, mock_call_gemini):
         """Test agent decision to analyze large positions"""
         # Setup
-        state = AgentState().model_dump()
         state = AgentState().model_dump()
         state["portfolio"] = {
             "total_value": 100000.0,
@@ -147,13 +134,8 @@ class TestGraphNodes:
         
         # Execute - returns a patch
         patch = agent_decision_node(state)
-        # Execute - returns a patch
-        patch = agent_decision_node(state)
         
         # Verify
-        assert patch["next_tool_call"]["tool"] == "analyze_news"
-        assert patch["next_tool_call"]["args"] == {"tickers": ["AAPL"]}
-        assert "AAPL is a large position" in patch["agent_reasoning"][0]["decision"]
         assert patch["next_tool_call"]["tool"] == "analyze_news"
         assert patch["next_tool_call"]["args"] == {"tickers": ["AAPL"]}
         assert "AAPL is a large position" in patch["agent_reasoning"][0]["decision"]
@@ -162,8 +144,6 @@ class TestGraphNodes:
     def test_tool_execution_node_applies_patch(self, mock_execute_tool):
         """Test that the tool_execution_node correctly applies a state_patch."""
         # Setup
-        state = AgentState().model_dump()
-        state["next_tool_call"] = {"tool": "parse_portfolio", "args": {}}
         state = AgentState().model_dump()
         state["next_tool_call"] = {"tool": "parse_portfolio", "args": {}}
         
@@ -180,7 +160,6 @@ class TestGraphNodes:
         )
         
         # Execute
-        patch = tool_execution_node(state)
         patch = tool_execution_node(state)
         
         # Verify - tool_execution_node returns a patch, not full state
@@ -250,7 +229,6 @@ class TestGraphNodes:
         
         # Execute
         patch = final_report_node(state)
-        patch = final_report_node(state)
         
         # Verify - V3 returns JSON string, not completed_at
         assert "final_report" in patch
@@ -277,9 +255,6 @@ class TestGraphIntegration:
         # Graph should be compiled and ready to invoke
 
     def test_graph_terminates_on_guardrail_breach(self):
-    def test_graph_terminates_on_guardrail_breach(self):
-        """
-        Test that guardrails trigger when cost exceeds limit.
         """
         Test that guardrails trigger when cost exceeds limit.
         """
@@ -287,14 +262,7 @@ class TestGraphIntegration:
         
         # Setup state with high cost
         state = AgentState(estimated_cost=2.0).model_dump()  # Exceeds $1.00 limit
-        # Setup state with high cost
-        state = AgentState(estimated_cost=2.0).model_dump()  # Exceeds $1.00 limit
         
-        # Execute guardrail
-        patch = guardrail_node(state)
-        
-        # Verify it forces final report due to cost breach
-        assert patch.get("force_final_report") is True
         # Execute guardrail
         patch = guardrail_node(state)
         

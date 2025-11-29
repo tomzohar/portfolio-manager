@@ -49,13 +49,11 @@ def parse_portfolio_tool() -> ToolResult:
     try:
         logger.info("Tool invoked: parse_portfolio")
         
-        # Call the legacy function, which is now configured via our settings load
-        # No need to pass settings directly, as the legacy function uses gspread
-        # which reads environment variables that pydantic has already loaded.
-        portfolio = parse_portfolio_legacy()
+        # Call the integration function to parse portfolio from Google Sheets
+        portfolio = parse_portfolio()
         
         # Convert Portfolio object to dict for JSON serialization
-        # Note: legacy uses 'symbol' not 'ticker', 'position' not 'shares'
+        # Note: integration uses 'symbol' not 'ticker', 'position' not 'shares'
         portfolio_dict = {
             "total_value": portfolio.total_value,
             "positions": [

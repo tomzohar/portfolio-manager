@@ -53,11 +53,19 @@ class TestFetchOHLCVData:
             }, index=sample_dates)
         }
 
-        # Mock the legacy fetcher (must mock at import source)
-        mock_legacy = mocker.patch(
-            'src.stock_researcher.data_fetcher.ohlcv.fetch_ohlcv_data',
-            return_value=sample_data
-        )
+        # Mock Polygon REST client and its response
+        mock_agg = MagicMock()
+        mock_agg.open = 150.0
+        mock_agg.high = 152.0
+        mock_agg.low = 149.0
+        mock_agg.close = 151.0
+        mock_agg.volume = 1000000
+        mock_agg.timestamp = datetime(2024, 1, 1).timestamp() * 1000
+        
+        mock_client = MagicMock()
+        mock_client.get_aggs.return_value = [mock_agg] * 10  # 10 days of data
+        
+        mocker.patch('src.portfolio_manager.integrations.polygon.RESTClient', return_value=mock_client)
 
         # Call function
         result = fetch_ohlcv_data(['AAPL', 'MSFT'], period='1y')
@@ -69,20 +77,20 @@ class TestFetchOHLCVData:
         assert isinstance(result['data']['AAPL'], pd.DataFrame)
         assert len(result['data']['AAPL']) == 10
         assert result['error'] is None
-        mock_legacy.assert_called_once_with(['AAPL', 'MSFT'], '1y')
+        assert mock_client.get_aggs.call_count == 2  # Called for AAPL and MSFT
 
     def test_fetch_ohlcv_data_api_error(self, mocker):
         """
-        Test error handling when Polygon API fails.
+        Test error handling when Polygon API fails at initialization.
         
         Verifies that:
         - Exceptions are captured
         - Error response is returned
         - Sentry is notified
         """
-        # Mock legacy fetcher to raise exception (must mock at import source)
-        mock_legacy = mocker.patch(
-            'src.stock_researcher.data_fetcher.ohlcv.fetch_ohlcv_data',
+        # Mock RESTClient to raise exception on initialization (top-level failure)
+        mocker.patch(
+            'src.portfolio_manager.integrations.polygon.RESTClient',
             side_effect=Exception("API rate limit exceeded")
         )
 
@@ -106,23 +114,22 @@ class TestFetchOHLCVData:
         
         Verifies graceful handling when a ticker has no historical data.
         """
-        # Mock legacy fetcher with empty DataFrame for one ticker
-        sample_dates = pd.date_range(start='2024-01-01', periods=10, freq='D')
-        sample_data = {
-            'AAPL': pd.DataFrame({
-                'Open': [150.0 + i for i in range(10)],
-                'High': [152.0 + i for i in range(10)],
-                'Low': [149.0 + i for i in range(10)],
-                'Close': [151.0 + i for i in range(10)],
-                'Volume': [1000000 + i * 10000 for i in range(10)]
-            }, index=sample_dates),
-            'INVALID': pd.DataFrame()  # Empty DataFrame
-        }
-
-        mocker.patch(
-            'src.stock_researcher.data_fetcher.ohlcv.fetch_ohlcv_data',
-            return_value=sample_data
+        # Mock Polygon client with empty response for INVALID ticker
+        mock_agg_aapl = MagicMock()
+        mock_agg_aapl.open = 150.0
+        mock_agg_aapl.high = 152.0
+        mock_agg_aapl.low = 149.0
+        mock_agg_aapl.close = 151.0
+        mock_agg_aapl.volume = 1000000
+        mock_agg_aapl.timestamp = datetime(2024, 1, 1).timestamp() * 1000
+        
+        mock_client = MagicMock()
+        # Return data for AAPL, empty for INVALID
+        mock_client.get_aggs.side_effect = lambda ticker, **kwargs: (
+            [mock_agg_aapl] * 10 if ticker == 'AAPL' else []
         )
+        
+        mocker.patch('src.portfolio_manager.integrations.polygon.RESTClient', return_value=mock_client)
 
         # Call function
         result = fetch_ohlcv_data(['AAPL', 'INVALID'], period='1y')

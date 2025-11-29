@@ -20,7 +20,7 @@ class TestPortfolioManagerEntryPoint:
 
     @patch("sys.argv", ["run_portfolio_manager.py"])
     @patch("src.portfolio_manager.graph.main.run_autonomous_analysis")
-    @patch("src.stock_researcher.notifications.pushover.send_pushover_message")
+    @patch("src.portfolio_manager.integrations.pushover.send_pushover_message")
     def test_run_exits_0_on_success(self, mock_pushover, mock_run_analysis, mock_sys_exit):
         """
         Tests that the main function exits with status 0 on a successful run.
@@ -61,7 +61,7 @@ class TestPortfolioManagerEntryPoint:
 
     @patch("sys.argv", ["run_portfolio_manager.py"])
     @patch("src.portfolio_manager.graph.main.run_autonomous_analysis")
-    @patch("src.stock_researcher.notifications.pushover.send_pushover_message")
+    @patch("src.portfolio_manager.integrations.pushover.send_pushover_message")
     @patch("sentry_sdk.capture_message")
     def test_run_exits_1_on_workflow_errors(self, mock_capture_message, mock_pushover, mock_run_analysis, mock_sys_exit):
         """
@@ -85,7 +85,7 @@ class TestPortfolioManagerEntryPoint:
 
     @patch("sys.argv", ["run_portfolio_manager.py"])
     @patch("src.portfolio_manager.graph.main.run_autonomous_analysis")
-    @patch("src.stock_researcher.notifications.pushover.send_pushover_message")
+    @patch("src.portfolio_manager.integrations.pushover.send_pushover_message")
     @patch("sentry_sdk.capture_exception")
     def test_run_exits_1_on_fatal_exception(self, mock_capture_exception, mock_pushover, mock_run_analysis, mock_sys_exit):
         """
@@ -106,7 +106,7 @@ class TestPortfolioManagerEntryPoint:
 
     @patch("sys.argv", ["run_portfolio_manager.py"])
     @patch("src.portfolio_manager.graph.main.run_autonomous_analysis")
-    @patch("src.stock_researcher.notifications.pushover.send_pushover_message")
+    @patch("src.portfolio_manager.integrations.pushover.send_pushover_message")
     def test_run_exits_1_if_no_report_is_generated(self, mock_pushover, mock_run_analysis, mock_sys_exit):
         """
         Tests that the main function exits with status 1 if no final report is generated.
@@ -128,7 +128,7 @@ class TestPortfolioManagerEntryPoint:
 
     @patch("sys.argv", ["run_portfolio_manager.py", "--no-notification"])
     @patch("src.portfolio_manager.graph.main.run_autonomous_analysis")
-    @patch("src.stock_researcher.notifications.pushover.send_pushover_message")
+    @patch("src.portfolio_manager.integrations.pushover.send_pushover_message")
     def test_run_with_no_notification_flag_suppresses_pushover(self, mock_pushover, mock_run_analysis, mock_sys_exit):
         """
         Tests that running with --no-notification suppresses the Pushover message on success.
@@ -170,7 +170,7 @@ class TestPortfolioManagerEntryPoint:
 
     @patch("sys.argv", ["run_portfolio_manager.py", "--no-notification"])
     @patch("src.portfolio_manager.graph.main.run_autonomous_analysis")
-    @patch("src.stock_researcher.notifications.pushover.send_pushover_message")
+    @patch("src.portfolio_manager.integrations.pushover.send_pushover_message")
     @patch("sentry_sdk.capture_exception")
     def test_run_with_no_notification_flag_suppresses_error_pushover(self, mock_capture_exception, mock_pushover, mock_run_analysis, mock_sys_exit):
         """

@@ -495,7 +495,7 @@ def mock_all_external_apis(
     
     # ===== Pushover Notification Mocks =====
     pushover_patch = patch(
-        'src.stock_researcher.notifications.pushover.send_pushover_message',
+        'src.portfolio_manager.integrations.pushover.send_pushover_message',
         return_value=True
     )
     mocks["pushover"] = pushover_patch.start()

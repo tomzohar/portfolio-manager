@@ -47,23 +47,13 @@ def mock_pushover_globally(mocker):
     This fixture is auto-used (autouse=True) so it applies to every test
     without needing to be explicitly included.
     """
-    # Mock the credentials at the source module level
-    mocker.patch('src.stock_researcher.config.PUSHOVER_USER_KEY', 'mock_test_user_key')
-    mocker.patch('src.stock_researcher.config.PUSHOVER_API_TOKEN', 'mock_test_app_token')
-    
-    # Also mock directly in the pushover module since it imports at load time
-    mocker.patch('stock_researcher.notifications.pushover.PUSHOVER_USER_KEY', 'mock_test_user_key')
-    mocker.patch('stock_researcher.notifications.pushover.PUSHOVER_API_TOKEN', 'mock_test_app_token')
-    
     # Mock the actual HTTP connection to ensure NO network calls are made
     mock_conn = mocker.MagicMock()
     mock_response = mocker.MagicMock()
     mock_response.status = 200
+    mock_response.read.return_value = b'{"status":1}'
     mock_conn.getresponse.return_value = mock_response
     mocker.patch('http.client.HTTPSConnection', return_value=mock_conn)
-    
-    # Mock the print function in the pushover module to silence output
-    mocker.patch('builtins.print', side_effect=lambda *args, **kwargs: None)
 
 
 @pytest.fixture
@@ -113,6 +103,8 @@ def sample_llm_response():
 @pytest.fixture
 def mock_portfolio():
     """Provides a mock portfolio object for testing."""
+    from src.portfolio_manager.schemas import Portfolio, PortfolioPosition
+    
     return Portfolio(
         positions=[
             PortfolioPosition(symbol='GOOGL', price=278.57, position=48, market_value=13371.36, percent_of_total=20.84),
@@ -124,8 +116,6 @@ def mock_portfolio():
 
 
 @pytest.fixture
-def initial_state() -> dict:
-    """Provides a basic initial state for tests as a dictionary."""
 def initial_state() -> dict:
     """Provides a basic initial state for tests as a dictionary."""
     # Import inside fixture to avoid circular dependency issues

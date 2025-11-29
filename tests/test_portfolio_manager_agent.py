@@ -35,11 +35,10 @@ class TestAgentWorkflow:
     @patch('src.portfolio_manager.graph.main.build_graph')
     def test_graph_execution_simple_flow(self, mock_build):
         """Test a simple end-to-end graph execution flow."""
+        from src.portfolio_manager.graph.main import run_autonomous_analysis
+        
         # Setup mocks
         mock_graph = MagicMock()
-        # Simulate the invoke behavior
-        mock_final_state = {"final_report": "All done!", "max_iterations": 5}
-        mock_graph.invoke.return_value = mock_final_state
         # Simulate the invoke behavior
         mock_final_state = {"final_report": "All done!", "max_iterations": 5}
         mock_graph.invoke.return_value = mock_final_state
@@ -51,11 +50,8 @@ class TestAgentWorkflow:
         # Verify
         mock_build.assert_called_once()
         mock_graph.invoke.assert_called_once()
-        mock_graph.invoke.assert_called_once()
         
         # Check that initial state was created with the correct max_iterations
-        invoke_args = mock_graph.invoke.call_args[0][0]
-        assert invoke_args['max_iterations'] == 5
         invoke_args = mock_graph.invoke.call_args[0][0]
         assert invoke_args['max_iterations'] == 5
         

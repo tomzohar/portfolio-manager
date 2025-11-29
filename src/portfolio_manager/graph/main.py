@@ -413,7 +413,7 @@ Environment Variables:
         # Send notification if enabled
         if not args.no_notification:
             try:
-                from src.stock_researcher.notifications.pushover import send_pushover_message
+                from src.portfolio_manager.integrations.pushover import send_pushover_message
                 
                 # V3 has structured notification in final_report node
                 # V2 needs manual notification
