@@ -6,6 +6,7 @@ import { DialogService } from '@frontend/util-dialog';
 import { DashboardAsset, DashboardPortfolio } from '@stocks-researcher/types';
 import { FeatureDashboardComponent } from './feature-dashboard';
 import { CreatePortfolioDialogComponent } from '../create-portfolio-dialog/create-portfolio-dialog.component';
+import { of } from 'rxjs';
 
 describe('FeatureDashboardComponent', () => {
   let component: FeatureDashboardComponent;
@@ -63,9 +64,7 @@ describe('FeatureDashboardComponent', () => {
 
     mockDialogService = {
       open: jest.fn().mockReturnValue({
-        afterClosedObservable: {
-          subscribe: jest.fn(),
-        },
+        afterClosedObservable: of({ name: 'Test Portfolio' }),
       }),
     };
 
