@@ -1,5 +1,58 @@
 # Frontend
 
+This is the Angular frontend for the Stocks Researcher application, built with Nx workspace.
+
+## Quick Start
+
+### Prerequisites
+
+1. Node.js (v18+)
+2. Backend server running on port 3001
+
+### Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start the development server
+npx nx serve client
+
+# Or use the npm script
+npm run serve:client
+```
+
+The application will be available at `http://localhost:4200`
+
+### Backend Integration
+
+The frontend is configured to proxy API requests to the backend server:
+- Frontend: `http://localhost:4200`
+- Backend: `http://localhost:3001`
+- API Proxy: All `/api/*` requests are forwarded to the backend
+
+See [PROXY_SETUP.md](./PROXY_SETUP.md) for detailed configuration and usage.
+
+### Project Structure
+
+```
+frontend/
+├── client/                    # Main Angular application
+│   ├── src/
+│   │   ├── app/              # Application components
+│   │   ├── environments/     # Environment configurations
+│   │   └── services/         # API and shared services
+│   └── proxy.conf.json       # Development proxy configuration
+├── libs/                      # Shared libraries
+│   ├── feature-dashboard/    # Dashboard feature module
+│   ├── types/                # TypeScript types/interfaces
+│   ├── ui-dashboard/         # Dashboard UI components
+│   └── styles/               # Shared styles
+└── PROXY_SETUP.md            # Proxy configuration documentation
+```
+
+---
+
 <a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
 
 ✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
