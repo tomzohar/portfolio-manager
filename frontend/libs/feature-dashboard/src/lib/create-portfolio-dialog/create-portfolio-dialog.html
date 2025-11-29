@@ -1,0 +1,22 @@
+<h2 mat-dialog-title>Create Portfolio</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form">
+    <lib-input [config]="portfolioNameInputConfig" />
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <lib-button
+    [config]="{ label: 'Cancel', variant: 'flat' }"
+    (clicked)="onCancel()"
+  />
+  <lib-button
+    [config]="{ 
+      label: 'Create', 
+      variant: 'raised',
+      disabled: !isFormValid
+    }"
+    (clicked)="onSubmit()"
+  />
+</mat-dialog-actions>

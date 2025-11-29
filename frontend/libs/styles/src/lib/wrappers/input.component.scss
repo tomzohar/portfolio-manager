@@ -1,0 +1,21 @@
+@use '../scss' as *;
+
+:host {
+  display: block;
+}
+
+mat-form-field {
+  &.full-width {
+    width: 100%;
+  }
+}
+
+// Ensure proper spacing for prefix/suffix icons
+mat-icon[matIconPrefix] {
+  margin-right: $spacing-xs;
+}
+
+mat-icon[matIconSuffix] {
+  margin-left: $spacing-xs;
+}
+

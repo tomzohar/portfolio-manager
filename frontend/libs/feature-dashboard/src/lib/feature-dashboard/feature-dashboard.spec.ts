@@ -2,13 +2,17 @@ import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { PortfolioFacade } from '@frontend/data-access-portfolio';
+import { DialogService } from '@frontend/util-dialog';
 import { DashboardAsset, DashboardPortfolio } from '@stocks-researcher/types';
 import { FeatureDashboardComponent } from './feature-dashboard';
+import { CreatePortfolioDialogComponent } from '../create-portfolio-dialog/create-portfolio-dialog.component';
+import { of } from 'rxjs';
 
 describe('FeatureDashboardComponent', () => {
   let component: FeatureDashboardComponent;
   let fixture: ComponentFixture<FeatureDashboardComponent>;
   let mockFacade: Partial<PortfolioFacade>;
+  let mockDialogService: Partial<DialogService>;
 
   const mockPortfolios: DashboardPortfolio[] = [
     { id: '1', name: 'Retirement Fund' },
@@ -58,12 +62,19 @@ describe('FeatureDashboardComponent', () => {
       error: signal<string | null>(null),
     };
 
+    mockDialogService = {
+      open: jest.fn().mockReturnValue({
+        afterClosedObservable: of({ name: 'Test Portfolio' }),
+      }),
+    };
+
     await TestBed.configureTestingModule({
       imports: [FeatureDashboardComponent],
       providers: [
         provideZonelessChangeDetection(),
         provideAnimations(),
         { provide: PortfolioFacade, useValue: mockFacade },
+        { provide: DialogService, useValue: mockDialogService },
       ],
     }).compileComponents();
 
@@ -113,10 +124,14 @@ describe('FeatureDashboardComponent', () => {
     expect(typeof component.onCreatePortfolio).toBe('function');
   });
 
-  it('should call onCreatePortfolio when triggered', () => {
-    const consoleSpy = jest.spyOn(console, 'log');
+  it('should open create portfolio dialog when onCreatePortfolio is called', () => {
     component.onCreatePortfolio();
-    expect(consoleSpy).toHaveBeenCalledWith('Create portfolio clicked');
-    consoleSpy.mockRestore();
+    
+    expect(mockDialogService.open).toHaveBeenCalledWith({
+      component: CreatePortfolioDialogComponent,
+      data: { userId: 'current-user-id' },
+      width: '500px',
+      disableClose: false,
+    });
   });
 });

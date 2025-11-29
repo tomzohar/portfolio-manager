@@ -1,0 +1,16 @@
+@use 'scss' as *;
+
+mat-dialog-content {
+  min-width: 400px;
+  padding: $spacing-md;
+}
+
+.full-width {
+  width: 100%;
+}
+
+mat-dialog-actions {
+  padding: $spacing-md;
+  margin: 0;
+}
+

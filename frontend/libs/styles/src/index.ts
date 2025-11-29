@@ -5,4 +5,6 @@ export * from './lib/wrappers/select.component';
 export * from './lib/wrappers/table.component';
 export * from './lib/wrappers/toolbar.component';
 export * from './lib/wrappers/empty-state.component';
+export * from './lib/wrappers/input.component';
 export * from './lib/types/button-config';
+export * from './lib/types/input-config';

@@ -1,0 +1,45 @@
+<mat-form-field 
+  [appearance]="getAppearance() || 'outline'" 
+  [ngClass]="getClasses()">
+  
+  <!-- Label -->
+  <mat-label>{{ config().label }}</mat-label>
+  
+  <!-- Prefix Icon -->
+  @if (config().prefixIcon) {
+    <mat-icon matIconPrefix>{{ config().prefixIcon }}</mat-icon>
+  }
+  
+  <!-- Input Element -->
+  <input 
+    matInput 
+    [formControl]="config().control"
+    [type]="getType() || 'text'"
+    [placeholder]="config().placeholder || ''"
+    [required]="config().required || false"
+    [disabled]="config().disabled || false"
+    [readonly]="config().readonly || false"
+    [attr.aria-label]="getAriaLabel()"
+    [attr.autocomplete]="config().autocomplete"
+    [attr.maxlength]="config().maxlength"
+    [attr.min]="config().min"
+    [attr.max]="config().max"
+    [attr.step]="config().step"
+  />
+  
+  <!-- Suffix Icon -->
+  @if (config().suffixIcon) {
+    <mat-icon matIconSuffix>{{ config().suffixIcon }}</mat-icon>
+  }
+  
+  <!-- Hint -->
+  @if (config().hint && getActiveErrors().length === 0) {
+    <mat-hint>{{ config().hint }}</mat-hint>
+  }
+  
+  <!-- Error Messages -->
+  @for (errorType of getActiveErrors(); track errorType) {
+    <mat-error>{{ getErrorMessage(errorType) }}</mat-error>
+  }
+</mat-form-field>
+
