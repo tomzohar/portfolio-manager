@@ -1,6 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { UiDashboardComponent } from '@frontend/ui-dashboard';
-import { PortfolioFacade } from '@frontend/data-access-portfolio';
+import { PortfolioFacade } from "@frontend/data-access-portfolio";
 
 @Component({
   selector: 'lib-feature-dashboard',
@@ -24,5 +24,11 @@ export class FeatureDashboardComponent implements OnInit {
 
   onPortfolioSelected(id: string): void {
     this.facade.selectPortfolio(id);
+  }
+
+  onCreatePortfolio(): void {
+    // TODO: Implement portfolio creation
+    // This will be handled when we add portfolio creation functionality
+    console.log('Create portfolio clicked');
   }
 }

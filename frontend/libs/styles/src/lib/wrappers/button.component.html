@@ -1,0 +1,102 @@
+<!-- Raised Button -->
+@if (getVariant() === 'raised') {
+  <button 
+    mat-raised-button 
+    [color]="getColor()"
+    [type]="getType()"
+    [disabled]="config().disabled"
+    [attr.aria-label]="getAriaLabel()"
+    [ngClass]="getClasses()"
+    (click)="onClick($event)">
+    @if (showIconLeft()) {
+      <mat-icon>{{ config().icon }}</mat-icon>
+    }
+    {{ config().label }}
+    @if (showIconRight()) {
+      <mat-icon>{{ config().icon }}</mat-icon>
+    }
+  </button>
+}
+
+<!-- Flat/Text Button -->
+@else if (getVariant() === 'flat') {
+  <button 
+    mat-button 
+    [color]="getColor()"
+    [type]="getType()"
+    [disabled]="config().disabled"
+    [attr.aria-label]="getAriaLabel()"
+    [ngClass]="getClasses()"
+    (click)="onClick($event)">
+    @if (showIconLeft()) {
+      <mat-icon>{{ config().icon }}</mat-icon>
+    }
+    {{ config().label }}
+    @if (showIconRight()) {
+      <mat-icon>{{ config().icon }}</mat-icon>
+    }
+  </button>
+}
+
+<!-- Stroked/Outlined Button -->
+@else if (getVariant() === 'stroked') {
+  <button 
+    mat-stroked-button 
+    [color]="getColor()"
+    [type]="getType()"
+    [disabled]="config().disabled"
+    [attr.aria-label]="getAriaLabel()"
+    [ngClass]="getClasses()"
+    (click)="onClick($event)">
+    @if (showIconLeft()) {
+      <mat-icon>{{ config().icon }}</mat-icon>
+    }
+    {{ config().label }}
+    @if (showIconRight()) {
+      <mat-icon>{{ config().icon }}</mat-icon>
+    }
+  </button>
+}
+
+<!-- Icon Button -->
+@else if (getVariant() === 'icon') {
+  <button 
+    mat-icon-button 
+    [color]="getColor()"
+    [type]="getType()"
+    [disabled]="config().disabled"
+    [attr.aria-label]="getAriaLabel()"
+    [ngClass]="getClasses()"
+    (click)="onClick($event)">
+    <mat-icon>{{ config().icon }}</mat-icon>
+  </button>
+}
+
+<!-- FAB (Floating Action Button) -->
+@else if (getVariant() === 'fab') {
+  <button 
+    mat-fab 
+    [color]="getColor()"
+    [type]="getType()"
+    [disabled]="config().disabled"
+    [attr.aria-label]="getAriaLabel()"
+    [ngClass]="getClasses()"
+    (click)="onClick($event)">
+    <mat-icon>{{ config().icon }}</mat-icon>
+  </button>
+}
+
+<!-- Mini FAB -->
+@else if (getVariant() === 'mini-fab') {
+  <button 
+    mat-mini-fab 
+    [color]="getColor()"
+    [type]="getType()"
+    [disabled]="config().disabled"
+    [attr.aria-label]="getAriaLabel()"
+    [ngClass]="getClasses()"
+    (click)="onClick($event)">
+    <mat-icon>{{ config().icon }}</mat-icon>
+  </button>
+}
+

@@ -81,5 +81,88 @@ export class PortfolioEffects {
       )
     )
   );
+
+  /**
+   * Effect: Create Portfolio
+   * Creates a new portfolio and reloads the portfolio list
+   */
+  createPortfolio$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(PortfolioActions.createPortfolio),
+      switchMap(({ dto }) =>
+        this.portfolioApiService.createPortfolio(dto).pipe(
+          map((portfolio) =>
+            PortfolioActions.createPortfolioSuccess({ portfolio })
+          ),
+          catchError((error) =>
+            of(PortfolioActions.createPortfolioFailure({ 
+              error: error?.message || 'Failed to create portfolio' 
+            }))
+          )
+        )
+      )
+    )
+  );
+
+  /**
+   * Effect: Create Portfolio Success
+   * Reload portfolios after successful creation
+   */
+  createPortfolioSuccess$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(PortfolioActions.createPortfolioSuccess),
+      map(() => PortfolioActions.loadPortfolios())
+    )
+  );
+
+  /**
+   * Effect: Add Asset
+   * Adds an asset to a portfolio
+   */
+  addAsset$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(PortfolioActions.addAsset),
+      switchMap(({ portfolioId, dto }) =>
+        this.portfolioApiService.addAsset(portfolioId, dto).pipe(
+          map((portfolio) =>
+            PortfolioActions.addAssetSuccess({ 
+              portfolioId, 
+              assets: portfolio.assets 
+            })
+          ),
+          catchError((error) =>
+            of(PortfolioActions.addAssetFailure({ 
+              error: error?.message || 'Failed to add asset' 
+            }))
+          )
+        )
+      )
+    )
+  );
+
+  /**
+   * Effect: Remove Asset
+   * Removes an asset from a portfolio
+   */
+  removeAsset$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(PortfolioActions.removeAsset),
+      switchMap(({ portfolioId, assetId }) =>
+        this.portfolioApiService.removeAsset(portfolioId, assetId).pipe(
+          map((portfolio) =>
+            PortfolioActions.removeAssetSuccess({ 
+              portfolioId, 
+              assets: portfolio.assets 
+            })
+          ),
+          catchError((error) =>
+            of(PortfolioActions.removeAssetFailure({ 
+              error: error?.message || 'Failed to remove asset' 
+            }))
+          )
+        )
+      )
+    )
+  );
 }
 

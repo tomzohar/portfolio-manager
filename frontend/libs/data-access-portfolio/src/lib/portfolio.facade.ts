@@ -9,7 +9,7 @@ import {
   selectError,
   selectSelectedPortfolio,
 } from './+state/portfolio.selectors';
-import { DashboardPortfolio, DashboardAsset } from '@stocks-researcher/types';
+import { DashboardPortfolio, DashboardAsset, CreatePortfolioDto, AddAssetDto } from '@stocks-researcher/types';
 
 /**
  * PortfolioFacade
@@ -27,6 +27,10 @@ import { DashboardPortfolio, DashboardAsset } from '@stocks-researcher/types';
  * 
  *   ngOnInit() {
  *     this.facade.init();
+ *   }
+ *   
+ *   createPortfolio() {
+ *     this.facade.createPortfolio({ name: 'My Portfolio', userId: 'user-123' });
  *   }
  * }
  * ```
@@ -89,6 +93,38 @@ export class PortfolioFacade {
    */
   loadAssets(portfolioId: string): void {
     this.store.dispatch(PortfolioActions.loadAssets({ portfolioId }));
+  }
+
+  /**
+   * Creates a new portfolio.
+   * After successful creation, the portfolio list will be automatically reloaded.
+   * 
+   * @param dto - Portfolio creation data (name and userId)
+   */
+  createPortfolio(dto: CreatePortfolioDto): void {
+    this.store.dispatch(PortfolioActions.createPortfolio({ dto }));
+  }
+
+  /**
+   * Adds an asset to a portfolio.
+   * The portfolio's assets will be automatically updated after success.
+   * 
+   * @param portfolioId - The portfolio ID
+   * @param dto - Asset data (ticker, quantity, avgPrice)
+   */
+  addAsset(portfolioId: string, dto: AddAssetDto): void {
+    this.store.dispatch(PortfolioActions.addAsset({ portfolioId, dto }));
+  }
+
+  /**
+   * Removes an asset from a portfolio.
+   * The portfolio's assets will be automatically updated after success.
+   * 
+   * @param portfolioId - The portfolio ID
+   * @param assetId - The asset ID to remove
+   */
+  removeAsset(portfolioId: string, assetId: string): void {
+    this.store.dispatch(PortfolioActions.removeAsset({ portfolioId, assetId }));
   }
 }
 

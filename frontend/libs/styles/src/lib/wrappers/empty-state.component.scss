@@ -1,0 +1,42 @@
+@use '../scss' as *;
+
+.empty-state {
+  @include flex-column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl;
+  text-align: center;
+  min-height: 300px;
+
+  &__icon {
+    margin-bottom: $spacing-lg;
+    
+    mat-icon {
+      font-size: 64px;
+      width: 64px;
+      height: 64px;
+      color: $color-text-secondary;
+      opacity: 0.5;
+    }
+  }
+
+  &__title {
+    margin: 0 0 $spacing-sm 0;
+    font-size: 24px;
+    font-weight: 500;
+    color: $color-text-primary;
+  }
+
+  &__message {
+    margin: 0 0 $spacing-lg 0;
+    font-size: 14px;
+    color: $color-text-secondary;
+    max-width: 400px;
+    line-height: 1.5;
+  }
+
+  &__action {
+    margin-top: $spacing-md;
+  }
+}
+

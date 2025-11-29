@@ -1,9 +1,9 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { FeatureDashboardComponent } from './feature-dashboard';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { PortfolioFacade } from '@frontend/data-access-portfolio';
-import { DashboardPortfolio, DashboardAsset } from '@stocks-researcher/types';
+import { DashboardAsset, DashboardPortfolio } from '@stocks-researcher/types';
+import { FeatureDashboardComponent } from './feature-dashboard';
 
 describe('FeatureDashboardComponent', () => {
   let component: FeatureDashboardComponent;
@@ -38,6 +38,16 @@ describe('FeatureDashboardComponent', () => {
   ];
 
   beforeEach(async () => {
+    mockFacade = {
+      init: jest.fn(),
+      selectPortfolio: jest.fn(),
+      portfolios: signal(mockPortfolios),
+      currentAssets: signal(mockAssets),
+      selectedId: signal<string | null>(null),
+      loading: signal(false),
+      error: signal<string | null>(null),
+    };
+
     mockFacade = {
       init: jest.fn(),
       selectPortfolio: jest.fn(),
@@ -96,5 +106,17 @@ describe('FeatureDashboardComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const uiDashboard = compiled.querySelector('lib-ui-dashboard');
     expect(uiDashboard).toBeTruthy();
+  });
+
+  it('should have onCreatePortfolio method', () => {
+    expect(component.onCreatePortfolio).toBeDefined();
+    expect(typeof component.onCreatePortfolio).toBe('function');
+  });
+
+  it('should call onCreatePortfolio when triggered', () => {
+    const consoleSpy = jest.spyOn(console, 'log');
+    component.onCreatePortfolio();
+    expect(consoleSpy).toHaveBeenCalledWith('Create portfolio clicked');
+    consoleSpy.mockRestore();
   });
 });

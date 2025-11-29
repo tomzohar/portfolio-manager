@@ -106,4 +106,49 @@ describe('UiDashboardComponent', () => {
 
     component.onPortfolioSelect(123);
   });
+
+  describe('Empty State', () => {
+    it('should display empty state when no portfolios exist', () => {
+      fixture.componentRef.setInput('portfolios', []);
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const emptyState = compiled.querySelector('lib-empty-state');
+      expect(emptyState).toBeTruthy();
+    });
+
+    it('should not display empty state when portfolios exist', () => {
+      fixture.componentRef.setInput('portfolios', mockPortfolios);
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const emptyState = compiled.querySelector('lib-empty-state');
+      expect(emptyState).toBeNull();
+    });
+
+    it('should not display portfolio selection card when portfolios are empty', () => {
+      fixture.componentRef.setInput('portfolios', []);
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const select = compiled.querySelector('lib-select');
+      expect(select).toBeNull();
+    });
+
+    it('should emit createPortfolio event when empty state action is clicked', (done) => {
+      fixture.componentRef.setInput('portfolios', []);
+      fixture.detectChanges();
+
+      component.createPortfolio.subscribe(() => {
+        done();
+      });
+
+      component.onCreatePortfolio();
+    });
+
+    it('should have onCreatePortfolio method', () => {
+      expect(component.onCreatePortfolio).toBeDefined();
+      expect(typeof component.onCreatePortfolio).toBe('function');
+    });
+  });
 });

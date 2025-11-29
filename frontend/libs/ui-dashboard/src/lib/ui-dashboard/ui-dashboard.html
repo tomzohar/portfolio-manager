@@ -2,24 +2,35 @@
   <lib-toolbar title="Portfolio Dashboard"></lib-toolbar>
 
   <div class="dashboard-content">
-    <!-- Portfolio Selection -->
-    <lib-card title="Select Portfolio">
-      <lib-select 
-        label="Choose a portfolio" 
-        [options]="portfolioOptions()"
-        [selected]="selectedPortfolioId()"
-        (selectionChange)="onPortfolioSelect($event)">
-      </lib-select>
-    </lib-card>
-
-    <!-- Asset List -->
-    @if (selectedPortfolioId()) {
-      <lib-card title="Portfolio Assets" [subtitle]="assets().length + ' positions'">
-        <lib-table 
-          [data]="assets()" 
-          [columns]="assetColumns">
-        </lib-table>
+    @if (portfolios().length === 0) {
+      <!-- Empty State -->
+      <lib-empty-state
+        [icon]="'account_balance_wallet'"
+        [title]="'No Portfolios Yet'"
+        [message]="'Get started by creating your first portfolio to track your investments'"
+        [buttonConfig]="{ label: 'Create Portfolio' }"
+        (actionClick)="onCreatePortfolio()"
+      />
+    } @else {
+      <!-- Portfolio Selection -->
+      <lib-card title="Select Portfolio">
+        <lib-select 
+          label="Choose a portfolio" 
+          [options]="portfolioOptions()"
+          [selected]="selectedPortfolioId()"
+          (selectionChange)="onPortfolioSelect($event)">
+        </lib-select>
       </lib-card>
+
+      <!-- Asset List -->
+      @if (selectedPortfolioId()) {
+        <lib-card title="Portfolio Assets" [subtitle]="assets().length + ' positions'">
+          <lib-table 
+            [data]="assets()" 
+            [columns]="assetColumns">
+          </lib-table>
+        </lib-card>
+      }
     }
   </div>
 </div>
