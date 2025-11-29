@@ -6,6 +6,9 @@ import { ZodValidationPipe } from 'nestjs-zod';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Set global API prefix
+  app.setGlobalPrefix('api');
+
   // Enable Zod Validation globally
   app.useGlobalPipes(new ZodValidationPipe());
 

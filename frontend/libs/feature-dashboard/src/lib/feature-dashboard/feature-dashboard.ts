@@ -1,6 +1,9 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { UiDashboardComponent } from '@frontend/ui-dashboard';
-import { PortfolioFacade } from "@frontend/data-access-portfolio";
+import { PortfolioFacade } from '@frontend/data-access-portfolio';
+import { DialogService } from '@frontend/util-dialog';
+import { CreatePortfolioDialogComponent } from '../create-portfolio-dialog/create-portfolio-dialog.component';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'lib-feature-dashboard',
@@ -11,6 +14,7 @@ import { PortfolioFacade } from "@frontend/data-access-portfolio";
 })
 export class FeatureDashboardComponent implements OnInit {
   private facade = inject(PortfolioFacade);
+  private dialogService = inject(DialogService);
 
   // Expose facade signals directly to template
   portfolios = this.facade.portfolios;
@@ -27,8 +31,24 @@ export class FeatureDashboardComponent implements OnInit {
   }
 
   onCreatePortfolio(): void {
-    // TODO: Implement portfolio creation
-    // This will be handled when we add portfolio creation functionality
-    console.log('Create portfolio clicked');
+    const dialogRef = this.dialogService.open({
+      component: CreatePortfolioDialogComponent,
+      data: { userId: 'current-user-id' }, // TODO: Get actual user ID from auth service
+      width: '500px',
+      disableClose: false,
+    });
+
+    const unsubscribeSubject = new Subject<boolean>();
+
+    // Handle dialog result if needed in the future
+    dialogRef.afterClosedObservable
+      .pipe(takeUntil(unsubscribeSubject))
+      .subscribe((result) => {
+        console.log({ result });
+        unsubscribeSubject.next(true);
+        unsubscribeSubject.complete();
+        // Dialog handles its own submission logic for now
+        // Future: Handle result here if dialog returns data
+      });
   }
 }
