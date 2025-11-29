@@ -1,10 +1,13 @@
 import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { UiDashboardComponent } from '@frontend/ui-dashboard';
+import { PortfolioFacade } from '@frontend/data-access-portfolio';
 import { PortfolioFacade } from '@frontend/data-access-portfolio';
 
 @Component({
   selector: 'lib-feature-dashboard',
   imports: [UiDashboardComponent],
+  standalone: true,
   standalone: true,
   templateUrl: './feature-dashboard.html',
   styleUrl: './feature-dashboard.scss',

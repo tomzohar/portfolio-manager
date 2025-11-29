@@ -4,10 +4,42 @@ import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { PortfolioFacade } from '@frontend/data-access-portfolio';
 import { DashboardPortfolio, DashboardAsset } from '@stocks-researcher/types';
+import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { provideAnimations } from '@angular/platform-browser/animations';
+import { PortfolioFacade } from '@frontend/data-access-portfolio';
+import { DashboardPortfolio, DashboardAsset } from '@stocks-researcher/types';
 
 describe('FeatureDashboardComponent', () => {
   let component: FeatureDashboardComponent;
   let fixture: ComponentFixture<FeatureDashboardComponent>;
+  let mockFacade: Partial<PortfolioFacade>;
+
+  const mockPortfolios: DashboardPortfolio[] = [
+    { id: '1', name: 'Retirement Fund' },
+    { id: '2', name: 'Tech Growth Speculation' },
+    { id: '3', name: 'Dividend Income' },
+  ];
+
+  const mockAssets: DashboardAsset[] = [
+    {
+      ticker: 'VOO',
+      quantity: 50,
+      avgPrice: 350.2,
+      currentPrice: 410.5,
+      marketValue: 20525,
+      pl: 3015,
+      plPercent: 0.17,
+    },
+    {
+      ticker: 'BND',
+      quantity: 100,
+      avgPrice: 75.1,
+      currentPrice: 72.3,
+      marketValue: 7230,
+      pl: -280,
+      plPercent: -0.03,
+    },
+  ];
   let mockFacade: Partial<PortfolioFacade>;
 
   const mockPortfolios: DashboardPortfolio[] = [
@@ -48,8 +80,23 @@ describe('FeatureDashboardComponent', () => {
       error: signal<string | null>(null),
     };
 
+    mockFacade = {
+      init: jest.fn(),
+      selectPortfolio: jest.fn(),
+      portfolios: signal(mockPortfolios),
+      currentAssets: signal(mockAssets),
+      selectedId: signal<string | null>(null),
+      loading: signal(false),
+      error: signal<string | null>(null),
+    };
+
     await TestBed.configureTestingModule({
       imports: [FeatureDashboardComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideAnimations(),
+        { provide: PortfolioFacade, useValue: mockFacade },
+      ],
       providers: [
         provideZonelessChangeDetection(),
         provideAnimations(),
