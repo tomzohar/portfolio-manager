@@ -39,23 +39,73 @@ Backend server for the Stocks Researcher application. This NestJS application pr
 $ cp .env.example .env
 ```
 
-2. Update the `.env` file with your PostgreSQL credentials:
+2. Update the `.env` file with your PostgreSQL credentials (default values work with Docker setup):
 ```
 DB_HOST=localhost
 DB_PORT=5432
 DB_USERNAME=postgres
-DB_PASSWORD=your_password
+DB_PASSWORD=postgres
 DB_DATABASE=stocks_researcher
+
+# Application runs on port 3001 (default port 3000 might be in use)
+PORT=3001
+NODE_ENV=development
 ```
 
-3. Ensure PostgreSQL is running and the database exists:
+3. **Setup PostgreSQL Database**
+
+You have two options:
+
+**Option A: Use existing PostgreSQL container** (if you already have one running)
 ```bash
-$ createdb stocks_researcher
+# Check if you have a PostgreSQL container running
+$ docker ps | grep postgres
+
+# Create the database in your existing container
+$ docker exec <container_name> psql -U postgres -c "CREATE DATABASE stocks_researcher;"
+
+# Skip to step 4
 ```
+
+**Option B: Use the provided Docker Compose** (fresh setup)
+```bash
+# First, stop any existing PostgreSQL containers on port 5432
+$ docker ps | grep postgres
+$ docker stop <container_name>
+
+# Then start the new PostgreSQL container
+$ docker-compose up -d
+```
+
+This will:
+- Pull the PostgreSQL 16 Alpine image
+- Create and start a PostgreSQL container
+- Create the `stocks_researcher` database
+- Expose port 5432 on localhost
+- Persist data in a Docker volume
 
 4. Install dependencies:
 ```bash
 $ npm install
+```
+
+## Database Management
+
+```bash
+# Start the database
+$ docker-compose up -d
+
+# Stop the database
+$ docker-compose down
+
+# Stop and remove all data
+$ docker-compose down -v
+
+# View database logs
+$ docker-compose logs -f postgres
+
+# Check database status
+$ docker-compose ps
 ```
 
 ## Compile and run the project
