@@ -1,0 +1,31 @@
+@use '../scss' as *;
+
+:host {
+  display: inline-block;
+}
+
+.full-width {
+  width: 100%;
+}
+
+// Ensure icons and text are aligned properly
+button {
+  mat-icon {
+    margin-right: $spacing-xs;
+    
+    &:last-child {
+      margin-right: 0;
+      margin-left: $spacing-xs;
+    }
+  }
+}
+
+// Icon-only buttons shouldn't have margins
+button[mat-icon-button],
+button[mat-fab],
+button[mat-mini-fab] {
+  mat-icon {
+    margin: 0;
+  }
+}
+

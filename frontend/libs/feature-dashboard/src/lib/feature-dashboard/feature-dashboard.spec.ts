@@ -92,9 +92,21 @@ describe('FeatureDashboardComponent', () => {
 
   it('should render ui-dashboard component', () => {
     fixture.detectChanges();
-
+    
     const compiled = fixture.nativeElement as HTMLElement;
     const uiDashboard = compiled.querySelector('lib-ui-dashboard');
     expect(uiDashboard).toBeTruthy();
+  });
+
+  it('should have onCreatePortfolio method', () => {
+    expect(component.onCreatePortfolio).toBeDefined();
+    expect(typeof component.onCreatePortfolio).toBe('function');
+  });
+
+  it('should call onCreatePortfolio when triggered', () => {
+    const consoleSpy = jest.spyOn(console, 'log');
+    component.onCreatePortfolio();
+    expect(consoleSpy).toHaveBeenCalledWith('Create portfolio clicked');
+    consoleSpy.mockRestore();
   });
 });

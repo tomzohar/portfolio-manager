@@ -25,4 +25,10 @@ export class FeatureDashboardComponent implements OnInit {
   onPortfolioSelected(id: string): void {
     this.facade.selectPortfolio(id);
   }
+
+  onCreatePortfolio(): void {
+    // TODO: Implement portfolio creation
+    // This will be handled when we add portfolio creation functionality
+    console.log('Create portfolio clicked');
+  }
 }

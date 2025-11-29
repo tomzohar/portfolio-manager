@@ -5,7 +5,8 @@ import {
   TableComponent, 
   ToolbarComponent, 
   SelectOption, 
-  ColumnDef 
+  ColumnDef,
+  EmptyStateComponent,
 } from '@stocks-researcher/styles';
 import { DashboardPortfolio, DashboardAsset } from '@stocks-researcher/types';
 
@@ -13,11 +14,12 @@ import { DashboardPortfolio, DashboardAsset } from '@stocks-researcher/types';
   selector: 'lib-ui-dashboard',
   standalone: true,
   imports: [
-    CardComponent, 
-    SelectComponent, 
-    TableComponent, 
-    ToolbarComponent
-  ],
+    CardComponent,
+    SelectComponent,
+    TableComponent,
+    ToolbarComponent,
+    EmptyStateComponent,
+],
   templateUrl: './ui-dashboard.html',
   styleUrl: './ui-dashboard.scss'
 })
@@ -27,6 +29,7 @@ export class UiDashboardComponent {
   selectedPortfolioId = input<string | null>(null);
   
   portfolioSelected = output<string>();
+  createPortfolio = output<void>();
 
   portfolioOptions = computed<SelectOption[]>(() => 
     this.portfolios().map(p => ({
@@ -61,5 +64,9 @@ export class UiDashboardComponent {
 
   onPortfolioSelect(id: string | number) {
     this.portfolioSelected.emit(String(id));
+  }
+
+  onCreatePortfolio() {
+    this.createPortfolio.emit();
   }
 }
