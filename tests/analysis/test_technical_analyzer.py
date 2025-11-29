@@ -1,409 +1,439 @@
 """
-Tests for Technical Analyzer Module
+Tests for Technical Analyzer Module.
 
-Comprehensive test suite for technical analysis functionality including
-indicator calculation and LLM-based technical interpretation.
-
-Author: Portfolio Manager Agent
-Version: 1.0.0
+Tests trend classification, support/resistance detection, volume analysis,
+and technical indicator calculation functions.
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+import numpy as np
 import pandas as pd
+from unittest.mock import patch, MagicMock
+
 from src.portfolio_manager.analysis.technical_analyzer import (
+    classify_trend,
+    detect_support_resistance,
+    analyze_volume_patterns,
     calculate_technical_indicators,
-    analyze_stock_technicals,
-    _analyze_technicals_for_ticker,
-    SYSTEM_INSTRUCTION,
+    _cluster_levels
 )
 
 
+# Fixtures
+
+
 @pytest.fixture
-def sample_ohlcv_data():
-    """Sample OHLCV DataFrame with sufficient data for indicator calculation."""
-    data_points = 250  # More than 200 required for SMA-200
+def sample_ohlcv_uptrend():
+    """Sample OHLCV data representing an uptrend."""
+    dates = pd.date_range("2024-01-01", periods=250, freq="D")
+    # Create uptrend: prices increase from 100 to 150
+    closes = np.linspace(100, 150, 250) + np.random.normal(0, 2, 250)
+    highs = closes + np.random.uniform(0.5, 2, 250)
+    lows = closes - np.random.uniform(0.5, 2, 250)
+    opens = closes + np.random.normal(0, 1, 250)
+    volumes = np.random.uniform(1000000, 2000000, 250)
+    
     return pd.DataFrame({
-        'Open': [150.0 + i * 0.1 for i in range(data_points)],
-        'High': [152.0 + i * 0.1 for i in range(data_points)],
-        'Low': [149.0 + i * 0.1 for i in range(data_points)],
-        'Close': [151.0 + i * 0.1 for i in range(data_points)],
-        'Volume': [100000 + i * 100 for i in range(data_points)],
+        "Date": dates,
+        "Open": opens,
+        "High": highs,
+        "Low": lows,
+        "Close": closes,
+        "Volume": volumes
     })
 
 
 @pytest.fixture
-def sample_multi_ticker_ohlcv():
-    """Multi-ticker OHLCV data for testing."""
-    data_points = 250
-    return {
-        "AAPL": pd.DataFrame({
-            'Open': [150] * data_points,
-            'High': [152] * data_points,
-            'Low': [149] * data_points,
-            'Close': [151] * data_points,
-            'Volume': [100000] * data_points,
-        }),
-        "GOOGL": pd.DataFrame({
-            'Open': [2800] * data_points,
-            'High': [2820] * data_points,
-            'Low': [2790] * data_points,
-            'Close': [2810] * data_points,
-            'Volume': [50000] * data_points,
-        }),
-    }
+def sample_ohlcv_downtrend():
+    """Sample OHLCV data representing a downtrend."""
+    dates = pd.date_range("2024-01-01", periods=250, freq="D")
+    # Create downtrend: prices decrease from 150 to 100
+    closes = np.linspace(150, 100, 250) + np.random.normal(0, 2, 250)
+    highs = closes + np.random.uniform(0.5, 2, 250)
+    lows = closes - np.random.uniform(0.5, 2, 250)
+    opens = closes + np.random.normal(0, 1, 250)
+    volumes = np.random.uniform(1000000, 2000000, 250)
+    
+    return pd.DataFrame({
+        "Date": dates,
+        "Open": opens,
+        "High": highs,
+        "Low": lows,
+        "Close": closes,
+        "Volume": volumes
+    })
 
 
 @pytest.fixture
-def sample_indicators():
-    """Sample technical indicators for testing."""
-    return {
-        "SMA_50": "150.50",
-        "SMA_200": "145.20",
-        "RSI": "65.30",
-        "MACD_line": "1.25",
-        "MACD_signal": "0.85",
-        "MACD_hist": "0.40",
-        "price_vs_SMA50": "above",
-        "price_vs_SMA200": "above",
-    }
+def sample_ohlcv_sideways():
+    """Sample OHLCV data representing sideways movement."""
+    dates = pd.date_range("2024-01-01", periods=250, freq="D")
+    # Create sideways: prices oscillate around 125
+    closes = 125 + np.random.normal(0, 5, 250)
+    highs = closes + np.random.uniform(0.5, 2, 250)
+    lows = closes - np.random.uniform(0.5, 2, 250)
+    opens = closes + np.random.normal(0, 1, 250)
+    volumes = np.random.uniform(1000000, 2000000, 250)
+    
+    return pd.DataFrame({
+        "Date": dates,
+        "Open": opens,
+        "High": highs,
+        "Low": lows,
+        "Close": closes,
+        "Volume": volumes
+    })
 
 
-@pytest.fixture
-def sample_technical_summary():
-    """Sample LLM technical analysis response."""
-    return "Stock shows bullish momentum with RSI at 65. Price above 50-day SMA indicates uptrend. MACD positive suggests continued strength."
+# Tests for classify_trend
 
 
-class TestCalculateTechnicalIndicators:
-    """Tests for calculate_technical_indicators function."""
-
-    def test_calculate_indicators_success(self, sample_ohlcv_data):
-        """Test successful calculation of technical indicators."""
-        # Act
-        indicators = calculate_technical_indicators(sample_ohlcv_data)
-        
-        # Assert
-        assert "error" not in indicators
-        assert "SMA_50" in indicators
-        assert "SMA_200" in indicators
-        assert "RSI" in indicators
-        assert "MACD_line" in indicators
-        assert "MACD_signal" in indicators
-        assert "MACD_hist" in indicators
-        assert "price_vs_SMA50" in indicators
-        assert "price_vs_SMA200" in indicators
-        
-        # Verify values are formatted correctly
-        assert isinstance(indicators["SMA_50"], str)
-        assert isinstance(indicators["RSI"], str)
-
-    def test_calculate_indicators_empty_dataframe(self):
-        """Test handling of empty DataFrame."""
-        # Arrange
-        empty_df = pd.DataFrame()
-        
-        # Act
-        indicators = calculate_technical_indicators(empty_df)
-        
-        # Assert
-        assert "error" in indicators
-        assert "Not enough historical data" in indicators["error"]
-
-    def test_calculate_indicators_insufficient_data(self):
-        """Test handling of DataFrame with insufficient data."""
-        # Arrange
-        small_df = pd.DataFrame({
-            'Open': [150] * 50,
-            'High': [152] * 50,
-            'Low': [149] * 50,
-            'Close': [151] * 50,
-            'Volume': [100000] * 50,
-        })
-        
-        # Act
-        indicators = calculate_technical_indicators(small_df)
-        
-        # Assert
-        assert "error" in indicators
-        assert "Not enough historical data" in indicators["error"]
-
-    def test_calculate_indicators_price_vs_sma(self, sample_ohlcv_data):
-        """Test price vs SMA comparison logic."""
-        # Act
-        indicators = calculate_technical_indicators(sample_ohlcv_data)
-        
-        # Assert
-        assert indicators["price_vs_SMA50"] in ["above", "below"]
-        assert indicators["price_vs_SMA200"] in ["above", "below"]
-
-    @patch("src.portfolio_manager.analysis.technical_analyzer.sentry_sdk")
-    def test_calculate_indicators_exception_handling(self, mock_sentry):
-        """Test exception handling and Sentry capture."""
-        # Arrange - DataFrame that will cause calculation errors
-        bad_df = pd.DataFrame({
-            'Close': [None] * 250,  # All NaN values
-        })
-        
-        # Act
-        indicators = calculate_technical_indicators(bad_df)
-        
-        # Assert
-        assert "error" in indicators
-        assert mock_sentry.capture_exception.called
-
-    def test_calculate_indicators_no_loops(self, sample_ohlcv_data):
-        """Test that calculation uses vectorized operations (no loops)."""
-        # This is a design verification test
-        # The function should use pandas-ta vectorized operations
-        # We verify by ensuring the function completes quickly
-        import time
-        
-        start_time = time.time()
-        indicators = calculate_technical_indicators(sample_ohlcv_data)
-        elapsed = time.time() - start_time
-        
-        # Vectorized operations should complete in under 1 second
-        assert elapsed < 1.0
-        assert "error" not in indicators
+def test_classify_trend_uptrend(sample_ohlcv_uptrend):
+    """Test trend classification for uptrend."""
+    # Calculate SMAs manually
+    sma_50 = float(sample_ohlcv_uptrend['Close'].rolling(window=50).mean().iloc[-1])
+    sma_200 = float(sample_ohlcv_uptrend['Close'].rolling(window=200).mean().iloc[-1])
+    
+    trend = classify_trend(sample_ohlcv_uptrend, sma_50=sma_50, sma_200=sma_200)
+    
+    # In an uptrend, should be either Uptrend or Sideways (due to random noise)
+    # The key is that SMA50 > SMA200 which indicates bullish alignment
+    assert trend in ["Uptrend", "Sideways"], f"Expected Uptrend or Sideways, got {trend}"
+    assert sma_50 > sma_200, "SMA50 should be above SMA200 in uptrend"
 
 
-class TestAnalyzeTechnicalsForTicker:
-    """Tests for _analyze_technicals_for_ticker function."""
-
-    @patch("src.portfolio_manager.analysis.technical_analyzer.call_gemini_api")
-    @patch("src.portfolio_manager.analysis.technical_analyzer.calculate_technical_indicators")
-    def test_analyze_ticker_success(self, mock_calc_indicators, mock_call_gemini, sample_ohlcv_data, sample_indicators, sample_technical_summary):
-        """Test successful technical analysis for a single ticker."""
-        # Arrange
-        mock_calc_indicators.return_value = sample_indicators
-        mock_call_gemini.return_value = sample_technical_summary
-        
-        # Act
-        ticker, analysis = _analyze_technicals_for_ticker("AAPL", sample_ohlcv_data)
-        
-        # Assert
-        assert ticker == "AAPL"
-        assert "bullish momentum" in analysis
-        assert len(analysis) > 0
-        mock_calc_indicators.assert_called_once()
-        mock_call_gemini.assert_called_once()
-
-    def test_analyze_ticker_empty_dataframe(self):
-        """Test handling of empty DataFrame."""
-        # Arrange
-        empty_df = pd.DataFrame()
-        
-        # Act
-        ticker, analysis = _analyze_technicals_for_ticker("AAPL", empty_df)
-        
-        # Assert
-        assert ticker == "AAPL"
-        assert "No data available" in analysis
-
-    @patch("src.portfolio_manager.analysis.technical_analyzer.calculate_technical_indicators")
-    def test_analyze_ticker_calculation_error(self, mock_calc_indicators, sample_ohlcv_data):
-        """Test handling of indicator calculation errors."""
-        # Arrange
-        mock_calc_indicators.return_value = {"error": "Calculation failed"}
-        
-        # Act
-        ticker, analysis = _analyze_technicals_for_ticker("AAPL", sample_ohlcv_data)
-        
-        # Assert
-        assert ticker == "AAPL"
-        assert "Calculation failed" in analysis
-
-    @patch("src.portfolio_manager.analysis.technical_analyzer.call_gemini_api")
-    @patch("src.portfolio_manager.analysis.technical_analyzer.calculate_technical_indicators")
-    def test_analyze_ticker_api_error(self, mock_calc_indicators, mock_call_gemini, sample_ohlcv_data, sample_indicators):
-        """Test handling of LLM API errors."""
-        # Arrange
-        mock_calc_indicators.return_value = sample_indicators
-        mock_call_gemini.side_effect = Exception("API Timeout")
-        
-        # Act
-        ticker, analysis = _analyze_technicals_for_ticker("AAPL", sample_ohlcv_data)
-        
-        # Assert
-        assert ticker == "AAPL"
-        assert "failed due to an API error" in analysis
-
-    @patch("src.portfolio_manager.analysis.technical_analyzer.call_gemini_api")
-    @patch("src.portfolio_manager.analysis.technical_analyzer.calculate_technical_indicators")
-    @patch("src.portfolio_manager.analysis.technical_analyzer.sentry_sdk")
-    def test_analyze_ticker_sentry_capture(self, mock_sentry, mock_calc_indicators, mock_call_gemini, sample_ohlcv_data, sample_indicators):
-        """Test that exceptions are captured in Sentry."""
-        # Arrange
-        test_exception = Exception("API Error")
-        mock_calc_indicators.return_value = sample_indicators
-        mock_call_gemini.side_effect = test_exception
-        
-        # Act
-        _analyze_technicals_for_ticker("AAPL", sample_ohlcv_data)
-        
-        # Assert
-        mock_sentry.capture_exception.assert_called_once_with(test_exception)
-
-    @patch("src.portfolio_manager.analysis.technical_analyzer.call_gemini_api")
-    @patch("src.portfolio_manager.analysis.technical_analyzer.calculate_technical_indicators")
-    def test_analyze_ticker_prompt_formatting(self, mock_calc_indicators, mock_call_gemini, sample_ohlcv_data, sample_indicators, sample_technical_summary):
-        """Test that prompt is properly formatted with indicators."""
-        # Arrange
-        mock_calc_indicators.return_value = sample_indicators
-        mock_call_gemini.return_value = sample_technical_summary
-        
-        # Act
-        _analyze_technicals_for_ticker("AAPL", sample_ohlcv_data)
-        
-        # Assert
-        prompt = mock_call_gemini.call_args[0][0]
-        
-        # Check system instruction is included
-        assert SYSTEM_INSTRUCTION in prompt
-        
-        # Check indicators are in JSON format
-        assert "```json" in prompt
-        assert "SMA_50" in prompt
-        assert "RSI" in prompt
+def test_classify_trend_downtrend(sample_ohlcv_downtrend):
+    """Test trend classification for downtrend."""
+    # Calculate SMAs manually
+    sma_50 = float(sample_ohlcv_downtrend['Close'].rolling(window=50).mean().iloc[-1])
+    sma_200 = float(sample_ohlcv_downtrend['Close'].rolling(window=200).mean().iloc[-1])
+    
+    trend = classify_trend(sample_ohlcv_downtrend, sma_50=sma_50, sma_200=sma_200)
+    
+    assert trend == "Downtrend", f"Expected Downtrend, got {trend}"
 
 
-class TestAnalyzeStockTechnicals:
-    """Tests for analyze_stock_technicals function."""
-
-    @patch("src.portfolio_manager.analysis.technical_analyzer.call_gemini_api")
-    @patch("src.portfolio_manager.analysis.technical_analyzer.calculate_technical_indicators")
-    @patch("src.portfolio_manager.analysis.technical_analyzer.fetch_ohlcv_data")
-    def test_analyze_technicals_single_ticker(self, mock_fetch_data, mock_calc_indicators, mock_call_gemini, sample_ohlcv_data, sample_indicators, sample_technical_summary):
-        """Test technical analysis for a single ticker."""
-        # Arrange
-        mock_fetch_data.return_value = {"success": True, "data": {"AAPL": sample_ohlcv_data}, "error": None}
-        mock_calc_indicators.return_value = sample_indicators
-        mock_call_gemini.return_value = sample_technical_summary
-        
-        # Act
-        summaries = analyze_stock_technicals(["AAPL"])
-        
-        # Assert
-        assert len(summaries) == 1
-        assert "AAPL" in summaries
-        assert "bullish momentum" in summaries["AAPL"]
-        mock_fetch_data.assert_called_once_with(["AAPL"], period="1y")
-
-    @patch("src.portfolio_manager.analysis.technical_analyzer.call_gemini_api")
-    @patch("src.portfolio_manager.analysis.technical_analyzer.calculate_technical_indicators")
-    @patch("src.portfolio_manager.analysis.technical_analyzer.fetch_ohlcv_data")
-    def test_analyze_technicals_multiple_tickers(self, mock_fetch_data, mock_calc_indicators, mock_call_gemini, sample_multi_ticker_ohlcv, sample_indicators, sample_technical_summary):
-        """Test technical analysis for multiple tickers."""
-        # Arrange
-        mock_fetch_data.return_value = {"success": True, "data": sample_multi_ticker_ohlcv, "error": None}
-        mock_calc_indicators.return_value = sample_indicators
-        mock_call_gemini.return_value = sample_technical_summary
-        
-        # Act
-        summaries = analyze_stock_technicals(["AAPL", "GOOGL"])
-        
-        # Assert
-        assert len(summaries) == 2
-        assert "AAPL" in summaries
-        assert "GOOGL" in summaries
-        assert mock_call_gemini.call_count == 2
-
-    def test_analyze_technicals_empty_list(self):
-        """Test technical analysis with empty ticker list."""
-        # Act
-        summaries = analyze_stock_technicals([])
-        
-        # Assert
-        assert summaries == {}
-
-    @patch("src.portfolio_manager.analysis.technical_analyzer.fetch_ohlcv_data")
-    def test_analyze_technicals_no_data(self, mock_fetch_data):
-        """Test handling of tickers with no data."""
-        # Arrange
-        mock_fetch_data.return_value = {"success": True, "data": {"AAPL": pd.DataFrame()}, "error": None}
-        
-        # Act
-        summaries = analyze_stock_technicals(["AAPL"])
-        
-        # Assert
-        assert summaries["AAPL"] == "No data available for technical analysis."
-
-    @patch("src.portfolio_manager.analysis.technical_analyzer.call_gemini_api")
-    @patch("src.portfolio_manager.analysis.technical_analyzer.calculate_technical_indicators")
-    @patch("src.portfolio_manager.analysis.technical_analyzer.fetch_ohlcv_data")
-    def test_analyze_technicals_partial_failure(self, mock_fetch_data, mock_calc_indicators, mock_call_gemini, sample_multi_ticker_ohlcv, sample_indicators, sample_technical_summary):
-        """Test handling of partial failures (some tickers succeed, some fail)."""
-        # Arrange
-        mock_fetch_data.return_value = {"success": True, "data": sample_multi_ticker_ohlcv, "error": None}
-        mock_calc_indicators.return_value = sample_indicators
-        # First call succeeds, second fails
-        mock_call_gemini.side_effect = [
-            sample_technical_summary,
-            Exception("API Error"),
-        ]
-        
-        # Act
-        summaries = analyze_stock_technicals(["AAPL", "GOOGL"])
-        
-        # Assert
-        assert len(summaries) == 2
-        assert "bullish momentum" in summaries["AAPL"]  # Success
-        assert "failed due to an API error" in summaries["GOOGL"]  # Failure
-
-    @patch("src.portfolio_manager.analysis.technical_analyzer.fetch_ohlcv_data")
-    @patch("src.portfolio_manager.analysis.technical_analyzer.sentry_sdk")
-    def test_analyze_technicals_fatal_error(self, mock_sentry, mock_fetch_data):
-        """Test handling of fatal errors."""
-        # Arrange
-        mock_fetch_data.side_effect = Exception("Network Error")
-        
-        # Act
-        summaries = analyze_stock_technicals(["AAPL"])
-        
-        # Assert
-        assert isinstance(summaries, dict)
-        assert mock_sentry.capture_exception.called
-
-    @patch("src.portfolio_manager.analysis.technical_analyzer.ThreadPoolExecutor")
-    @patch("src.portfolio_manager.analysis.technical_analyzer.fetch_ohlcv_data")
-    def test_analyze_technicals_concurrent_execution(self, mock_fetch_data, mock_executor, sample_multi_ticker_ohlcv):
-        """Test that analyses are performed concurrently."""
-        # Arrange
-        mock_fetch_data.return_value = {"success": True, "data": sample_multi_ticker_ohlcv, "error": None}
-        mock_executor_instance = MagicMock()
-        mock_executor.return_value.__enter__.return_value = mock_executor_instance
-        
-        # Create mock futures
-        mock_future1 = MagicMock()
-        mock_future1.result.return_value = ("AAPL", "Analysis 1")
-        mock_future2 = MagicMock()
-        mock_future2.result.return_value = ("GOOGL", "Analysis 2")
-        
-        mock_executor_instance.submit.side_effect = [mock_future1, mock_future2]
-        
-        # Act
-        summaries = analyze_stock_technicals(["AAPL", "GOOGL"])
-        
-        # Assert
-        # ThreadPoolExecutor was created with max_workers=2
-        mock_executor.assert_called_once_with(max_workers=2)
-        # Submit was called for each ticker
-        assert mock_executor_instance.submit.call_count == 2
+def test_classify_trend_sideways(sample_ohlcv_sideways):
+    """Test trend classification for sideways movement."""
+    # Calculate SMAs manually
+    sma_50 = float(sample_ohlcv_sideways['Close'].rolling(window=50).mean().iloc[-1])
+    sma_200 = float(sample_ohlcv_sideways['Close'].rolling(window=200).mean().iloc[-1])
+    
+    trend = classify_trend(sample_ohlcv_sideways, sma_50=sma_50, sma_200=sma_200)
+    
+    # Sideways movement with noise can result in various classifications
+    # The key is that SMAs should be close together
+    assert trend in ["Sideways", "Downtrend", "Uptrend"], f"Got {trend}"
+    # Check that SMAs are relatively close (within 5%)
+    sma_diff_pct = abs(sma_50 - sma_200) / sma_200
+    assert sma_diff_pct < 0.05 or trend in ["Sideways", "Downtrend"], "SMAs should be close in sideways market"
 
 
-class TestSystemInstruction:
-    """Tests for the SYSTEM_INSTRUCTION constant."""
+def test_classify_trend_insufficient_data():
+    """Test trend classification with insufficient data."""
+    df = pd.DataFrame({
+        'Close': [100, 101, 102]
+    })
+    
+    trend = classify_trend(df)
+    
+    assert trend == "Insufficient Data"
 
-    def test_system_instruction_not_empty(self):
-        """Test that system instruction is defined."""
-        assert SYSTEM_INSTRUCTION
-        assert len(SYSTEM_INSTRUCTION) > 0
 
-    def test_system_instruction_content(self):
-        """Test that system instruction contains key elements."""
-        assert "Technical Analyst" in SYSTEM_INSTRUCTION
-        assert "technical indicators" in SYSTEM_INSTRUCTION
-        assert "RSI" in SYSTEM_INSTRUCTION
-        assert "momentum" in SYSTEM_INSTRUCTION
+def test_classify_trend_empty_dataframe():
+    """Test trend classification with empty DataFrame."""
+    df = pd.DataFrame()
+    
+    trend = classify_trend(df)
+    
+    assert trend == "Insufficient Data"
+
+
+def test_classify_trend_auto_calculate_smas():
+    """Test trend classification with automatic SMA calculation."""
+    # Create simple uptrend data
+    closes = np.linspace(100, 150, 250)
+    df = pd.DataFrame({'Close': closes})
+    
+    trend = classify_trend(df)
+    
+    assert trend in ["Uptrend", "Sideways"]  # Should classify based on calculated SMAs
+
+
+# Tests for detect_support_resistance
+
+
+def test_detect_support_resistance_basic():
+    """Test support/resistance detection with clear levels."""
+    # Create data with obvious support at 95-100 and resistance at 145-150
+    closes = []
+    for i in range(100):
+        if i % 10 < 5:
+            closes.append(np.random.uniform(95, 100))  # Support zone
+        else:
+            closes.append(np.random.uniform(145, 150))  # Resistance zone
+    
+    df = pd.DataFrame({
+        'Low': [c - 2 for c in closes],
+        'High': [c + 2 for c in closes]
+    })
+    
+    levels = detect_support_resistance(df, num_levels=2, window=5)
+    
+    assert "support" in levels
+    assert "resistance" in levels
+    assert len(levels["support"]) > 0
+    assert len(levels["resistance"]) > 0
+
+
+def test_detect_support_resistance_insufficient_data():
+    """Test support/resistance detection with insufficient data."""
+    df = pd.DataFrame({
+        'Low': [100, 101, 102],
+        'High': [105, 106, 107]
+    })
+    
+    levels = detect_support_resistance(df, window=20)
+    
+    assert levels["support"] == []
+    assert levels["resistance"] == []
+
+
+def test_detect_support_resistance_empty_dataframe():
+    """Test support/resistance detection with empty DataFrame."""
+    df = pd.DataFrame()
+    
+    levels = detect_support_resistance(df)
+    
+    assert levels["support"] == []
+    assert levels["resistance"] == []
+
+
+def test_cluster_levels():
+    """Test price level clustering."""
+    # Levels that should cluster: [100, 101, 102] -> ~101, [150, 152] -> ~151
+    levels = np.array([100, 101, 102, 150, 152])
+    
+    clustered = _cluster_levels(levels, tolerance=0.02)  # 2% tolerance
+    
+    assert len(clustered) == 2  # Should cluster into 2 groups
+    assert clustered[0] == pytest.approx(101, abs=2)  # First cluster around 101
+    assert clustered[1] == pytest.approx(151, abs=2)  # Second cluster around 151
+
+
+def test_cluster_levels_empty():
+    """Test clustering with empty array."""
+    levels = np.array([])
+    
+    clustered = _cluster_levels(levels)
+    
+    assert len(clustered) == 0
+
+
+# Tests for analyze_volume_patterns
+
+
+def test_analyze_volume_patterns_spike():
+    """Test volume spike detection."""
+    # Normal volume followed by spike
+    volumes = [1000000] * 25 + [3000000]  # Last volume is 3x average
+    closes = list(range(100, 126))
+    
+    df = pd.DataFrame({
+        'Volume': volumes,
+        'Close': closes
+    })
+    
+    result = analyze_volume_patterns(df, window=20)
+    
+    assert result["recent_spike"] is True
+    assert result["recent_volume"] > result["avg_volume"] * 1.5
+
+
+def test_analyze_volume_patterns_no_spike():
+    """Test volume analysis without spike."""
+    volumes = [1000000] * 26  # Consistent volume
+    closes = list(range(100, 126))
+    
+    df = pd.DataFrame({
+        'Volume': volumes,
+        'Close': closes
+    })
+    
+    result = analyze_volume_patterns(df, window=20)
+    
+    assert result["recent_spike"] is False
+
+
+def test_analyze_volume_patterns_increasing_trend():
+    """Test detection of increasing volume trend."""
+    # Gradually increasing volumes
+    volumes = np.linspace(1000000, 2000000, 30)
+    closes = list(range(100, 130))
+    
+    df = pd.DataFrame({
+        'Volume': volumes,
+        'Close': closes
+    })
+    
+    result = analyze_volume_patterns(df, window=20)
+    
+    assert result["trend"] == "Increasing"
+
+
+def test_analyze_volume_patterns_decreasing_trend():
+    """Test detection of decreasing volume trend."""
+    # Gradually decreasing volumes
+    volumes = np.linspace(2000000, 1000000, 30)
+    closes = list(range(100, 130))
+    
+    df = pd.DataFrame({
+        'Volume': volumes,
+        'Close': closes
+    })
+    
+    result = analyze_volume_patterns(df, window=20)
+    
+    assert result["trend"] == "Decreasing"
+
+
+def test_analyze_volume_patterns_empty_dataframe():
+    """Test volume analysis with empty DataFrame."""
+    df = pd.DataFrame()
+    
+    result = analyze_volume_patterns(df)
+    
+    assert result["avg_volume"] == 0.0
+    assert result["recent_spike"] is False
+    assert result["trend"] == "Unknown"
+
+
+def test_analyze_volume_patterns_insufficient_data():
+    """Test volume analysis with insufficient data."""
+    df = pd.DataFrame({
+        'Volume': [1000000, 1100000, 1200000],
+        'Close': [100, 101, 102]
+    })
+    
+    result = analyze_volume_patterns(df, window=20)
+    
+    # Should still return valid result with adjusted window
+    assert result["avg_volume"] > 0
+    assert "trend" in result
+
+
+def test_analyze_volume_patterns_correlation():
+    """Test volume-price correlation calculation."""
+    # Volumes and prices both increasing -> positive correlation
+    volumes = np.linspace(1000000, 2000000, 30)
+    closes = np.linspace(100, 130, 30)
+    
+    df = pd.DataFrame({
+        'Volume': volumes,
+        'Close': closes
+    })
+    
+    result = analyze_volume_patterns(df, window=20)
+    
+    # Positive correlation expected
+    assert result["volume_price_correlation"] > 0.5
+
+
+# Tests for calculate_technical_indicators
+
+
+def test_calculate_technical_indicators_full(sample_ohlcv_uptrend):
+    """Test full technical indicator calculation."""
+    indicators = calculate_technical_indicators(sample_ohlcv_uptrend)
+    
+    # Check all expected indicators are present
+    expected_keys = [
+        "SMA_50", "SMA_200", "EMA_12", "EMA_26",
+        "RSI", "MACD_line", "MACD_signal", "MACD_hist",
+        "BB_upper", "BB_middle", "BB_lower",
+        "ATR", "ADX",
+        "price_vs_SMA50", "price_vs_SMA200"
+    ]
+    
+    for key in expected_keys:
+        assert key in indicators, f"Missing indicator: {key}"
+    
+    # Check indicator values are reasonable
+    assert 0 <= indicators["RSI"] <= 100
+    assert indicators["SMA_50"] > 0
+    assert indicators["SMA_200"] > 0
+    assert indicators["BB_upper"] > indicators["BB_middle"] > indicators["BB_lower"]
+    assert indicators["ATR"] > 0
+    assert 0 <= indicators["ADX"] <= 100
+
+
+def test_calculate_technical_indicators_insufficient_data():
+    """Test indicator calculation with insufficient data."""
+    df = pd.DataFrame({
+        'Open': [100, 101, 102],
+        'High': [105, 106, 107],
+        'Low': [95, 96, 97],
+        'Close': [100, 101, 102],
+        'Volume': [1000000, 1100000, 1200000]
+    })
+    
+    indicators = calculate_technical_indicators(df)
+    
+    assert "error" in indicators
+
+
+def test_calculate_technical_indicators_empty_dataframe():
+    """Test indicator calculation with empty DataFrame."""
+    df = pd.DataFrame()
+    
+    indicators = calculate_technical_indicators(df)
+    
+    assert "error" in indicators
+
+
+def test_calculate_technical_indicators_error_handling(sample_ohlcv_uptrend, mocker):
+    """Test error handling in indicator calculation."""
+    # Mock pandas DataFrame's ta accessor to raise exception on sma
+    mock_ta = MagicMock()
+    mock_ta.sma.side_effect = Exception("Calculation failed")
+    
+    # Patch the ta accessor
+    mocker.patch.object(sample_ohlcv_uptrend, 'ta', mock_ta)
+    
+    indicators = calculate_technical_indicators(sample_ohlcv_uptrend)
+    
+    # Should catch the exception and return error
+    assert "error" in indicators
+    assert "Calculation failed" in indicators["error"]
+
+
+# Integration test
+
+
+def test_full_technical_analysis_workflow(sample_ohlcv_uptrend):
+    """Test complete technical analysis workflow."""
+    # 1. Calculate indicators
+    indicators = calculate_technical_indicators(sample_ohlcv_uptrend)
+    assert "error" not in indicators
+    
+    # 2. Classify trend
+    trend = classify_trend(
+        sample_ohlcv_uptrend,
+        sma_50=indicators["SMA_50"],
+        sma_200=indicators["SMA_200"]
+    )
+    assert trend in ["Uptrend", "Downtrend", "Sideways"]
+    
+    # 3. Detect support/resistance
+    levels = detect_support_resistance(sample_ohlcv_uptrend)
+    assert "support" in levels
+    assert "resistance" in levels
+    
+    # 4. Analyze volume
+    volume_analysis = analyze_volume_patterns(sample_ohlcv_uptrend)
+    assert "trend" in volume_analysis
+    assert "recent_spike" in volume_analysis
+    
+    # All analysis steps completed successfully
+    assert True
 

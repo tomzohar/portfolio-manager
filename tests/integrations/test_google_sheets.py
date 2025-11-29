@@ -24,8 +24,11 @@ def mock_settings(mocker):
     settings_mock.SPREADSHEET_ID = "test_sheet_id"
     settings_mock.SPREADSHEET_RANGE = "A:E"
     settings_mock.POLYGON_API_KEY = "test_api_key"
-    settings_mock.get_google_creds.return_value = {"type": "service_account"}
     settings_mock.GOOGLE_SERVICE_ACCOUNT_FILE = None
+    
+    # Mock the module-level get_google_creds function
+    mocker.patch("src.portfolio_manager.integrations.google_sheets.get_google_creds", return_value={"type": "service_account"})
+    
     return settings_mock
 
 
@@ -46,9 +49,12 @@ def mock_gspread(mocker):
 
 def test_get_gspread_client(mock_settings, mock_gspread):
     """Test authentication client creation."""
+    from src.portfolio_manager.integrations.google_sheets import get_google_creds
+    
     client = _get_gspread_client()
     assert client is not None
-    mock_settings.get_google_creds.assert_called_once()
+    # Verify get_google_creds was called (it's mocked in fixture)
+    get_google_creds.assert_called_once()
 
 
 def test_parse_portfolio_success(mock_settings, mock_gspread):

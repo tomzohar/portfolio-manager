@@ -1,10 +1,13 @@
 # Portfolio Manager: Technical High-Level Design
 
+> **⚠️ NOTE:** This document details the V2 technical implementation (LangGraph migration).
+> For the **V3 Supervisor Architecture**, refer to `MANAGER_V3.md` and `ARCHITECTURE.md`.
+
 ## 1. Objective
 
-This document outlines the technical design of the Autonomous Portfolio Manager, an intelligent agent system built with `LangGraph`. The system uses a stateful, event-driven workflow orchestrated by a central Portfolio Manager agent that dynamically decides which analyses to perform based on portfolio composition and current state.
+This document outlines the technical implementation plan for refactoring the existing `stock-researcher` pipeline into an autonomous agent system, as specified in `PORTFOLIO_MANAGER.md`. The core of this redesign will be the adoption of `LangGraph` to create a stateful, event-driven workflow orchestrated by a central Portfolio Manager agent.
 
-This architecture enables dynamic, intelligent, and resource-efficient analysis by only performing necessary analyses rather than following a fixed sequence.
+This new architecture will move away from the rigid, sequential process and enable dynamic, intelligent, and resource-efficient analysis.
 
 ## 2. Core Technology: LangGraph
 
@@ -13,6 +16,53 @@ We will use `LangGraph`, a library for building stateful, multi-agent applicatio
 -   **Stateful Graphs**: The agent's state (e.g., portfolio data, analysis results, conversation history) is explicitly managed and passed between nodes.
 -   **Nodes**: Nodes represent functions or tools that can be invoked.
 -   **Edges**: Edges connect nodes, allowing for conditional logic and complex, cyclical workflows, which are essential for the agent's iterative reasoning process.
+
+### 2.1 LLM Integration Pattern
+
+**Important**: All LLM calls in this project use the centralized `call_gemini_api()` utility from `src.stock_researcher.utils.llm_utils`. This provides:
+
+- Consistent retry logic with exponential backoff via `tenacity`
+- Centralized API key management
+- Lazy client initialization for test-friendly imports
+- Standardized error handling
+
+**Do NOT use** LangChain's `ChatGoogleGenerativeAI` directly. Instead:
+
+```python
+from src.stock_researcher.utils.llm_utils import call_gemini_api
+
+# Correct usage
+response_text = call_gemini_api(prompt, model='gemini-2.5-flash')
+
+# ❌ Incorrect - Don't do this
+llm = ChatGoogleGenerativeAI(model="...")
+response = llm.invoke(prompt)
+```
+
+This pattern ensures all LLM interactions are consistent, resilient, and easily mockable for testing.
+
+### 2.2 Logging Pattern
+
+**Important**: All logging in this project uses Python's standard `logging` module. **NEVER** use `rich.console.Console` or `print()` statements.
+
+**Correct Pattern:**
+
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Use appropriate log levels
+logger.info("Starting analysis for AAPL")
+logger.warning("Missing data, using fallback value")
+logger.error(f"API call failed: {e}", exc_info=True)
+```
+
+**Log Level Guidelines:**
+- `logger.info()` - Normal operational messages
+- `logger.warning()` - Expected but unusual conditions
+- `logger.error()` - Error conditions (always include `exc_info=True` for exceptions)
+- `logger.debug()` - Detailed diagnostic information
 
 ## 3. High-Level Architecture
 
@@ -121,7 +171,7 @@ Creating a new tool follows a clear, scalable pattern:
 
 ## 6. Graph & Agent Logic
 
-The LangGraph implementation resides in `src/portfolio_manager/graph/`.
+The LangGraph implementation will reside in `src/stock_researcher/agents/portfolio_manager.py`.
 
 ### Graph Nodes
 
@@ -162,62 +212,36 @@ The graph's primary conditional edge will be after the `agent_node`:
 
 ## 7. Code Structure & Implementation Plan
 
-The autonomous agent is implemented as a standalone system with all functionality self-contained in the `portfolio_manager` package.
+To ensure the existing production pipeline (`stock-researcher`) remains untouched, we will develop the new autonomous agent in a completely separate source directory. The new agent will reuse logic from the existing application by importing its functions as if it were a library.
 
-### Package Organization
+1.  **New Source Directory**: A new Python package will be created at `src/portfolio_manager`. The existing `src/stock_researcher` package will not be modified.
 
-The implementation follows a modular design with clear separation of concerns:
+2.  **Code Reuse**: The `portfolio_manager` package will import functions from `stock_researcher` (e.g., `stock_researcher.agents.portfolio_parser.parse`) and wrap them into tools for the LangGraph agent. This avoids code duplication while maintaining strict separation.
 
-1.  **Main Package**: `src/portfolio_manager/` contains all autonomous agent code
+3.  **New Entry Point**: A new top-level script, `run_portfolio_manager.py`, will be created to launch the autonomous agent. The existing `main.py` will continue to run the original sequential pipeline.
 
-2.  **Self-Contained Integrations**: All external service integrations are implemented within `portfolio_manager/integrations/` (Google Sheets, Polygon.io, SerpAPI, Pushover)
-
-3.  **Self-Contained Analysis**: All AI-powered analysis modules are in `portfolio_manager/analysis/` (news summarization, technical analysis)
-
-4.  **Entry Point**: `run_portfolio_manager.py` launches the autonomous agent workflow
-
-5.  **Current Directory Structure:**
+4.  **Proposed New Directory Structure:**
     ```
     stocks-researcher/
     ├── src/
-    │   └── portfolio_manager/
+    │   ├── stock_researcher/   # (Existing, UNTOUCHED)
+    │   │   └── ...
+    │   └── portfolio_manager/  # (New)
     │       ├── __init__.py
-    │       ├── agent_state.py      # AgentState schema and ToolResult
-    │       ├── tool_registry.py    # Tool registration system
-    │       ├── schemas.py          # Pydantic models
-    │       ├── config.py           # Configuration management
-    │       ├── utils.py            # LLM utilities, formatting
-    │       ├── prompts.py          # System prompts
-    │       ├── parsers.py          # JSON parsing utilities
-    │       ├── error_handler.py    # Global error handling
-    │       ├── graph/              # LangGraph workflow
+    │       ├── agent_state.py      # Definition for AgentState
+    │       ├── graph/              # NEW: Modular graph package
     │       │   ├── __init__.py
-    │       │   ├── main.py         # Entry point for graph execution
     │       │   ├── builder.py      # Graph construction logic
     │       │   ├── edges.py        # Conditional routing logic
-    │       │   └── nodes/          # Graph node implementations
+    │       │   ├── main.py         # Main runner for the graph
+    │       │   └── nodes/          # Directory for individual nodes
     │       │       ├── __init__.py
-    │       │       ├── start.py            # Initialization node
-    │       │       ├── agent_decision.py   # LLM decision node
-    │       │       ├── tool_execution.py   # Tool execution node
-    │       │       ├── guardrails.py       # Safety checks node
-    │       │       └── final_report.py     # Report generation node
-    │       ├── tools/              # Agent-callable tools
-    │       │   ├── __init__.py
-    │       │   ├── parse_portfolio.py
-    │       │   ├── analyze_news.py
-    │       │   ├── analyze_technicals.py
-    │       │   └── assess_confidence.py
-    │       ├── integrations/       # External service integrations
-    │       │   ├── __init__.py
-    │       │   ├── google_sheets.py  # Portfolio data & price updates
-    │       │   ├── polygon.py        # Market data (OHLCV)
-    │       │   ├── serp_api.py       # News article search
-    │       │   └── pushover.py       # Push notifications
-    │       └── analysis/           # AI-powered analysis modules
-    │           ├── __init__.py
-    │           ├── news_analyzer.py        # News summarization
-    │           └── technical_analyzer.py   # Technical indicator calculation
+    │       │       ├── agent_decision.py
+    │       │       ├── final_report.py
+    │       │       ├── start.py
+    │       │       └── tool_execution.py
+    │       ├── prompts.py          # System prompt for the LLM agent
+    │       ├── parsers.py          # LLM response parsing logic
     │       ├── schemas.py          # Pydantic schemas for data validation
     │       └── utils.py            # Utility functions for formatting state
     │
@@ -243,9 +267,9 @@ The implementation follows a modular design with clear separation of concerns:
     -   [x] In `src/portfolio_manager/agent_state.py`, define the `AgentState` TypedDict with `ToolResult` dataclass.
     -   [x] Implement decorator-based tool registry system in `tool_registry.py` for scalable tool management.
     -   [x] Create individual tool modules:
-        -   [x] `tools/parse_portfolio.py` - Loads portfolio from Google Sheets
-        -   [x] `tools/analyze_news.py` - News search and AI-powered summarization
-        -   [x] `tools/analyze_technicals.py` - Technical analysis with indicators
+        -   [x] `tools/parse_portfolio.py` - Wraps legacy portfolio parser
+        -   [x] `tools/analyze_news.py` - Wraps news search and LLM analyzer
+        -   [x] `tools/analyze_technicals.py` - Wraps technical analyzer
         -   [x] `tools/assess_confidence.py` - Evaluates analysis completeness
 
 4.  **LangGraph Implementation**:
@@ -433,28 +457,19 @@ Current Confidence: {state["confidence_score"]:.2%}
 Based on this information, what should be your next action?
 """
         
-        # Call LLM for decision
-        llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash",
-            temperature=0.1,  # Lower temperature for consistent decisions
-        )
-        
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message}
-        ]
-        
-        response = llm.invoke(messages)
+        # Call LLM for decision using the centralized utility
+        full_prompt = f"{system_prompt}\n\n{user_message}"
+        response_text = call_gemini_api(full_prompt, model="gemini-2.5-flash")
         
         # Parse LLM decision
-        decision = parse_agent_decision(response.content)
+        decision = parse_agent_decision(response_text)
         
         # Store reasoning and decision
         state["agent_reasoning"].append({
             "iteration": iteration,
             "reasoning": decision.get("reasoning", ""),
             "action": decision.get("action", ""),
-            "raw_response": response.content
+            "raw_response": response_text
         })
         
         # Store next tool call

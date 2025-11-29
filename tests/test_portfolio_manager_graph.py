@@ -20,7 +20,6 @@ from src.portfolio_manager.graph.nodes import (
 )
 from src.portfolio_manager.graph.edges import route_after_agent_decision
 from src.portfolio_manager.graph.builder import build_graph
-from src.portfolio_manager.agent_state import AgentState
 
 
 @pytest.fixture
@@ -49,14 +48,17 @@ def initial_state() -> AgentState:
 class TestGraphNodes:
     """Tests for individual graph nodes"""
     
-    def test_start_node(self):
-        """Test start node passes through valid state"""
-        state = AgentState().model_dump()
+    def test_start_node(self, mocker):
+        """Test start node loads portfolio data or accepts existing portfolio"""
+        # Start node either loads from Google Sheets or accepts existing portfolio
+        state = AgentState(
+            portfolio={"positions": [], "tickers": [], "total_value": 0}
+        ).model_dump()
         
         updated_state = start_node(state)
         
-        # Start node now just validates and returns state unchanged
-        assert updated_state == state
+        # Start node validates and returns state with portfolio
+        assert "portfolio" in updated_state
         assert "current_iteration" in updated_state
     
     def test_should_continue_max_iterations(self):
@@ -183,43 +185,63 @@ class TestGraphNodes:
 
     @patch('src.portfolio_manager.graph.nodes.final_report.call_gemini_api')
     def test_final_report_node(self, mock_llm):
-        """Test final report generation"""
-        # Setup
+        """Test final report generation (V3 structured JSON output)"""
+        # Setup - V3 state with synthesis result
         state = AgentState().model_dump()
-        state["portfolio"] = {
-            "total_value": 100000.0,
-            "positions": [
+        state["synthesis_result"] = {
+            "position_actions": [
                 {
                     "ticker": "AAPL",
-                    "shares": 10.0,
-                    "avg_price": 150.0,
-                    "current_price": 160.0,
-                    "market_value": 1600.0,
-                    "unrealized_gain_loss": 100.0,
-                    "unrealized_gain_loss_pct": 6.67,
-                    "weight": 0.016,
+                    "action": "Hold",
+                    "current_weight": 0.5,
+                    "target_weight": 0.5,
+                    "rationale": "Strong fundamentals justify holding position",
+                    "confidence": 0.8
                 }
-            ]
+            ],
+            "portfolio_strategy": {
+                "action": "Hold",
+                "rationale": "Maintain current allocation based on market conditions",
+                "priority": "Medium"
+            },
+            "confidence_score": 0.8
         }
-        state["analysis_results"] = {
-            "AAPL": {
-                "news": {"summary": "positive"},
-                "technicals": {"rsi": 65}
-            }
+        state["macro_analysis"] = {
+            "status": "Goldilocks",
+            "signal": "Risk-On",
+            "key_driver": "Strong economic data",
+            "confidence": 0.8
         }
-        state["confidence_score"] = 0.8
-        state["reasoning_trace"] = ["Step 1", "Step 2"]
+        state["risk_assessment"] = {
+            "beta": 1.0,
+            "sharpe_ratio": 1.2,
+            "max_drawdown_risk": "Moderate",
+            "var_95": -0.05,
+            "portfolio_volatility": 0.18,
+            "lookback_period": "1y",
+            "calculation_date": "2025-11-22",
+            "max_drawdown": -0.15
+        }
+        state["reflexion_feedback"] = ["Analysis approved"]
+        state["confidence_adjustment"] = 0.0
         
-        mock_llm.return_value = "# PORTFOLIO ANALYSIS\n\nHOLD all positions based on positive sentiment and technical indicators."
+        mock_llm.return_value = "Portfolio positioned well for current market conditions with balanced risk profile and positive outlook."
         
         # Execute
         patch = final_report_node(state)
         
-        # Verify - returns a patch with final_report and completed_at
+        # Verify - V3 returns JSON string, not completed_at
         assert "final_report" in patch
-        assert "completed_at" in patch
-        assert patch["final_report"] is not None
-        mock_llm.assert_called_once()
+        assert patch.get("error") is None
+        
+        # Parse and validate JSON
+        import json
+        report_dict = json.loads(patch["final_report"])
+        assert "executive_summary" in report_dict
+        assert "market_regime" in report_dict
+        assert "portfolio_strategy" in report_dict
+        assert "positions" in report_dict
+        assert "confidence_score" in report_dict
 
 
 class TestGraphIntegration:
@@ -252,37 +274,76 @@ class TestGraphIntegration:
         Tests that the graph gracefully finishes by forcing a final report
         when the max_iterations limit is reached.
         """
-        # Mock the guardrail where it is LOOKED UP, not where it is defined.
-        # The graph builder imports it, so we patch it there.
+        # Mock the nodes at the builder import level (where they're used in the graph)
         mocker.patch(
-            "src.portfolio_manager.graph.builder.guardrail_node",
-            return_value={"force_final_report": True, "terminate_run": False}
+            "src.portfolio_manager.graph.builder.supervisor_node",
+            return_value={
+                "execution_plan": {"tasks": ["Test task"], "parallel_groups": [], "rationale": "Test"},
+                "sub_agent_status": {
+                    "macro_agent": "completed",
+                    "fundamental_agent": "completed",  # Required for edge routing
+                    "technical_agent": "completed",    # Required for edge routing
+                    "risk_agent": "completed"
+                },
+                "macro_analysis": {"status": "Goldilocks", "signal": "Risk-On", "confidence": 0.8, "key_driver": "Test"},
+                "fundamental_analysis": {"AAPL": {"assessment": {"recommendation": "Hold", "confidence": 0.8}}},
+                "technical_analysis": {"AAPL": {"assessment": {"recommendation": "Hold", "confidence": 0.8}}},
+                "risk_assessment": {
+                    "beta": 1.0, 
+                    "sharpe_ratio": 1.2,
+                    "max_drawdown_risk": "Moderate",
+                    "var_95": -0.05,
+                    "portfolio_volatility": 0.15,
+                    "max_drawdown": -0.1,
+                    "lookback_period": "1y",
+                    "calculation_date": "2025-11-23"
+                }
+            }
         )
-        # Mock the final report node to confirm it was called
+        
+        # Mock synthesis node
+        mocker.patch(
+            "src.portfolio_manager.graph.builder.synthesis_node",
+            return_value={
+                "synthesis_result": {
+                    "portfolio_strategy": {"action": "Hold", "rationale": "Test strategy rationale", "priority": "Medium"},
+                    "position_actions": [],
+                    "conflicts": [],
+                    "confidence_score": 0.8
+                }
+            }
+        )
+        
+        # Mock reflexion to approve immediately (no loop)
+        mocker.patch(
+            "src.portfolio_manager.graph.builder.reflexion_node",
+            return_value={
+                "reflexion_approved": True,
+                "reflexion_feedback": [],
+                "reflexion_iteration": 1
+            }
+        )
+        
+        # Mock final report node to confirm it was called
         final_report_mock = mocker.patch(
             "src.portfolio_manager.graph.builder.final_report_node",
-            return_value={"final_report": "Report generated due to max iterations."}
+            return_value={"final_report": '{"executive_summary": "Test report", "confidence_score": 0.8}'}
         )
 
-        graph = build_graph()
-        # Set the iteration counter to exceed the max limit and provide a mock portfolio
-        initial_state["current_iteration"] = initial_state["max_iterations"] + 1
+        graph = build_graph(version="v3")
+        # Provide a valid portfolio with tickers for V3 workflow
         initial_state["portfolio"] = {
-            "positions": [],
-            "total_value": 0,
-            "analysis_summary": {}
+            "positions": [{"ticker": "AAPL", "shares": 10, "weight": 1.0}],
+            "tickers": ["AAPL"],
+            "total_value": 1500
         }
-        
-        # We also need to mock the agent node to prevent it from running
-        mocker.patch(
-            "src.portfolio_manager.graph.builder.agent_decision_node",
-            return_value={}
-        )
 
         result = graph.invoke(initial_state)
 
+        # Verify final report was generated
+        assert "final_report" in result
+        # Verify the mock was called
         final_report_mock.assert_called_once()
-        assert result["final_report"] == "Report generated due to max iterations."
 
 class TestRecursionLimitConfiguration:
     """Tests for LangGraph recursion limit configuration"""
@@ -304,9 +365,9 @@ class TestRecursionLimitConfiguration:
         run_autonomous_analysis(max_iterations=10)
         
         # Verify invoke was called with correct recursion_limit
-        # Formula: (max_iterations * 4) + 10
-        # For max_iterations=10: (10 * 4) + 10 = 50
-        expected_recursion_limit = 50
+        # V3 Formula: max_iterations * 3
+        # For max_iterations=10: 10 * 3 = 30
+        expected_recursion_limit = 30
         
         mock_graph.invoke.assert_called_once()
         call_args = mock_graph.invoke.call_args

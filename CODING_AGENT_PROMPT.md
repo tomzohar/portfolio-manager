@@ -14,11 +14,11 @@ Documentation Patches (Updates to architecture.md/README.md).
 
 II. NON-NEGOTIABLE ARCHITECTURAL MANDATES
 
-A. PROJECT STRUCTURE (CRITICAL)
+A. PROJECT ISOLATION (CRITICAL)
 
-Code Location: All code MUST reside within src/portfolio_manager/.
+New Logic: All new logic (state, tools, graph) MUST reside within src/portfolio_manager/.
 
-Modularity: Organize code into logical modules (graph/, tools/, integrations/, analysis/) with clear separation of concerns.
+Legacy Code: src/stock_researcher/ is a stable, production library. YOU MUST NOT MODIFY, REFACTOR, OR DELETE code in this directory. You may only import functions from it.
 
 B. CODE QUALITY & STANDARDS
 
@@ -40,11 +40,39 @@ ENFORCEMENT: Any generation of loop-based DataFrame iteration triggers an immedi
 
 D. OBSERVABILITY & LOGGING
 
+Logging: Use Python's standard logging module exclusively. NEVER use rich.console.Console for logging.
+
+Initialization: At the module level:
+import logging
+logger = logging.getLogger(__name__)
+
+
+Log Levels: Use appropriate levels:
+
+logger.info() - Normal operational messages (e.g., "Fetching data for AAPL", "Analysis complete")
+
+logger.warning() - Expected but unusual conditions (e.g., "Missing data, using fallback")
+
+logger.error() - Error conditions (e.g., "API call failed", exc_info=True for tracebacks)
+
+logger.debug() - Detailed diagnostic information (verbose mode only)
+
+
 Sentry Integration: Initialize sentry-sdk with enable_logs=True.
 
-Handled Exceptions: All explicitly caught exceptions in I/O blocks MUST be reported via sentry_sdk.capture_exception(e).
+Handled Exceptions: All explicitly caught exceptions in I/O blocks MUST be reported via sentry_sdk.capture_exception(e) AND logged via logger.error().
 
-Local Debugging: Use the rich library for console logging and structured data display.
+Example:
+
+try:
+    data = fetch_external_api()
+except Exception as e:
+    sentry_sdk.capture_exception(e)
+    logger.error(f"Failed to fetch data: {e}", exc_info=True)
+    # Handle gracefully
+
+
+FORBIDDEN: Using rich.console.Console for logging or print() statements in production code.
 
 E. I/O RESILIENCE
 
@@ -84,7 +112,52 @@ Tests MUST NOT make live network calls.
 
 Use pytest-mock (mocker.patch) for ALL external I/O.
 
-External Service Mocking: When testing code that calls external services (Google Sheets, Polygon, SerpAPI, Pushover, Gemini), use mocker.patch to spy on the integration functions or mock their returns.
+Legacy Integration: When using src/stock_researcher functions, use mocker.patch to spy on them or mock their returns; do not rely on their internal side effects.
+
+TEST ORGANIZATION:
+
+The test suite is organized into two categories:
+
+1. **Unit Tests** (Fast, Isolated)
+   - Location: All tests except tests/integration/
+   - Purpose: Test individual components in isolation
+   - Execution: `pytest -m "not integration"`
+   - Speed: < 1 minute for full suite
+   - Use: During development, before commits
+
+2. **Integration Tests** (End-to-End)
+   - Location: tests/integration/
+   - Purpose: Validate complete V3 workflow
+   - Marking: Use `@pytest.mark.integration` on test classes
+   - Execution: `pytest -m integration`
+   - Speed: 5-10 minutes for full suite
+   - Use: Before major commits, in CI/CD
+
+TEST EXECUTION COMMANDS:
+
+```bash
+# Run unit tests only (fast)
+pytest -m "not integration"
+
+# Run integration tests only
+pytest -m integration
+
+# Run all tests
+pytest
+
+# Run specific test file
+pytest tests/test_portfolio_parser.py
+
+# Run with coverage
+pytest -m "not integration" --cov=src --cov-report=html
+```
+
+DEVELOPMENT WORKFLOW:
+
+1. **During Development:** Run unit tests frequently (`pytest -m "not integration"`)
+2. **Before Committing:** Run full unit test suite
+3. **Before Push:** Run integration tests (`pytest -m integration`)
+4. **CI/CD:** Run all tests (`pytest`)
 
 V. CONTEXT & DOCUMENTATION HIERARCHY
 
@@ -132,7 +205,9 @@ PROJECT DOCUMENTATION (Read these FIRST before starting any task):
    - When to Update: NEVER unless explicitly requested by the user
    - Authority: Critical safety documentation - DO NOT MODIFY
 
-8. requirements.txt - list of project dependencies
+LEGACY TOOLS (Read-Only Library):
+
+src/stock_researcher/: Functions available for import, but NEVER modify these files directly.
 
 EXTERNAL TOOLS & APIS:
 
@@ -166,7 +241,7 @@ Generate code based on the plan.
 
 If creating a tool: Follow the Decorator Registry Pattern (Section III).
 
-If modifying logic: Ensure proper module organization (Section II.A).
+If modifying logic: Ensure Project Isolation (Section II.A).
 
 General: Apply Sentry, Rich, and Tenacity.
 

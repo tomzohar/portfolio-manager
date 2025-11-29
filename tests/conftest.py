@@ -18,20 +18,42 @@ os.environ.setdefault("SPREADSHEET_RANGE", "Sheet1!A1:F100")
 os.environ.setdefault("ENVIRONMENT", "test")
 
 import pytest
-from unittest.mock import MagicMock
-from src.portfolio_manager.schemas import Portfolio, PortfolioPosition
+from unittest.mock import patch
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 
+# ============================================================================
+# Global Fixtures to Prevent Real API Calls During Tests
+# ============================================================================
+
+def pytest_configure(config):
+    """
+    Hook that runs before test collection.
+    Set mock environment variables to prevent real Pushover notifications.
+    """
+    import os
+    os.environ['PUSHOVER_USER_KEY'] = 'mock_test_user_key'
+    os.environ['PUSHOVER_API_TOKEN'] = 'mock_test_app_token'
+
+
 @pytest.fixture(autouse=True)
-def disable_sentry(mocker):
-    """Disable Sentry for all tests to prevent network calls and speed up execution."""
-    # Disable Sentry exception capturing
-    mocker.patch("sentry_sdk.capture_exception", return_value=None)
-    # Prevent Sentry initialization
-    mocker.patch("sentry_sdk.init", return_value=None)
+def mock_pushover_globally(mocker):
+    """
+    Automatically mock Pushover notifications for ALL tests to prevent
+    real notifications from being sent during test runs.
+    
+    This fixture is auto-used (autouse=True) so it applies to every test
+    without needing to be explicitly included.
+    """
+    # Mock the actual HTTP connection to ensure NO network calls are made
+    mock_conn = mocker.MagicMock()
+    mock_response = mocker.MagicMock()
+    mock_response.status = 200
+    mock_response.read.return_value = b'{"status":1}'
+    mock_conn.getresponse.return_value = mock_response
+    mocker.patch('http.client.HTTPSConnection', return_value=mock_conn)
 
 
 @pytest.fixture
@@ -81,6 +103,8 @@ def sample_llm_response():
 @pytest.fixture
 def mock_portfolio():
     """Provides a mock portfolio object for testing."""
+    from src.portfolio_manager.schemas import Portfolio, PortfolioPosition
+    
     return Portfolio(
         positions=[
             PortfolioPosition(symbol='GOOGL', price=278.57, position=48, market_value=13371.36, percent_of_total=20.84),
@@ -114,4 +138,127 @@ def initial_state() -> dict:
         final_report="",
         started_at="2025-11-15T12:00:00Z"
     ).model_dump()
+
+
+# ============================================================================
+# Phase 2: Sub-Agent Test Fixtures
+# ============================================================================
+
+@pytest.fixture
+def mock_fred_macro_data():
+    """Mock FRED economic indicators for Macro Agent tests."""
+    return {
+        "available": True,
+        "cpi_yoy": 3.2,
+        "gdp_growth": 2.5,
+        "yield_spread": 0.8,
+        "vix": 16.5,
+        "unemployment": 3.8,
+        "date": "2024-11-22"
+    }
+
+
+@pytest.fixture
+def mock_ticker_fundamentals():
+    """Mock Polygon ticker fundamentals for Fundamental Agent tests."""
+    return {
+        "ticker": "AAPL",
+        "name": "Apple Inc.",
+        "market_cap": 3000000000000,
+        "shares_outstanding": 16000000000,
+        "description": "Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide.",
+        "sector": "Technology",
+        "industry": "Consumer Electronics",
+        "exchange": "NASDAQ",
+        "employees": 164000,
+        "homepage_url": "https://www.apple.com"
+    }
+
+
+@pytest.fixture
+def mock_financial_statements():
+    """Mock financial statements for Fundamental Agent tests."""
+    return {
+        "statements": [
+            {
+                "period": "Q4",
+                "fiscal_year": 2024,
+                "revenue": 90000000000,
+                "net_income": 23000000000,
+                "total_assets": 350000000000,
+                "total_liabilities": 280000000000,
+                "operating_cash_flow": 30000000000
+            },
+            {
+                "period": "Q3",
+                "fiscal_year": 2024,
+                "revenue": 85000000000,
+                "net_income": 21000000000,
+                "total_assets": 345000000000,
+                "total_liabilities": 275000000000,
+                "operating_cash_flow": 28000000000
+            }
+        ]
+    }
+
+
+@pytest.fixture
+def mock_ohlcv_data():
+    """Mock OHLCV DataFrame for Technical Agent tests."""
+    import pandas as pd
+    import numpy as np
+    
+    dates = pd.date_range("2024-01-01", periods=90, freq="D")
+    prices = np.linspace(100, 120, 90) + np.random.randn(90) * 2
+    
+    return pd.DataFrame({
+        "timestamp": dates,
+        "open": prices - np.random.rand(90),
+        "high": prices + np.random.rand(90) * 2,
+        "low": prices - np.random.rand(90) * 2,
+        "close": prices,
+        "volume": np.random.randint(1000000, 5000000, 90)
+    })
+
+
+@pytest.fixture
+def sample_portfolio_state():
+    """Sample AgentState with portfolio data for sub-agent tests."""
+    return {
+        "portfolio": {
+            "tickers": ["AAPL", "MSFT", "GOOGL"],
+            "positions": {
+                "AAPL": 0.4,
+                "MSFT": 0.35,
+                "GOOGL": 0.25
+            }
+        },
+        "scratchpad": [],
+        "reasoning_trace": [],
+        "analysis_results": {},
+        "confidence_score": 0.0
+    }
+
+
+@pytest.fixture
+def mock_market_regime():
+    """Mock MarketRegime for testing."""
+    return {
+        "status": "Goldilocks",
+        "signal": "Risk-On",
+        "key_driver": "Moderate growth with low inflation",
+        "confidence": 0.85
+    }
+
+
+@pytest.fixture
+def mock_risk_assessment():
+    """Mock RiskAssessment for testing."""
+    return {
+        "beta": 1.05,
+        "sharpe_projected": 1.2,
+        "max_drawdown_risk": "Moderate",
+        "var_95": 2.5,
+        "portfolio_volatility": 18.5
+    }
 

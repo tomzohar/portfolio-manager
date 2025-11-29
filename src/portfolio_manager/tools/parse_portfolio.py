@@ -18,6 +18,7 @@ from typing import Dict
 from ..agent_state import ToolResult
 from ..integrations.google_sheets import parse_portfolio
 from ..tool_registry import tool
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -48,10 +49,11 @@ def parse_portfolio_tool() -> ToolResult:
     try:
         logger.info("Tool invoked: parse_portfolio")
         
-        # Call the new integration function
+        # Call the integration function to parse portfolio from Google Sheets
         portfolio = parse_portfolio()
         
-        # Convert Pydantic model to dict for JSON serialization and add extra fields
+        # Convert Portfolio object to dict for JSON serialization
+        # Note: integration uses 'symbol' not 'ticker', 'position' not 'shares'
         portfolio_dict = {
             "total_value": portfolio.total_value,
             "positions": [

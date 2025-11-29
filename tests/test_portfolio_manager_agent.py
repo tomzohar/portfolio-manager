@@ -9,8 +9,6 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 from src.portfolio_manager.agent_state import AgentState, ToolResult
-from src.portfolio_manager.graph.main import run_autonomous_analysis
-from src.portfolio_manager.tools.assess_confidence import assess_confidence_tool
 from src.portfolio_manager.tools.parse_portfolio import parse_portfolio_tool
 
 
@@ -37,6 +35,8 @@ class TestAgentWorkflow:
     @patch('src.portfolio_manager.graph.main.build_graph')
     def test_graph_execution_simple_flow(self, mock_build):
         """Test a simple end-to-end graph execution flow."""
+        from src.portfolio_manager.graph.main import run_autonomous_analysis
+        
         # Setup mocks
         mock_graph = MagicMock()
         # Simulate the invoke behavior

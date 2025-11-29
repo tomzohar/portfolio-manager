@@ -1,12 +1,99 @@
 # Portfolio Manager Architecture
 
-This document describes the architecture of the **Autonomous Portfolio Manager**, an intelligent, agent-based system built using `LangGraph` for stateful workflow orchestration.
+This document describes the two primary architectures in this project: the new **Autonomous Portfolio Manager** and the original **Legacy Sequential Pipeline**.
 
-## Overview
+## 1. Autonomous Portfolio Manager Architecture (LangGraph-Based)
 
 The new autonomous agent is built using `LangGraph` to create a stateful, cyclical, and intelligent workflow. Unlike the rigid sequential pipeline, this architecture allows an AI agent to decide which tools to use and when, based on the evolving state of the analysis.
 
 ### High-Level Flow
+
+The system is a graph where the Portfolio Manager agent repeatedly decides on the next best action, calls a tool, updates its state, and loops until it is confident enough to generate a final report.
+
+```mermaid
+graph TD
+    A[Start] --> B(Parse Portfolio);
+    B --> C{Agent Decision};
+    C -- "Needs News" --> D[Tool: News Search & Analysis];
+    C -- "Needs Technicals" --> E[Tool: Technical Analysis];
+    C -- "Needs Risk Assessment" --> F[Tool: Position Sizing & Risk];
+    
+    D --> G(Update State);
+    E --> G;
+    F --> G;
+    
+    G --> C;
+    
+    C -- "Sufficient Confidence" --> H(Generate Final Report);
+    H --> I[Notify User];
+    I --> J[End];
+```
+
+### Key Components
+
+-   **State (`AgentState`)**: A central dictionary that holds all information about the current analysis, including portfolio data, tool results, and reasoning history. It is passed between every step.
+-   **Nodes**: Functions that represent a specific action, such as the agent's decision-making "brain" (`agent_decision_node`) or a tool executor (`tool_execution_node`).
+-   **Edges**: Conditional logic that routes the flow of the graph based on the agent's decisions (e.g., call a tool or generate the final report).
+
+This event-driven architecture makes the system more efficient, adaptable, and intelligent, as it only performs the analysis that is necessary for the given portfolio.
+
+### V3 Multi-Agent Supervisor Architecture (Phase 4 - Complete)
+
+**Status:** Production Ready ✅
+
+The V3 architecture implements a **Supervisor-based Multi-Agent System** where specialized sub-agents handle different analysis domains, coordinated by a central Supervisor Node.
+
+```mermaid
+graph TD
+    A[Start] --> B(Parse Portfolio);
+    B --> C{Supervisor Node<br/>(Orchestrator)};
+    
+    subgraph "Sub-Agent Execution (Internal to Supervisor)"
+        D[Macro Agent]
+        E[Fundamental Agent]
+        F[Technical Agent]
+        G[Risk Agent]
+    end
+    
+    C -- "Delegates To" --> D
+    C -- "Delegates To" --> E
+    C -- "Delegates To" --> F
+    C -- "Delegates To" --> G
+    
+    D & E & F & G -- "Results" --> C
+    
+    C --> H{Synthesis Node<br/>Conflict Resolution};
+    
+    H --> I{Reflexion Node<br/>Self-Critique};
+    I -- "Rejected (Loop)" --> H;
+    I -- "Approved" --> J[Final Report];
+    J --> K[End];
+```
+
+**Sub-Agent Modules (Implemented as Callable Agents):**
+- **Macro Agent** (`macro_agent.py`): Analyzes macroeconomic conditions using FRED API.
+- **Fundamental Agent** (`fundamental_agent.py`): Assesses company valuation using Polygon.io.
+- **Technical Agent** (`technical_agent.py`): Evaluates price trends and timing.
+- **Risk Agent** (`risk_agent.py`): Calculates portfolio risk metrics (Sharpe, Beta, VaR).
+
+**Orchestration Nodes:**
+- **Supervisor Node** (`supervisor.py`): The central brain. Decomposes queries, creates execution plans, and calls sub-agents. It handles the execution logic (currently sequential/batch) and aggregates results.
+- **Synthesis Node** (`synthesis.py`): Combines sub-agent outputs, resolves conflicts (e.g., Bullish Fundamental vs. Bearish Technical), and generates position strategies.
+- **Reflexion Node** (`reflexion.py`): A self-critique loop where a "Risk Officer" persona reviews the synthesis output for biases and errors before approval.
+
+**Key Features:**
+- **Single Entry Point**: `run_portfolio_manager.py` handles both V3 (default) and V2 (legacy) workflows.
+- **Graceful Degradation**: If one sub-agent fails, the supervisor continues with remaining agents.
+- **Structured Output**: Generates comprehensive JSON reports with confidence scores.
+- **Recursion Management**: LangGraph recursion limits are dynamically set based on workflow version.
+
+---
+
+## 2. Legacy Sequential Pipeline Architecture
+
+*Note: This architecture is preserved for backward compatibility and can be run using `python run_portfolio_manager.py --version v2`.*
+
+The workflow is heavily optimized for performance, with expensive I/O and API calls running concurrently.
 
 The system is a graph where the Portfolio Manager agent repeatedly decides on the next best action, calls a tool, updates its state, and loops until it is confident enough to generate a final report.
 
