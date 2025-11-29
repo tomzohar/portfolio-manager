@@ -1,0 +1,68 @@
+@use 'scss' as *;
+
+.auth-container {
+  @include container-center;
+  min-height: 100vh;
+  padding: $spacing-lg;
+  background: $color-background;
+}
+
+.auth-card {
+  max-width: 400px;
+  width: 100%;
+  padding: $spacing-xl;
+
+  h1 {
+    margin: 0 0 $spacing-xs 0;
+    font-size: 2rem;
+    font-weight: 600;
+    color: $color-text-primary;
+    text-align: center;
+  }
+
+  .subtitle {
+    margin: 0 0 $spacing-xl 0;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  .error-message {
+    padding: $spacing-sm $spacing-md;
+    margin-bottom: $spacing-md;
+    background-color: rgba(244, 67, 54, 0.1);
+    border: 1px solid rgba(244, 67, 54, 0.5);
+    border-radius: $border-radius-sm;
+    color: #f44336;
+    font-size: 0.875rem;
+  }
+
+  form {
+    @include flex-column;
+    gap: $spacing-md;
+
+    lib-button {
+      margin-top: $spacing-sm;
+    }
+  }
+
+  .auth-footer {
+    margin-top: $spacing-lg;
+    text-align: center;
+    color: $color-text-secondary;
+
+    p {
+      margin: 0;
+    }
+
+    a {
+      color: $color-primary;
+      text-decoration: none;
+      font-weight: 500;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
+

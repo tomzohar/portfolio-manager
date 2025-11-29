@@ -1,0 +1,53 @@
+<div class="auth-container">
+  <lib-card>
+    <div class="auth-card">
+      <h1>Sign Up</h1>
+      <p class="subtitle">Create a new account</p>
+
+      @if (error(); as errorMsg) {
+      <div class="error-message">
+        {{ errorMsg }}
+      </div>
+      }
+
+      <form [formGroup]="signupForm" (ngSubmit)="onSubmit()">
+        <lib-input
+          [config]="{
+            control: emailControl,
+            label: 'Email',
+            type: 'email',
+            placeholder: 'Enter your email',
+            errorMessages: {
+              required: 'Email is required',
+              email: 'Invalid email format'
+            }
+          }"
+        />
+
+        <lib-input
+          [config]="{
+            control: passwordControl,
+            label: 'Password',
+            type: 'password',
+            placeholder: 'Enter your password (minimum 8 characters)',
+            errorMessages: {
+              required: 'Password is required',
+              minlength: 'Password must be at least 8 characters'
+            }
+          }"
+        />
+
+        <lib-button [config]="{ label: 'Sign Up', type: 'submit', fullWidth: true, disabled: loading() }" (clicked)="onSubmit()">
+          {{ loading() ? 'Creating account...' : 'Sign Up' }}
+        </lib-button>
+      </form>
+
+      <div class="auth-footer">
+        <p>
+          Already have an account?
+          <a routerLink="/login">Login</a>
+        </p>
+      </div>
+    </div>
+  </lib-card>
+</div>

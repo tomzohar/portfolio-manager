@@ -39,3 +39,33 @@ export interface AddAssetDto {
 export interface PortfolioWithAssets extends DashboardPortfolio {
   assets: DashboardAsset[];
 }
+
+// Auth Types
+export interface User {
+  id: string;
+  email: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface AuthState {
+  user: User | null;
+  token: string | null;
+  loading: boolean;
+  error: string | null;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface SignupRequest {
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+}
