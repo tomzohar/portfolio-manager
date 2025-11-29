@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import { DashboardPortfolio, DashboardAsset } from '@stocks-researcher/types';
+import { DashboardPortfolio, DashboardAsset, CreatePortfolioDto, AddAssetDto } from '@stocks-researcher/types';
 
 /**
  * Portfolio Actions
@@ -18,6 +18,15 @@ export const PortfolioActions = createActionGroup({
     'Load Assets': props<{ portfolioId: string }>(),
     'Load Assets Success': props<{ portfolioId: string; assets: DashboardAsset[] }>(),
     'Load Assets Failure': props<{ error: string }>(),
+    'Create Portfolio': props<{ dto: CreatePortfolioDto }>(),
+    'Create Portfolio Success': props<{ portfolio: DashboardPortfolio }>(),
+    'Create Portfolio Failure': props<{ error: string }>(),
+    'Add Asset': props<{ portfolioId: string; dto: AddAssetDto }>(),
+    'Add Asset Success': props<{ portfolioId: string; assets: DashboardAsset[] }>(),
+    'Add Asset Failure': props<{ error: string }>(),
+    'Remove Asset': props<{ portfolioId: string; assetId: string }>(),
+    'Remove Asset Success': props<{ portfolioId: string; assets: DashboardAsset[] }>(),
+    'Remove Asset Failure': props<{ error: string }>(),
   }
 });
 
