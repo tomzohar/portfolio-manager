@@ -1,6 +1,25 @@
-<div class="dashboard-layout">
-  <h2>Stocks Researcher Dashboard</h2>
-  <div class="content">
-    <p>Dashboard Layout Loaded (Zoneless Mode)</p>
+<div class="dashboard-container">
+  <lib-toolbar title="Portfolio Dashboard"></lib-toolbar>
+
+  <div class="dashboard-content">
+    <!-- Portfolio Selection -->
+    <lib-card title="Select Portfolio">
+      <lib-select 
+        label="Choose a portfolio" 
+        [options]="portfolioOptions()"
+        [selected]="selectedPortfolioId()"
+        (selectionChange)="onPortfolioSelect($event)">
+      </lib-select>
+    </lib-card>
+
+    <!-- Asset List -->
+    @if (selectedPortfolioId()) {
+      <lib-card title="Portfolio Assets" [subtitle]="assets().length + ' positions'">
+        <lib-table 
+          [data]="assets()" 
+          [columns]="assetColumns">
+        </lib-table>
+      </lib-card>
+    }
   </div>
 </div>
