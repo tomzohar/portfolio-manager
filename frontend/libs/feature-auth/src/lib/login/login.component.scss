@@ -1,29 +1,34 @@
 @use 'scss' as *;
 
 .auth-container {
-  @include container-center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-height: 100vh;
   padding: $spacing-lg;
   background: $color-background;
 }
 
 .auth-card {
-  max-width: 400px;
-  width: 100%;
+  display: flex;
+  flex-direction: column;
+  max-width: 440px;
   padding: $spacing-xl;
 
   h1 {
     margin: 0 0 $spacing-xs 0;
-    font-size: 2rem;
-    font-weight: 600;
+    font-size: 3rem;
+    font-weight: 700;
     color: $color-text-primary;
     text-align: center;
+    line-height: 1.2;
   }
 
   .subtitle {
     margin: 0 0 $spacing-xl 0;
     color: $color-text-secondary;
     text-align: center;
+    font-size: 1.125rem;
   }
 
   .error-message {
@@ -37,18 +42,25 @@
   }
 
   form {
-    @include flex-column;
-    gap: $spacing-md;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-lg;
+
+    lib-input {
+      width: 100%;
+    }
 
     lib-button {
-      margin-top: $spacing-sm;
+      width: 100%;
+      margin-top: $spacing-md;
     }
   }
 
   .auth-footer {
-    margin-top: $spacing-lg;
+    margin-top: $spacing-xl;
     text-align: center;
     color: $color-text-secondary;
+    font-size: 1rem;
 
     p {
       margin: 0;
@@ -58,6 +70,7 @@
       color: $color-primary;
       text-decoration: none;
       font-weight: 500;
+      margin-left: $spacing-xs;
 
       &:hover {
         text-decoration: underline;
@@ -65,4 +78,5 @@
     }
   }
 }
+
 
