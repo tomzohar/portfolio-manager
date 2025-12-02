@@ -16,7 +16,11 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column()
+  /**
+   * Password hash - should NEVER be exposed in API responses
+   * Using select: false prevents it from being loaded by default
+   */
+  @Column({ select: false })
   passwordHash: string;
 
   @OneToMany(() => Portfolio, (portfolio) => portfolio.user)

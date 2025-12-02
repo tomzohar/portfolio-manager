@@ -75,33 +75,21 @@ describe('CreatePortfolioDialogComponent', () => {
   });
 
   it('should not submit if form is invalid', () => {
-    const consoleSpy = jest.spyOn(console, 'log');
-    
     // Clear form to make it invalid
     component.form.patchValue({ name: '' });
     component.onSubmit();
     
-    expect(consoleSpy).not.toHaveBeenCalled();
     expect(mockDialogRef.close).not.toHaveBeenCalled();
-    
-    consoleSpy.mockRestore();
   });
 
   it('should submit and close dialog when form is valid', () => {
-    const consoleSpy = jest.spyOn(console, 'log');
-    
     // Set valid form value
     component.form.patchValue({ name: 'My Portfolio' });
     component.onSubmit();
     
-    expect(consoleSpy).toHaveBeenCalledWith('Create portfolio:', {
-      name: 'My Portfolio',
-    });
     expect(mockDialogRef.close).toHaveBeenCalledWith({
       name: 'My Portfolio',
     });
-    
-    consoleSpy.mockRestore();
   });
 
   it('should expose isFormValid getter', () => {

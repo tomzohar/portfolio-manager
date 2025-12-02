@@ -4,7 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { User } from '../users/entities/user.entity';
-import { AuthResponseDto, AuthUserDto } from './dto/auth-response.dto';
+import { AuthResponseDto } from './dto/auth-response.dto';
+import { UserSerializer } from '../users/serializers/user.serializer';
 
 interface JwtPayload {
   sub: string;
@@ -32,7 +33,8 @@ export class AuthService {
   async validateUser(email: string, password: string): Promise<User | null> {
     this.logger.log(`Validating credentials for email: ${email}`);
 
-    const user = await this.usersService.findByEmail(email);
+    // Include password for authentication
+    const user = await this.usersService.findByEmail(email, true);
 
     if (!user) {
       this.logger.warn(`User not found: ${email}`);
@@ -70,7 +72,7 @@ export class AuthService {
 
     return {
       token,
-      user: this.sanitizeUser(user),
+      user: UserSerializer.serialize(user),
     };
   }
 
@@ -99,7 +101,7 @@ export class AuthService {
 
       return {
         token, // Return same token if still valid
-        user: this.sanitizeUser(user),
+        user: UserSerializer.serialize(user),
       };
     } catch (error) {
       const errorMessage =
@@ -135,19 +137,7 @@ export class AuthService {
 
     return {
       token,
-      user: this.sanitizeUser(user),
-    };
-  }
-
-  /**
-   * Removes sensitive data from user entity
-   * @param user User entity
-   * @returns Sanitized user data without password hash
-   */
-  private sanitizeUser(user: User): AuthUserDto {
-    return {
-      id: user.id,
-      email: user.email,
+      user: UserSerializer.serialize(user),
     };
   }
 }
