@@ -7,7 +7,6 @@ import { AuthFacade, AuthStorageService } from '@frontend/data-access-auth';
 describe('authGuard', () => {
   let router: jest.Mocked<Router>;
   let authStorage: jest.Mocked<AuthStorageService>;
-
   beforeEach(() => {
     router = {
       navigate: jest.fn(),
@@ -47,7 +46,6 @@ describe('authGuard', () => {
     } as unknown as AuthFacade;
 
     authStorage.hasToken.mockReturnValue(true);
-
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),

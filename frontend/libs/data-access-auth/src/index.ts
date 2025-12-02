@@ -8,5 +8,4 @@ export * from './lib/+state/auth.effects';
 export * from './lib/services/auth-api.service';
 export * from './lib/services/auth-storage.service';
 export * from './lib/interceptors/auth.interceptor';
-export * from './lib/interceptors/auth.interceptor';
 

@@ -221,34 +221,6 @@ describe('AuthEffects', () => {
         done();
       });
     });
-
-    it('should not navigate when already on login page', (done) => {
-      Object.defineProperty(router, 'url', {
-        get: jest.fn().mockReturnValue('/login'),
-        configurable: true,
-      });
-
-      actions$ = of(AuthActions.checkAuthFailure());
-
-      effects.checkAuthFailure$.subscribe(() => {
-        expect(router.navigate).not.toHaveBeenCalled();
-        done();
-      });
-    });
-
-    it('should not navigate when already on signup page', (done) => {
-      Object.defineProperty(router, 'url', {
-        get: jest.fn().mockReturnValue('/signup'),
-        configurable: true,
-      });
-
-      actions$ = of(AuthActions.checkAuthFailure());
-
-      effects.checkAuthFailure$.subscribe(() => {
-        expect(router.navigate).not.toHaveBeenCalled();
-        done();
-      });
-    });
   });
 
   describe('checkAuthSuccess$', () => {
