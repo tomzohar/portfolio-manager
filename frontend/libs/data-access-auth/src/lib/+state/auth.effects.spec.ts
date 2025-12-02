@@ -208,11 +208,44 @@ describe('AuthEffects', () => {
   });
 
   describe('checkAuthFailure$', () => {
-    it('should navigate to login', (done) => {
+    it('should navigate to login when on protected route', (done) => {
+      Object.defineProperty(router, 'url', {
+        get: jest.fn().mockReturnValue('/dashboard'),
+        configurable: true,
+      });
+
       actions$ = of(AuthActions.checkAuthFailure());
 
       effects.checkAuthFailure$.subscribe(() => {
         expect(router.navigate).toHaveBeenCalledWith(['/login']);
+        done();
+      });
+    });
+
+    it('should not navigate when already on login page', (done) => {
+      Object.defineProperty(router, 'url', {
+        get: jest.fn().mockReturnValue('/login'),
+        configurable: true,
+      });
+
+      actions$ = of(AuthActions.checkAuthFailure());
+
+      effects.checkAuthFailure$.subscribe(() => {
+        expect(router.navigate).not.toHaveBeenCalled();
+        done();
+      });
+    });
+
+    it('should not navigate when already on signup page', (done) => {
+      Object.defineProperty(router, 'url', {
+        get: jest.fn().mockReturnValue('/signup'),
+        configurable: true,
+      });
+
+      actions$ = of(AuthActions.checkAuthFailure());
+
+      effects.checkAuthFailure$.subscribe(() => {
+        expect(router.navigate).not.toHaveBeenCalled();
         done();
       });
     });

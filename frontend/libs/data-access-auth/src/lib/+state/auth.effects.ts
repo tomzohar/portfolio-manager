@@ -102,7 +102,11 @@ export class AuthEffects {
       this.actions$.pipe(
         ofType(AuthActions.checkAuthFailure),
         tap(() => {
-          this.router.navigate(['/login']);
+          // Only redirect if not already on a public auth page
+          const currentUrl = this.router.url;
+          if (!['/login', '/signup'].includes(currentUrl)) {
+            this.router.navigate(['/login']);
+          }
         })
       ),
     { dispatch: false }

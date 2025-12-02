@@ -12,7 +12,8 @@
 .auth-card {
   display: flex;
   flex-direction: column;
-  max-width: 440px;
+  max-width: 480px;
+  width: 480px;
   padding: $spacing-xl;
 
   h1 {
