@@ -35,6 +35,7 @@ export class UiDashboardComponent {
   
   portfolioSelected = output<string>();
   createPortfolio = output<void>();
+  addAsset = output<void>();
 
   /**
    * Action menu configuration
@@ -102,6 +103,10 @@ export class UiDashboardComponent {
 
   onCreatePortfolio() {
     this.createPortfolio.emit();
+  }
+
+  onAddAsset() {
+    this.addAsset.emit();
   }
 
   /**

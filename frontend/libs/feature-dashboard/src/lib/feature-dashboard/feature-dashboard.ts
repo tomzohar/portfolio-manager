@@ -52,4 +52,9 @@ export class FeatureDashboardComponent implements OnInit {
         }
       });
   }
+
+  onAddAsset(): void {
+    // TODO: Implement add asset dialog
+    console.log('Add Asset clicked for portfolio:', this.selectedPortfolioId());
+  }
 }

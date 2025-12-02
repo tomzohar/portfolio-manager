@@ -30,10 +30,21 @@
       <!-- Asset List -->
       @if (selectedPortfolioId()) {
         <lib-card title="Portfolio Assets" [subtitle]="assets().length + ' positions'">
-          <lib-table 
-            [data]="assets()" 
-            [columns]="assetColumns">
-          </lib-table>
+          @if (assets().length === 0) {
+            <!-- Empty State for Assets -->
+            <lib-empty-state
+              [icon]="'inventory_2'"
+              [title]="'No Assets Yet'"
+              [message]="'Add your first asset to start tracking this portfolio'"
+              [buttonConfig]="{ label: 'Add Asset' }"
+              (actionClick)="onAddAsset()"
+            />
+          } @else {
+            <lib-table 
+              [data]="assets()" 
+              [columns]="assetColumns">
+            </lib-table>
+          }
         </lib-card>
       }
     }
