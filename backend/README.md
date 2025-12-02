@@ -50,6 +50,10 @@ DB_DATABASE=stocks_researcher
 # Application runs on port 3001 (default port 3000 might be in use)
 PORT=3001
 NODE_ENV=development
+
+# Polygon API Configuration
+# Get your API key from https://polygon.io/
+POLYGON_API_KEY=your_polygon_api_key_here
 ```
 
 3. **Setup PostgreSQL Database**
