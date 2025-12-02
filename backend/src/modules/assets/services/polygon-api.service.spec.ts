@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-import { Test, TestingModule } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
+import { Test, TestingModule } from '@nestjs/testing';
+import { AxiosError, AxiosResponse } from 'axios';
 import { of, throwError } from 'rxjs';
-import { AxiosResponse, AxiosError } from 'axios';
 import { PolygonApiService } from './polygon-api.service';
 
 describe('PolygonApiService', () => {
@@ -320,7 +320,7 @@ describe('PolygonApiService', () => {
         status: 200,
         statusText: 'OK',
         headers: {},
-        config: {} as any,
+        config: {},
       };
 
       jest.spyOn(httpService, 'get').mockReturnValue(of(mockAxiosResponse));
