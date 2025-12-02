@@ -141,5 +141,125 @@ describe('Portfolio Reducer', () => {
       expect(result.loading).toBe(false);
     });
   });
+
+  describe('createPortfolio - Optimistic Updates', () => {
+    it('should immediately add a temporary portfolio', () => {
+      const dto = { name: 'New Portfolio' };
+      const action = PortfolioActions.createPortfolio({ dto });
+      const result = portfolioReducer(initialState, action);
+
+      expect(result.portfolios.length).toBe(1);
+      expect(result.portfolios[0].name).toBe('New Portfolio');
+      expect(result.portfolios[0].id).toContain('temp-');
+      expect(result.loading).toBe(true);
+      expect(result.error).toBeNull();
+    });
+
+    it('should preserve existing portfolios when adding optimistically', () => {
+      const stateWithPortfolios = {
+        ...initialState,
+        portfolios: mockPortfolios,
+      };
+      const dto = { name: 'New Portfolio' };
+      const action = PortfolioActions.createPortfolio({ dto });
+      const result = portfolioReducer(stateWithPortfolios, action);
+
+      expect(result.portfolios.length).toBe(3);
+      expect(result.portfolios[0]).toEqual(mockPortfolios[0]);
+      expect(result.portfolios[1]).toEqual(mockPortfolios[1]);
+      expect(result.portfolios[2].name).toBe('New Portfolio');
+    });
+  });
+
+  describe('createPortfolioSuccess', () => {
+    it('should replace temporary portfolio with real one', () => {
+      const stateWithTempPortfolio = {
+        ...initialState,
+        portfolios: [
+          { id: 'temp-123', name: 'New Portfolio' },
+        ],
+        loading: true,
+      };
+      const realPortfolio: DashboardPortfolio = {
+        id: 'real-id-456',
+        name: 'New Portfolio',
+        createdAt: new Date(),
+      };
+      const action = PortfolioActions.createPortfolioSuccess({
+        portfolio: realPortfolio,
+      });
+      const result = portfolioReducer(stateWithTempPortfolio, action);
+
+      expect(result.portfolios.length).toBe(1);
+      expect(result.portfolios[0]).toEqual(realPortfolio);
+      expect(result.portfolios[0].id).toBe('real-id-456');
+      expect(result.loading).toBe(false);
+      expect(result.error).toBeNull();
+    });
+
+    it('should only replace the matching temporary portfolio', () => {
+      const stateWithMultiplePortfolios = {
+        ...initialState,
+        portfolios: [
+          mockPortfolios[0],
+          { id: 'temp-123', name: 'New Portfolio' },
+          mockPortfolios[1],
+        ],
+        loading: true,
+      };
+      const realPortfolio: DashboardPortfolio = {
+        id: 'real-id-456',
+        name: 'New Portfolio',
+      };
+      const action = PortfolioActions.createPortfolioSuccess({
+        portfolio: realPortfolio,
+      });
+      const result = portfolioReducer(stateWithMultiplePortfolios, action);
+
+      expect(result.portfolios.length).toBe(3);
+      expect(result.portfolios[0]).toEqual(mockPortfolios[0]);
+      expect(result.portfolios[1]).toEqual(realPortfolio);
+      expect(result.portfolios[2]).toEqual(mockPortfolios[1]);
+    });
+  });
+
+  describe('createPortfolioFailure', () => {
+    it('should remove temporary portfolio on failure', () => {
+      const stateWithTempPortfolio = {
+        ...initialState,
+        portfolios: [
+          mockPortfolios[0],
+          { id: 'temp-123', name: 'Failed Portfolio' },
+        ],
+        loading: true,
+      };
+      const error = 'Failed to create portfolio';
+      const action = PortfolioActions.createPortfolioFailure({ error });
+      const result = portfolioReducer(stateWithTempPortfolio, action);
+
+      expect(result.portfolios.length).toBe(1);
+      expect(result.portfolios[0]).toEqual(mockPortfolios[0]);
+      expect(result.loading).toBe(false);
+      expect(result.error).toBe(error);
+    });
+
+    it('should remove all temporary portfolios on failure', () => {
+      const stateWithMultipleTempPortfolios = {
+        ...initialState,
+        portfolios: [
+          { id: 'temp-123', name: 'Temp 1' },
+          mockPortfolios[0],
+          { id: 'temp-456', name: 'Temp 2' },
+        ],
+        loading: true,
+      };
+      const error = 'Failed to create portfolio';
+      const action = PortfolioActions.createPortfolioFailure({ error });
+      const result = portfolioReducer(stateWithMultipleTempPortfolios, action);
+
+      expect(result.portfolios.length).toBe(1);
+      expect(result.portfolios[0]).toEqual(mockPortfolios[0]);
+    });
+  });
 });
 

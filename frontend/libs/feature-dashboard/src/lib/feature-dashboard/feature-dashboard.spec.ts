@@ -2,8 +2,9 @@ import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { PortfolioFacade } from '@frontend/data-access-portfolio';
+import { AuthFacade } from '@frontend/data-access-auth';
 import { DialogService } from '@frontend/util-dialog';
-import { DashboardAsset, DashboardPortfolio } from '@stocks-researcher/types';
+import { DashboardAsset, DashboardPortfolio, User } from '@stocks-researcher/types';
 import { FeatureDashboardComponent } from './feature-dashboard';
 import { CreatePortfolioDialogComponent } from '../create-portfolio-dialog/create-portfolio-dialog.component';
 import { of } from 'rxjs';
@@ -12,7 +13,13 @@ describe('FeatureDashboardComponent', () => {
   let component: FeatureDashboardComponent;
   let fixture: ComponentFixture<FeatureDashboardComponent>;
   let mockFacade: Partial<PortfolioFacade>;
+  let mockAuthFacade: Partial<AuthFacade>;
   let mockDialogService: Partial<DialogService>;
+
+  const mockUser: User = {
+    id: 'user-123',
+    email: 'test@example.com',
+  };
 
   const mockPortfolios: DashboardPortfolio[] = [
     { id: '1', name: 'Retirement Fund' },
@@ -45,6 +52,7 @@ describe('FeatureDashboardComponent', () => {
     mockFacade = {
       init: jest.fn(),
       selectPortfolio: jest.fn(),
+      createPortfolio: jest.fn(),
       portfolios: signal(mockPortfolios),
       currentAssets: signal(mockAssets),
       selectedId: signal<string | null>(null),
@@ -52,12 +60,9 @@ describe('FeatureDashboardComponent', () => {
       error: signal<string | null>(null),
     };
 
-    mockFacade = {
-      init: jest.fn(),
-      selectPortfolio: jest.fn(),
-      portfolios: signal(mockPortfolios),
-      currentAssets: signal(mockAssets),
-      selectedId: signal<string | null>(null),
+    mockAuthFacade = {
+      user: signal(mockUser),
+      isAuthenticated: signal(true),
       loading: signal(false),
       error: signal<string | null>(null),
     };
@@ -74,6 +79,7 @@ describe('FeatureDashboardComponent', () => {
         provideZonelessChangeDetection(),
         provideAnimations(),
         { provide: PortfolioFacade, useValue: mockFacade },
+        { provide: AuthFacade, useValue: mockAuthFacade },
         { provide: DialogService, useValue: mockDialogService },
       ],
     }).compileComponents();
@@ -129,9 +135,35 @@ describe('FeatureDashboardComponent', () => {
     
     expect(mockDialogService.open).toHaveBeenCalledWith({
       component: CreatePortfolioDialogComponent,
-      data: { userId: 'current-user-id' },
+      data: {},
       width: '500px',
       disableClose: false,
     });
   });
+
+  it('should call facade.createPortfolio when dialog returns valid result', (done) => {
+    component.onCreatePortfolio();
+    
+    // Wait for async subscription to complete
+    setTimeout(() => {
+      expect(mockFacade.createPortfolio).toHaveBeenCalledWith({
+        name: 'Test Portfolio',
+      });
+      done();
+    }, 0);
+  });
+
+  it('should not call createPortfolio when dialog is cancelled', (done) => {
+    mockDialogService.open = jest.fn().mockReturnValue({
+      afterClosedObservable: of(undefined),
+    });
+
+    component.onCreatePortfolio();
+    
+    setTimeout(() => {
+      expect(mockFacade.createPortfolio).not.toHaveBeenCalled();
+      done();
+    }, 0);
+  });
+
 });

@@ -7,6 +7,9 @@ import {
   SelectOption, 
   ColumnDef,
   EmptyStateComponent,
+  ActionMenuComponent,
+  ActionMenuConfig,
+  MenuItem,
 } from '@stocks-researcher/styles';
 import { DashboardPortfolio, DashboardAsset } from '@stocks-researcher/types';
 
@@ -19,6 +22,7 @@ import { DashboardPortfolio, DashboardAsset } from '@stocks-researcher/types';
     TableComponent,
     ToolbarComponent,
     EmptyStateComponent,
+    ActionMenuComponent,
 ],
   templateUrl: './ui-dashboard.html',
   styleUrl: './ui-dashboard.scss'
@@ -30,6 +34,33 @@ export class UiDashboardComponent {
   
   portfolioSelected = output<string>();
   createPortfolio = output<void>();
+
+  /**
+   * Action menu configuration
+   */
+  actionMenuConfig: ActionMenuConfig = {
+    button: {
+      label: 'Actions',
+      icon: 'more_vert',
+      variant: 'icon',
+      ariaLabel: 'Portfolio actions menu'
+    },
+    menu: {
+      items: [
+        { 
+          id: 'create-portfolio', 
+          label: 'Create Portfolio', 
+          icon: 'add' 
+        },
+        { 
+          id: 'refresh', 
+          label: 'Refresh', 
+          icon: 'refresh' 
+        }
+      ],
+      ariaLabel: 'Portfolio actions'
+    }
+  };
 
   portfolioOptions = computed<SelectOption[]>(() => 
     this.portfolios().map(p => ({
@@ -68,5 +99,19 @@ export class UiDashboardComponent {
 
   onCreatePortfolio() {
     this.createPortfolio.emit();
+  }
+
+  /**
+   * Handle action menu item selection
+   */
+  onActionMenuItemSelected(item: MenuItem): void {
+    switch (item.id) {
+      case 'create-portfolio':
+        this.onCreatePortfolio();
+        break;
+      case 'refresh':
+        // Emit a refresh event in the future
+        break;
+    }
   }
 }

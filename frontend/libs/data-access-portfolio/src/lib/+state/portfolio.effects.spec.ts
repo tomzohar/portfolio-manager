@@ -32,6 +32,7 @@ describe('PortfolioEffects', () => {
     const portfolioApiServiceMock = {
       getPortfolios: jest.fn(),
       getAssets: jest.fn(),
+      createPortfolio: jest.fn(),
     };
 
     TestBed.configureTestingModule({
@@ -127,6 +128,43 @@ describe('PortfolioEffects', () => {
       effects.loadAssets$.subscribe((action) => {
         expect(action).toEqual(
           PortfolioActions.loadAssetsFailure({ error: 'Asset load error' })
+        );
+        done();
+      });
+    });
+  });
+
+  describe('createPortfolio$', () => {
+    it('should dispatch createPortfolioSuccess on successful creation', (done) => {
+      const dto = { name: 'New Portfolio' };
+      const createdPortfolio: DashboardPortfolio = {
+        id: 'new-id-123',
+        name: 'New Portfolio',
+        createdAt: new Date(),
+      };
+      
+      portfolioApiService.createPortfolio.mockReturnValue(of(createdPortfolio));
+      actions$ = of(PortfolioActions.createPortfolio({ dto }));
+
+      effects.createPortfolio$.subscribe((action) => {
+        expect(action).toEqual(
+          PortfolioActions.createPortfolioSuccess({ portfolio: createdPortfolio })
+        );
+        expect(portfolioApiService.createPortfolio).toHaveBeenCalledWith(dto);
+        done();
+      });
+    });
+
+    it('should dispatch createPortfolioFailure on error', (done) => {
+      const dto = { name: 'New Portfolio' };
+      const error = new Error('Creation failed');
+      
+      portfolioApiService.createPortfolio.mockReturnValue(throwError(() => error));
+      actions$ = of(PortfolioActions.createPortfolio({ dto }));
+
+      effects.createPortfolio$.subscribe((action) => {
+        expect(action).toEqual(
+          PortfolioActions.createPortfolioFailure({ error: 'Creation failed' })
         );
         done();
       });
