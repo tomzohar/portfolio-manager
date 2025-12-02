@@ -35,4 +35,5 @@ async function bootstrap() {
     `Swagger documentation available at: http://localhost:${process.env.PORT ?? 3001}/api`,
   );
 }
-bootstrap();
+
+void bootstrap();

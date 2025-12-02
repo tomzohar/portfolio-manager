@@ -87,12 +87,16 @@ Complex Queries: Use createQueryBuilder for complex joins or aggregation to ensu
 IV. TESTING PROTOCOL
 Framework: Jest (Unit), Supertest (E2E).
 
+IMPORTANT: Refer to TESTING.md for comprehensive testing best practices, common issues, and solutions specific to this project.
+
 ISOLATION & MOCKING
 Unit Tests (*.spec.ts):
 
 Test Services in isolation.
 
 MANDATE: Mock Repositories using a custom mock factory (e.g., provide: getRepositoryToken(Entity), useValue: mockRepo).
+
+MANDATE: Mock external libraries (e.g., bcrypt) at module level using jest.mock() BEFORE imports to avoid property redefinition errors.
 
 NEVER connect to a real DB in unit tests.
 
@@ -124,6 +128,8 @@ CONTEXT.md: Current task context.
 README.md: Setup, Docker build instructions, and Environment Variable reference.
 
 ARCHITECTURE.md: Module dependency graph and ERD (Entity Relationship Diagram).
+
+TESTING.md: Testing best practices, common issues, and solutions for Jest/NestJS testing.
 
 API_SPEC.json: (Auto-generated) OpenAPI spec.
 
