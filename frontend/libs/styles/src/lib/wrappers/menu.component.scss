@@ -1,0 +1,20 @@
+@use '../scss' as *;
+
+// Menu styling
+:host {
+  ::ng-deep {
+    .mat-mdc-menu-content {
+      padding: $spacing-xs 0;
+    }
+
+    .mat-mdc-menu-item {
+      min-height: 40px;
+      
+      .mat-icon {
+        margin-right: $spacing-sm;
+        color: $color-text-secondary;
+      }
+    }
+  }
+}
+
