@@ -8,3 +8,10 @@
 .dashboard-content {
   @include container-center($max-width: $max-width-container, $padding: $spacing-lg);
 }
+
+.asset-actions {
+  display: flex;
+  gap: $spacing-xs;
+  justify-content: center;
+  align-items: center;
+}

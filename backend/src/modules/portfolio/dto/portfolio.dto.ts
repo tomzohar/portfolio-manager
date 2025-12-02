@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
@@ -17,3 +18,11 @@ export const AddAssetSchema = z.object({
 });
 
 export class AddAssetDto extends createZodDto(AddAssetSchema) {}
+
+// Response DTO for asset creation
+export class AssetCreatedResponseDto {
+  @ApiProperty({
+    description: 'ID of the created asset',
+  })
+  id: string;
+}

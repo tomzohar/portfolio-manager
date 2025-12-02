@@ -106,12 +106,13 @@ export class PortfolioService {
 
   /**
    * Add an asset to a portfolio (with ownership verification)
+   * Returns only the asset ID as confirmation
    */
   async addAsset(
     portfolioId: string,
     userId: string,
     addAssetDto: AddAssetDto,
-  ): Promise<Asset> {
+  ): Promise<{ id: string }> {
     const portfolio = await this.findOne(portfolioId, userId);
     if (!portfolio) {
       throw new NotFoundException('Portfolio not found');
@@ -122,7 +123,10 @@ export class PortfolioService {
       portfolio,
     });
 
-    return this.assetRepository.save(asset);
+    const savedAsset = await this.assetRepository.save(asset);
+
+    // Return only the ID
+    return { id: savedAsset.id };
   }
 
   /**

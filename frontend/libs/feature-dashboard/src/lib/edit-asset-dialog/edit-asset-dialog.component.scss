@@ -1,0 +1,49 @@
+@use 'scss' as *;
+
+:host {
+  display: block;
+}
+
+// Ticker information section
+.ticker-info {
+  @include flex-row($spacing-md);
+  padding: $spacing-md;
+  background-color: $color-background;
+  border-radius: $border-radius-md;
+  margin-bottom: $spacing-lg;
+
+  .ticker-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+    color: $color-accent;
+    flex-shrink: 0;
+  }
+
+  .ticker-details {
+    @include flex-column($spacing-xs);
+    flex: 1;
+  }
+
+  .ticker-symbol {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+  }
+
+  .ticker-meta {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
+}
+
+// Form styling
+.asset-form {
+  @include flex-column($spacing-md);
+  margin-bottom: $spacing-md;
+}
+
+mat-dialog-actions {
+  padding: $spacing-md $spacing-lg;
+}
+

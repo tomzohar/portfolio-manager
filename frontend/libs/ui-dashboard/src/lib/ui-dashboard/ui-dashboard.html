@@ -42,7 +42,8 @@
           } @else {
             <lib-table 
               [data]="assets()" 
-              [columns]="assetColumns">
+              [columns]="assetColumns"
+              [actionsTemplate]="assetActions">
             </lib-table>
           }
         </lib-card>
@@ -50,3 +51,13 @@
     }
   </div>
 </div>
+
+<!-- Asset Actions Template -->
+<ng-template #assetActions let-asset>
+  <div class="asset-actions">
+    <lib-action-menu
+      [config]="getAssetActionsMenuConfig(asset)"
+      (itemSelected)="onAssetActionSelected(asset, $event)"
+    />
+  </div>
+</ng-template>

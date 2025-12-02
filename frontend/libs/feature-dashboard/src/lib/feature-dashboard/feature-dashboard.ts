@@ -3,11 +3,13 @@ import { PortfolioFacade } from '@frontend/data-access-portfolio';
 import { UiDashboardComponent } from '@frontend/ui-dashboard';
 import { DialogService } from '@frontend/util-dialog';
 import { AssetSearchDialogComponent } from '@stocks-researcher/ui-asset-search';
+import { ConfirmationDialogComponent, ConfirmationDialogConfig } from '@frontend/util-dialog';
 import {
   CreatePortfolioDto,
   AssetSearchConfig,
   AssetSearchResult,
   AddAssetDto,
+  DashboardAsset,
 } from '@stocks-researcher/types';
 import { take } from 'rxjs';
 import { CreatePortfolioDialogComponent } from '../create-portfolio-dialog/create-portfolio-dialog.component';
@@ -16,6 +18,11 @@ import {
   AddAssetDialogData,
   AddAssetDialogResult,
 } from '../add-asset-dialog/add-asset-dialog.component';
+import {
+  EditAssetDialogComponent,
+  EditAssetDialogData,
+  EditAssetDialogResult,
+} from '../edit-asset-dialog/edit-asset-dialog.component';
 
 @Component({
   selector: 'lib-feature-dashboard',
@@ -131,6 +138,87 @@ export class FeatureDashboardComponent implements OnInit {
                 this.facade.addAsset(detailsResult.portfolioId, dto);
               }
             });
+        }
+      });
+  }
+
+  /**
+   * Opens the edit asset dialog to update an existing asset
+   */
+  onEditAsset(asset: DashboardAsset): void {
+    const portfolioId = this.selectedPortfolioId();
+    
+    if (!portfolioId || !asset.id) {
+      console.warn('No portfolio selected or asset has no ID');
+      return;
+    }
+
+    const editData: EditAssetDialogData = {
+      asset,
+      portfolioId,
+    };
+
+    const editDialogRef = this.dialogService.open<
+      EditAssetDialogData,
+      EditAssetDialogResult
+    >({
+      component: EditAssetDialogComponent,
+      data: editData,
+      width: '500px',
+      disableClose: false,
+    });
+
+    // Handle edit dialog result
+    editDialogRef.afterClosedObservable
+      .pipe(take(1))
+      .subscribe((result: EditAssetDialogResult | undefined) => {
+        if (result) {
+          // TODO: Implement update asset in facade
+          console.log('Update asset:', result);
+          // this.facade.updateAsset(result.portfolioId, result.assetId, {
+          //   ticker: result.ticker,
+          //   quantity: result.quantity,
+          //   avgPrice: result.avgPrice,
+          // });
+        }
+      });
+  }
+
+  /**
+   * Opens confirmation dialog and deletes the asset if confirmed
+   */
+  onDeleteAsset(asset: DashboardAsset): void {
+    const portfolioId = this.selectedPortfolioId();
+    
+    if (!portfolioId || !asset.id) {
+      console.warn('No portfolio selected or asset has no ID');
+      return;
+    }
+
+    const confirmConfig: ConfirmationDialogConfig = {
+      title: 'Delete Asset',
+      message: `Are you sure you want to delete ${asset.ticker} from this portfolio? This action cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      confirmColor: 'warn',
+      icon: 'warning',
+    };
+
+    const confirmDialogRef = this.dialogService.open<
+      ConfirmationDialogConfig,
+      boolean
+    >({
+      component: ConfirmationDialogComponent,
+      data: confirmConfig,
+      width: '450px',
+    });
+
+    // Handle confirmation result
+    confirmDialogRef.afterClosedObservable
+      .pipe(take(1))
+      .subscribe((confirmed: boolean | undefined) => {
+        if (confirmed && asset.id) {
+          this.facade.removeAsset(portfolioId, asset.id);
         }
       });
   }

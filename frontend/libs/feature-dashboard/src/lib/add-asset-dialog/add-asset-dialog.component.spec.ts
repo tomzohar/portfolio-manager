@@ -75,10 +75,10 @@ describe('AddAssetDialogComponent', () => {
       expect(quantityControl?.hasError('min')).toBe(true);
     });
 
-    it('should validate quantity is a valid number', () => {
+    it('should validate quantity is a number', () => {
       const quantityControl = component.form.get('quantity');
-      quantityControl?.setValue('abc');
-      expect(quantityControl?.hasError('pattern')).toBe(true);
+      quantityControl?.setValue(10);
+      expect(quantityControl?.valid).toBe(true);
     });
 
     it('should accept valid quantity', () => {

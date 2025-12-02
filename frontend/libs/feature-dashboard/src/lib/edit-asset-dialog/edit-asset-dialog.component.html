@@ -2,10 +2,10 @@
 
 <mat-dialog-content>
   <div class="ticker-info">
-    <mat-icon class="ticker-icon">account_balance</mat-icon>
+    <mat-icon class="ticker-icon">edit</mat-icon>
     <div class="ticker-details">
-      <span class="ticker-symbol">{{ ticker().ticker }}</span>
-      <span class="ticker-name">{{ ticker().name }}</span>
+      <span class="ticker-symbol">{{ tickerDisplay() }}</span>
+      <span class="ticker-meta">Editing position</span>
     </div>
   </div>
 
@@ -16,7 +16,7 @@
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
-  <lib-button [config]="{ label: 'Cancel', variant: 'flat' }" (clicked)="onCancel()" />
+  <button mat-button (click)="onCancel()">Cancel</button>
   <lib-button
     [config]="submitButtonConfig()"
     (clicked)="onSubmit()"

@@ -27,40 +27,41 @@ import {
   InputConfig,
   ButtonConfig,
 } from '@stocks-researcher/styles';
-import { TickerResult, AddAssetDto } from '@stocks-researcher/types';
+import { DashboardAsset, AddAssetDto } from '@stocks-researcher/types';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 /**
- * Data passed to the Add Asset Dialog
+ * Data passed to the Edit Asset Dialog
  */
-export interface AddAssetDialogData {
-  ticker: TickerResult;
+export interface EditAssetDialogData {
+  asset: DashboardAsset;
   portfolioId: string;
 }
 
 /**
- * Result returned from the Add Asset Dialog
+ * Result returned from the Edit Asset Dialog
  */
-export interface AddAssetDialogResult extends AddAssetDto {
+export interface EditAssetDialogResult extends AddAssetDto {
+  assetId: string;
   portfolioId: string;
 }
 
 /**
- * AddAssetDialogComponent
+ * EditAssetDialogComponent
  *
- * Dialog component for collecting asset details (quantity and average price)
- * after a ticker has been selected from the asset search dialog.
+ * Dialog component for editing asset details (quantity and average price).
+ * Pre-fills the form with the current asset values.
  *
  * @example
  * ```typescript
- * const dialogRef = this.dialogService.open<AddAssetDialogData, AddAssetDialogResult>({
- *   component: AddAssetDialogComponent,
- *   data: { ticker: selectedTicker, portfolioId: 'portfolio-id' },
+ * const dialogRef = this.dialogService.open<EditAssetDialogData, EditAssetDialogResult>({
+ *   component: EditAssetDialogComponent,
+ *   data: { asset: existingAsset, portfolioId: 'portfolio-id' },
  * });
  * ```
  */
 @Component({
-  selector: 'lib-add-asset-dialog',
+  selector: 'lib-edit-asset-dialog',
   standalone: true,
   imports: [
     CommonModule,
@@ -72,28 +73,28 @@ export interface AddAssetDialogResult extends AddAssetDto {
     ButtonComponent,
     InputComponent,
   ],
-  templateUrl: './add-asset-dialog.component.html',
-  styleUrl: './add-asset-dialog.component.scss',
+  templateUrl: './edit-asset-dialog.component.html',
+  styleUrl: './edit-asset-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AddAssetDialogComponent {
+export class EditAssetDialogComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly dialogRef =
-    inject<MatDialogRef<AddAssetDialogComponent, AddAssetDialogResult>>(
+    inject<MatDialogRef<EditAssetDialogComponent, EditAssetDialogResult>>(
       MatDialogRef
     );
-  private readonly dialogData = inject<AddAssetDialogData>(MAT_DIALOG_DATA);
+  private readonly dialogData = inject<EditAssetDialogData>(MAT_DIALOG_DATA);
 
-  /** Signal for the selected ticker */
-  readonly ticker = signal(this.dialogData.ticker);
+  /** Signal for the asset being edited */
+  readonly asset = signal(this.dialogData.asset);
 
   /** Signal for the portfolio ID */
   readonly portfolioId = signal(this.dialogData.portfolioId);
 
-  /** Form group for asset details */
+  /** Form group for asset details - pre-filled with current values */
   readonly form: FormGroup = this.formBuilder.group({
-    quantity: ['', [Validators.required, Validators.min(1)]],
-    avgPrice: ['', [Validators.required, Validators.min(1)]],
+    quantity: [this.dialogData.asset.quantity, [Validators.required, Validators.min(1)]],
+    avgPrice: [this.dialogData.asset.avgPrice, [Validators.required, Validators.min(1)]],
   });
 
   readonly formChanges = toSignal(this.form.valueChanges, {
@@ -109,17 +110,17 @@ export class AddAssetDialogComponent {
   });
 
   /** Computed: Dialog title with ticker symbol */
-  readonly title = computed(() => `Add ${this.ticker().ticker} to Portfolio`);
+  readonly title = computed(() => `Edit ${this.asset().ticker} Position`);
 
   /** Computed: Ticker display info */
   readonly tickerDisplay = computed(
-    () => `${this.ticker().ticker} - ${this.ticker().name}`
+    () => this.asset().ticker
   );
 
   /** Computed: Submit button configuration */
   readonly submitButtonConfig = computed(
     (): ButtonConfig => ({
-      label: 'Add Asset',
+      label: 'Update Asset',
       variant: 'raised',
       color: 'primary',
       disabled: !this.isFormValid(),
@@ -140,7 +141,6 @@ export class AddAssetDialogComponent {
       errorMessages: {
         required: 'Quantity is required',
         min: 'Quantity must be greater than 0',
-        pattern: 'Please enter a valid number',
       },
     };
   }
@@ -158,8 +158,7 @@ export class AddAssetDialogComponent {
       fullWidth: true,
       errorMessages: {
         required: 'Average price is required',
-        min: 'Price must be at least $0.01',
-        pattern: 'Please enter a valid price (up to 2 decimal places)',
+        min: 'Price must be at least $1',
       },
     };
   }
@@ -173,13 +172,14 @@ export class AddAssetDialogComponent {
 
   /**
    * Handle submit button click
-   * Closes dialog with asset details if form is valid
+   * Closes dialog with updated asset details if form is valid
    */
   onSubmit(): void {
     if (this.form.valid) {
       const formValue = this.form.value;
-      const result: AddAssetDialogResult = {
-        ticker: this.ticker().ticker,
+      const result: EditAssetDialogResult = {
+        assetId: this.asset().id!,
+        ticker: this.asset().ticker,
         quantity: parseFloat(formValue.quantity),
         avgPrice: parseFloat(formValue.avgPrice),
         portfolioId: this.portfolioId(),
@@ -202,3 +202,4 @@ export class AddAssetDialogComponent {
     return this.form.get('avgPrice') as FormControl;
   }
 }
+

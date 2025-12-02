@@ -80,7 +80,10 @@ export class PortfolioController {
   @ApiOperation({
     summary: 'Add an asset to a portfolio (with ownership verification)',
   })
-  @ApiResponse({ status: 201, description: 'Asset added.' })
+  @ApiResponse({
+    status: 201,
+    description: 'Asset added successfully. Returns asset ID.',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 403, description: 'Access denied.' })
   @ApiResponse({ status: 404, description: 'Portfolio not found.' })
@@ -88,7 +91,7 @@ export class PortfolioController {
     @CurrentUser() user: User,
     @Param('id') id: string,
     @Body() addAssetDto: AddAssetDto,
-  ) {
+  ): Promise<{ id: string }> {
     return this.portfolioService.addAsset(id, user.id, addAssetDto);
   }
 

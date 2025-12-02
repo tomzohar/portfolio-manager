@@ -108,26 +108,33 @@ export class PortfolioEffects {
 
   /**
    * Effect: Add Asset
-   * Adds an asset to a portfolio
+   * Adds an asset to a portfolio with optimistic updates.
+   * The reducer immediately adds a temporary asset with a temp ID,
+   * and this effect either confirms it with the real ID or removes it on failure.
    */
   addAsset$ = createEffect(() =>
     this.actions$.pipe(
       ofType(PortfolioActions.addAsset),
-      switchMap(({ portfolioId, dto }) =>
-        this.portfolioApiService.addAsset(portfolioId, dto).pipe(
-          map((portfolio) =>
+      switchMap((action) => {
+        const { portfolioId, dto, tempId } = action;
+        
+        return this.portfolioApiService.addAsset(portfolioId, dto).pipe(
+          map((response) =>
             PortfolioActions.addAssetSuccess({ 
               portfolioId, 
-              assets: portfolio.assets 
+              tempId,
+              assetId: response.id
             })
           ),
           catchError((error) =>
             of(PortfolioActions.addAssetFailure({ 
+              portfolioId,
+              tempId,
               error: error?.message || 'Failed to add asset' 
             }))
           )
-        )
-      )
+        );
+      })
     )
   );
 

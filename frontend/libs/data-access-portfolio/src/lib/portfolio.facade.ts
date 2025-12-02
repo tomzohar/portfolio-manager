@@ -106,14 +106,17 @@ export class PortfolioFacade {
   }
 
   /**
-   * Adds an asset to a portfolio.
-   * The portfolio's assets will be automatically updated after success.
+   * Adds an asset to a portfolio with optimistic updates.
+   * The asset is immediately shown in the UI with a temporary ID,
+   * then updated with the real ID once the server confirms, or removed if it fails.
    * 
    * @param portfolioId - The portfolio ID
    * @param dto - Asset data (ticker, quantity, avgPrice)
    */
   addAsset(portfolioId: string, dto: AddAssetDto): void {
-    this.store.dispatch(PortfolioActions.addAsset({ portfolioId, dto }));
+    // Generate temp ID for optimistic update
+    const tempId = `temp-asset-${Date.now()}`;
+    this.store.dispatch(PortfolioActions.addAsset({ portfolioId, dto, tempId }));
   }
 
   /**
