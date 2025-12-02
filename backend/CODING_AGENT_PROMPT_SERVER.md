@@ -25,7 +25,9 @@ Style: Standard NestJS/Prettier rules.
 
 Typing: any is FORBIDDEN.
 
-DTOs: All Controller inputs/outputs MUST be defined as Classes (not Interfaces) using class-validator and class-transformer decorators.
+DTOs: 
+  - Request DTOs MUST be defined using Zod schemas with nestjs-zod (createZodDto).
+  - Response DTOs MUST be defined as Classes with @ApiProperty decorators for Swagger documentation.
 
 Async/Await: All I/O operations (DB, API) MUST use async/await. Callback-style code is FORBIDDEN.
 
@@ -70,7 +72,7 @@ III. IMPLEMENTATION STANDARD (The "How")
 1. API Development (Controllers)
 Decorators: Use @nestjs/swagger decorators (@ApiProperty, @ApiResponse) on ALL endpoints and DTOs to generate documentation automatically.
 
-Validation: Use ValidationPipe globally with { transform: true, whitelist: true }.
+Validation: Use ZodValidationPipe (from nestjs-zod) globally for automatic validation of Zod-based DTOs.
 
 Response Format: Standardize responses. Do not return raw TypeORM entities if they contain sensitive data (passwords, salts). Use Response DTOs using plainToInstance.
 
