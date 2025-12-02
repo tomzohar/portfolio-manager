@@ -7,9 +7,15 @@ import {
   CreatePortfolioDto,
   AssetSearchConfig,
   AssetSearchResult,
+  AddAssetDto,
 } from '@stocks-researcher/types';
 import { take } from 'rxjs';
 import { CreatePortfolioDialogComponent } from '../create-portfolio-dialog/create-portfolio-dialog.component';
+import {
+  AddAssetDialogComponent,
+  AddAssetDialogData,
+  AddAssetDialogResult,
+} from '../add-asset-dialog/add-asset-dialog.component';
 
 @Component({
   selector: 'lib-feature-dashboard',
@@ -60,40 +66,71 @@ export class FeatureDashboardComponent implements OnInit {
 
   /**
    * Opens the asset search dialog to add assets to the selected portfolio
-   * Uses single-select mode by default
+   * Chains with the add asset details dialog for quantity and price input
    */
   onAddAsset(): void {
-    const config: AssetSearchConfig = {
+    const portfolioId = this.selectedPortfolioId();
+    
+    if (!portfolioId) {
+      console.warn('No portfolio selected');
+      return;
+    }
+
+    // Step 1: Open asset search dialog
+    const searchConfig: AssetSearchConfig = {
       mode: 'single',
-      title: 'Add Asset',
+      title: 'Search Asset',
       placeholder: 'Search by ticker or company name...',
     };
 
-    const dialogRef = this.dialogService.open<
+    const searchDialogRef = this.dialogService.open<
       AssetSearchConfig,
       AssetSearchResult
     >({
       component: AssetSearchDialogComponent,
-      data: config,
+      data: searchConfig,
       width: '600px',
       maxHeight: '80vh',
     });
 
-    // Handle dialog result
-    dialogRef.afterClosedObservable
+    // Handle search dialog result
+    searchDialogRef.afterClosedObservable
       .pipe(take(1))
-      .subscribe((result: AssetSearchResult | undefined) => {
-        if (result && result.length > 0) {
-          // Selected ticker(s) from the dialog
-          const selectedTicker = result[0];
-          console.log(
-            'Selected ticker:',
-            selectedTicker,
-            'for portfolio:',
-            this.selectedPortfolioId()
-          );
-          // TODO: Implement adding the asset to the portfolio
-          // Example: this.facade.addAsset({ ticker: selectedTicker.ticker, ... });
+      .subscribe((searchResult: AssetSearchResult | undefined) => {
+        if (searchResult && searchResult.length > 0) {
+          const selectedTicker = searchResult[0];
+
+          // Step 2: Open add asset details dialog
+          const detailsData: AddAssetDialogData = {
+            ticker: selectedTicker,
+            portfolioId,
+          };
+
+          const detailsDialogRef = this.dialogService.open<
+            AddAssetDialogData,
+            AddAssetDialogResult
+          >({
+            component: AddAssetDialogComponent,
+            data: detailsData,
+            width: '500px',
+            disableClose: false,
+          });
+
+          // Handle details dialog result
+          detailsDialogRef.afterClosedObservable
+            .pipe(take(1))
+            .subscribe((detailsResult: AddAssetDialogResult | undefined) => {
+              if (detailsResult) {
+                // Step 3: Add asset to portfolio via facade
+                const dto: AddAssetDto = {
+                  ticker: detailsResult.ticker,
+                  quantity: detailsResult.quantity,
+                  avgPrice: detailsResult.avgPrice,
+                };
+
+                this.facade.addAsset(detailsResult.portfolioId, dto);
+              }
+            });
         }
       });
   }
