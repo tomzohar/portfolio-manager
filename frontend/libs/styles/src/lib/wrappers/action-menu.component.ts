@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { ActionMenuConfig } from '../types/action-menu-config';
 import { MenuItem } from '../types/menu-config';
 import { MenuComponent } from './menu.component';
+import { ButtonComponent } from './button.component';
 
 /**
  * ActionMenuComponent
@@ -34,17 +35,14 @@ import { MenuComponent } from './menu.component';
   standalone: true,
   imports: [
     MatMenuModule,
-    MatButtonModule,
+    ButtonComponent,
     MatIconModule,
     MenuComponent,
   ],
   template: `
-    <button
+    <lib-button
+      [config]="config().button"
       [matMenuTriggerFor]="menuRef.matMenu()"
-      [disabled]="config().button.disabled"
-      [type]="getButtonType()"
-      [class]="getButtonClasses()"
-      [attr.aria-label]="getAriaLabel()"
       class="action-menu-trigger"
       [attr.mat-button]="getMatButtonDirective()"
     >
@@ -60,7 +58,7 @@ import { MenuComponent } from './menu.component';
       @if (isIconOnly() && config().button.icon) {
         <mat-icon>{{ config().button.icon }}</mat-icon>
       }
-    </button>
+    </lib-button>
 
     <lib-menu
       [config]="config().menu"

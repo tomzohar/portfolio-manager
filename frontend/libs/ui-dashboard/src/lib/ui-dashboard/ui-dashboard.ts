@@ -10,6 +10,7 @@ import {
   ActionMenuComponent,
   ActionMenuConfig,
   MenuItem,
+  ACTION_ICONS,
 } from '@stocks-researcher/styles';
 import { DashboardPortfolio, DashboardAsset } from '@stocks-researcher/types';
 
@@ -37,12 +38,14 @@ export class UiDashboardComponent {
 
   /**
    * Action menu configuration
+   * Uses Material Icons constants for type safety
    */
   actionMenuConfig: ActionMenuConfig = {
     button: {
       label: 'Actions',
-      icon: 'more_vert',
+      icon: ACTION_ICONS.MORE,
       variant: 'icon',
+      color: 'accent',
       ariaLabel: 'Portfolio actions menu'
     },
     menu: {
@@ -50,12 +53,12 @@ export class UiDashboardComponent {
         { 
           id: 'create-portfolio', 
           label: 'Create Portfolio', 
-          icon: 'add' 
+          icon: ACTION_ICONS.ADD 
         },
         { 
           id: 'refresh', 
           label: 'Refresh', 
-          icon: 'refresh' 
+          icon: ACTION_ICONS.REFRESH 
         }
       ],
       ariaLabel: 'Portfolio actions'

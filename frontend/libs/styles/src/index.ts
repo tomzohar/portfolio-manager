@@ -12,3 +12,4 @@ export * from './lib/types/button-config';
 export * from './lib/types/input-config';
 export * from './lib/types/menu-config';
 export * from './lib/types/action-menu-config';
+export * from './lib/constants/material-icons';
