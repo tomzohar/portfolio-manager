@@ -151,4 +151,46 @@ describe('UiDashboardComponent', () => {
       expect(typeof component.onCreatePortfolio).toBe('function');
     });
   });
+
+  describe('Empty Assets State', () => {
+    it('should display empty state when portfolio has no assets', () => {
+      fixture.componentRef.setInput('portfolios', mockPortfolios);
+      fixture.componentRef.setInput('selectedPortfolioId', '1');
+      fixture.componentRef.setInput('assets', []);
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const emptyStates = compiled.querySelectorAll('lib-empty-state');
+      expect(emptyStates.length).toBeGreaterThan(0);
+    });
+
+    it('should not display empty assets state when portfolio has assets', () => {
+      fixture.componentRef.setInput('portfolios', mockPortfolios);
+      fixture.componentRef.setInput('selectedPortfolioId', '1');
+      fixture.componentRef.setInput('assets', mockAssets);
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const table = compiled.querySelector('lib-table');
+      expect(table).toBeTruthy();
+    });
+
+    it('should emit addAsset event when empty assets action is clicked', (done) => {
+      fixture.componentRef.setInput('portfolios', mockPortfolios);
+      fixture.componentRef.setInput('selectedPortfolioId', '1');
+      fixture.componentRef.setInput('assets', []);
+      fixture.detectChanges();
+
+      component.addAsset.subscribe(() => {
+        done();
+      });
+
+      component.onAddAsset();
+    });
+
+    it('should have onAddAsset method', () => {
+      expect(component.onAddAsset).toBeDefined();
+      expect(typeof component.onAddAsset).toBe('function');
+    });
+  });
 });
