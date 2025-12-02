@@ -2,7 +2,12 @@ import { Component, inject, OnInit } from '@angular/core';
 import { PortfolioFacade } from '@frontend/data-access-portfolio';
 import { UiDashboardComponent } from '@frontend/ui-dashboard';
 import { DialogService } from '@frontend/util-dialog';
-import { CreatePortfolioDto } from '@stocks-researcher/types';
+import { AssetSearchDialogComponent } from '@stocks-researcher/ui-asset-search';
+import {
+  CreatePortfolioDto,
+  AssetSearchConfig,
+  AssetSearchResult,
+} from '@stocks-researcher/types';
 import { take } from 'rxjs';
 import { CreatePortfolioDialogComponent } from '../create-portfolio-dialog/create-portfolio-dialog.component';
 
@@ -53,8 +58,43 @@ export class FeatureDashboardComponent implements OnInit {
       });
   }
 
+  /**
+   * Opens the asset search dialog to add assets to the selected portfolio
+   * Uses single-select mode by default
+   */
   onAddAsset(): void {
-    // TODO: Implement add asset dialog
-    console.log('Add Asset clicked for portfolio:', this.selectedPortfolioId());
+    const config: AssetSearchConfig = {
+      mode: 'single',
+      title: 'Add Asset',
+      placeholder: 'Search by ticker or company name...',
+    };
+
+    const dialogRef = this.dialogService.open<
+      AssetSearchConfig,
+      AssetSearchResult
+    >({
+      component: AssetSearchDialogComponent,
+      data: config,
+      width: '600px',
+      maxHeight: '80vh',
+    });
+
+    // Handle dialog result
+    dialogRef.afterClosedObservable
+      .pipe(take(1))
+      .subscribe((result: AssetSearchResult | undefined) => {
+        if (result && result.length > 0) {
+          // Selected ticker(s) from the dialog
+          const selectedTicker = result[0];
+          console.log(
+            'Selected ticker:',
+            selectedTicker,
+            'for portfolio:',
+            this.selectedPortfolioId()
+          );
+          // TODO: Implement adding the asset to the portfolio
+          // Example: this.facade.addAsset({ ticker: selectedTicker.ticker, ... });
+        }
+      });
   }
 }

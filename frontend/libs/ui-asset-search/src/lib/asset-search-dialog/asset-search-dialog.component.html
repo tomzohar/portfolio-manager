@@ -1,0 +1,119 @@
+<h2 mat-dialog-title>{{ title() }}</h2>
+
+<mat-dialog-content>
+  <!-- Search Input -->
+  <mat-form-field appearance="outline" class="search-field">
+    <mat-label>{{ placeholder() }}</mat-label>
+    <input
+      matInput
+      type="text"
+      [value]="searchQuery()"
+      (input)="onInputChange($any($event.target).value)"
+      autocomplete="off"
+      cdkFocusInitial
+    />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+
+  <!-- Selected Items Preview (Multi-select mode only) -->
+  @if (!isSingleMode() && selectedCount() > 0) {
+    <div class="selected-preview">
+      <span class="selected-label">Selected ({{ selectedCount() }}):</span>
+      <mat-chip-set>
+        @for (item of selectedItems(); track item.ticker) {
+          <mat-chip (removed)="removeSelection(item)">
+            {{ item.ticker }}
+            <button matChipRemove aria-label="Remove {{ item.ticker }}">
+              <mat-icon>cancel</mat-icon>
+            </button>
+          </mat-chip>
+        }
+      </mat-chip-set>
+    </div>
+  }
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="state-container loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+      <span>Searching...</span>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (error(); as errorMessage) {
+    <div class="state-container error-container">
+      <mat-icon color="warn">error</mat-icon>
+      <span>{{ errorMessage }}</span>
+    </div>
+  }
+
+  <!-- Results List -->
+  @if (!loading() && !error() && results().length > 0) {
+    <div class="results-container">
+      @if (isSingleMode()) {
+        <!-- Single-select mode: simple list -->
+        <mat-list class="results-list">
+          @for (result of results(); track result.ticker) {
+            <mat-list-item 
+              class="result-item clickable"
+              (click)="onSelectItem(result)"
+            >
+              <div class="ticker-item">
+                <span class="ticker-symbol">{{ result.ticker }}</span>
+                <span class="ticker-name">{{ result.name }}</span>
+              </div>
+            </mat-list-item>
+          }
+        </mat-list>
+      } @else {
+        <!-- Multi-select mode: selection list with checkboxes -->
+        <mat-selection-list [multiple]="true" class="results-list">
+          @for (result of results(); track result.ticker) {
+            <mat-list-option
+              [selected]="isSelected(result)"
+              [disabled]="!canSelect() && !isSelected(result)"
+              (click)="onSelectItem(result)"
+            >
+              <div class="ticker-item">
+                <span class="ticker-symbol">{{ result.ticker }}</span>
+                <span class="ticker-name">{{ result.name }}</span>
+              </div>
+            </mat-list-option>
+          }
+        </mat-selection-list>
+      }
+    </div>
+  }
+
+  <!-- No Results -->
+  @if (noResults()) {
+    <div class="state-container no-results">
+      <mat-icon>search_off</mat-icon>
+      <span>No results found for "{{ searchQuery() }}"</span>
+    </div>
+  }
+
+  <!-- Empty State (no search yet) -->
+  @if (!loading() && !error() && searchQuery().length === 0) {
+    <div class="state-container empty-state">
+      <mat-icon>manage_search</mat-icon>
+      <span>Start typing to search for assets</span>
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Cancel</button>
+  @if (!isSingleMode()) {
+    <button
+      mat-flat-button
+      color="primary"
+      [disabled]="selectedCount() === 0"
+      (click)="onDone()"
+    >
+      Done{{ selectedCount() > 0 ? ' (' + selectedCount() + ')' : '' }}
+    </button>
+  }
+</mat-dialog-actions>
+
