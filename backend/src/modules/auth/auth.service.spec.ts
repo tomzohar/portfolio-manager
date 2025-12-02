@@ -197,4 +197,31 @@ describe('AuthService', () => {
       });
     });
   });
+
+  describe('createAuthResponse', () => {
+    it('should generate auth response without password validation', async () => {
+      jwtService.sign.mockReturnValue(mockToken);
+
+      const result = service.createAuthResponse(mockUser);
+
+      expect(result).toEqual({
+        token: mockToken,
+        user: {
+          id: mockUser.id,
+          email: mockUser.email,
+        },
+      });
+      expect(jwtService.sign).toHaveBeenCalledWith({ sub: mockUser.id });
+    });
+
+    it('should not call usersService when creating auth response', async () => {
+      jwtService.sign.mockReturnValue(mockToken);
+
+      service.createAuthResponse(mockUser);
+
+      // Should NOT validate user or password
+      expect(usersService.findByEmail).not.toHaveBeenCalled();
+      expect(usersService.findOne).not.toHaveBeenCalled();
+    });
+  });
 });

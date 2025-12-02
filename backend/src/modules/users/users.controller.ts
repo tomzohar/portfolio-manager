@@ -49,7 +49,8 @@ export class UsersController {
     const user = await this.usersService.create(createUserDto);
 
     // Generate JWT and return auth response (token + user data)
-    return this.authService.login(user);
+    // No password validation needed since we just created the user
+    return this.authService.createAuthResponse(user);
   }
 
   @Get(':id')

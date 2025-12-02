@@ -123,6 +123,23 @@ export class AuthService {
   }
 
   /**
+   * Generates auth response for a user without password validation
+   * Used after user creation (signup) where password validation is not needed
+   * @param user User entity
+   * @returns AuthResponse with JWT token and user data
+   */
+  createAuthResponse(user: User): AuthResponseDto {
+    const token = this.generateJwt(user);
+
+    this.logger.log(`Auth response created for user: ${user.email}`);
+
+    return {
+      token,
+      user: this.sanitizeUser(user),
+    };
+  }
+
+  /**
    * Removes sensitive data from user entity
    * @param user User entity
    * @returns Sanitized user data without password hash
