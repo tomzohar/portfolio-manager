@@ -68,3 +68,20 @@ export interface AuthResponse {
   token: string;
   user: User;
 }
+
+// Ticker Search Types (from backend DTO)
+export interface TickerResult {
+  ticker: string;
+  name: string;
+  market: string;
+  type: string;
+}
+
+export interface AssetSearchConfig {
+  mode: 'single' | 'multi';
+  title?: string;
+  placeholder?: string;
+  maxSelections?: number; // Optional limit for multi-select
+}
+
+export type AssetSearchResult = TickerResult[];

@@ -132,7 +132,7 @@ Framework: Jest (Unit), Cypress (E2E).
 ISOLATION & REACTIVITY
 Unit Tests:
 
-Must configure provideExperimentalZonelessChangeDetection() in the TestBed.
+Must configure provideZoneChangeDetection() in the TestBed.
 
 MANDATE: Test Signal updates by explicitly flushing effects if necessary (usually automatic in ComponentFixture.autoDetectChanges()).
 

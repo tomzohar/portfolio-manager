@@ -25,7 +25,11 @@
       "@frontend/util-dialog": ["libs/util-dialog/src/index.ts"],
       "@frontend/data-access-auth": ["libs/data-access-auth/src/index.ts"],
       "@frontend/feature-auth": ["libs/feature-auth/src/index.ts"],
-      "@frontend/util-auth": ["libs/util-auth/src/index.ts"]
+      "@frontend/util-auth": ["libs/util-auth/src/index.ts"],
+      "@frontend/data-access-assets": ["libs/data-access-assets/src/index.ts"],
+      "@frontend/ui-asset-search": ["libs/ui-asset-search/src/index.ts"],
+      "@stocks-researcher/data-access-assets": ["libs/data-access-assets/src/index.ts"],
+      "@stocks-researcher/ui-asset-search": ["libs/ui-asset-search/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

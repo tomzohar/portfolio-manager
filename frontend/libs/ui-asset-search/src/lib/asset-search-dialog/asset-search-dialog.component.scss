@@ -1,0 +1,133 @@
+@use 'scss' as *;
+
+:host {
+  display: block;
+}
+
+// Search input field
+.search-field {
+  width: 100%;
+  margin-bottom: $spacing-md;
+}
+
+// Selected items preview section
+.selected-preview {
+  @include flex-column($spacing-sm);
+  margin-bottom: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  background-color: $color-background;
+  border-radius: $border-radius-md;
+
+  .selected-label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+  }
+
+  mat-chip-set {
+    @include flex-row($spacing-xs);
+    flex-wrap: wrap;
+  }
+}
+
+// State containers (loading, error, no results, empty)
+.state-container {
+  @include flex-column($spacing-sm);
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl;
+  color: $color-text-secondary;
+  text-align: center;
+
+  mat-icon {
+    font-size: $font-size-2xl;
+    width: 32px;
+    height: 32px;
+  }
+}
+
+.loading-container {
+  mat-spinner {
+    margin-bottom: $spacing-sm;
+  }
+}
+
+.error-container {
+  color: $color-warn;
+}
+
+.no-results,
+.empty-state {
+  mat-icon {
+    color: $color-text-disabled;
+  }
+}
+
+// Results container
+.results-container {
+  max-height: 300px;
+  overflow-y: auto;
+  border: $border-width-thin solid $border-color-light;
+  border-radius: $border-radius-md;
+}
+
+.results-list {
+  padding: 0;
+}
+
+// Result item styling
+.result-item {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: $color-background;
+  }
+
+  &.clickable {
+    cursor: pointer;
+  }
+}
+
+// Ticker item layout
+.ticker-item {
+  @include flex-column($spacing-xs);
+  padding: $spacing-xs 0;
+  width: 100%;
+}
+
+.ticker-symbol {
+  font-weight: $font-weight-bold;
+  font-size: $font-size-base;
+  color: $color-primary;
+}
+
+.ticker-name {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  @include text-truncate;
+}
+
+// Material overrides
+::ng-deep {
+  .mat-mdc-dialog-content {
+    max-height: 60vh;
+  }
+
+  .mat-mdc-list-option {
+    border-bottom: $border-width-thin solid $border-color-light;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .mat-mdc-list-item {
+    border-bottom: $border-width-thin solid $border-color-light;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+}
+
