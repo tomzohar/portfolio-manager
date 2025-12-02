@@ -1,18 +1,20 @@
-import { Component, input, output, effect, computed } from '@angular/core';
-import { 
-  CardComponent, 
-  SelectComponent, 
-  TableComponent, 
-  ToolbarComponent, 
-  SelectOption, 
-  ColumnDef,
-  EmptyStateComponent,
+import { Component, computed, effect, input, output } from '@angular/core';
+import {
+  ACTION_ICONS,
   ActionMenuComponent,
   ActionMenuConfig,
+  ButtonComponent,
+  ButtonConfig,
+  CardComponent,
+  ColumnDef,
+  EmptyStateComponent,
   MenuItem,
-  ACTION_ICONS,
+  SelectComponent,
+  SelectOption,
+  TableComponent,
+  ToolbarComponent,
 } from '@stocks-researcher/styles';
-import { DashboardPortfolio, DashboardAsset } from '@stocks-researcher/types';
+import { DashboardAsset, DashboardPortfolio } from '@stocks-researcher/types';
 
 @Component({
   selector: 'lib-ui-dashboard',
@@ -24,18 +26,21 @@ import { DashboardPortfolio, DashboardAsset } from '@stocks-researcher/types';
     ToolbarComponent,
     EmptyStateComponent,
     ActionMenuComponent,
-],
+    ButtonComponent,
+  ],
   templateUrl: './ui-dashboard.html',
-  styleUrl: './ui-dashboard.scss'
+  styleUrl: './ui-dashboard.scss',
 })
 export class UiDashboardComponent {
   portfolios = input<DashboardPortfolio[]>([]);
   assets = input<DashboardAsset[]>([]);
   selectedPortfolioId = input<string | null>(null);
-  
+
   portfolioSelected = output<string>();
   createPortfolio = output<void>();
   addAsset = output<void>();
+  editAsset = output<DashboardAsset>();
+  deleteAsset = output<DashboardAsset>();
 
   /**
    * Action menu configuration
@@ -47,29 +52,29 @@ export class UiDashboardComponent {
       icon: ACTION_ICONS.MORE,
       variant: 'icon',
       color: 'accent',
-      ariaLabel: 'Portfolio actions menu'
+      ariaLabel: 'Portfolio actions menu',
     },
     menu: {
       items: [
-        { 
-          id: 'create-portfolio', 
-          label: 'Create Portfolio', 
-          icon: ACTION_ICONS.ADD 
+        {
+          id: 'create-portfolio',
+          label: 'Create Portfolio',
+          icon: ACTION_ICONS.ADD,
         },
-        { 
-          id: 'refresh', 
-          label: 'Refresh', 
-          icon: ACTION_ICONS.REFRESH 
-        }
+        {
+          id: 'refresh',
+          label: 'Refresh',
+          icon: ACTION_ICONS.REFRESH,
+        },
       ],
-      ariaLabel: 'Portfolio actions'
-    }
+      ariaLabel: 'Portfolio actions',
+    },
   };
 
-  portfolioOptions = computed<SelectOption[]>(() => 
-    this.portfolios().map(p => ({
+  portfolioOptions = computed<SelectOption[]>(() =>
+    this.portfolios().map((p) => ({
       value: p.id,
-      label: p.name
+      label: p.name,
     }))
   );
 
@@ -80,8 +85,17 @@ export class UiDashboardComponent {
     { key: 'currentPrice', header: 'Current Price', type: 'currency' },
     { key: 'marketValue', header: 'Market Value', type: 'currency' },
     { key: 'pl', header: 'P/L', type: 'currency' },
-    { key: 'plPercent', header: 'P/L %', type: 'percent' }
+    { key: 'plPercent', header: 'P/L %', type: 'percent' },
+    { key: 'actions', header: 'Actions', type: 'actions' },
   ];
+
+  readonly addAssetButtonConfig: ButtonConfig = {
+    label: 'Add Asset',
+    variant: 'icon',
+    icon: ACTION_ICONS.ADD,
+    color: 'primary',
+    ariaLabel: 'Add new asset to portfolio',
+  };
 
   constructor() {
     effect(() => {
@@ -109,8 +123,30 @@ export class UiDashboardComponent {
     this.addAsset.emit();
   }
 
+  onEditAsset(asset: DashboardAsset) {
+    this.editAsset.emit(asset);
+  }
+
+  onDeleteAsset(asset: DashboardAsset) {
+    this.deleteAsset.emit(asset);
+  }
+
   /**
-   * Handle action menu item selection
+   * Handle action menu item selection for asset rows
+   */
+  onAssetActionSelected(asset: DashboardAsset, action: MenuItem): void {
+    switch (action.id) {
+      case 'edit':
+        this.onEditAsset(asset);
+        break;
+      case 'delete':
+        this.onDeleteAsset(asset);
+        break;
+    }
+  }
+
+  /**
+   * Handle action menu item selection for main toolbar
    */
   onActionMenuItemSelected(item: MenuItem): void {
     switch (item.id) {
@@ -121,5 +157,23 @@ export class UiDashboardComponent {
         // Emit a refresh event in the future
         break;
     }
+  }
+
+  getAssetActionsMenuConfig(asset: DashboardAsset): ActionMenuConfig {
+    return {
+      button: {
+        label: 'Actions',
+        variant: 'icon',
+        icon: 'more_vert',
+        ariaLabel: 'Actions for ' + asset.ticker,
+      },
+      menu: {
+        items: [
+          { id: 'edit', label: 'Edit', icon: 'edit' },
+          { id: 'delete', label: 'Delete', icon: 'delete' },
+        ],
+        ariaLabel: 'Asset actions',
+      },
+    };
   }
 }

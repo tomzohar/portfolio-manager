@@ -3,8 +3,8 @@ import { TableComponent, ColumnDef } from './table.component';
 import { provideZonelessChangeDetection } from '@angular/core';
 
 describe('TableComponent', () => {
-  let component: TableComponent;
-  let fixture: ComponentFixture<TableComponent>;
+  let component: TableComponent<any>;
+  let fixture: ComponentFixture<TableComponent<any>>;
 
   const mockColumns: ColumnDef[] = [
     { key: 'name', header: 'Name', type: 'text' },

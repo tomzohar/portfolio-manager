@@ -1,0 +1,22 @@
+<h2 mat-dialog-title>
+  @if (icon()) {
+    <div class="title-with-icon">
+      <mat-icon [class.warn-icon]="confirmColor() === 'warn'">{{ icon() }}</mat-icon>
+      <span>{{ title() }}</span>
+    </div>
+  } @else {
+    {{ title() }}
+  }
+</h2>
+
+<mat-dialog-content>
+  <p class="message">{{ message() }}</p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <lib-button [config]="{ label: cancelText() ?? '', variant: 'flat' }" (clicked)="onCancel()">
+  </lib-button>
+  <lib-button [config]="{ label: confirmText() ?? '', variant: 'flat', color: confirmColor() ?? 'primary' }" (clicked)="onConfirm()">
+  </lib-button>
+</mat-dialog-actions>
+

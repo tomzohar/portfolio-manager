@@ -9,10 +9,19 @@ import { MatCardModule } from '@angular/material/card';
     <mat-card class="lib-card">
       @if (title()) {
         <mat-card-header>
-          <mat-card-title>{{ title() }}</mat-card-title>
-          @if (subtitle()) {
-            <mat-card-subtitle>{{ subtitle() }}</mat-card-subtitle>
-          }
+          <div class="card-header-content">
+            <div class="card-header-text">
+              <mat-card-title>{{ title() }}</mat-card-title>
+              @if (subtitle()) {
+                <mat-card-subtitle>{{ subtitle() }}</mat-card-subtitle>
+              }
+            </div>
+            @if (headerActions()) {
+              <div class="card-header-actions">
+                <ng-content select="[headerActions]"></ng-content>
+              </div>
+            }
+          </div>
         </mat-card-header>
       }
       <mat-card-content>
@@ -31,4 +40,5 @@ export class CardComponent {
   title = input<string>();
   subtitle = input<string>();
   actions = input(false);
+  headerActions = input(false);
 }

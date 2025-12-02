@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { catchError } from 'rxjs/operators';
 import { 
   DashboardPortfolio, 
   DashboardAsset, 
@@ -67,8 +67,8 @@ export class PortfolioApiService {
    * @param portfolioId - The portfolio ID
    * @param dto - Asset data
    */
-  addAsset(portfolioId: string, dto: AddAssetDto): Observable<PortfolioWithAssets> {
-    return this.http.post<PortfolioWithAssets>(`${this.apiUrl}/${portfolioId}/assets`, dto).pipe(
+  addAsset(portfolioId: string, dto: AddAssetDto): Observable<{ id: string }> {
+    return this.http.post<{ id: string }>(`${this.apiUrl}/${portfolioId}/assets`, dto).pipe(
       catchError(this.handleError)
     );
   }

@@ -198,9 +198,9 @@ describe('PortfolioApiService', () => {
         ],
       };
 
-      service.addAsset(portfolioId, dto).subscribe((portfolio) => {
-        expect(portfolio.assets.length).toBe(3);
-        expect(portfolio.assets[2].ticker).toBe('MSFT');
+      service.addAsset(portfolioId, dto).subscribe((response) => {
+        expect(response.id).toBeDefined();
+        expect(typeof response.id).toBe('string');
       });
 
       const req = httpMock.expectOne(`${apiUrl}/${portfolioId}/assets`);

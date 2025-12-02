@@ -29,7 +29,20 @@
 
       <!-- Asset List -->
       @if (selectedPortfolioId()) {
-        <lib-card title="Portfolio Assets" [subtitle]="assets().length + ' positions'">
+        <lib-card 
+          title="Portfolio Assets" 
+          [subtitle]="assets().length + ' positions'"
+          [headerActions]="true">
+          
+          <!-- Header Actions -->
+          <div headerActions>
+            <lib-button
+              [config]="addAssetButtonConfig"
+              (clicked)="onAddAsset()"
+            />
+          </div>
+
+          <!-- Content -->
           @if (assets().length === 0) {
             <!-- Empty State for Assets -->
             <lib-empty-state
@@ -42,7 +55,8 @@
           } @else {
             <lib-table 
               [data]="assets()" 
-              [columns]="assetColumns">
+              [columns]="assetColumns"
+              [actionsTemplate]="assetActions">
             </lib-table>
           }
         </lib-card>
@@ -50,3 +64,13 @@
     }
   </div>
 </div>
+
+<!-- Asset Actions Template -->
+<ng-template #assetActions let-asset>
+  <div class="asset-actions">
+    <lib-action-menu
+      [config]="getAssetActionsMenuConfig(asset)"
+      (itemSelected)="onAssetActionSelected(asset, $event)"
+    />
+  </div>
+</ng-template>

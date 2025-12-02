@@ -1,17 +1,17 @@
-import { Component, input, computed } from '@angular/core';
+import { Component, input, computed, TemplateRef } from '@angular/core';
 import { MatTableModule } from '@angular/material/table';
-import { CurrencyPipe, PercentPipe } from '@angular/common';
+import { CurrencyPipe, PercentPipe, NgTemplateOutlet } from '@angular/common';
 
 export interface ColumnDef {
   key: string;
   header: string;
-  type?: 'text' | 'number' | 'currency' | 'percent';
+  type?: 'text' | 'number' | 'currency' | 'percent' | 'actions';
 }
 
 @Component({
   selector: 'lib-table',
   standalone: true,
-  imports: [MatTableModule, CurrencyPipe, PercentPipe],
+  imports: [MatTableModule, CurrencyPipe, PercentPipe, NgTemplateOutlet],
   template: `
     <table mat-table [dataSource]="data()" class="lib-table">
       @for (col of columns(); track col.key) {
@@ -24,6 +24,11 @@ export interface ColumnDef {
               }
               @case ('percent') {
                 {{ row[col.key] | percent:'1.2-2' }}
+              }
+              @case ('actions') {
+                @if (actionsTemplate()) {
+                  <ng-container *ngTemplateOutlet="actionsTemplate()!; context: { $implicit: row }"></ng-container>
+                }
               }
               @default {
                 {{ row[col.key] }}
@@ -39,9 +44,10 @@ export interface ColumnDef {
   `,
   styleUrl: './table.component.scss'
 })
-export class TableComponent {
-  data = input<any[]>([]);
+export class TableComponent<T = Record<string, unknown>> {
+  data = input<T[]>([]);
   columns = input<ColumnDef[]>([]);
+  actionsTemplate = input<TemplateRef<{ $implicit: T }> | null>(null);
 
   displayedColumns = computed(() => this.columns().map(c => c.key));
 }
