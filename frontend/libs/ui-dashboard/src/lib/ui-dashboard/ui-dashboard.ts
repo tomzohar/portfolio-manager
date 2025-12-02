@@ -3,6 +3,8 @@ import {
   ACTION_ICONS,
   ActionMenuComponent,
   ActionMenuConfig,
+  ButtonComponent,
+  ButtonConfig,
   CardComponent,
   ColumnDef,
   EmptyStateComponent,
@@ -24,6 +26,7 @@ import { DashboardAsset, DashboardPortfolio } from '@stocks-researcher/types';
     ToolbarComponent,
     EmptyStateComponent,
     ActionMenuComponent,
+    ButtonComponent,
   ],
   templateUrl: './ui-dashboard.html',
   styleUrl: './ui-dashboard.scss',
@@ -85,6 +88,14 @@ export class UiDashboardComponent {
     { key: 'plPercent', header: 'P/L %', type: 'percent' },
     { key: 'actions', header: 'Actions', type: 'actions' },
   ];
+
+  readonly addAssetButtonConfig: ButtonConfig = {
+    label: 'Add Asset',
+    variant: 'icon',
+    icon: ACTION_ICONS.ADD,
+    color: 'primary',
+    ariaLabel: 'Add new asset to portfolio',
+  };
 
   constructor() {
     effect(() => {
@@ -151,18 +162,18 @@ export class UiDashboardComponent {
   getAssetActionsMenuConfig(asset: DashboardAsset): ActionMenuConfig {
     return {
       button: {
-      label: 'Actions',
-      variant: 'icon',
-      icon: 'more_vert',
-      ariaLabel: 'Actions for ' + asset.ticker,
-    },
-    menu: {
-      items: [
-        { id: 'edit', label: 'Edit', icon: 'edit' },
-        { id: 'delete', label: 'Delete', icon: 'delete' },
-      ],
-      ariaLabel: 'Asset actions',
-    },
-  };
-}
+        label: 'Actions',
+        variant: 'icon',
+        icon: 'more_vert',
+        ariaLabel: 'Actions for ' + asset.ticker,
+      },
+      menu: {
+        items: [
+          { id: 'edit', label: 'Edit', icon: 'edit' },
+          { id: 'delete', label: 'Delete', icon: 'delete' },
+        ],
+        ariaLabel: 'Asset actions',
+      },
+    };
+  }
 }

@@ -3,3 +3,20 @@
 .lib-card {
   margin-bottom: $spacing-md;
 }
+
+.card-header-content {
+  @include flex-row($spacing-md);
+  width: 100%;
+  align-items: flex-start;
+}
+
+.card-header-text {
+  flex: 1;
+}
+
+.card-header-actions {
+  display: flex;
+  gap: $spacing-xs;
+  align-items: center;
+  flex-shrink: 0;
+}
