@@ -1,4 +1,4 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZonelessChangeDetection, isDevMode } from '@angular/core';
+import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZonelessChangeDetection, isDevMode, provideAppInitializer, inject } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { appRoutes } from './app.routes';
@@ -8,6 +8,7 @@ import { provideEffects } from '@ngrx/effects';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { providePortfolioDataAccess } from '@frontend/data-access-portfolio';
 import { provideAuthDataAccess, authInterceptor } from '@frontend/data-access-auth';
+import { IconRegistryService } from '@frontend/util-auth';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -21,5 +22,9 @@ export const appConfig: ApplicationConfig = {
     provideStoreDevtools({ maxAge: 25, logOnly: !isDevMode() }),
     provideAuthDataAccess(),
     providePortfolioDataAccess(),
+    provideAppInitializer(() => {
+      const registry = inject(IconRegistryService);
+      registry.init();
+    }),
   ],
 };
