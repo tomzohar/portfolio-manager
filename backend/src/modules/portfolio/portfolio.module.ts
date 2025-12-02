@@ -5,9 +5,14 @@ import { PortfolioController } from './portfolio.controller';
 import { Portfolio } from './entities/portfolio.entity';
 import { Asset } from './entities/asset.entity';
 import { UsersModule } from '../users/users.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Portfolio, Asset]), UsersModule],
+  imports: [
+    TypeOrmModule.forFeature([Portfolio, Asset]),
+    UsersModule,
+    AuthModule,
+  ],
   controllers: [PortfolioController],
   providers: [PortfolioService],
   exports: [PortfolioService],

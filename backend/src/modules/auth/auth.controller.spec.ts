@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException, ExecutionContext } from '@nestjs/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -51,6 +52,10 @@ describe('AuthController', () => {
           request.user = mockUser;
           return true;
         },
+      })
+      .overrideGuard(ThrottlerGuard)
+      .useValue({
+        canActivate: () => true, // Allow all requests in tests
       })
       .compile();
 

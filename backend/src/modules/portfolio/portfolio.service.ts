@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Portfolio } from './entities/portfolio.entity';
@@ -16,8 +20,14 @@ export class PortfolioService {
     private usersService: UsersService,
   ) {}
 
-  async create(createPortfolioDto: CreatePortfolioDto): Promise<Portfolio> {
-    const { userId, name } = createPortfolioDto;
+  /**
+   * Create a new portfolio for the authenticated user
+   */
+  async create(
+    userId: string,
+    createPortfolioDto: CreatePortfolioDto,
+  ): Promise<Portfolio> {
+    const { name } = createPortfolioDto;
     const user = await this.usersService.findOne(userId);
 
     if (!user) {
@@ -32,22 +42,46 @@ export class PortfolioService {
     return this.portfolioRepository.save(portfolio);
   }
 
-  async findAll(): Promise<Portfolio[]> {
-    return this.portfolioRepository.find({ relations: ['assets'] });
-  }
-
-  async findOne(id: string): Promise<Portfolio | null> {
-    return this.portfolioRepository.findOne({
-      where: { id },
+  /**
+   * Get all portfolios for a specific user
+   */
+  async findAllByUserId(userId: string): Promise<Portfolio[]> {
+    return this.portfolioRepository.find({
+      where: { user: { id: userId } },
       relations: ['assets'],
     });
   }
 
+  /**
+   * Get a specific portfolio by ID and verify ownership
+   */
+  async findOne(id: string, userId: string): Promise<Portfolio | null> {
+    const portfolio = await this.portfolioRepository.findOne({
+      where: { id },
+      relations: ['assets', 'user'],
+    });
+
+    if (!portfolio) {
+      return null;
+    }
+
+    // Verify ownership
+    if (portfolio.user.id !== userId) {
+      throw new ForbiddenException('Access denied to this portfolio');
+    }
+
+    return portfolio;
+  }
+
+  /**
+   * Add an asset to a portfolio (with ownership verification)
+   */
   async addAsset(
     portfolioId: string,
+    userId: string,
     addAssetDto: AddAssetDto,
   ): Promise<Asset> {
-    const portfolio = await this.findOne(portfolioId);
+    const portfolio = await this.findOne(portfolioId, userId);
     if (!portfolio) {
       throw new NotFoundException('Portfolio not found');
     }
@@ -60,7 +94,20 @@ export class PortfolioService {
     return this.assetRepository.save(asset);
   }
 
-  async removeAsset(portfolioId: string, assetId: string): Promise<void> {
+  /**
+   * Remove an asset from a portfolio (with ownership verification)
+   */
+  async removeAsset(
+    portfolioId: string,
+    assetId: string,
+    userId: string,
+  ): Promise<void> {
+    // Verify ownership first
+    const portfolio = await this.findOne(portfolioId, userId);
+    if (!portfolio) {
+      throw new NotFoundException('Portfolio not found');
+    }
+
     const result = await this.assetRepository.delete({
       id: assetId,
       portfolio: { id: portfolioId },

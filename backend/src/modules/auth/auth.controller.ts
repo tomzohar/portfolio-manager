@@ -5,6 +5,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { VerifyTokenDto } from './dto/verify-token.dto';
@@ -15,6 +16,7 @@ import { User } from '../users/entities/user.entity';
 
 @ApiTags('auth')
 @Controller('auth')
+@UseGuards(ThrottlerGuard)
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
@@ -22,8 +24,10 @@ export class AuthController {
 
   /**
    * Login endpoint - authenticates user with email and password
+   * Rate limited to 5 requests per minute to prevent brute force attacks
    */
   @Post('login')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per 60 seconds
   @ApiOperation({
     summary: 'Login with email and password',
     description: 'Authenticates user and returns JWT token with user data',
@@ -36,6 +40,10 @@ export class AuthController {
   @ApiResponse({
     status: 401,
     description: 'Invalid credentials',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests - rate limit exceeded',
   })
   async login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
     this.logger.log(`Login attempt for email: ${loginDto.email}`);
