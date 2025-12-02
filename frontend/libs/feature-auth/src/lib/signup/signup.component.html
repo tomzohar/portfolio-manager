@@ -39,7 +39,7 @@
           }"
         />
 
-        <lib-button [config]="{ label: 'Sign Up', type: 'submit', fullWidth: true, disabled: loading() }" (clicked)="onSubmit()">
+        <lib-button [config]="{ label: 'Sign Up', type: 'submit', fullWidth: true, disabled: loading() }">
           {{ loading() ? 'Creating account...' : 'Sign Up' }}
         </lib-button>
       </form>

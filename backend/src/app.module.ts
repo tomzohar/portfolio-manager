@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './modules/users/users.module';
 import { PortfolioModule } from './modules/portfolio/portfolio.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -28,8 +30,15 @@ import { PortfolioModule } from './modules/portfolio/portfolio.module';
         logging: configService.get<string>('NODE_ENV') === 'development',
       }),
     }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 60 seconds
+        limit: 100, // 100 requests per minute (default for all routes)
+      },
+    ]),
     UsersModule,
     PortfolioModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

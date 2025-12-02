@@ -208,7 +208,12 @@ describe('AuthEffects', () => {
   });
 
   describe('checkAuthFailure$', () => {
-    it('should navigate to login', (done) => {
+    it('should navigate to login when on protected route', (done) => {
+      Object.defineProperty(router, 'url', {
+        get: jest.fn().mockReturnValue('/dashboard'),
+        configurable: true,
+      });
+
       actions$ = of(AuthActions.checkAuthFailure());
 
       effects.checkAuthFailure$.subscribe(() => {

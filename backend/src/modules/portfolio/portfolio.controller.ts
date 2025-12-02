@@ -6,36 +6,57 @@ import {
   Param,
   Delete,
   NotFoundException,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { PortfolioService } from './portfolio.service';
 import { CreatePortfolioDto, AddAssetDto } from './dto/portfolio.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { User } from '../users/entities/user.entity';
 
 @ApiTags('portfolios')
 @Controller('portfolios')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class PortfolioController {
   constructor(private readonly portfolioService: PortfolioService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new portfolio' })
+  @ApiOperation({ summary: 'Create a new portfolio for authenticated user' })
   @ApiResponse({ status: 201, description: 'Portfolio created.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
-  create(@Body() createPortfolioDto: CreatePortfolioDto) {
-    return this.portfolioService.create(createPortfolioDto);
+  create(
+    @CurrentUser() user: User,
+    @Body() createPortfolioDto: CreatePortfolioDto,
+  ) {
+    return this.portfolioService.create(user.id, createPortfolioDto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all portfolios' })
-  findAll() {
-    return this.portfolioService.findAll();
+  @ApiOperation({ summary: "Get all of the authenticated user's portfolios" })
+  @ApiResponse({ status: 200, description: 'Portfolios retrieved.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  findAll(@CurrentUser() user: User) {
+    return this.portfolioService.findAllByUserId(user.id);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get portfolio by ID' })
+  @ApiOperation({
+    summary: 'Get portfolio by ID (with ownership verification)',
+  })
   @ApiResponse({ status: 200, description: 'Portfolio found.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Access denied.' })
   @ApiResponse({ status: 404, description: 'Portfolio not found.' })
-  async findOne(@Param('id') id: string) {
-    const portfolio = await this.portfolioService.findOne(id);
+  async findOne(@CurrentUser() user: User, @Param('id') id: string) {
+    const portfolio = await this.portfolioService.findOne(id, user.id);
     if (!portfolio) {
       throw new NotFoundException('Portfolio not found');
     }
@@ -43,18 +64,34 @@ export class PortfolioController {
   }
 
   @Post(':id/assets')
-  @ApiOperation({ summary: 'Add an asset to a portfolio' })
+  @ApiOperation({
+    summary: 'Add an asset to a portfolio (with ownership verification)',
+  })
   @ApiResponse({ status: 201, description: 'Asset added.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Access denied.' })
   @ApiResponse({ status: 404, description: 'Portfolio not found.' })
-  addAsset(@Param('id') id: string, @Body() addAssetDto: AddAssetDto) {
-    return this.portfolioService.addAsset(id, addAssetDto);
+  addAsset(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Body() addAssetDto: AddAssetDto,
+  ) {
+    return this.portfolioService.addAsset(id, user.id, addAssetDto);
   }
 
   @Delete(':id/assets/:assetId')
-  @ApiOperation({ summary: 'Remove an asset from a portfolio' })
+  @ApiOperation({
+    summary: 'Remove an asset from a portfolio (with ownership verification)',
+  })
   @ApiResponse({ status: 200, description: 'Asset removed.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Access denied.' })
   @ApiResponse({ status: 404, description: 'Asset or Portfolio not found.' })
-  removeAsset(@Param('id') id: string, @Param('assetId') assetId: string) {
-    return this.portfolioService.removeAsset(id, assetId);
+  removeAsset(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Param('assetId') assetId: string,
+  ) {
+    return this.portfolioService.removeAsset(id, assetId, user.id);
   }
 }

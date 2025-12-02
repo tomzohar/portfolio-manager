@@ -34,3 +34,6 @@ Create independent libraries for types and styles to enforce separation of conce
 ## 5. Note on Backend
 - Since no REST API currently exists, the frontend services will initially use mock data.
 
+
+
+

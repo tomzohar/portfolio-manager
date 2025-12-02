@@ -3,7 +3,6 @@ import { z } from 'zod';
 
 export const CreatePortfolioSchema = z.object({
   name: z.string().min(1),
-  userId: z.string().uuid(),
 });
 
 export class CreatePortfolioDto extends createZodDto(CreatePortfolioSchema) {}

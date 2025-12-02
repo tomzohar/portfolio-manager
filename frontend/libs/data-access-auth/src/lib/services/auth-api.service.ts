@@ -11,7 +11,7 @@ import { LoginRequest, SignupRequest, AuthResponse } from '@stocks-researcher/ty
 })
 export class AuthApiService {
   private readonly http = inject(HttpClient);
-  private readonly API_URL = 'http://localhost:3001';
+  private readonly API_URL = 'http://localhost:3001/api';
 
   /**
    * Logs in a user with email and password
@@ -19,17 +19,7 @@ export class AuthApiService {
    * @returns Observable of auth response with JWT token
    */
   login(credentials: LoginRequest): Observable<AuthResponse> {
-    // TODO: Implement actual API call when backend endpoint is ready
-    // return this.http.post<AuthResponse>(`${this.API_URL}/auth/login`, credentials);
-    
-    // Mock implementation for now
-    return of({
-      token: 'mock-jwt-token-' + Date.now(),
-      user: {
-        id: 'mock-user-id',
-        email: credentials.email,
-      },
-    });
+    return this.http.post<AuthResponse>(`${this.API_URL}/auth/login`, credentials);
   }
 
   /**
@@ -38,23 +28,8 @@ export class AuthApiService {
    * @returns Observable of auth response with JWT token
    */
   signup(credentials: SignupRequest): Observable<AuthResponse> {
-    // TODO: Implement actual API call when backend endpoint is ready
-    // For now, we'll call the existing users endpoint
-    // return this.http.post<User>(`${this.API_URL}/users`, credentials).pipe(
-    //   map(user => ({
-    //     token: 'mock-jwt-token-' + Date.now(),
-    //     user
-    //   }))
-    // );
-    
-    // Mock implementation for now
-    return of({
-      token: 'mock-jwt-token-' + Date.now(),
-      user: {
-        id: 'mock-user-id',
-        email: credentials.email,
-      },
-    });
+    // Call the backend /users endpoint which now returns JWT + user
+    return this.http.post<AuthResponse>(`${this.API_URL}/users`, credentials);
   }
 
   /**
@@ -63,17 +38,7 @@ export class AuthApiService {
    * @returns Observable of auth response
    */
   verifyToken(token: string): Observable<AuthResponse> {
-    // TODO: Implement actual API call when backend endpoint is ready
-    // return this.http.post<AuthResponse>(`${this.API_URL}/auth/verify`, { token });
-    
-    // Mock implementation for now
-    return of({
-      token,
-      user: {
-        id: 'mock-user-id',
-        email: 'user@example.com',
-      },
-    });
+    return this.http.post<AuthResponse>(`${this.API_URL}/auth/verify`, { token });
   }
 }
 
