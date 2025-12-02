@@ -47,8 +47,7 @@ export class PortfolioApiService {
    * @param portfolioId - The portfolio ID to fetch assets for
    */
   getAssets(portfolioId: string): Observable<DashboardAsset[]> {
-    return this.getPortfolio(portfolioId).pipe(
-      map(portfolio => portfolio.assets || []),
+    return this.http.get<DashboardAsset[]>(`${this.apiUrl}/${portfolioId}/assets`).pipe(
       catchError(this.handleError)
     );
   }

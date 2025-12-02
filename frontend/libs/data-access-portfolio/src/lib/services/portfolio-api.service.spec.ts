@@ -105,7 +105,7 @@ describe('PortfolioApiService', () => {
   });
 
   describe('getAssets', () => {
-    it('should fetch assets for a portfolio', () => {
+    it('should fetch assets for a portfolio via dedicated endpoint', () => {
       const portfolioId = '1';
 
       service.getAssets(portfolioId).subscribe((assets) => {
@@ -113,25 +113,34 @@ describe('PortfolioApiService', () => {
         expect(assets.length).toBe(2);
       });
 
-      const req = httpMock.expectOne(`${apiUrl}/${portfolioId}`);
+      const req = httpMock.expectOne(`${apiUrl}/${portfolioId}/assets`);
       expect(req.request.method).toBe('GET');
-      req.flush(mockPortfolioWithAssets);
+      req.flush(mockAssets);
     });
 
     it('should return empty array when portfolio has no assets', () => {
       const portfolioId = '1';
-      const emptyPortfolio: PortfolioWithAssets = {
-        id: '1',
-        name: 'Empty Portfolio',
-        assets: [],
-      };
 
       service.getAssets(portfolioId).subscribe((assets) => {
         expect(assets).toEqual([]);
       });
 
-      const req = httpMock.expectOne(`${apiUrl}/${portfolioId}`);
-      req.flush(emptyPortfolio);
+      const req = httpMock.expectOne(`${apiUrl}/${portfolioId}/assets`);
+      req.flush([]);
+    });
+
+    it('should handle error when portfolio not found', () => {
+      const portfolioId = '999';
+
+      service.getAssets(portfolioId).subscribe({
+        next: () => fail('should have failed with 404 error'),
+        error: (error) => {
+          expect(error.message).toContain('Server Error');
+        },
+      });
+
+      const req = httpMock.expectOne(`${apiUrl}/${portfolioId}/assets`);
+      req.flush('Portfolio not found', { status: 404, statusText: 'Not Found' });
     });
   });
 

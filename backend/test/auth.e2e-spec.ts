@@ -243,6 +243,8 @@ describe('Authentication Flow (e2e)', () => {
       expect(Array.isArray(response.body)).toBe(true);
       expect(response.body.length).toBe(1);
       expect(response.body[0].name).toBe('My Test Portfolio');
+      // Verify that assets are NOT included in the list response (performance optimization)
+      expect(response.body[0].assets).toBeUndefined();
     });
 
     it('should not show other users portfolios', async () => {
@@ -263,6 +265,9 @@ describe('Authentication Flow (e2e)', () => {
 
       expect(response.body.id).toBe(user1PortfolioId);
       expect(response.body.name).toBe('My Test Portfolio');
+      // Verify that the detail endpoint DOES return assets
+      expect(response.body.assets).toBeDefined();
+      expect(Array.isArray(response.body.assets)).toBe(true);
     });
 
     it('should deny access to another users portfolio', async () => {
@@ -301,14 +306,46 @@ describe('Authentication Flow (e2e)', () => {
         .expect(403);
     });
 
-    it('should remove asset from portfolio', async () => {
-      // First, get the portfolio with assets
-      const portfolio = await request(app.getHttpServer())
-        .get(`/portfolios/${user1PortfolioId}`)
+    it('should get assets for a portfolio via dedicated endpoint', async () => {
+      // First add an asset
+      await request(app.getHttpServer())
+        .post(`/portfolios/${user1PortfolioId}/assets`)
+        .set('Authorization', `Bearer ${user1Token}`)
+        .send({
+          ticker: 'NVDA',
+          quantity: 8,
+          avgPrice: 450.0,
+        })
+        .expect(201);
+
+      // Fetch assets using the dedicated endpoint
+      const response = await request(app.getHttpServer())
+        .get(`/portfolios/${user1PortfolioId}/assets`)
         .set('Authorization', `Bearer ${user1Token}`)
         .expect(200);
 
-      const assetId = portfolio.body.assets[0].id;
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body.length).toBeGreaterThan(0);
+      expect(response.body[0]).toHaveProperty('ticker');
+      expect(response.body[0]).toHaveProperty('quantity');
+      expect(response.body[0]).toHaveProperty('avgPrice');
+    });
+
+    it('should deny access to another users portfolio assets', async () => {
+      await request(app.getHttpServer())
+        .get(`/portfolios/${user1PortfolioId}/assets`)
+        .set('Authorization', `Bearer ${user2Token}`)
+        .expect(403);
+    });
+
+    it('should remove asset from portfolio', async () => {
+      // First, get the portfolio assets
+      const assets = await request(app.getHttpServer())
+        .get(`/portfolios/${user1PortfolioId}/assets`)
+        .set('Authorization', `Bearer ${user1Token}`)
+        .expect(200);
+
+      const assetId = assets.body[0].id;
 
       // Remove the asset
       await request(app.getHttpServer())
@@ -317,12 +354,12 @@ describe('Authentication Flow (e2e)', () => {
         .expect(200);
 
       // Verify asset was removed
-      const updatedPortfolio = await request(app.getHttpServer())
-        .get(`/portfolios/${user1PortfolioId}`)
+      const updatedAssets = await request(app.getHttpServer())
+        .get(`/portfolios/${user1PortfolioId}/assets`)
         .set('Authorization', `Bearer ${user1Token}`)
         .expect(200);
 
-      expect(updatedPortfolio.body.assets.length).toBe(0);
+      expect(updatedAssets.body.length).toBe(0);
     });
 
     it('should deny removing asset from another users portfolio', async () => {
@@ -402,6 +439,8 @@ describe('Authentication Flow (e2e)', () => {
         (p: { id: string }) => p.id === portfolioId,
       );
       expect(journeyPortfolio).toBeDefined();
+      // Verify that list endpoint doesn't return assets (they should only be in the detail endpoint)
+      expect(journeyPortfolio.assets).toBeUndefined();
     });
   });
 });

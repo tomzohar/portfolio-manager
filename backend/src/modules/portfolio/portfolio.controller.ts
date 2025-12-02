@@ -63,6 +63,19 @@ export class PortfolioController {
     return portfolio;
   }
 
+  @Get(':id/assets')
+  @ApiOperation({
+    summary:
+      'Get assets for a specific portfolio (with ownership verification)',
+  })
+  @ApiResponse({ status: 200, description: 'Assets retrieved.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Access denied.' })
+  @ApiResponse({ status: 404, description: 'Portfolio not found.' })
+  async getAssets(@CurrentUser() user: User, @Param('id') id: string) {
+    return this.portfolioService.getAssets(id, user.id);
+  }
+
   @Post(':id/assets')
   @ApiOperation({
     summary: 'Add an asset to a portfolio (with ownership verification)',

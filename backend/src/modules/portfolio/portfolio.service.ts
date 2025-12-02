@@ -54,7 +54,6 @@ export class PortfolioService {
   async findAllByUserId(userId: string): Promise<Portfolio[]> {
     return this.portfolioRepository.find({
       where: { user: { id: userId } },
-      relations: ['assets'],
     });
   }
 
@@ -81,6 +80,28 @@ export class PortfolioService {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { user: _, ...portfolioWithoutUser } = portfolio;
     return portfolioWithoutUser as Portfolio;
+  }
+
+  /**
+   * Get assets for a specific portfolio (with ownership verification)
+   * Returns only the assets array, not the entire portfolio
+   */
+  async getAssets(portfolioId: string, userId: string): Promise<Asset[]> {
+    const portfolio = await this.portfolioRepository.findOne({
+      where: { id: portfolioId },
+      relations: ['assets', 'user'],
+    });
+
+    if (!portfolio) {
+      throw new NotFoundException('Portfolio not found');
+    }
+
+    // Verify ownership
+    if (portfolio.user.id !== userId) {
+      throw new ForbiddenException('Access denied to this portfolio');
+    }
+
+    return portfolio.assets || [];
   }
 
   /**
