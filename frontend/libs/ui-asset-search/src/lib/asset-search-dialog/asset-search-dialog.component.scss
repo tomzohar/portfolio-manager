@@ -4,19 +4,36 @@
   display: block;
 }
 
+// Fixed content area (doesn't grow with results)
+.fixed-content {
+  min-height: auto;
+  overflow: visible !important; // Allow autocomplete panel to float outside
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0 !important; // Remove excess padding
+}
+
 // Search input field
 .search-field {
   width: 100%;
-  margin-bottom: $spacing-md;
+  margin-bottom: 0;
+  flex-shrink: 0;
+
+  mat-spinner {
+    margin-left: $spacing-sm;
+  }
 }
 
 // Selected items preview section
 .selected-preview {
   @include flex-column($spacing-sm);
-  margin-bottom: $spacing-md;
+  margin-top: $spacing-md;
   padding: $spacing-sm $spacing-md;
   background-color: $color-background;
   border-radius: $border-radius-md;
+  max-height: 100px;
+  overflow-y: auto;
+  flex-shrink: 0;
 
   .selected-label {
     font-size: $font-size-sm;
@@ -30,72 +47,25 @@
   }
 }
 
-// State containers (loading, error, no results, empty)
-.state-container {
-  @include flex-column($spacing-sm);
+// Autocomplete option layout
+.ticker-option {
+  @include flex-row($spacing-sm);
   align-items: center;
-  justify-content: center;
-  padding: $spacing-xl;
-  color: $color-text-secondary;
-  text-align: center;
+  width: 100%;
+  padding: $spacing-xs 0;
 
-  mat-icon {
-    font-size: $font-size-2xl;
-    width: 32px;
-    height: 32px;
-  }
-}
-
-.loading-container {
-  mat-spinner {
-    margin-bottom: $spacing-sm;
-  }
-}
-
-.error-container {
-  color: $color-warn;
-}
-
-.no-results,
-.empty-state {
-  mat-icon {
-    color: $color-text-disabled;
-  }
-}
-
-// Results container
-.results-container {
-  max-height: 300px;
-  overflow-y: auto;
-  border: $border-width-thin solid $border-color-light;
-  border-radius: $border-radius-md;
-}
-
-.results-list {
-  padding: 0;
-}
-
-// Result item styling
-.result-item {
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-
-  &:hover {
-    background-color: $color-background;
+  .option-checkbox {
+    flex-shrink: 0;
   }
 
-  &.clickable {
-    cursor: pointer;
+  .ticker-item {
+    @include flex-column(2px);
+    flex: 1;
+    min-width: 0; // Enable text truncation
   }
 }
 
 // Ticker item layout
-.ticker-item {
-  @include flex-column($spacing-xs);
-  padding: $spacing-xs 0;
-  width: 100%;
-}
-
 .ticker-symbol {
   font-weight: $font-weight-bold;
   font-size: $font-size-base;
@@ -108,26 +78,82 @@
   @include text-truncate;
 }
 
-// Material overrides
-::ng-deep {
-  .mat-mdc-dialog-content {
-    max-height: 60vh;
+// State options in autocomplete panel
+.state-option {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  padding: $spacing-md !important;
+  color: $color-text-secondary;
+  min-height: 60px;
+
+  mat-icon {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
   }
 
-  .mat-mdc-list-option {
-    border-bottom: $border-width-thin solid $border-color-light;
+  span {
+    font-size: $font-size-sm;
+  }
 
-    &:last-child {
-      border-bottom: none;
+  &.error-state {
+    color: $color-warn;
+    
+    mat-icon {
+      color: $color-warn;
     }
   }
 
-  .mat-mdc-list-item {
-    border-bottom: $border-width-thin solid $border-color-light;
-
-    &:last-child {
-      border-bottom: none;
+  &.no-results-state {
+    mat-icon {
+      color: $color-text-disabled;
     }
   }
 }
 
+// Highlight selected options in multi-select mode
+.selected-option {
+  background-color: $color-background !important;
+}
+
+// Material overrides for the autocomplete panel
+::ng-deep {
+  // Autocomplete panel styling
+  .mat-mdc-autocomplete-panel.asset-autocomplete {
+    max-height: 400px !important;
+    
+    .mat-mdc-option {
+      height: auto !important;
+      min-height: 56px;
+      line-height: normal;
+      padding: $spacing-sm $spacing-md;
+      
+      &:hover:not(.mat-mdc-option-disabled) {
+        background-color: $color-background;
+      }
+      
+      &.mat-mdc-option-active:not(.mat-mdc-option-disabled) {
+        background-color: $color-background;
+      }
+
+      // Border between options
+      border-bottom: $border-width-thin solid $border-color-light;
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+  }
+  
+  // Ensure checkbox doesn't trigger option selection
+  .option-checkbox {
+    pointer-events: none;
+  }
+
+  // Dialog content should not scroll
+  .mat-mdc-dialog-content {
+    overflow: visible !important;
+  }
+}

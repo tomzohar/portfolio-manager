@@ -15,7 +15,7 @@ import {
 } from '@angular/material/dialog';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatListModule } from '@angular/material/list';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -67,7 +67,7 @@ const DEFAULT_CONFIG: AssetSearchConfig = {
     MatDialogModule,
     MatInputModule,
     MatFormFieldModule,
-    MatListModule,
+    MatAutocompleteModule,
     MatProgressSpinnerModule,
     MatIconModule,
     MatButtonModule,
@@ -154,20 +154,43 @@ export class AssetSearchDialogComponent {
   }
 
   /**
-   * Handles item selection
-   * - Single mode: closes dialog immediately with the selected item
-   * - Multi mode: toggles selection state
-   * @param item - The ticker result to select/deselect
+   * Display function for mat-autocomplete
+   * Returns empty string to keep showing the search query
+   * @returns Empty string to maintain search query in input
    */
-  onSelectItem(item: TickerResult): void {
+  displayFn = (): string => {
+    return '';
+  };
+
+  /**
+   * Handles autocomplete option selection event
+   * - Single mode: closes dialog immediately with the selected item
+   * - Multi mode: prevented by onOptionClick
+   * @param event - The MatAutocompleteSelectedEvent with option value
+   */
+  onAutocompleteSelect(event: { option: { value: TickerResult } }): void {
+    const item = event.option.value;
     if (this.isSingleMode()) {
       // Single mode: close immediately with selection
       this.facade.clearSearch();
       this.dialogRef.close([item]);
-    } else {
-      // Multi mode: toggle selection
+    }
+    // Multi-select is handled by onOptionClick
+  }
+
+  /**
+   * Handles option click event
+   * In multi-select mode, prevents default autocomplete behavior and toggles selection
+   * @param event - The click event
+   * @param item - The ticker result to select/deselect
+   */
+  onOptionClick(event: Event, item: TickerResult): void {
+    if (!this.isSingleMode()) {
+      // Prevent autocomplete from closing in multi-select mode
+      event.stopPropagation();
       this.toggleSelection(item);
     }
+    // Single-select is handled by onAutocompleteSelect
   }
 
   /**

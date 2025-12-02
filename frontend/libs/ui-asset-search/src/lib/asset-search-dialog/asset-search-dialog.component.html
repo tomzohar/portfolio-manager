@@ -1,7 +1,7 @@
 <h2 mat-dialog-title>{{ title() }}</h2>
 
-<mat-dialog-content>
-  <!-- Search Input -->
+<mat-dialog-content class="fixed-content">
+  <!-- Search Input with Autocomplete -->
   <mat-form-field appearance="outline" class="search-field">
     <mat-label>{{ placeholder() }}</mat-label>
     <input
@@ -9,11 +9,67 @@
       type="text"
       [value]="searchQuery()"
       (input)="onInputChange($any($event.target).value)"
+      [matAutocomplete]="auto"
       autocomplete="off"
       cdkFocusInitial
     />
     <mat-icon matSuffix>search</mat-icon>
+    
+    <!-- Loading indicator in input suffix -->
+    @if (loading()) {
+      <mat-spinner matSuffix diameter="20"></mat-spinner>
+    }
   </mat-form-field>
+
+  <!-- Autocomplete Panel (Floating) -->
+  <mat-autocomplete
+    #auto="matAutocomplete"
+    [displayWith]="displayFn"
+    [autoActiveFirstOption]="true"
+    (optionSelected)="onAutocompleteSelect($event)"
+    panelClass="asset-autocomplete"
+  >
+    <!-- Error State in Panel -->
+    @if (error(); as errorMessage) {
+      <mat-option disabled class="state-option error-state">
+        <mat-icon color="warn">error</mat-icon>
+        <span>{{ errorMessage }}</span>
+      </mat-option>
+    }
+
+    <!-- No Results State -->
+    @if (noResults()) {
+      <mat-option disabled class="state-option no-results-state">
+        <mat-icon>search_off</mat-icon>
+        <span>No results found for "{{ searchQuery() }}"</span>
+      </mat-option>
+    }
+
+    <!-- Results Options -->
+    @if (!loading() && !error() && results().length > 0) {
+      @for (result of results(); track result.ticker) {
+        <mat-option
+          [value]="result"
+          [disabled]="!isSingleMode() && !canSelect() && !isSelected(result)"
+          [class.selected-option]="!isSingleMode() && isSelected(result)"
+          (click)="onOptionClick($event, result)"
+        >
+          <div class="ticker-option">
+            @if (!isSingleMode()) {
+              <mat-checkbox
+                [checked]="isSelected(result)"
+                class="option-checkbox"
+              />
+            }
+            <div class="ticker-item">
+              <span class="ticker-symbol">{{ result.ticker }}</span>
+              <span class="ticker-name">{{ result.name }}</span>
+            </div>
+          </div>
+        </mat-option>
+      }
+    }
+  </mat-autocomplete>
 
   <!-- Selected Items Preview (Multi-select mode only) -->
   @if (!isSingleMode() && selectedCount() > 0) {
@@ -32,75 +88,7 @@
     </div>
   }
 
-  <!-- Loading State -->
-  @if (loading()) {
-    <div class="state-container loading-container">
-      <mat-spinner diameter="40"></mat-spinner>
-      <span>Searching...</span>
-    </div>
-  }
 
-  <!-- Error State -->
-  @if (error(); as errorMessage) {
-    <div class="state-container error-container">
-      <mat-icon color="warn">error</mat-icon>
-      <span>{{ errorMessage }}</span>
-    </div>
-  }
-
-  <!-- Results List -->
-  @if (!loading() && !error() && results().length > 0) {
-    <div class="results-container">
-      @if (isSingleMode()) {
-        <!-- Single-select mode: simple list -->
-        <mat-list class="results-list">
-          @for (result of results(); track result.ticker) {
-            <mat-list-item 
-              class="result-item clickable"
-              (click)="onSelectItem(result)"
-            >
-              <div class="ticker-item">
-                <span class="ticker-symbol">{{ result.ticker }}</span>
-                <span class="ticker-name">{{ result.name }}</span>
-              </div>
-            </mat-list-item>
-          }
-        </mat-list>
-      } @else {
-        <!-- Multi-select mode: selection list with checkboxes -->
-        <mat-selection-list [multiple]="true" class="results-list">
-          @for (result of results(); track result.ticker) {
-            <mat-list-option
-              [selected]="isSelected(result)"
-              [disabled]="!canSelect() && !isSelected(result)"
-              (click)="onSelectItem(result)"
-            >
-              <div class="ticker-item">
-                <span class="ticker-symbol">{{ result.ticker }}</span>
-                <span class="ticker-name">{{ result.name }}</span>
-              </div>
-            </mat-list-option>
-          }
-        </mat-selection-list>
-      }
-    </div>
-  }
-
-  <!-- No Results -->
-  @if (noResults()) {
-    <div class="state-container no-results">
-      <mat-icon>search_off</mat-icon>
-      <span>No results found for "{{ searchQuery() }}"</span>
-    </div>
-  }
-
-  <!-- Empty State (no search yet) -->
-  @if (!loading() && !error() && searchQuery().length === 0) {
-    <div class="state-container empty-state">
-      <mat-icon>manage_search</mat-icon>
-      <span>Start typing to search for assets</span>
-    </div>
-  }
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
