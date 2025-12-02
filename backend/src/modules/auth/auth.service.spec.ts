@@ -83,7 +83,10 @@ describe('AuthService', () => {
       );
 
       expect(result).toEqual(mockUser);
-      expect(usersService.findByEmail).toHaveBeenCalledWith('test@example.com');
+      expect(usersService.findByEmail).toHaveBeenCalledWith(
+        'test@example.com',
+        true,
+      );
     });
 
     it('should return null when user is not found', async () => {
@@ -97,6 +100,7 @@ describe('AuthService', () => {
       expect(result).toBeNull();
       expect(usersService.findByEmail).toHaveBeenCalledWith(
         'nonexistent@example.com',
+        true,
       );
     });
 
@@ -121,13 +125,12 @@ describe('AuthService', () => {
 
       const result = await service.login('test@example.com', 'password123');
 
-      expect(result).toEqual({
-        token: mockToken,
-        user: {
-          id: mockUser.id,
-          email: mockUser.email,
-        },
-      });
+      expect(result.token).toBe(mockToken);
+      expect(result.user.id).toBe(mockUser.id);
+      expect(result.user.email).toBe(mockUser.email);
+      expect(result.user.createdAt).toEqual(mockUser.createdAt);
+      expect(result.user.updatedAt).toEqual(mockUser.updatedAt);
+      expect((result.user as User).passwordHash).toBeUndefined();
       expect(jwtService.sign).toHaveBeenCalledWith({
         sub: mockUser.id,
       });
@@ -151,13 +154,12 @@ describe('AuthService', () => {
 
       const result = await service.verifyToken(mockToken);
 
-      expect(result).toEqual({
-        token: mockToken,
-        user: {
-          id: mockUser.id,
-          email: mockUser.email,
-        },
-      });
+      expect(result.token).toBe(mockToken);
+      expect(result.user.id).toBe(mockUser.id);
+      expect(result.user.email).toBe(mockUser.email);
+      expect(result.user.createdAt).toEqual(mockUser.createdAt);
+      expect(result.user.updatedAt).toEqual(mockUser.updatedAt);
+      expect((result.user as User).passwordHash).toBeUndefined();
       expect(jwtService.verifyAsync).toHaveBeenCalledWith(mockToken, {
         secret: 'test-secret',
       });
@@ -199,22 +201,18 @@ describe('AuthService', () => {
   });
 
   describe('createAuthResponse', () => {
-    it('should generate auth response without password validation', async () => {
+    it('should generate auth response without password validation', () => {
       jwtService.sign.mockReturnValue(mockToken);
 
       const result = service.createAuthResponse(mockUser);
 
-      expect(result).toEqual({
-        token: mockToken,
-        user: {
-          id: mockUser.id,
-          email: mockUser.email,
-        },
-      });
+      expect(result.token).toBe(mockToken);
+      expect(result.user.id).toBe(mockUser.id);
+      expect(result.user.email).toBe(mockUser.email);
       expect(jwtService.sign).toHaveBeenCalledWith({ sub: mockUser.id });
     });
 
-    it('should not call usersService when creating auth response', async () => {
+    it('should not call usersService when creating auth response', () => {
       jwtService.sign.mockReturnValue(mockToken);
 
       service.createAuthResponse(mockUser);

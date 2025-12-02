@@ -20,6 +20,7 @@ import { AuthService } from '../auth/auth.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from './entities/user.entity';
+import { SerializedUser } from './serializers/user.serializer';
 
 @ApiTags('users')
 @Controller('users')
@@ -46,11 +47,19 @@ export class UsersController {
     description: 'Too many requests - rate limit exceeded',
   })
   async create(@Body() createUserDto: CreateUserDto) {
-    const user = await this.usersService.create(createUserDto);
+    const serializedUser = await this.usersService.create(createUserDto);
+
+    // Convert SerializedUser back to User entity for JWT generation
+    // This is safe because createAuthResponse only needs id and email
+    const userForAuth = {
+      id: serializedUser.id,
+      email: serializedUser.email,
+      createdAt: serializedUser.createdAt,
+      updatedAt: serializedUser.updatedAt,
+    } as User;
 
     // Generate JWT and return auth response (token + user data)
-    // No password validation needed since we just created the user
-    return this.authService.createAuthResponse(user);
+    return this.authService.createAuthResponse(userForAuth);
   }
 
   @Get(':id')
@@ -60,13 +69,14 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'User found.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
-  async findOne(@CurrentUser() currentUser: User, @Param('id') id: string) {
-    const user = await this.usersService.findOne(id);
+  async findOne(
+    @CurrentUser() currentUser: User,
+    @Param('id') id: string,
+  ): Promise<SerializedUser> {
+    const user = await this.usersService.findOneSerialized(id);
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { passwordHash, ...result } = user;
-    return result;
+    return user;
   }
 }

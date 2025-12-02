@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import type { SerializedUser } from '../../users/serializers/user.serializer';
 
 export class AuthUserDto {
   @ApiProperty({
@@ -12,6 +13,18 @@ export class AuthUserDto {
     example: 'user@example.com',
   })
   email: string;
+
+  @ApiProperty({
+    description: 'User creation timestamp',
+    example: '2025-01-01T00:00:00.000Z',
+  })
+  createdAt: Date;
+
+  @ApiProperty({
+    description: 'User last update timestamp',
+    example: '2025-01-02T00:00:00.000Z',
+  })
+  updatedAt: Date;
 }
 
 export class AuthResponseDto {
@@ -25,5 +38,5 @@ export class AuthResponseDto {
     description: 'Authenticated user data',
     type: AuthUserDto,
   })
-  user: AuthUserDto;
+  user: SerializedUser;
 }

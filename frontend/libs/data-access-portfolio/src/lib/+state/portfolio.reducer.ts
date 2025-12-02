@@ -88,6 +88,50 @@ export const portfolioReducer = createReducer(
     ...state,
     loading: false,
     error,
-  }))
+  })),
+
+  // Create Portfolio - Optimistic Update
+  on(PortfolioActions.createPortfolio, (state, { dto }) => {
+    // Generate temporary ID for optimistic update
+    const tempId = `temp-${Date.now()}`;
+    const optimisticPortfolio: DashboardPortfolio = {
+      id: tempId,
+      name: dto.name,
+      createdAt: new Date(),
+    };
+
+    return {
+      ...state,
+      portfolios: [...state.portfolios, optimisticPortfolio],
+      loading: true,
+      error: null,
+    };
+  }),
+
+  on(PortfolioActions.createPortfolioSuccess, (state, { portfolio }) => {
+    // Find and replace the temporary portfolio with the real one
+    const portfolios = state.portfolios.map((p) =>
+      p.id.startsWith('temp-') && p.name === portfolio.name ? portfolio : p
+    );
+
+    return {
+      ...state,
+      portfolios,
+      loading: false,
+      error: null,
+    };
+  }),
+
+  on(PortfolioActions.createPortfolioFailure, (state, { error }) => {
+    // Remove the temporary portfolio on failure
+    const portfolios = state.portfolios.filter((p) => !p.id.startsWith('temp-'));
+
+    return {
+      ...state,
+      portfolios,
+      loading: false,
+      error,
+    };
+  })
 );
 

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import {
   MAT_DIALOG_DATA,
   MatDialogRef,
@@ -35,45 +35,19 @@ import { ButtonComponent, InputComponent, InputConfig } from '@stocks-researcher
   templateUrl: './create-portfolio-dialog.html',
   styleUrl: './create-portfolio-dialog.scss',
 })
-export class CreatePortfolioDialogComponent implements OnInit {
+export class CreatePortfolioDialogComponent {
   private formBuilder = inject(FormBuilder);
   dialogRef = inject(MatDialogRef<CreatePortfolioDialogComponent>);
 
-  // Optional: data passed from parent (e.g., userId)
+  // Optional: data passed from parent (e.g., initial name)
   data = inject<{ name?: string } | undefined>(MAT_DIALOG_DATA, {
     optional: true,
   });
 
+  // Form group for portfolio name
   form: FormGroup = this.formBuilder.group({
-    name: ['', [Validators.required, Validators.minLength(1)]],
+    name: [this.data?.name || '', [Validators.required, Validators.minLength(1)]],
   });
-
-  ngOnInit(): void {
-    this.form.patchValue({ name: this.data?.name || '' });
-  }
-
-  /**
-   * Handle cancel button click
-   */
-  onCancel(): void {
-    this.dialogRef.close();
-  }
-
-  /**
-   * Handle submit button click
-   */
-  onSubmit(): void {
-    if (this.form.valid) {
-      const formValue = this.form.value;
-      console.log('Create portfolio:', {
-        name: formValue.name,
-      });
-
-      this.dialogRef.close({
-        name: formValue.name,
-      });
-    }
-  }
 
   /**
    * Check if form is valid
@@ -82,6 +56,9 @@ export class CreatePortfolioDialogComponent implements OnInit {
     return this.form.valid;
   }
 
+  /**
+   * Config for portfolio name input field
+   */
   get portfolioNameInputConfig(): InputConfig {
     return {
       control: this.nameControl,
@@ -94,6 +71,26 @@ export class CreatePortfolioDialogComponent implements OnInit {
         minlength: 'Portfolio name must be at least 1 character',
       },
     };
+  }
+
+  /**
+   * Handle cancel button click
+   */
+  onCancel(): void {
+    this.dialogRef.close();
+  }
+
+  /**
+   * Handle submit button click
+   * Closes dialog with portfolio name if form is valid
+   */
+  onSubmit(): void {
+    if (this.form.valid) {
+      const formValue = this.form.value;
+      this.dialogRef.close({
+        name: formValue.name,
+      });
+    }
   }
 
   /**

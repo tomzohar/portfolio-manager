@@ -1,9 +1,10 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { UiDashboardComponent } from '@frontend/ui-dashboard';
 import { PortfolioFacade } from '@frontend/data-access-portfolio';
+import { UiDashboardComponent } from '@frontend/ui-dashboard';
 import { DialogService } from '@frontend/util-dialog';
+import { CreatePortfolioDto } from '@stocks-researcher/types';
+import { take } from 'rxjs';
 import { CreatePortfolioDialogComponent } from '../create-portfolio-dialog/create-portfolio-dialog.component';
-import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'lib-feature-dashboard',
@@ -33,22 +34,22 @@ export class FeatureDashboardComponent implements OnInit {
   onCreatePortfolio(): void {
     const dialogRef = this.dialogService.open({
       component: CreatePortfolioDialogComponent,
-      data: { userId: 'current-user-id' }, // TODO: Get actual user ID from auth service
+      data: {},
       width: '500px',
       disableClose: false,
     });
 
-    const unsubscribeSubject = new Subject<boolean>();
-
-    // Handle dialog result if needed in the future
+    // Handle dialog result
     dialogRef.afterClosedObservable
-      .pipe(takeUntil(unsubscribeSubject))
-      .subscribe((result) => {
-        console.log({ result });
-        unsubscribeSubject.next(true);
-        unsubscribeSubject.complete();
-        // Dialog handles its own submission logic for now
-        // Future: Handle result here if dialog returns data
+      .pipe(take(1))
+      .subscribe((result: { name: string } | undefined) => {
+        if (result?.name) {
+          const dto: CreatePortfolioDto = {
+            name: result.name,
+          };
+
+          this.facade.createPortfolio(dto);
+        }
       });
   }
 }

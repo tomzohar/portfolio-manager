@@ -139,7 +139,6 @@ describe('PortfolioApiService', () => {
     it('should create a new portfolio via POST', () => {
       const dto: CreatePortfolioDto = {
         name: 'New Portfolio',
-        userId: 'user-123',
       };
       const createdPortfolio: DashboardPortfolio = {
         id: '3',
@@ -160,7 +159,6 @@ describe('PortfolioApiService', () => {
     it('should handle validation error on create', () => {
       const dto: CreatePortfolioDto = {
         name: '',
-        userId: 'user-123',
       };
 
       service.createPortfolio(dto).subscribe({

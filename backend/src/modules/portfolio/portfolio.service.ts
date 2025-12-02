@@ -22,6 +22,7 @@ export class PortfolioService {
 
   /**
    * Create a new portfolio for the authenticated user
+   * Returns only portfolio data without user relation to avoid exposing sensitive data
    */
   async create(
     userId: string,
@@ -39,7 +40,12 @@ export class PortfolioService {
       user,
     });
 
-    return this.portfolioRepository.save(portfolio);
+    const savedPortfolio = await this.portfolioRepository.save(portfolio);
+
+    // Return portfolio without user relation to avoid exposing user data
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { user: _, ...portfolioWithoutUser } = savedPortfolio;
+    return portfolioWithoutUser as Portfolio;
   }
 
   /**
@@ -54,6 +60,7 @@ export class PortfolioService {
 
   /**
    * Get a specific portfolio by ID and verify ownership
+   * Returns portfolio without user relation to avoid exposing sensitive data
    */
   async findOne(id: string, userId: string): Promise<Portfolio | null> {
     const portfolio = await this.portfolioRepository.findOne({
@@ -70,7 +77,10 @@ export class PortfolioService {
       throw new ForbiddenException('Access denied to this portfolio');
     }
 
-    return portfolio;
+    // Remove user relation from response
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { user: _, ...portfolioWithoutUser } = portfolio;
+    return portfolioWithoutUser as Portfolio;
   }
 
   /**

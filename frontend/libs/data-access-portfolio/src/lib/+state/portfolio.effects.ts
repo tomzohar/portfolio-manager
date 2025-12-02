@@ -84,7 +84,9 @@ export class PortfolioEffects {
 
   /**
    * Effect: Create Portfolio
-   * Creates a new portfolio and reloads the portfolio list
+   * Creates a new portfolio using optimistic updates.
+   * The reducer immediately adds a temporary portfolio to the state,
+   * and this effect either confirms it with the real data or removes it on failure.
    */
   createPortfolio$ = createEffect(() =>
     this.actions$.pipe(
@@ -101,17 +103,6 @@ export class PortfolioEffects {
           )
         )
       )
-    )
-  );
-
-  /**
-   * Effect: Create Portfolio Success
-   * Reload portfolios after successful creation
-   */
-  createPortfolioSuccess$ = createEffect(() =>
-    this.actions$.pipe(
-      ofType(PortfolioActions.createPortfolioSuccess),
-      map(() => PortfolioActions.loadPortfolios())
     )
   );
 

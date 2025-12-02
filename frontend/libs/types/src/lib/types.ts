@@ -26,7 +26,6 @@ export interface DashboardAsset {
 // DTOs for API operations
 export interface CreatePortfolioDto {
   name: string;
-  userId: string;
 }
 
 export interface AddAssetDto {

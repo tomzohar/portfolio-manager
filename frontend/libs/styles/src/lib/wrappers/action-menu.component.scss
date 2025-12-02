@@ -1,0 +1,17 @@
+@use '../scss' as *;
+
+.action-menu-trigger {
+  &.full-width {
+    width: 100%;
+  }
+
+  .mat-icon {
+    margin-right: $spacing-xs;
+
+    &:last-child:not(:first-child) {
+      margin-right: 0;
+      margin-left: $spacing-xs;
+    }
+  }
+}
+

@@ -1,5 +1,10 @@
 <div class="dashboard-container">
-  <lib-toolbar title="Portfolio Dashboard"></lib-toolbar>
+  <lib-toolbar title="Portfolio Dashboard">
+    <lib-action-menu
+      [config]="actionMenuConfig"
+      (itemSelected)="onActionMenuItemSelected($event)"
+    />
+  </lib-toolbar>
 
   <div class="dashboard-content">
     @if (portfolios().length === 0) {
