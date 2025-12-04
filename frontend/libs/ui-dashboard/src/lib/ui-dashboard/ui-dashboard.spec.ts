@@ -193,4 +193,83 @@ describe('UiDashboardComponent', () => {
       expect(typeof component.onAddAsset).toBe('function');
     });
   });
+
+  describe('Delete Portfolio', () => {
+    it('should have onDeletePortfolio method', () => {
+      expect(component.onDeletePortfolio).toBeDefined();
+      expect(typeof component.onDeletePortfolio).toBe('function');
+    });
+
+    it('should emit deletePortfolio event when onDeletePortfolio is called', (done) => {
+      component.deletePortfolio.subscribe(() => {
+        done();
+      });
+
+      component.onDeletePortfolio();
+    });
+
+    it('should include delete portfolio action in menu when portfolio is selected', () => {
+      fixture.componentRef.setInput('selectedPortfolioId', '1');
+      fixture.detectChanges();
+
+      const menuConfig = component.actionMenuConfig();
+      const deleteAction = menuConfig.menu.items.find(item => item.id === 'delete-portfolio');
+      
+      expect(deleteAction).toBeDefined();
+      expect(deleteAction?.label).toBe('Delete Portfolio');
+      expect(deleteAction?.icon).toBe('delete');
+    });
+
+    it('should not include delete portfolio action in menu when no portfolio is selected', () => {
+      fixture.componentRef.setInput('selectedPortfolioId', null);
+      fixture.detectChanges();
+
+      const menuConfig = component.actionMenuConfig();
+      const deleteAction = menuConfig.menu.items.find(item => item.id === 'delete-portfolio');
+      
+      expect(deleteAction).toBeUndefined();
+    });
+
+    it('should call onDeletePortfolio when delete action is selected from menu', () => {
+      jest.spyOn(component, 'onDeletePortfolio');
+      
+      component.onActionMenuItemSelected({ id: 'delete-portfolio', label: 'Delete Portfolio', icon: 'delete' });
+      
+      expect(component.onDeletePortfolio).toHaveBeenCalled();
+    });
+  });
+
+  describe('Asset Actions', () => {
+    it('should have onEditAsset method', () => {
+      expect(component.onEditAsset).toBeDefined();
+      expect(typeof component.onEditAsset).toBe('function');
+    });
+
+    it('should have onDeleteAsset method', () => {
+      expect(component.onDeleteAsset).toBeDefined();
+      expect(typeof component.onDeleteAsset).toBe('function');
+    });
+
+    it('should emit editAsset event when onEditAsset is called', (done) => {
+      const asset = mockAssets[0];
+      
+      component.editAsset.subscribe((emittedAsset) => {
+        expect(emittedAsset).toEqual(asset);
+        done();
+      });
+
+      component.onEditAsset(asset);
+    });
+
+    it('should emit deleteAsset event when onDeleteAsset is called', (done) => {
+      const asset = mockAssets[0];
+      
+      component.deleteAsset.subscribe((emittedAsset) => {
+        expect(emittedAsset).toEqual(asset);
+        done();
+      });
+
+      component.onDeleteAsset(asset);
+    });
+  });
 });

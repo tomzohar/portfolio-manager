@@ -71,6 +71,58 @@ describe('PortfolioFacade', () => {
     });
   });
 
+  describe('createPortfolio', () => {
+    it('should dispatch createPortfolio action with dto', () => {
+      const dto = { name: 'New Portfolio' };
+      facade.createPortfolio(dto);
+
+      expect(store.dispatch).toHaveBeenCalledWith(
+        PortfolioActions.createPortfolio({ dto })
+      );
+    });
+  });
+
+  describe('deletePortfolio', () => {
+    it('should dispatch deletePortfolio action with portfolioId', () => {
+      const portfolioId = 'portfolio-123';
+      facade.deletePortfolio(portfolioId);
+
+      expect(store.dispatch).toHaveBeenCalledWith(
+        PortfolioActions.deletePortfolio({ portfolioId })
+      );
+    });
+  });
+
+  describe('addAsset', () => {
+    it('should dispatch addAsset action with portfolioId, dto, and tempId', () => {
+      const portfolioId = 'portfolio-123';
+      const dto = { ticker: 'AAPL', quantity: 10, avgPrice: 150 };
+      
+      facade.addAsset(portfolioId, dto);
+
+      expect(store.dispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          portfolioId,
+          dto,
+          tempId: expect.stringContaining('temp-asset-'),
+        })
+      );
+    });
+  });
+
+  describe('removeAsset', () => {
+    it('should dispatch removeAsset action with portfolioId and assetId', () => {
+      const portfolioId = 'portfolio-123';
+      const assetId = 'asset-456';
+      
+      facade.removeAsset(portfolioId, assetId);
+
+      expect(store.dispatch).toHaveBeenCalledWith(
+        PortfolioActions.removeAsset({ portfolioId, assetId })
+      );
+    });
+  });
+
   describe('facade properties', () => {
     it('should have portfolios property', () => {
       expect(facade).toHaveProperty('portfolios');

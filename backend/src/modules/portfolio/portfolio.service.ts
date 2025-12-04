@@ -9,6 +9,10 @@ import { Portfolio } from './entities/portfolio.entity';
 import { Asset } from './entities/asset.entity';
 import { CreatePortfolioDto, AddAssetDto } from './dto/portfolio.dto';
 import { UsersService } from '../users/users.service';
+import { PolygonApiService } from '../assets/services/polygon-api.service';
+import type { PolygonSnapshotResponse } from '../assets/types/polygon-api.types';
+import { EnrichedAssetDto } from './dto/asset-response.dto';
+import { lastValueFrom } from 'rxjs';
 
 @Injectable()
 export class PortfolioService {
@@ -18,6 +22,7 @@ export class PortfolioService {
     @InjectRepository(Asset)
     private assetRepository: Repository<Asset>,
     private usersService: UsersService,
+    private polygonApiService: PolygonApiService,
   ) {}
 
   /**
@@ -84,9 +89,12 @@ export class PortfolioService {
 
   /**
    * Get assets for a specific portfolio (with ownership verification)
-   * Returns only the assets array, not the entire portfolio
+   * Returns enriched assets with current market data
    */
-  async getAssets(portfolioId: string, userId: string): Promise<Asset[]> {
+  async getAssets(
+    portfolioId: string,
+    userId: string,
+  ): Promise<EnrichedAssetDto[]> {
     const portfolio = await this.portfolioRepository.findOne({
       where: { id: portfolioId },
       relations: ['assets', 'user'],
@@ -101,7 +109,57 @@ export class PortfolioService {
       throw new ForbiddenException('Access denied to this portfolio');
     }
 
-    return portfolio.assets || [];
+    const assets = portfolio.assets || [];
+
+    // If no assets, return empty array
+    if (assets.length === 0) {
+      return [];
+    }
+
+    return this.enrichAssetsWithMarketData(assets);
+  }
+
+  /**
+   * Enrich assets with current market data from Polygon API
+   * Fetches ticker snapshots in parallel and returns enriched assets
+   * @param assets - Array of assets to enrich
+   * @returns Promise of enriched assets with market data
+   */
+  private async enrichAssetsWithMarketData(
+    assets: Asset[],
+  ): Promise<EnrichedAssetDto[]> {
+    // Fetch current price data for all assets in parallel
+    const snapshotPromises = assets.map(
+      async (asset): Promise<PolygonSnapshotResponse | null> => {
+        try {
+          return await lastValueFrom(
+            this.polygonApiService.getTickerSnapshot(asset.ticker),
+          );
+        } catch {
+          // Return null if snapshot fetch fails
+          return null;
+        }
+      },
+    );
+
+    const snapshots = await Promise.all(snapshotPromises);
+
+    // Enrich assets with current price data
+    return assets.map((asset, index) => {
+      const snapshot = snapshots[index];
+
+      if (snapshot?.ticker?.day) {
+        return new EnrichedAssetDto(asset, {
+          currentPrice: snapshot.ticker.day.c,
+          todaysChange: snapshot.ticker.todaysChange,
+          todaysChangePerc: snapshot.ticker.todaysChangePerc,
+          lastUpdated: snapshot.ticker.updated,
+        });
+      }
+
+      // If snapshot failed or unavailable, return asset without market data
+      return new EnrichedAssetDto(asset);
+    });
   }
 
   /**
@@ -151,5 +209,29 @@ export class PortfolioService {
     if (result.affected === 0) {
       throw new NotFoundException('Asset not found in this portfolio');
     }
+  }
+
+  /**
+   * Delete a portfolio (with ownership verification)
+   * Will cascade delete all associated assets
+   */
+  async deletePortfolio(portfolioId: string, userId: string): Promise<void> {
+    // Verify ownership first
+    const portfolio = await this.portfolioRepository.findOne({
+      where: { id: portfolioId },
+      relations: ['user'],
+    });
+
+    if (!portfolio) {
+      throw new NotFoundException('Portfolio not found');
+    }
+
+    // Verify ownership
+    if (portfolio.user.id !== userId) {
+      throw new ForbiddenException('Access denied to this portfolio');
+    }
+
+    // Delete the portfolio (assets will cascade delete due to relation configuration)
+    await this.portfolioRepository.remove(portfolio);
   }
 }

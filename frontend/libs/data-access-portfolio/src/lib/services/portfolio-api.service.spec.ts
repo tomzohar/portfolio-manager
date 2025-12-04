@@ -264,6 +264,48 @@ describe('PortfolioApiService', () => {
     });
   });
 
+  describe('deletePortfolio', () => {
+    it('should delete a portfolio via DELETE', () => {
+      const portfolioId = '1';
+
+      service.deletePortfolio(portfolioId).subscribe((result) => {
+        expect(result).toBeUndefined();
+      });
+
+      const req = httpMock.expectOne(`${apiUrl}/${portfolioId}`);
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null);
+    });
+
+    it('should handle error when portfolio not found', () => {
+      const portfolioId = '999';
+
+      service.deletePortfolio(portfolioId).subscribe({
+        next: () => fail('should have failed with 404 error'),
+        error: (error) => {
+          expect(error.message).toContain('Server Error');
+        },
+      });
+
+      const req = httpMock.expectOne(`${apiUrl}/${portfolioId}`);
+      req.flush('Portfolio not found', { status: 404, statusText: 'Not Found' });
+    });
+
+    it('should handle forbidden error when user does not own portfolio', () => {
+      const portfolioId = '1';
+
+      service.deletePortfolio(portfolioId).subscribe({
+        next: () => fail('should have failed with 403 error'),
+        error: (error) => {
+          expect(error.message).toContain('Server Error');
+        },
+      });
+
+      const req = httpMock.expectOne(`${apiUrl}/${portfolioId}`);
+      req.flush('Access denied', { status: 403, statusText: 'Forbidden' });
+    });
+  });
+
   describe('Error Handling', () => {
     it('should handle network errors', () => {
       const errorEvent = new ErrorEvent('Network error', {

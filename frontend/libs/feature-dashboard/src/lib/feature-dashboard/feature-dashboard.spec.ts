@@ -1,4 +1,4 @@
-import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { provideZonelessChangeDetection, signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { PortfolioFacade } from '@frontend/data-access-portfolio';
@@ -15,6 +15,7 @@ describe('FeatureDashboardComponent', () => {
   let mockFacade: Partial<PortfolioFacade>;
   let mockAuthFacade: Partial<AuthFacade>;
   let mockDialogService: Partial<DialogService>;
+  let selectedIdSignal: WritableSignal<string | null>;
 
   const mockUser: User = {
     id: 'user-123',
@@ -49,13 +50,16 @@ describe('FeatureDashboardComponent', () => {
   ];
 
   beforeEach(async () => {
+    // Create a writable signal that can be updated in tests
+    selectedIdSignal = signal<string | null>(null);
+
     mockFacade = {
       init: jest.fn(),
       selectPortfolio: jest.fn(),
       createPortfolio: jest.fn(),
       portfolios: signal(mockPortfolios),
       currentAssets: signal(mockAssets),
-      selectedId: signal<string | null>(null),
+      selectedId: selectedIdSignal,
       loading: signal(false),
       error: signal<string | null>(null),
     };
@@ -164,6 +168,96 @@ describe('FeatureDashboardComponent', () => {
       expect(mockFacade.createPortfolio).not.toHaveBeenCalled();
       done();
     }, 0);
+  });
+
+  describe('Delete Portfolio', () => {
+    beforeEach(() => {
+      mockFacade.deletePortfolio = jest.fn();
+      // Update the writable signal to simulate a selected portfolio
+      selectedIdSignal.set('1');
+    });
+
+    it('should have onDeletePortfolio method', () => {
+      expect(component.onDeletePortfolio).toBeDefined();
+      expect(typeof component.onDeletePortfolio).toBe('function');
+    });
+
+    it('should open confirmation dialog when onDeletePortfolio is called', () => {
+      mockDialogService.open = jest.fn().mockReturnValue({
+        afterClosedObservable: of(true),
+      });
+
+      component.onDeletePortfolio();
+      
+      expect(mockDialogService.open).toHaveBeenCalledWith(
+        expect.objectContaining({
+          width: '450px',
+          data: expect.objectContaining({
+            title: 'Delete Portfolio',
+            confirmColor: 'warn',
+            icon: 'warning',
+          }),
+        })
+      );
+    });
+
+    it('should call facade.deletePortfolio when dialog is confirmed', (done) => {
+      mockDialogService.open = jest.fn().mockReturnValue({
+        afterClosedObservable: of(true),
+      });
+
+      component.onDeletePortfolio();
+      
+      setTimeout(() => {
+        expect(mockFacade.deletePortfolio).toHaveBeenCalledWith('1');
+        done();
+      }, 0);
+    });
+
+    it('should not call deletePortfolio when dialog is cancelled', (done) => {
+      mockDialogService.open = jest.fn().mockReturnValue({
+        afterClosedObservable: of(false),
+      });
+
+      component.onDeletePortfolio();
+      
+      setTimeout(() => {
+        expect(mockFacade.deletePortfolio).not.toHaveBeenCalled();
+        done();
+      }, 0);
+    });
+
+    it('should not call deletePortfolio when no portfolio is selected', () => {
+      // Update signal to null to simulate no selection
+      selectedIdSignal.set(null);
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      component.onDeletePortfolio();
+      
+      expect(mockFacade.deletePortfolio).not.toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledWith('No portfolio selected');
+      
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should include portfolio name in confirmation message', (done) => {
+      mockDialogService.open = jest.fn().mockReturnValue({
+        afterClosedObservable: of(true),
+      });
+
+      component.onDeletePortfolio();
+      
+      setTimeout(() => {
+        expect(mockDialogService.open).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              message: expect.stringContaining('Retirement Fund'),
+            }),
+          })
+        );
+        done();
+      }, 0);
+    });
   });
 
 });

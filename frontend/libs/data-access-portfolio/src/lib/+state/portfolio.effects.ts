@@ -162,5 +162,38 @@ export class PortfolioEffects {
       )
     )
   );
+
+  /**
+   * Effect: Delete Portfolio
+   * Deletes a portfolio and reloads the portfolio list
+   */
+  deletePortfolio$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(PortfolioActions.deletePortfolio),
+      switchMap(({ portfolioId }) =>
+        this.portfolioApiService.deletePortfolio(portfolioId).pipe(
+          map(() =>
+            PortfolioActions.deletePortfolioSuccess({ portfolioId })
+          ),
+          catchError((error) =>
+            of(PortfolioActions.deletePortfolioFailure({ 
+              error: error?.message || 'Failed to delete portfolio' 
+            }))
+          )
+        )
+      )
+    )
+  );
+
+  /**
+   * Effect: Delete Portfolio Success
+   * After successfully deleting a portfolio, reload the portfolio list
+   */
+  deletePortfolioSuccess$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(PortfolioActions.deletePortfolioSuccess),
+      map(() => PortfolioActions.loadPortfolios())
+    )
+  );
 }
 

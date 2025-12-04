@@ -85,6 +85,16 @@ export class PortfolioApiService {
   }
 
   /**
+   * Deletes a portfolio
+   * @param portfolioId - The portfolio ID to delete
+   */
+  deletePortfolio(portfolioId: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${portfolioId}`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
    * Centralized error handling
    * @param error - HTTP error response
    */

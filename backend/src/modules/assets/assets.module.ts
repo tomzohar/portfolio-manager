@@ -10,6 +10,6 @@ import { PolygonApiService } from './services/polygon-api.service';
   imports: [HttpModule, JwtModule, UsersModule],
   controllers: [AssetsController],
   providers: [AssetsService, PolygonApiService],
-  exports: [AssetsService],
+  exports: [AssetsService, PolygonApiService],
 })
 export class AssetsModule {}

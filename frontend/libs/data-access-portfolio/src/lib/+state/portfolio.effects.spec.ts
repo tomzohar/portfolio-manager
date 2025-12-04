@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideMockActions } from '@ngrx/effects/testing';
+import { Action } from '@ngrx/store';
 import { Observable, of, throwError } from 'rxjs';
 import { PortfolioEffects } from './portfolio.effects';
 import { PortfolioApiService } from '../services/portfolio-api.service';
@@ -7,7 +8,7 @@ import { PortfolioActions } from './portfolio.actions';
 import { DashboardPortfolio, DashboardAsset } from '@stocks-researcher/types';
 
 describe('PortfolioEffects', () => {
-  let actions$: Observable<any>;
+  let actions$: Observable<Action>;
   let effects: PortfolioEffects;
   let portfolioApiService: jest.Mocked<PortfolioApiService>;
 
@@ -33,6 +34,9 @@ describe('PortfolioEffects', () => {
       getPortfolios: jest.fn(),
       getAssets: jest.fn(),
       createPortfolio: jest.fn(),
+      deletePortfolio: jest.fn(),
+      addAsset: jest.fn(),
+      removeAsset: jest.fn(),
     };
 
     TestBed.configureTestingModule({
@@ -165,6 +169,129 @@ describe('PortfolioEffects', () => {
       effects.createPortfolio$.subscribe((action) => {
         expect(action).toEqual(
           PortfolioActions.createPortfolioFailure({ error: 'Creation failed' })
+        );
+        done();
+      });
+    });
+  });
+
+  describe('deletePortfolio$', () => {
+    it('should dispatch deletePortfolioSuccess on successful deletion', (done) => {
+      const portfolioId = 'portfolio-123';
+      
+      portfolioApiService.deletePortfolio.mockReturnValue(of(undefined));
+      actions$ = of(PortfolioActions.deletePortfolio({ portfolioId }));
+
+      effects.deletePortfolio$.subscribe((action) => {
+        expect(action).toEqual(
+          PortfolioActions.deletePortfolioSuccess({ portfolioId })
+        );
+        expect(portfolioApiService.deletePortfolio).toHaveBeenCalledWith(portfolioId);
+        done();
+      });
+    });
+
+    it('should dispatch deletePortfolioFailure on error', (done) => {
+      const portfolioId = 'portfolio-123';
+      const error = new Error('Deletion failed');
+      
+      portfolioApiService.deletePortfolio.mockReturnValue(throwError(() => error));
+      actions$ = of(PortfolioActions.deletePortfolio({ portfolioId }));
+
+      effects.deletePortfolio$.subscribe((action) => {
+        expect(action).toEqual(
+          PortfolioActions.deletePortfolioFailure({ error: 'Deletion failed' })
+        );
+        done();
+      });
+    });
+  });
+
+  describe('deletePortfolioSuccess$', () => {
+    it('should dispatch loadPortfolios action after successful deletion', (done) => {
+      actions$ = of(PortfolioActions.deletePortfolioSuccess({ portfolioId: 'portfolio-123' }));
+
+      effects.deletePortfolioSuccess$.subscribe((action) => {
+        expect(action).toEqual(PortfolioActions.loadPortfolios());
+        done();
+      });
+    });
+  });
+
+  describe('addAsset$', () => {
+    it('should dispatch addAssetSuccess on successful addition', (done) => {
+      const portfolioId = '1';
+      const dto = { ticker: 'AAPL', quantity: 10, avgPrice: 150 };
+      const tempId = 'temp-asset-123';
+      const assetId = 'real-asset-456';
+      
+      portfolioApiService.addAsset.mockReturnValue(of({ id: assetId }));
+      actions$ = of(PortfolioActions.addAsset({ portfolioId, dto, tempId }));
+
+      effects.addAsset$.subscribe((action) => {
+        expect(action).toEqual(
+          PortfolioActions.addAssetSuccess({ portfolioId, tempId, assetId })
+        );
+        expect(portfolioApiService.addAsset).toHaveBeenCalledWith(portfolioId, dto);
+        done();
+      });
+    });
+
+    it('should dispatch addAssetFailure on error', (done) => {
+      const portfolioId = '1';
+      const dto = { ticker: 'AAPL', quantity: 10, avgPrice: 150 };
+      const tempId = 'temp-asset-123';
+      const error = new Error('Failed to add asset');
+      
+      portfolioApiService.addAsset.mockReturnValue(throwError(() => error));
+      actions$ = of(PortfolioActions.addAsset({ portfolioId, dto, tempId }));
+
+      effects.addAsset$.subscribe((action) => {
+        expect(action).toEqual(
+          PortfolioActions.addAssetFailure({ 
+            portfolioId, 
+            tempId, 
+            error: 'Failed to add asset' 
+          })
+        );
+        done();
+      });
+    });
+  });
+
+  describe('removeAsset$', () => {
+    it('should dispatch removeAssetSuccess on successful removal', (done) => {
+      const portfolioId = '1';
+      const assetId = 'asset-123';
+      const updatedAssets = mockAssets.slice(0, 1);
+      
+      portfolioApiService.removeAsset.mockReturnValue(of({ 
+        id: portfolioId, 
+        name: 'Portfolio 1', 
+        assets: updatedAssets 
+      }));
+      actions$ = of(PortfolioActions.removeAsset({ portfolioId, assetId }));
+
+      effects.removeAsset$.subscribe((action) => {
+        expect(action).toEqual(
+          PortfolioActions.removeAssetSuccess({ portfolioId, assets: updatedAssets })
+        );
+        expect(portfolioApiService.removeAsset).toHaveBeenCalledWith(portfolioId, assetId);
+        done();
+      });
+    });
+
+    it('should dispatch removeAssetFailure on error', (done) => {
+      const portfolioId = '1';
+      const assetId = 'asset-123';
+      const error = new Error('Failed to remove asset');
+      
+      portfolioApiService.removeAsset.mockReturnValue(throwError(() => error));
+      actions$ = of(PortfolioActions.removeAsset({ portfolioId, assetId }));
+
+      effects.removeAsset$.subscribe((action) => {
+        expect(action).toEqual(
+          PortfolioActions.removeAssetFailure({ error: 'Failed to remove asset' })
         );
         done();
       });

@@ -38,6 +38,7 @@ export class UiDashboardComponent {
 
   portfolioSelected = output<string>();
   createPortfolio = output<void>();
+  deletePortfolio = output<void>();
   addAsset = output<void>();
   editAsset = output<DashboardAsset>();
   deleteAsset = output<DashboardAsset>();
@@ -46,30 +47,34 @@ export class UiDashboardComponent {
    * Action menu configuration
    * Uses Material Icons constants for type safety
    */
-  actionMenuConfig: ActionMenuConfig = {
-    button: {
-      label: 'Actions',
-      icon: ACTION_ICONS.MORE,
-      variant: 'icon',
-      color: 'accent',
-      ariaLabel: 'Portfolio actions menu',
-    },
-    menu: {
-      items: [
-        {
-          id: 'create-portfolio',
-          label: 'Create Portfolio',
-          icon: ACTION_ICONS.ADD,
-        },
-        {
-          id: 'refresh',
-          label: 'Refresh',
-          icon: ACTION_ICONS.REFRESH,
-        },
-      ],
-      ariaLabel: 'Portfolio actions',
-    },
-  };
+  actionMenuConfig = computed<ActionMenuConfig>(() => {
+    const hasSelectedPortfolio = !!this.selectedPortfolioId();
+    
+    return {
+      button: {
+        label: 'Actions',
+        icon: ACTION_ICONS.MORE,
+        variant: 'icon',
+        color: 'accent',
+        ariaLabel: 'Portfolio actions menu',
+      },
+      menu: {
+        items: [
+          {
+            id: 'create-portfolio',
+            label: 'Create Portfolio',
+            icon: ACTION_ICONS.ADD,
+          },
+          ...(hasSelectedPortfolio ? [{
+            id: 'delete-portfolio',
+            label: 'Delete Portfolio',
+            icon: ACTION_ICONS.DELETE,
+          }] : []),
+        ],
+        ariaLabel: 'Portfolio actions',
+      },
+    };
+  });
 
   portfolioOptions = computed<SelectOption[]>(() =>
     this.portfolios().map((p) => ({
@@ -119,6 +124,10 @@ export class UiDashboardComponent {
     this.createPortfolio.emit();
   }
 
+  onDeletePortfolio() {
+    this.deletePortfolio.emit();
+  }
+
   onAddAsset() {
     this.addAsset.emit();
   }
@@ -153,8 +162,8 @@ export class UiDashboardComponent {
       case 'create-portfolio':
         this.onCreatePortfolio();
         break;
-      case 'refresh':
-        // Emit a refresh event in the future
+      case 'delete-portfolio':
+        this.onDeletePortfolio();
         break;
     }
   }

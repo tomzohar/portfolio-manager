@@ -134,6 +134,37 @@ export const portfolioReducer = createReducer(
     };
   }),
 
+  // Delete Portfolio - Optimistic Update
+  on(PortfolioActions.deletePortfolio, (state, { portfolioId }) => {
+    // Immediately remove the portfolio optimistically
+    const portfolios = state.portfolios.filter((p) => p.id !== portfolioId);
+    
+    // Also remove associated assets and clear selection if needed
+    const { [portfolioId]: _, ...remainingAssets } = state.assets;
+    const selectedId = state.selectedId === portfolioId ? null : state.selectedId;
+
+    return {
+      ...state,
+      portfolios,
+      assets: remainingAssets,
+      selectedId,
+      loading: true,
+      error: null,
+    };
+  }),
+
+  on(PortfolioActions.deletePortfolioSuccess, (state) => ({
+    ...state,
+    loading: false,
+    error: null,
+  })),
+
+  on(PortfolioActions.deletePortfolioFailure, (state, { error }) => ({
+    ...state,
+    loading: false,
+    error,
+  })),
+
   // Add Asset - Optimistic Update
   on(PortfolioActions.addAsset, (state, { portfolioId, dto, tempId }) => {
     // Create optimistic asset with temp ID from action

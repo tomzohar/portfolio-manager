@@ -261,5 +261,156 @@ describe('Portfolio Reducer', () => {
       expect(result.portfolios[0]).toEqual(mockPortfolios[0]);
     });
   });
+
+  describe('deletePortfolio - Optimistic Updates', () => {
+    it('should immediately remove the portfolio', () => {
+      const stateWithPortfolios = {
+        ...initialState,
+        portfolios: mockPortfolios,
+        selectedId: '1',
+      };
+      const action = PortfolioActions.deletePortfolio({ portfolioId: '1' });
+      const result = portfolioReducer(stateWithPortfolios, action);
+
+      expect(result.portfolios.length).toBe(1);
+      expect(result.portfolios[0]).toEqual(mockPortfolios[1]);
+      expect(result.loading).toBe(true);
+      expect(result.error).toBeNull();
+    });
+
+    it('should clear selectedId when deleting the selected portfolio', () => {
+      const stateWithPortfolios = {
+        ...initialState,
+        portfolios: mockPortfolios,
+        selectedId: '1',
+      };
+      const action = PortfolioActions.deletePortfolio({ portfolioId: '1' });
+      const result = portfolioReducer(stateWithPortfolios, action);
+
+      expect(result.selectedId).toBeNull();
+    });
+
+    it('should preserve selectedId when deleting a different portfolio', () => {
+      const stateWithPortfolios = {
+        ...initialState,
+        portfolios: mockPortfolios,
+        selectedId: '2',
+      };
+      const action = PortfolioActions.deletePortfolio({ portfolioId: '1' });
+      const result = portfolioReducer(stateWithPortfolios, action);
+
+      expect(result.selectedId).toBe('2');
+    });
+
+    it('should remove assets associated with the deleted portfolio', () => {
+      const stateWithAssets = {
+        ...initialState,
+        portfolios: mockPortfolios,
+        assets: {
+          '1': mockAssets,
+          '2': [{ ticker: 'GOOGL', quantity: 5, avgPrice: 2800 }],
+        },
+      };
+      const action = PortfolioActions.deletePortfolio({ portfolioId: '1' });
+      const result = portfolioReducer(stateWithAssets, action);
+
+      expect(result.assets['1']).toBeUndefined();
+      expect(result.assets['2']).toBeDefined();
+      expect(result.assets['2'].length).toBe(1);
+    });
+
+    it('should preserve assets from other portfolios', () => {
+      const otherAssets = [{ ticker: 'GOOGL', quantity: 5, avgPrice: 2800 }];
+      const stateWithAssets = {
+        ...initialState,
+        portfolios: mockPortfolios,
+        assets: {
+          '1': mockAssets,
+          '2': otherAssets,
+        },
+      };
+      const action = PortfolioActions.deletePortfolio({ portfolioId: '1' });
+      const result = portfolioReducer(stateWithAssets, action);
+
+      expect(result.assets['2']).toEqual(otherAssets);
+    });
+  });
+
+  describe('deletePortfolioSuccess', () => {
+    it('should set loading to false and clear error', () => {
+      const stateAfterDelete = {
+        ...initialState,
+        loading: true,
+        error: 'Some error',
+      };
+      const action = PortfolioActions.deletePortfolioSuccess({ portfolioId: '1' });
+      const result = portfolioReducer(stateAfterDelete, action);
+
+      expect(result.loading).toBe(false);
+      expect(result.error).toBeNull();
+    });
+  });
+
+  describe('deletePortfolioFailure', () => {
+    it('should set error and loading to false', () => {
+      const error = 'Failed to delete portfolio';
+      const action = PortfolioActions.deletePortfolioFailure({ error });
+      const result = portfolioReducer(initialState, action);
+
+      expect(result.error).toBe(error);
+      expect(result.loading).toBe(false);
+    });
+  });
+
+  describe('addAsset - Optimistic Updates', () => {
+    it('should immediately add a temporary asset', () => {
+      const portfolioId = '1';
+      const dto = { ticker: 'MSFT', quantity: 20, avgPrice: 300 };
+      const tempId = 'temp-asset-123';
+      const action = PortfolioActions.addAsset({ portfolioId, dto, tempId });
+      const result = portfolioReducer(initialState, action);
+
+      expect(result.assets[portfolioId]).toBeDefined();
+      expect(result.assets[portfolioId].length).toBe(1);
+      expect(result.assets[portfolioId][0].id).toBe(tempId);
+      expect(result.assets[portfolioId][0].ticker).toBe('MSFT');
+      expect(result.loading).toBe(true);
+    });
+
+    it('should add to existing assets in portfolio', () => {
+      const portfolioId = '1';
+      const stateWithAssets = {
+        ...initialState,
+        assets: { [portfolioId]: mockAssets },
+      };
+      const dto = { ticker: 'MSFT', quantity: 20, avgPrice: 300 };
+      const tempId = 'temp-asset-456';
+      const action = PortfolioActions.addAsset({ portfolioId, dto, tempId });
+      const result = portfolioReducer(stateWithAssets, action);
+
+      expect(result.assets[portfolioId].length).toBe(2);
+      expect(result.assets[portfolioId][1].id).toBe(tempId);
+    });
+  });
+
+  describe('removeAsset - Optimistic Updates', () => {
+    it('should immediately remove the asset', () => {
+      const portfolioId = '1';
+      const assets = [
+        { id: 'asset-1', ticker: 'AAPL', quantity: 10, avgPrice: 150 },
+        { id: 'asset-2', ticker: 'GOOGL', quantity: 5, avgPrice: 2800 },
+      ];
+      const stateWithAssets = {
+        ...initialState,
+        assets: { [portfolioId]: assets },
+      };
+      const action = PortfolioActions.removeAsset({ portfolioId, assetId: 'asset-1' });
+      const result = portfolioReducer(stateWithAssets, action);
+
+      expect(result.assets[portfolioId].length).toBe(1);
+      expect(result.assets[portfolioId][0].id).toBe('asset-2');
+      expect(result.loading).toBe(true);
+    });
+  });
 });
 
