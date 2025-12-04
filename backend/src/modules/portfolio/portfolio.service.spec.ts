@@ -1,17 +1,16 @@
 /* eslint-disable @typescript-eslint/unbound-method */
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { of } from 'rxjs';
-import { PortfolioService } from './portfolio.service';
-import { Portfolio } from './entities/portfolio.entity';
-import { Asset } from './entities/asset.entity';
-import { UsersService } from '../users/users.service';
+import { Repository } from 'typeorm';
 import { PolygonApiService } from '../assets/services/polygon-api.service';
-import { EnrichedAssetDto } from './dto/asset-response.dto';
-import { User } from '../users/entities/user.entity';
 import { SerializedUser } from '../users/serializers/user.serializer';
+import { UsersService } from '../users/users.service';
+import { EnrichedAssetDto } from './dto/asset-response.dto';
+import { Asset } from './entities/asset.entity';
+import { Portfolio } from './entities/portfolio.entity';
+import { PortfolioService } from './portfolio.service';
 
 describe('PortfolioService', () => {
   let service: PortfolioService;
