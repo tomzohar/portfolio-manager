@@ -83,7 +83,9 @@ export class PolygonApiService {
       )
       .pipe(
         map((response) => {
-          this.logger.log(`Successfully fetched snapshot for ${ticker}`);
+          this.logger.log(
+            `Successfully fetched snapshot for ${ticker} ${response.data.ticker.todaysChangePerc}`,
+          );
           return response.data;
         }),
         catchError((error: Error) => {

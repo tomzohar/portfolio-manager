@@ -182,14 +182,22 @@ describe('PortfolioService', () => {
       expect(result[0].ticker).toBe('AAPL');
       expect(result[0].currentPrice).toBe(153.75);
       expect(result[0].todaysChange).toBe(3.75);
-      expect(result[0].todaysChangePerc).toBe(2.5);
+      expect(result[0].todaysChangePerc).toBe(0.025); // 2.5% -> 0.025 (converted to decimal)
       expect(result[0].lastUpdated).toBe(1234567890);
+      // Calculated fields: avgPrice = 150, currentPrice = 153.75, quantity = 10
+      expect(result[0].marketValue).toBe(1537.5); // 153.75 * 10
+      expect(result[0].pl).toBe(37.5); // (153.75 - 150) * 10
+      expect(result[0].plPercent).toBeCloseTo(0.025, 4); // (153.75 - 150) / 150
 
       expect(result[1]).toBeInstanceOf(EnrichedAssetDto);
       expect(result[1].ticker).toBe('GOOGL');
       expect(result[1].currentPrice).toBe(2757.5);
       expect(result[1].todaysChange).toBe(-42.5);
-      expect(result[1].todaysChangePerc).toBe(-1.5);
+      expect(result[1].todaysChangePerc).toBe(-0.015); // -1.5% -> -0.015 (converted to decimal)
+      // Calculated fields: avgPrice = 2800, currentPrice = 2757.5, quantity = 5
+      expect(result[1].marketValue).toBe(13787.5); // 2757.5 * 5
+      expect(result[1].pl).toBe(-212.5); // (2757.5 - 2800) * 5
+      expect(result[1].plPercent).toBeCloseTo(-0.015179, 4); // (2757.5 - 2800) / 2800
 
       expect(polygonApiService.getTickerSnapshot).toHaveBeenCalledTimes(2);
       expect(polygonApiService.getTickerSnapshot).toHaveBeenCalledWith('AAPL');
@@ -215,9 +223,15 @@ describe('PortfolioService', () => {
       expect(result[0].currentPrice).toBeUndefined();
       expect(result[0].todaysChange).toBeUndefined();
       expect(result[0].todaysChangePerc).toBeUndefined();
+      expect(result[0].marketValue).toBeUndefined();
+      expect(result[0].pl).toBeUndefined();
+      expect(result[0].plPercent).toBeUndefined();
 
       expect(result[1].ticker).toBe('GOOGL');
       expect(result[1].currentPrice).toBeUndefined();
+      expect(result[1].marketValue).toBeUndefined();
+      expect(result[1].pl).toBeUndefined();
+      expect(result[1].plPercent).toBeUndefined();
     });
 
     it('should handle partial API failures (some succeed, some fail)', async () => {

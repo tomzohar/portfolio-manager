@@ -49,6 +49,32 @@ export class EnrichedAssetDto {
   })
   lastUpdated?: number;
 
+  @ApiProperty({
+    description: 'Total market value (currentPrice * quantity)',
+    type: 'number',
+    required: false,
+    nullable: true,
+  })
+  marketValue?: number;
+
+  @ApiProperty({
+    description:
+      'Profit/Loss in dollars ((currentPrice - avgPrice) * quantity)',
+    type: 'number',
+    required: false,
+    nullable: true,
+  })
+  pl?: number;
+
+  @ApiProperty({
+    description:
+      'Profit/Loss percentage ((currentPrice - avgPrice) / avgPrice)',
+    type: 'number',
+    required: false,
+    nullable: true,
+  })
+  plPercent?: number;
+
   @ApiProperty({ description: 'Asset creation date' })
   createdAt: Date;
 
@@ -74,8 +100,31 @@ export class EnrichedAssetDto {
     if (marketData) {
       this.currentPrice = marketData.currentPrice;
       this.todaysChange = marketData.todaysChange;
-      this.todaysChangePerc = marketData.todaysChangePerc;
+      if (marketData.todaysChangePerc) {
+        this.todaysChangePerc =
+          Number(marketData.todaysChangePerc.toFixed(2)) / 100;
+      }
       this.lastUpdated = marketData.lastUpdated;
+
+      // Calculate derived metrics when currentPrice is available
+      if (
+        this.currentPrice !== undefined &&
+        this.currentPrice !== null &&
+        this.avgPrice !== undefined &&
+        this.avgPrice !== null
+      ) {
+        // Market Value: currentPrice * quantity
+        this.marketValue = this.currentPrice * this.quantity;
+
+        // Profit/Loss in dollars: (currentPrice - avgPrice) * quantity
+        this.pl = (this.currentPrice - this.avgPrice) * this.quantity;
+
+        // Profit/Loss percentage: (currentPrice - avgPrice) / avgPrice
+        // Avoid division by zero
+        if (this.avgPrice !== 0) {
+          this.plPercent = (this.currentPrice - this.avgPrice) / this.avgPrice;
+        }
+      }
     }
   }
 }

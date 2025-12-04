@@ -88,6 +88,8 @@ export class UiDashboardComponent {
     { key: 'quantity', header: 'Quantity', type: 'number' },
     { key: 'avgPrice', header: 'Avg Price', type: 'currency' },
     { key: 'currentPrice', header: 'Current Price', type: 'currency' },
+    { key: 'todaysChange', header: "Today's Change", type: 'currency' },
+    { key: 'todaysChangePerc', header: "Today's Change %", type: 'percent' },
     { key: 'marketValue', header: 'Market Value', type: 'currency' },
     { key: 'pl', header: 'P/L', type: 'currency' },
     { key: 'plPercent', header: 'P/L %', type: 'percent' },
