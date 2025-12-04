@@ -7,6 +7,7 @@ import { Asset } from './entities/asset.entity';
 import { UsersModule } from '../users/users.module';
 import { AuthModule } from '../auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
+import { AssetsModule } from '../assets/assets.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { JwtModule } from '@nestjs/jwt';
     UsersModule,
     AuthModule,
     JwtModule,
+    AssetsModule,
   ],
   controllers: [PortfolioController],
   providers: [PortfolioService],

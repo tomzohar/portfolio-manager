@@ -376,4 +376,219 @@ describe('PolygonApiService', () => {
       });
     });
   });
+
+  describe('getTickerSnapshot', () => {
+    const mockTicker = 'GOOGL';
+
+    it('should successfully fetch ticker snapshot data', (done) => {
+      const mockSnapshotResponse = {
+        ticker: {
+          ticker: 'GOOGL',
+          todaysChangePerc: -1.4986077652285519,
+          todaysChange: -4.7900000000000205,
+          updated: 1764859645869554400,
+          day: {
+            o: 322.225,
+            h: 322.36,
+            l: 314.79,
+            c: 314.875,
+            v: 5277907,
+            vw: 318.4246,
+          },
+          min: {
+            av: 5271687,
+            t: 1764859560000,
+            n: 7898,
+            o: 315.53,
+            h: 315.725,
+            l: 314.8,
+            c: 314.8,
+            v: 326877,
+            vw: 315.2469,
+          },
+          prevDay: {
+            o: 315.89,
+            h: 321.58,
+            l: 314.1,
+            c: 319.63,
+            v: 41838317,
+            vw: 319.1381,
+          },
+        },
+        status: 'OK',
+        request_id: '567adb48b172e2a67f6bf2c8c72a45b9',
+      };
+
+      const mockAxiosResponse: AxiosResponse = {
+        data: mockSnapshotResponse,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as any,
+      };
+
+      jest.spyOn(httpService, 'get').mockReturnValue(of(mockAxiosResponse));
+
+      service.getTickerSnapshot(mockTicker).subscribe({
+        next: (result) => {
+          expect(result).toEqual(mockSnapshotResponse);
+          expect(result?.ticker.ticker).toBe('GOOGL');
+          expect(result?.ticker.day.c).toBe(314.875);
+          expect(result?.ticker.todaysChange).toBe(-4.7900000000000205);
+          done();
+        },
+        error: done.fail,
+      });
+    });
+
+    it('should call Polygon API with correct endpoint and parameters', (done) => {
+      const mockSnapshotResponse = {
+        ticker: {
+          ticker: 'AAPL',
+          todaysChangePerc: 1.5,
+          todaysChange: 2.5,
+          updated: 1234567890,
+          day: {
+            o: 150,
+            h: 155,
+            l: 149,
+            c: 152.5,
+            v: 1000000,
+            vw: 151.5,
+          },
+          prevDay: {
+            o: 148,
+            h: 151,
+            l: 147,
+            c: 150,
+            v: 900000,
+            vw: 149.5,
+          },
+        },
+        status: 'OK',
+        request_id: 'test-request-id',
+      };
+
+      const mockAxiosResponse: AxiosResponse = {
+        data: mockSnapshotResponse,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as any,
+      };
+
+      const getSpy = jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(of(mockAxiosResponse));
+
+      service.getTickerSnapshot('AAPL').subscribe({
+        next: () => {
+          expect(getSpy).toHaveBeenCalledWith(
+            'https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/AAPL',
+            {
+              params: {
+                apiKey: mockApiKey,
+              },
+            },
+          );
+          done();
+        },
+        error: done.fail,
+      });
+    });
+
+    it('should return null on API error', (done) => {
+      const mockError = {
+        message: 'Network error',
+        name: 'AxiosError',
+        response: {
+          status: 500,
+          statusText: 'Internal Server Error',
+        },
+      } as AxiosError;
+
+      jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(throwError(() => mockError));
+
+      service.getTickerSnapshot(mockTicker).subscribe({
+        next: (result) => {
+          expect(result).toBeNull();
+          done();
+        },
+        error: done.fail,
+      });
+    });
+
+    it('should return null on 404 not found', (done) => {
+      const mockError = {
+        message: 'Not Found',
+        name: 'AxiosError',
+        response: {
+          status: 404,
+          statusText: 'Not Found',
+        },
+      } as AxiosError;
+
+      jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(throwError(() => mockError));
+
+      service.getTickerSnapshot('INVALID').subscribe({
+        next: (result) => {
+          expect(result).toBeNull();
+          done();
+        },
+        error: done.fail,
+      });
+    });
+
+    it('should handle snapshot with missing optional min field', (done) => {
+      const mockSnapshotResponse = {
+        ticker: {
+          ticker: 'TSLA',
+          todaysChangePerc: 2.5,
+          todaysChange: 5.0,
+          updated: 1234567890,
+          day: {
+            o: 200,
+            h: 205,
+            l: 199,
+            c: 202.5,
+            v: 2000000,
+            vw: 201.5,
+          },
+          prevDay: {
+            o: 195,
+            h: 199,
+            l: 194,
+            c: 197.5,
+            v: 1800000,
+            vw: 196.5,
+          },
+        },
+        status: 'OK',
+        request_id: 'test-request-id',
+      };
+
+      const mockAxiosResponse: AxiosResponse = {
+        data: mockSnapshotResponse,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as any,
+      };
+
+      jest.spyOn(httpService, 'get').mockReturnValue(of(mockAxiosResponse));
+
+      service.getTickerSnapshot('TSLA').subscribe({
+        next: (result) => {
+          expect(result).toEqual(mockSnapshotResponse);
+          expect(result?.ticker.min).toBeUndefined();
+          done();
+        },
+        error: done.fail,
+      });
+    });
+  });
 });

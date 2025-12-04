@@ -1,23 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
-import { Observable, map, catchError, throwError } from 'rxjs';
+import { Observable, map, catchError, throwError, of } from 'rxjs';
 import { TickerResultDto } from '../dto/ticker-result.dto';
-
-interface PolygonTickerResponse {
-  results: Array<{
-    ticker: string;
-    name: string;
-    market: string;
-    type: string;
-    active: boolean;
-    // Additional fields omitted for minimal response
-  }>;
-  status: string;
-  request_id: string;
-  count: number;
-  next_url?: string;
-}
+import {
+  PolygonTickerResponse,
+  PolygonSnapshotResponse,
+} from '../types/polygon-api.types';
 
 @Injectable()
 export class PolygonApiService {
@@ -54,7 +43,9 @@ export class PolygonApiService {
     };
 
     return this.httpService
-      .get<PolygonTickerResponse>(`${this.baseUrl}/reference/tickers`, { params })
+      .get<PolygonTickerResponse>(`${this.baseUrl}/reference/tickers`, {
+        params,
+      })
       .pipe(
         map((response) => {
           this.logger.log(
@@ -67,6 +58,40 @@ export class PolygonApiService {
           return throwError(
             () => new Error('Failed to fetch tickers from Polygon API'),
           );
+        }),
+      );
+  }
+
+  /**
+   * Get a snapshot of current market data for a single ticker
+   * @param ticker - The ticker symbol
+   * @returns Observable of snapshot data or null on error
+   */
+  getTickerSnapshot(
+    ticker: string,
+  ): Observable<PolygonSnapshotResponse | null> {
+    this.logger.log(`Fetching snapshot for ticker: ${ticker}`);
+
+    const params = {
+      apiKey: this.apiKey,
+    };
+
+    return this.httpService
+      .get<PolygonSnapshotResponse>(
+        `${this.baseUrl.replace('/v3', '/v2')}/snapshot/locale/us/markets/stocks/tickers/${ticker}`,
+        { params },
+      )
+      .pipe(
+        map((response) => {
+          this.logger.log(`Successfully fetched snapshot for ${ticker}`);
+          return response.data;
+        }),
+        catchError((error: Error) => {
+          this.logger.error(
+            `Polygon API snapshot error for ${ticker}: ${error.message}`,
+            error.stack,
+          );
+          return of(null);
         }),
       );
   }
