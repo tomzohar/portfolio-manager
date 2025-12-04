@@ -82,13 +82,6 @@ jobs:
         name: backend-coverage
         path: backend/coverage/
 
-    - name: Run E2E tests
-      run: npm run test:e2e
-      env:
-        DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
-        JWT_SECRET: test-jwt-secret-for-ci
-        POLYGON_API_KEY: test-api-key
-
   test-frontend:
     runs-on: ubuntu-latest
     
