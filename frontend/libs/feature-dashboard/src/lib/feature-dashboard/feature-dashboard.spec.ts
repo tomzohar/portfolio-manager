@@ -1,4 +1,4 @@
-import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { provideZonelessChangeDetection, signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { PortfolioFacade } from '@frontend/data-access-portfolio';
@@ -15,6 +15,7 @@ describe('FeatureDashboardComponent', () => {
   let mockFacade: Partial<PortfolioFacade>;
   let mockAuthFacade: Partial<AuthFacade>;
   let mockDialogService: Partial<DialogService>;
+  let selectedIdSignal: WritableSignal<string | null>;
 
   const mockUser: User = {
     id: 'user-123',
@@ -49,13 +50,16 @@ describe('FeatureDashboardComponent', () => {
   ];
 
   beforeEach(async () => {
+    // Create a writable signal that can be updated in tests
+    selectedIdSignal = signal<string | null>(null);
+
     mockFacade = {
       init: jest.fn(),
       selectPortfolio: jest.fn(),
       createPortfolio: jest.fn(),
       portfolios: signal(mockPortfolios),
       currentAssets: signal(mockAssets),
-      selectedId: signal<string | null>(null),
+      selectedId: selectedIdSignal,
       loading: signal(false),
       error: signal<string | null>(null),
     };
@@ -169,7 +173,8 @@ describe('FeatureDashboardComponent', () => {
   describe('Delete Portfolio', () => {
     beforeEach(() => {
       mockFacade.deletePortfolio = jest.fn();
-      (mockFacade as any).selectedId = signal('1');
+      // Update the writable signal to simulate a selected portfolio
+      selectedIdSignal.set('1');
     });
 
     it('should have onDeletePortfolio method', () => {
@@ -223,7 +228,8 @@ describe('FeatureDashboardComponent', () => {
     });
 
     it('should not call deletePortfolio when no portfolio is selected', () => {
-      (mockFacade as any).selectedId = signal(null);
+      // Update signal to null to simulate no selection
+      selectedIdSignal.set(null);
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
       component.onDeletePortfolio();
