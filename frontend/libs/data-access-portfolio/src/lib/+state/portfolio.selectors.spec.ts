@@ -19,6 +19,7 @@ describe('Portfolio Selectors', () => {
   const mockAssets: Record<string, DashboardAsset[]> = {
     '1': [
       {
+        id: 'asset-1',
         ticker: 'AAPL',
         quantity: 10,
         avgPrice: 150,
@@ -30,6 +31,7 @@ describe('Portfolio Selectors', () => {
     ],
     '2': [
       {
+        id: 'asset-2',
         ticker: 'GOOGL',
         quantity: 5,
         avgPrice: 2500,
@@ -37,6 +39,15 @@ describe('Portfolio Selectors', () => {
         marketValue: 13500,
         pl: 1000,
         plPercent: 0.08,
+      },
+    ],
+    '3': [
+      {
+        id: 'asset-3',
+        ticker: 'MSFT',
+        quantity: 20,
+        avgPrice: 300,
+        // No currentPrice - marketValue should be undefined
       },
     ],
   };
@@ -91,9 +102,32 @@ describe('Portfolio Selectors', () => {
   });
 
   describe('selectCurrentAssets', () => {
-    it('should return assets for selected portfolio', () => {
+    it('should return assets with backend-calculated metrics', () => {
       const result = selectCurrentAssets.projector(mockAssets, '1');
-      expect(result).toEqual(mockAssets['1']);
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual(mockAssets['1'][0]);
+      expect(result[0].marketValue).toBe(1800);
+      expect(result[0].pl).toBe(300);
+      expect(result[0].plPercent).toBe(0.2);
+    });
+
+    it('should return assets for another portfolio', () => {
+      const result = selectCurrentAssets.projector(mockAssets, '2');
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual(mockAssets['2'][0]);
+      expect(result[0].marketValue).toBe(13500);
+      expect(result[0].pl).toBe(1000);
+      expect(result[0].plPercent).toBe(0.08);
+    });
+
+    it('should return assets without calculated fields when currentPrice is missing', () => {
+      const result = selectCurrentAssets.projector(mockAssets, '3');
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual(mockAssets['3'][0]);
+      expect(result[0].currentPrice).toBeUndefined();
+      expect(result[0].marketValue).toBeUndefined();
+      expect(result[0].pl).toBeUndefined();
+      expect(result[0].plPercent).toBeUndefined();
     });
 
     it('should return empty array when no portfolio selected', () => {

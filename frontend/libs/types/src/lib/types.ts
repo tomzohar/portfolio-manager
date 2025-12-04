@@ -15,7 +15,12 @@ export interface DashboardAsset {
   ticker: string;
   quantity: number;
   avgPrice: number;
+  // Enriched market data fields (from backend EnrichedAssetDto)
   currentPrice?: number;
+  todaysChange?: number; // Today's price change in dollars
+  todaysChangePerc?: number; // Today's price change in percentage
+  lastUpdated?: number; // Last updated timestamp (Unix milliseconds)
+  // Computed fields (may be calculated on frontend)
   marketValue?: number;
   pl?: number;
   plPercent?: number;
