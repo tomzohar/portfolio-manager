@@ -152,4 +152,28 @@ export class PortfolioService {
       throw new NotFoundException('Asset not found in this portfolio');
     }
   }
+
+  /**
+   * Delete a portfolio (with ownership verification)
+   * Will cascade delete all associated assets
+   */
+  async deletePortfolio(portfolioId: string, userId: string): Promise<void> {
+    // Verify ownership first
+    const portfolio = await this.portfolioRepository.findOne({
+      where: { id: portfolioId },
+      relations: ['user'],
+    });
+
+    if (!portfolio) {
+      throw new NotFoundException('Portfolio not found');
+    }
+
+    // Verify ownership
+    if (portfolio.user.id !== userId) {
+      throw new ForbiddenException('Access denied to this portfolio');
+    }
+
+    // Delete the portfolio (assets will cascade delete due to relation configuration)
+    await this.portfolioRepository.remove(portfolio);
+  }
 }

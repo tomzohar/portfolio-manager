@@ -129,5 +129,15 @@ export class PortfolioFacade {
   removeAsset(portfolioId: string, assetId: string): void {
     this.store.dispatch(PortfolioActions.removeAsset({ portfolioId, assetId }));
   }
+
+  /**
+   * Deletes a portfolio.
+   * After successful deletion, the portfolio list will be automatically reloaded.
+   * 
+   * @param portfolioId - The portfolio ID to delete
+   */
+  deletePortfolio(portfolioId: string): void {
+    this.store.dispatch(PortfolioActions.deletePortfolio({ portfolioId }));
+  }
 }
 

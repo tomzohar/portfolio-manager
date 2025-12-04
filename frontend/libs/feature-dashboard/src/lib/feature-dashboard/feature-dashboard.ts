@@ -72,6 +72,49 @@ export class FeatureDashboardComponent implements OnInit {
   }
 
   /**
+   * Opens confirmation dialog and deletes the portfolio if confirmed
+   */
+  onDeletePortfolio(): void {
+    const portfolioId = this.selectedPortfolioId();
+    
+    if (!portfolioId) {
+      console.warn('No portfolio selected');
+      return;
+    }
+
+    // Find the portfolio name for the confirmation message
+    const portfolio = this.portfolios().find(p => p.id === portfolioId);
+    const portfolioName = portfolio?.name || 'this portfolio';
+
+    const confirmConfig: ConfirmationDialogConfig = {
+      title: 'Delete Portfolio',
+      message: `Are you sure you want to delete "${portfolioName}"? All assets in this portfolio will also be deleted. This action cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      confirmColor: 'warn',
+      icon: 'warning',
+    };
+
+    const confirmDialogRef = this.dialogService.open<
+      ConfirmationDialogConfig,
+      boolean
+    >({
+      component: ConfirmationDialogComponent,
+      data: confirmConfig,
+      width: '450px',
+    });
+
+    // Handle confirmation result
+    confirmDialogRef.afterClosedObservable
+      .pipe(take(1))
+      .subscribe((confirmed: boolean | undefined) => {
+        if (confirmed) {
+          this.facade.deletePortfolio(portfolioId);
+        }
+      });
+  }
+
+  /**
    * Opens the asset search dialog to add assets to the selected portfolio
    * Chains with the add asset details dialog for quantity and price input
    */

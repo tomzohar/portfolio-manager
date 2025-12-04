@@ -110,4 +110,16 @@ export class PortfolioController {
   ) {
     return this.portfolioService.removeAsset(id, assetId, user.id);
   }
+
+  @Delete(':id')
+  @ApiOperation({
+    summary: 'Delete a portfolio (with ownership verification)',
+  })
+  @ApiResponse({ status: 200, description: 'Portfolio deleted.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Access denied.' })
+  @ApiResponse({ status: 404, description: 'Portfolio not found.' })
+  deletePortfolio(@CurrentUser() user: User, @Param('id') id: string) {
+    return this.portfolioService.deletePortfolio(id, user.id);
+  }
 }

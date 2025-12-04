@@ -127,8 +127,9 @@ export class ActionMenuComponent {
    * Get the Material button directive attribute value
    */
   getMatButtonDirective(): string | null {
-    const variant = this.config().button.variant || 'raised';
-    const color = this.config().button.color || 'primary';
+    const config = this.config();
+    const variant = config.button.variant || 'raised';
+    const color = config.button.color || 'primary';
     
     switch (variant) {
       case 'raised':
