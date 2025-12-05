@@ -119,6 +119,12 @@
   background-color: var(--color-bg-tertiary) !important;
 }
 
+// Dialog actions styling
+mat-dialog-actions {
+  padding: var(--spacing-base) var(--spacing-xl) !important;
+  gap: var(--spacing-md) !important;
+}
+
 // Material overrides for the autocomplete panel
 ::ng-deep {
   // Autocomplete panel styling

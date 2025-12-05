@@ -90,16 +90,17 @@
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
-  <button mat-button (click)="onCancel()">Cancel</button>
+  <lib-button [config]="{ label: 'Cancel', variant: 'flat' }" (clicked)="onCancel()" />
   @if (!isSingleMode()) {
-    <button
-      mat-flat-button
-      color="primary"
-      [disabled]="selectedCount() === 0"
-      (click)="onDone()"
-    >
-      Done{{ selectedCount() > 0 ? ' (' + selectedCount() + ')' : '' }}
-    </button>
+    <lib-button
+      [config]="{
+        label: 'Done' + (selectedCount() > 0 ? ' (' + selectedCount() + ')' : ''),
+        variant: 'raised',
+        color: 'primary',
+        disabled: selectedCount() === 0
+      }"
+      (clicked)="onDone()"
+    />
   }
 </mat-dialog-actions>
 

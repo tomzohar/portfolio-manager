@@ -28,6 +28,7 @@ import {
   AssetSearchResult,
 } from '@stocks-researcher/types';
 import { DialogModule } from "@angular/cdk/dialog";
+import { ButtonComponent } from '@stocks-researcher/styles';
 
 /**
  * Default configuration for the asset search dialog
@@ -74,7 +75,8 @@ const DEFAULT_CONFIG: AssetSearchConfig = {
     MatButtonModule,
     MatCheckboxModule,
     MatChipsModule,
-    DialogModule
+    DialogModule,
+    ButtonComponent
 ],
   templateUrl: './asset-search-dialog.component.html',
   styleUrls: ['./asset-search-dialog.component.scss'],
