@@ -1,9 +1,10 @@
 import { Component, inject } from '@angular/core';
-import { RouterModule } from '@angular/router';
 import { AuthFacade } from '@frontend/data-access-auth';
+import { LayoutComponent } from '@frontend/feature-layout';
+import { RouterOutlet } from "@angular/router";
 
 @Component({
-  imports: [RouterModule],
+  imports: [LayoutComponent, RouterOutlet],
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.scss',

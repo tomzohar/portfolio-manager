@@ -11,6 +11,7 @@ export const appRoutes: Route[] = [
   {
     path: 'dashboard',
     canActivate: [authGuard],
+    data: { title: 'Portfolio' },
     loadComponent: () =>
       import('@frontend/feature-dashboard').then(
         (m) => m.FeatureDashboardComponent

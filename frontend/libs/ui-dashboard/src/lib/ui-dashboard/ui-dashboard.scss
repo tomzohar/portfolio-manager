@@ -9,6 +9,16 @@
   @include container-center($max-width: $max-width-container, $padding: $spacing-lg);
 }
 
+.portfolio-selection-container {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  
+  .portfolio-actions {
+    margin-left: auto;
+  }
+}
+
 .asset-actions {
   display: flex;
   gap: $spacing-xs;
