@@ -3,6 +3,7 @@
 .dashboard-container {
   @include flex-column($gap: 0);
   height: 100%;
+  padding: $spacing-lg;
 }
 
 .dashboard-content {
