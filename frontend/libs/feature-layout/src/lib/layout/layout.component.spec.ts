@@ -52,10 +52,10 @@ describe('LayoutComponent', () => {
       const config = component.topNavConfig();
       
       expect(config.title).toBe('Portfolio Manager');
-      expect(config.userEmail).toBeNull();
+      expect(config.user).toBeNull();
     });
 
-    it('should derive config with user email when authenticated', () => {
+    it('should derive config with user object when authenticated', () => {
       const mockUser = { id: '1', email: 'test@example.com' };
       store.overrideSelector(selectUser, mockUser);
       store.refreshState();
@@ -63,7 +63,8 @@ describe('LayoutComponent', () => {
 
       const config = component.topNavConfig();
       
-      expect(config.userEmail).toBe('test@example.com');
+      expect(config.user).toEqual(mockUser);
+      expect(config.user?.email).toBe('test@example.com');
     });
   });
 

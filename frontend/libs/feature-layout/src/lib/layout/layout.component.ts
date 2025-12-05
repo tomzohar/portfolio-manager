@@ -56,7 +56,7 @@ export class LayoutComponent {
    */
   readonly topNavConfig = computed<TopNavConfig>(() => ({
     title: this.routeTitle(),
-    userEmail: this.authFacade.user()?.email ?? null,
+    user: this.authFacade.user(),
   }));
 
   /**
