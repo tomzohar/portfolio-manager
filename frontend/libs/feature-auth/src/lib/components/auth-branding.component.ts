@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { BrandIconComponent, BrandIconConfig } from '@stocks-researcher/styles';
+import { BrandIconComponent, BrandIconConfig, getBrandIcon } from '@stocks-researcher/styles';
 
 /**
  * AuthBrandingComponent
@@ -31,12 +31,10 @@ import { BrandIconComponent, BrandIconConfig } from '@stocks-researcher/styles';
 export class AuthBrandingComponent {
   /**
    * Brand icon configuration
-   * Uses a custom SVG arrow trending upward
+   * Uses the arrow trend icon from centralized brand icons
    */
   readonly brandIconConfig: BrandIconConfig = {
-    icon: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M7 17L17 7M17 7H10M17 7V14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-    </svg>`,
+    icon: getBrandIcon('arrow-trend'),
     isMaterialIcon: false,
     size: 'md',
     ariaLabel: 'Portfolio Mind logo',

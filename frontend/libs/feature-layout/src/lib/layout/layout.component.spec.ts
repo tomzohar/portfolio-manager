@@ -1,10 +1,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideZoneChangeDetection } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { Component } from '@angular/core';
+import { provideZonelessChangeDetection } from '@angular/core';
+import { provideRouter, Router, Routes } from '@angular/router';
 import { provideMockStore, MockStore } from '@ngrx/store/testing';
 import { LayoutComponent } from './layout.component';
 import { AuthFacade } from '@frontend/data-access-auth';
 import { selectUser, selectIsAuthenticated } from '@frontend/data-access-auth';
+
+@Component({
+  standalone: true,
+  template: '<div>Test Route</div>',
+})
+class TestRouteComponent {}
 
 describe('LayoutComponent', () => {
   let component: LayoutComponent;
@@ -21,12 +28,25 @@ describe('LayoutComponent', () => {
     },
   };
 
+  const testRoutes: Routes = [
+    { 
+      path: 'test', 
+      component: TestRouteComponent,
+      data: { title: 'Test Page', icon: 'chart-bars' }
+    },
+    { 
+      path: 'no-icon', 
+      component: TestRouteComponent,
+      data: { title: 'No Icon Page' }
+    },
+  ];
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [LayoutComponent],
       providers: [
-        provideZoneChangeDetection(),
-        provideRouter([]),
+        provideZonelessChangeDetection(),
+        provideRouter(testRoutes),
         provideMockStore({ initialState }),
         AuthFacade,
       ],
@@ -44,7 +64,7 @@ describe('LayoutComponent', () => {
   });
 
   describe('topNavConfig computed', () => {
-    it('should derive config with default title and null email when not authenticated', () => {
+    it('should derive config with default title and null user when not authenticated', () => {
       store.overrideSelector(selectUser, null);
       store.refreshState();
       fixture.detectChanges();
@@ -65,6 +85,35 @@ describe('LayoutComponent', () => {
       
       expect(config.user).toEqual(mockUser);
       expect(config.user?.email).toBe('test@example.com');
+    });
+
+    it('should include brand icon in config when route has icon data', async () => {
+      const router = TestBed.inject(Router);
+      await router.navigate(['/test']);
+      
+      store.overrideSelector(selectUser, null);
+      store.refreshState();
+      fixture.detectChanges();
+
+      const config = component.topNavConfig();
+      
+      expect(config.icon).toBeDefined();
+      expect(config.icon?.isMaterialIcon).toBe(false);
+      expect(config.icon?.size).toBe('xs');
+      expect(config.icon?.ariaLabel).toBe('Portfolio Mind logo');
+    });
+
+    it('should not include icon when route has no icon data', async () => {
+      const router = TestBed.inject(Router);
+      await router.navigate(['/no-icon']);
+      
+      store.overrideSelector(selectUser, null);
+      store.refreshState();
+      fixture.detectChanges();
+
+      const config = component.topNavConfig();
+      
+      expect(config.icon).toBeUndefined();
     });
   });
 

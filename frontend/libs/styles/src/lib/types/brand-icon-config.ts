@@ -1,7 +1,7 @@
 /**
  * Brand icon size options
  */
-export type BrandIconSize = 'sm' | 'md' | 'lg' | 'xl';
+export type BrandIconSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 /**
  * Configuration interface for BrandIcon component

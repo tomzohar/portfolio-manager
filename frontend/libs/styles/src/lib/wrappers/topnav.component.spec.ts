@@ -62,6 +62,27 @@ describe('TopNavComponent', () => {
       
       expect(userMenu).toBeFalsy();
     });
+
+    it('should show icon when icon config is provided', () => {
+      fixture.componentRef.setInput('config', {
+        title: 'Test Page',
+        user: mockUser,
+        icon: { icon: 'trending_up', size: 'sm' },
+      });
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const brandIcon = compiled.querySelector('lib-brand-icon');
+      
+      expect(brandIcon).toBeTruthy();
+    });
+
+    it('should hide icon when no icon config is provided', () => {
+      const compiled = fixture.nativeElement as HTMLElement;
+      const brandIcon = compiled.querySelector('lib-brand-icon');
+      
+      expect(brandIcon).toBeFalsy();
+    });
   });
 
   describe('User Menu Config', () => {
@@ -136,6 +157,29 @@ describe('TopNavComponent', () => {
       fixture.detectChanges();
 
       expect(component.shouldShowUserMenu()).toBe(false);
+    });
+  });
+
+  describe('shouldShowIcon computed', () => {
+    it('should return true when icon is provided', () => {
+      fixture.componentRef.setInput('config', {
+        title: 'Test',
+        user: mockUser,
+        icon: { icon: 'trending_up' },
+      });
+      fixture.detectChanges();
+
+      expect(component.shouldShowIcon()).toBe(true);
+    });
+
+    it('should return false when no icon is provided', () => {
+      fixture.componentRef.setInput('config', {
+        title: 'Test',
+        user: mockUser,
+      });
+      fixture.detectChanges();
+
+      expect(component.shouldShowIcon()).toBe(false);
     });
   });
 });

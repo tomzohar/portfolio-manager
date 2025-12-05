@@ -30,3 +30,4 @@ export * from './lib/types/design-tokens';
 // Icon constants
 export * from './lib/constants/material-icons';
 export * from './lib/constants/custom-icons';
+export * from './lib/constants/brand-icons';

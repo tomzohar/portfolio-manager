@@ -1,22 +1,28 @@
 import { Component, computed, inject } from '@angular/core';
-import { Router, ActivatedRoute, NavigationEnd } from '@angular/router';
+import { Router, ActivatedRoute, NavigationEnd, Data } from '@angular/router';
 import { AuthFacade } from '@frontend/data-access-auth';
-import { TopNavComponent, TopNavConfig } from '@stocks-researcher/styles';
+import {
+  TopNavComponent,
+  TopNavConfig,
+  BrandIconConfig,
+  getBrandIcon,
+  BrandIconName,
+} from '@stocks-researcher/styles';
 import { filter, map } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 /**
  * LayoutComponent
- * 
+ *
  * Smart component that manages the application layout structure.
  * Handles state management for the TopNav component and wraps the router outlet.
- * 
+ *
  * Responsibilities:
  * - Derives page title from route data
  * - Provides user email from auth state to TopNav
  * - Handles sign out action
  * - Conditionally shows TopNav only when authenticated
- * 
+ *
  * This component follows the Smart/Dumb component pattern where:
  * - This component (Smart) manages state and business logic
  * - TopNavComponent (Dumb) handles presentation only
@@ -34,10 +40,10 @@ export class LayoutComponent {
   private readonly activatedRoute = inject(ActivatedRoute);
 
   /**
-   * Current route title from route data
-   * Listens to navigation events and extracts title from route data
+   * Current route data from route configuration
+   * Listens to navigation events and extracts route data
    */
-  private readonly routeTitle = toSignal(
+  private readonly routeData = toSignal<Data>(
     this.router.events.pipe(
       filter((event) => event instanceof NavigationEnd),
       map(() => {
@@ -45,11 +51,38 @@ export class LayoutComponent {
         while (route.firstChild) {
           route = route.firstChild;
         }
-        return route.snapshot.data['title'] || 'Portfolio Manager';
+        return route.snapshot.data;
       })
-    ),
-    { initialValue: 'Portfolio Manager' }
+    )
   );
+
+  /**
+   * Current route title from route data
+   */
+  private readonly routeTitle = computed(() => {
+    const data = this.routeData();
+    if (!data || !data['title']) {
+      return 'Portfolio Manager';
+    }
+    return data['title'] as string;
+  });
+
+  /**
+   * Current route icon from route data
+   * Returns undefined if no icon is specified in route
+   */
+  private readonly routeIcon = computed<BrandIconConfig | undefined>(() => {
+    const data = this.routeData();
+    if (!data || !data['icon']) {
+      return undefined;
+    }
+    return {
+      icon: getBrandIcon(data['icon'] as BrandIconName),
+      isMaterialIcon: false,
+      size: 'xs',
+      ariaLabel: 'Portfolio Mind logo',
+    };
+  });
 
   /**
    * TopNav configuration derived from auth state and route data
@@ -57,6 +90,7 @@ export class LayoutComponent {
   readonly topNavConfig = computed<TopNavConfig>(() => ({
     title: this.routeTitle(),
     user: this.authFacade.user(),
+    icon: this.routeIcon(),
   }));
 
   /**

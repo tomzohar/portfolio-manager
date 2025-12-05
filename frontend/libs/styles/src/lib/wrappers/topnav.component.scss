@@ -6,6 +6,16 @@
   padding: 0 $spacing-lg;
   border-bottom: 1px solid var(--color-border-primary);
   
+  .topnav-left {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+  }
+
+  .topnav-icon {
+    flex-shrink: 0;
+  }
+  
   .topnav-title {
     font-family: var(--font-family-primary);
     font-size: var(--font-size-lg);

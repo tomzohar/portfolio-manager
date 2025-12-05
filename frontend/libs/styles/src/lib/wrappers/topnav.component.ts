@@ -1,6 +1,7 @@
 import { Component, computed, input, output } from '@angular/core';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { ActionMenuComponent } from './action-menu.component';
+import { BrandIconComponent } from './brand-icon.component';
 import { TopNavConfig } from '../types/topnav-config';
 import { ActionMenuConfig } from '../types/action-menu-config';
 import { MenuItem } from '../types/menu-config';
@@ -30,10 +31,15 @@ import { USER_ICONS } from '../constants/material-icons';
 @Component({
   selector: 'lib-topnav',
   standalone: true,
-  imports: [MatToolbarModule, ActionMenuComponent],
+  imports: [MatToolbarModule, ActionMenuComponent, BrandIconComponent],
   template: `
     <mat-toolbar color="primary" class="lib-topnav">
-      <span class="topnav-title">{{ config().title }}</span>
+      <div class="topnav-left">
+        @if (shouldShowIcon()) {
+          <lib-brand-icon [config]="config().icon!" class="topnav-icon" />
+        }
+        <span class="topnav-title">{{ config().title }}</span>
+      </div>
       <span class="spacer"></span>
       
       @if (shouldShowUserMenu()) {
@@ -57,6 +63,13 @@ export class TopNavComponent {
    * Emitted when user clicks sign out
    */
   signOut = output<void>();
+
+  /**
+   * Determine if icon should be shown
+   */
+  shouldShowIcon = computed(() => {
+    return !!this.config().icon;
+  });
 
   /**
    * Determine if user menu should be shown

@@ -11,6 +11,23 @@
   flex-shrink: 0;
 
   // Size variants
+  &--xs {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+
+    .mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+
+    .brand-icon-svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
   &--sm {
     width: 48px;
     height: 48px;
