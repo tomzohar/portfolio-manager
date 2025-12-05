@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { Component, input, effect } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -15,7 +15,7 @@ import { InputConfig } from '../types/input-config';
  * Supports:
  * - All standard HTML input types (text, number, email, password, etc.)
  * - Reactive forms integration via FormControl
- * - Material Design form field appearances (fill by default, outline optional)
+ * - Material Design form field appearances (outline by default, fill optional)
  * - Validation error display
  * - Prefix/suffix icons
  * - Hints and accessibility features
@@ -73,6 +73,24 @@ export class InputComponent {
    */
   config = input.required<InputConfig>();
 
+  constructor() {
+    // Sync config.disabled with FormControl disabled state
+    // Only sync when config.disabled is explicitly set (not undefined)
+    effect(() => {
+      const config = this.config();
+      const control = config.control;
+      
+      // Only sync if disabled is explicitly set in config
+      if (config.disabled !== undefined) {
+        if (config.disabled && !control.disabled) {
+          control.disable();
+        } else if (!config.disabled && control.disabled) {
+          control.enable();
+        }
+      }
+    });
+  }
+
   /**
    * Get the effective input type (with default)
    */
@@ -83,7 +101,7 @@ export class InputComponent {
   /**
    * Get the effective appearance (with default)
    */
-  getAppearance(): InputConfig['appearance'] {
+  getAppearance(): 'fill' | 'outline' {
     return this.config().appearance || 'fill';
   }
 

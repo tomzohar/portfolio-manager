@@ -95,11 +95,11 @@ describe('InputComponent', () => {
   });
 
   describe('Appearance', () => {
-    it('should use outline appearance by default', () => {
+    it('should use fill appearance by default', () => {
       fixture.componentRef.setInput('config', createDefaultConfig());
       fixture.detectChanges();
 
-      expect(component.getAppearance()).toBe('outline');
+      expect(component.getAppearance()).toBe('fill');
     });
 
     it('should apply fill appearance', () => {
