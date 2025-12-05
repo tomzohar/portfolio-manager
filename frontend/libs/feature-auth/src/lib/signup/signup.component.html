@@ -1,8 +1,12 @@
 <div class="auth-container">
-  <lib-card>
+  <!-- Background gradient blobs -->
+  <div class="gradient-blob gradient-blob--top-right"></div>
+  <div class="gradient-blob gradient-blob--bottom-left"></div>
+
+  <div class="auth-content">
     <div class="auth-card">
-      <h1>Sign Up</h1>
-      <p class="subtitle">Create a new account</p>
+      <!-- Branding -->
+      <lib-auth-branding />
 
       @if (error(); as errorMsg) {
       <div class="error-message">
@@ -10,13 +14,13 @@
       </div>
       }
 
-      <form [formGroup]="signupForm" (ngSubmit)="onSubmit()">
+      <!-- Form -->
+      <form [formGroup]="signupForm" (ngSubmit)="onSubmit()" class="auth-form">
         <lib-input
           [config]="{
             control: emailControl,
             label: 'Email',
             type: 'email',
-            placeholder: 'Enter your email',
             fullWidth: true,
             errorMessages: {
               required: 'Email is required',
@@ -30,7 +34,6 @@
             control: passwordControl,
             label: 'Password',
             type: 'password',
-            placeholder: 'Enter your password (minimum 8 characters)',
             fullWidth: true,
             errorMessages: {
               required: 'Password is required',
@@ -39,9 +42,9 @@
           }"
         />
 
-        <lib-button [config]="{ label: 'Sign Up', type: 'submit', fullWidth: true, disabled: loading() }">
+        <button type="submit" class="auth-button" [disabled]="loading()">
           {{ loading() ? 'Creating account...' : 'Sign Up' }}
-        </lib-button>
+        </button>
       </form>
 
       <div class="auth-footer">
@@ -51,5 +54,5 @@
         </p>
       </div>
     </div>
-  </lib-card>
+  </div>
 </div>

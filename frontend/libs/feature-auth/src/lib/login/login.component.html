@@ -1,8 +1,12 @@
 <div class="auth-container">
-  <lib-card>
+  <!-- Background gradient blobs -->
+  <div class="gradient-blob gradient-blob--top-right"></div>
+  <div class="gradient-blob gradient-blob--bottom-left"></div>
+
+  <div class="auth-content">
     <div class="auth-card">
-      <h1>Login</h1>
-      <p class="subtitle">Sign in to your account</p>
+      <!-- Branding -->
+      <lib-auth-branding />
 
       @if (error(); as errorMsg) {
       <div class="error-message">
@@ -10,17 +14,16 @@
       </div>
       }
 
-      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+      <!-- Form -->
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="auth-form">
         <lib-input
           [config]="{
             control: emailControl,
-            label: 'Email',
-            type: 'email',
-            placeholder: 'Enter your email',
+            label: 'Username',
+            type: 'text',
             fullWidth: true,
             errorMessages: {
-              required: 'Email is required',
-              email: 'Invalid email format'
+              required: 'Username is required'
             }
           }"
         />
@@ -30,7 +33,6 @@
             control: passwordControl,
             label: 'Password',
             type: 'password',
-            placeholder: 'Enter your password',
             fullWidth: true,
             errorMessages: {
               required: 'Password is required',
@@ -39,16 +41,9 @@
           }"
         />
 
-        <lib-button
-          [config]="{
-            label: 'Login',
-            type: 'submit',
-            fullWidth: true,
-            disabled: loading()
-          }"
-        >
-          {{ loading() ? 'Logging in...' : 'Login' }}
-        </lib-button>
+        <button type="submit" class="auth-button" [disabled]="loading()">
+          {{ loading() ? 'Signing in...' : 'Sign In' }}
+        </button>
       </form>
 
       <div class="auth-footer">
@@ -58,5 +53,5 @@
         </p>
       </div>
     </div>
-  </lib-card>
+  </div>
 </div>

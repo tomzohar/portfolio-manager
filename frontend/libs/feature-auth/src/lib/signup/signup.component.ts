@@ -3,12 +3,11 @@ import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } 
 import { RouterLink } from '@angular/router';
 import { AuthFacade } from '@frontend/data-access-auth';
 import { InputComponent } from '@stocks-researcher/styles';
-import { ButtonComponent } from '@stocks-researcher/styles';
-import { CardComponent } from '@stocks-researcher/styles';
+import { AuthBrandingComponent } from '../components/auth-branding.component';
 
 @Component({
   selector: 'lib-signup',
-  imports: [ReactiveFormsModule, RouterLink, InputComponent, ButtonComponent, CardComponent],
+  imports: [ReactiveFormsModule, RouterLink, InputComponent, AuthBrandingComponent],
   templateUrl: './signup.component.html',
   styleUrl: './signup.component.scss',
 })
