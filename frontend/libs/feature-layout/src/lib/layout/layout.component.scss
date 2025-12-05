@@ -1,0 +1,15 @@
+@use 'scss' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+}
+
+.layout-content {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: $spacing-lg;
+  background-color: var(--color-bg-primary);
+}
