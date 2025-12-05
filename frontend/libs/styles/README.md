@@ -20,6 +20,8 @@ import { ButtonComponent, BadgeComponent } from '@frontend/styles';
 ### Phase 2: Typography System (✅ Complete)
 ### Phase 3: Component Base Styles (✅ Complete)
 ### Phase 4: Icon System (✅ Complete)
+### Phase 5: Global Styles & Material Theme (✅ Complete)
+### Phase 6: Utility Classes (✅ Complete)
 
 The design system includes:
 
@@ -31,6 +33,20 @@ The design system includes:
 - **Shadows**: Elevation levels from sm to xl, plus AI-themed shadow
 - **Transitions**: Fast (150ms), base (300ms), slow (500ms)
 - **Z-Index**: Consistent layering scale
+
+#### Utility Classes (`_utilities.scss`)
+150+ utility classes for rapid development:
+- **Spacing**: Margin/padding utilities (mt-xs, p-lg, gap-md, etc.)
+- **Colors**: Text and background color utilities
+- **Display**: Flex, grid, block, hidden
+- **Layout**: Flex utilities (flex-between, items-center, justify-center)
+- **Sizing**: Width/height utilities (w-full, h-full, size-full)
+- **Position**: Relative, absolute, fixed, sticky
+- **Overflow**: Overflow control utilities
+- **Text**: Alignment, transform, truncate, font weights
+- **Border**: Radius and border utilities
+- **Effects**: Opacity, shadows, transitions
+- **Common Patterns**: center-content, scrollable, card-padding
 
 #### Icon System (`IconComponent` + constants)
 Unified icon system with 80+ icons:
@@ -75,6 +91,29 @@ All design tokens are exposed as CSS custom properties:
 ```
 
 ### Usage Examples
+
+#### Using Utility Classes
+
+```html
+<!-- Quick Layout -->
+<div class="flex-between gap-lg p-xl bg-card rounded-lg">
+  <h2 class="text-primary font-bold">Title</h2>
+  <button class="px-lg py-sm bg-ai rounded-md cursor-pointer">Action</button>
+</div>
+
+<!-- Grid Layout -->
+<div class="grid grid-cols-3 gap-xl mb-2xl">
+  <div class="bg-card p-card rounded-lg">Card 1</div>
+  <div class="bg-card p-card rounded-lg">Card 2</div>
+  <div class="bg-card p-card rounded-lg">Card 3</div>
+</div>
+
+<!-- Responsive Stack -->
+<div class="flex flex-column gap-md scrollable">
+  <div class="text-muted mb-sm">Item 1</div>
+  <div class="text-muted mb-sm">Item 2</div>
+</div>
+```
 
 #### Using Icons
 

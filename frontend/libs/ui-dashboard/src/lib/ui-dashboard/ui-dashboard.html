@@ -20,7 +20,6 @@
       <!-- Portfolio Selection -->
       <lib-card title="Select Portfolio">
         <lib-select 
-          label="Choose a portfolio" 
           [options]="portfolioOptions()"
           [selected]="selectedPortfolioId()"
           (selectionChange)="onPortfolioSelect($event)">

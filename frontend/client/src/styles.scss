@@ -4,12 +4,11 @@
 
 // Import design system (this loads all design tokens and CSS custom properties)
 @use 'scss' as *;
-
-// Material Design theme (temporary - will be replaced with custom theme)
+// Material Design base theme (provides Material component styles)
 @import '@angular/material/prebuilt-themes/indigo-pink.css';
 
-// === GLOBAL RESETS ===
 
+// === GLOBAL RESETS ===
 *,
 *::before,
 *::after {

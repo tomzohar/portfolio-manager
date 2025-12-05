@@ -1,5 +1,5 @@
 <mat-form-field 
-  [appearance]="getAppearance() || 'outline'" 
+  [appearance]="getAppearance()" 
   [ngClass]="getClasses()">
   
   <!-- Label -->
@@ -17,7 +17,6 @@
     [type]="getType() || 'text'"
     [placeholder]="config().placeholder || ''"
     [required]="config().required || false"
-    [disabled]="config().disabled || false"
     [readonly]="config().readonly || false"
     [attr.aria-label]="getAriaLabel()"
     [attr.autocomplete]="config().autocomplete"

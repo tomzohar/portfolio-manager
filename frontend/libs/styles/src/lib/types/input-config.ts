@@ -29,7 +29,7 @@ export interface InputConfig {
 
   /**
    * Material form field appearance
-   * @default 'outline'
+   * @default 'fill'
    */
   appearance?: 'fill' | 'outline';
 

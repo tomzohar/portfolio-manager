@@ -7,16 +7,17 @@
 // Ticker information section
 .ticker-info {
   @include flex-row($spacing-md);
-  padding: $spacing-md;
-  background-color: $color-background;
-  border-radius: $border-radius-md;
-  margin-bottom: $spacing-lg;
+  padding: var(--spacing-base);
+  background-color: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-xl);
 
   .ticker-icon {
     font-size: 40px;
     width: 40px;
     height: 40px;
-    color: $color-accent;
+    color: var(--color-ai-primary);
     flex-shrink: 0;
   }
 
@@ -26,24 +27,25 @@
   }
 
   .ticker-symbol {
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
-    color: $color-primary;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary);
   }
 
   .ticker-meta {
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-subtle);
   }
 }
 
 // Form styling
 .asset-form {
-  @include flex-column($spacing-md);
-  margin-bottom: $spacing-md;
+  @include flex-column($spacing-lg);
+  margin-bottom: var(--spacing-base);
 }
 
 mat-dialog-actions {
-  padding: $spacing-md $spacing-lg;
+  padding: var(--spacing-base) var(--spacing-xl) !important;
+  gap: var(--spacing-md) !important;
 }
 
