@@ -20,6 +20,7 @@ import { ButtonComponent, BadgeComponent } from '@frontend/styles';
 ### Phase 2: Typography System (✅ Complete)
 ### Phase 3: Component Base Styles (✅ Complete)
 ### Phase 4: Icon System (✅ Complete)
+### Phase 5: Global Styles & Material Theme (✅ Complete)
 ### Phase 6: Utility Classes (✅ Complete)
 
 The design system includes:

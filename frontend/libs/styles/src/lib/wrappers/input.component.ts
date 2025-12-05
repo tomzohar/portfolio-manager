@@ -15,7 +15,7 @@ import { InputConfig } from '../types/input-config';
  * Supports:
  * - All standard HTML input types (text, number, email, password, etc.)
  * - Reactive forms integration via FormControl
- * - Material Design form field appearances (fill, outline)
+ * - Material Design form field appearances (fill by default, outline optional)
  * - Validation error display
  * - Prefix/suffix icons
  * - Hints and accessibility features
@@ -84,7 +84,7 @@ export class InputComponent {
    * Get the effective appearance (with default)
    */
   getAppearance(): InputConfig['appearance'] {
-    return this.config().appearance || 'outline';
+    return this.config().appearance || 'fill';
   }
 
   /**

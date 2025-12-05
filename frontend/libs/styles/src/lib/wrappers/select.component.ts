@@ -13,8 +13,10 @@ export interface SelectOption {
   standalone: true,
   imports: [MatFormFieldModule, MatSelectModule, FormsModule],
   template: `
-    <mat-form-field appearance="outline" class="lib-select">
-      <mat-label>{{ label() }}</mat-label>
+    <mat-form-field appearance="fill" class="lib-select">
+      @if (label()) {
+        <mat-label>{{ label() }}</mat-label>
+      }
       <mat-select [value]="selected()" (selectionChange)="onSelectionChange($event)" [disabled]="disabled()">
         @for (option of options(); track option.value) {
           <mat-option [value]="option.value">{{ option.label }}</mat-option>

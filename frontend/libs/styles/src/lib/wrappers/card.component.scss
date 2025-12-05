@@ -2,6 +2,11 @@
 
 .lib-card {
   margin-bottom: $spacing-md;
+  
+  // Ensure border is always visible
+  border: 1px solid var(--color-border-primary) !important;
+  background-color: var(--color-bg-card) !important;
+  border-radius: var(--radius-lg) !important;
 }
 
 .card-header-content {

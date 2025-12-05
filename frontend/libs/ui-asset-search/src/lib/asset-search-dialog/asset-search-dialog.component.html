@@ -2,7 +2,7 @@
 
 <mat-dialog-content class="fixed-content">
   <!-- Search Input with Autocomplete -->
-  <mat-form-field appearance="outline" class="search-field">
+  <mat-form-field appearance="fill" class="search-field">
     <mat-label>{{ placeholder() }}</mat-label>
     <input
       matInput
@@ -12,7 +12,7 @@
       [matAutocomplete]="auto"
       autocomplete="off"
       cdkFocusInitial
-    />
+      />
     <mat-icon matSuffix>search</mat-icon>
     <!-- Loading indicator in input suffix -->
     @if (loading()) {

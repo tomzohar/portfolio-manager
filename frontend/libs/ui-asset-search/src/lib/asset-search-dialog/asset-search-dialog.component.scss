@@ -29,16 +29,17 @@
   @include flex-column($spacing-sm);
   margin-top: $spacing-md;
   padding: $spacing-sm $spacing-md;
-  background-color: $color-background;
-  border-radius: $border-radius-md;
+  background-color: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-md);
   max-height: 100px;
   overflow-y: auto;
   flex-shrink: 0;
 
   .selected-label {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
-    color: $color-text-secondary;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-secondary);
   }
 
   mat-chip-set {
@@ -67,14 +68,14 @@
 
 // Ticker item layout
 .ticker-symbol {
-  font-weight: $font-weight-bold;
-  font-size: $font-size-base;
-  color: $color-primary;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
 }
 
 .ticker-name {
-  font-size: $font-size-sm;
-  color: $color-text-secondary;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-subtle);
   @include text-truncate;
 }
 
@@ -115,7 +116,7 @@
 
 // Highlight selected options in multi-select mode
 .selected-option {
-  background-color: $color-background !important;
+  background-color: var(--color-bg-tertiary) !important;
 }
 
 // Material overrides for the autocomplete panel
@@ -123,23 +124,26 @@
   // Autocomplete panel styling
   .mat-mdc-autocomplete-panel.asset-autocomplete {
     max-height: 400px !important;
+    background-color: var(--color-bg-secondary) !important;
+    border: 1px solid var(--color-border-primary);
     
     .mat-mdc-option {
       height: auto !important;
       min-height: 56px;
       line-height: normal;
       padding: $spacing-sm $spacing-md;
+      color: var(--color-text-primary) !important;
       
       &:hover:not(.mat-mdc-option-disabled) {
-        background-color: $color-background;
+        background-color: var(--color-bg-tertiary) !important;
       }
       
       &.mat-mdc-option-active:not(.mat-mdc-option-disabled) {
-        background-color: $color-background;
+        background-color: var(--color-bg-tertiary) !important;
       }
 
       // Border between options
-      border-bottom: $border-width-thin solid $border-color-light;
+      border-bottom: 1px solid var(--color-border-primary);
 
       &:last-child {
         border-bottom: none;

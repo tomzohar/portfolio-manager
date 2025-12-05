@@ -12,23 +12,24 @@
     font-size: 28px;
     width: 28px;
     height: 28px;
-    color: $color-primary;
+    color: var(--color-ai-primary);
 
     &.warn-icon {
-      color: $color-warn;
+      color: var(--color-error);
     }
   }
 }
 
 .message {
-  font-size: $font-size-base;
-  color: $color-text-primary;
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
   line-height: 1.5;
   margin: 0;
-  padding: $spacing-md 0;
+  padding: var(--spacing-md) 0;
 }
 
 mat-dialog-actions {
-  padding: $spacing-md $spacing-lg;
+  padding: var(--spacing-base) var(--spacing-xl) !important;
+  gap: var(--spacing-md) !important;
 }
 
