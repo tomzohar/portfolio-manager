@@ -19,9 +19,12 @@
 // 4. Load typography mixins
 @forward './typography';
 
-// 5. Load legacy variables (backward compatibility)
+// 5. Load component base styles
+@forward './components';
+
+// 6. Load legacy variables (backward compatibility)
 @forward './variables';
 
-// 6. Load mixins
+// 7. Load mixins
 @forward './mixins';
 

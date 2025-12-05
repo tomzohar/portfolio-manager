@@ -1,0 +1,443 @@
+// ============================================================================
+// COMPONENT BASE STYLES
+// ============================================================================
+// Reusable mixins for common component patterns.
+// These provide consistent styling for cards, badges, buttons, etc.
+//
+// Usage:
+// @use 'scss' as *;
+// 
+// .my-card {
+//   @include card-base;
+// }
+// ============================================================================
+
+@use './tokens' as *;
+
+// === CARD VARIANTS ===
+
+/// Base card styling with glassmorphism effect
+/// Used for: Summary cards, stock cards, panels
+@mixin card-base {
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: border-color var(--transition-base);
+
+  &:hover {
+    border-color: var(--color-border-secondary);
+  }
+}
+
+/// Solid card without glassmorphism
+/// Used for: Opaque cards, darker cards
+@mixin card-solid {
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/// Elevated card with shadow
+/// Used for: Floating cards, modals, dropdowns
+@mixin card-elevated {
+  @include card-base;
+  box-shadow: var(--shadow-lg);
+}
+
+/// Glassmorphism effect
+/// Used for: Transparent cards, overlay panels
+@mixin glassmorphism {
+  background-color: var(--color-bg-card);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--color-border-primary);
+}
+
+// === BADGE VARIANTS ===
+
+/// Base badge styling
+/// Internal mixin - use specific badge variants instead
+@mixin badge-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--badge-padding-y) var(--badge-padding-x);
+  border-radius: var(--radius-sm);
+  font-size: var(--badge-font-size);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+/// BUY action badge
+/// Used for: Stock recommendation badges showing "BUY"
+@mixin badge-buy {
+  @include badge-base;
+  background-color: var(--color-buy-bg);
+  border-color: var(--color-buy-border);
+  color: var(--color-buy-text);
+}
+
+/// SELL action badge
+/// Used for: Stock recommendation badges showing "SELL"
+@mixin badge-sell {
+  @include badge-base;
+  background-color: var(--color-sell-bg);
+  border-color: var(--color-sell-border);
+  color: var(--color-sell-text);
+}
+
+/// HOLD action badge
+/// Used for: Stock recommendation badges showing "HOLD"
+@mixin badge-hold {
+  @include badge-base;
+  background-color: var(--color-hold-bg);
+  border-color: var(--color-hold-border);
+  color: var(--color-hold-text);
+}
+
+/// MONITOR action badge
+/// Used for: Stock recommendation badges showing "MONITOR"
+@mixin badge-monitor {
+  @include badge-base;
+  background-color: var(--color-monitor-bg);
+  border-color: var(--color-monitor-border);
+  color: var(--color-monitor-text);
+}
+
+// === TAG PILLS ===
+
+/// Category/topic tag pill
+/// Used for: Tech, Growth, Semiconductors, etc.
+@mixin tag-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--tag-padding-y) var(--tag-padding-x);
+  border-radius: var(--radius-pill);
+  font-size: var(--tag-font-size);
+  font-weight: var(--font-weight-regular);
+  line-height: 1;
+  letter-spacing: 0.12px;
+  background-color: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--color-text-disabled);
+  white-space: nowrap;
+}
+
+// === PROGRESS BAR ===
+
+/// Progress bar container
+/// Used for: Confidence meters, loading bars
+@mixin progress-bar-container {
+  width: 100%;
+  height: var(--progress-bar-height);
+  background-color: var(--color-bg-tertiary);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  position: relative;
+}
+
+/// Progress bar fill with AI gradient
+/// Used inside progress-bar-container
+@mixin progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--color-ai-primary),
+    var(--color-ai-secondary)
+  );
+  border-radius: inherit;
+  transition: width var(--transition-base);
+}
+
+/// Large progress bar variant (8px height)
+@mixin progress-bar-large {
+  @include progress-bar-container;
+  height: var(--progress-bar-height-lg);
+}
+
+// === STATUS PILLS ===
+
+/// Status indicator pill (circular dot)
+/// @param {size} $size - Size of the status pill (default: 12px)
+@mixin status-pill($size: 12px) {
+  width: $size;
+  height: $size;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/// Active status pill with glow
+/// Used for: "Analyzing", "Active" states
+@mixin status-pill-active {
+  @include status-pill;
+  background-color: var(--color-success);
+  box-shadow: 0 0 8px var(--color-success);
+}
+
+/// Idle status pill
+/// Used for: "Idle", "Inactive" states
+@mixin status-pill-idle {
+  @include status-pill;
+  background-color: var(--color-text-subtle);
+}
+
+/// Warning status pill with glow
+/// Used for: "Warning", "Attention needed" states
+@mixin status-pill-warning {
+  @include status-pill;
+  background-color: var(--color-warning);
+  box-shadow: 0 0 8px var(--color-warning);
+}
+
+// === BUTTONS ===
+
+/// Primary button (AI purple)
+/// Used for: Main actions, "Run Agent Analysis"
+@mixin button-primary {
+  background-color: var(--color-ai-primary);
+  color: var(--color-text-primary);
+  border: none;
+  padding: $spacing-sm $spacing-base;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover:not(:disabled) {
+    background-color: var(--color-ai-secondary);
+    transform: translateY(-1px);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+/// Ghost button (transparent)
+/// Used for: Secondary actions, navigation items
+@mixin button-ghost {
+  background-color: transparent;
+  color: var(--color-text-disabled);
+  border: none;
+  padding: $spacing-sm $spacing-base;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover:not(:disabled) {
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-tertiary);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+/// Secondary button (outlined)
+/// Used for: Alternative actions, cancel buttons
+@mixin button-secondary {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-secondary);
+  padding: $spacing-sm $spacing-base;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover:not(:disabled) {
+    background-color: var(--color-bg-secondary);
+    border-color: var(--color-border-primary);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// === LOG ENTRY ICON CONTAINERS ===
+
+/// Base log icon container
+/// Internal mixin - use specific icon variants
+@mixin log-icon-base {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+/// Info log icon (no special styling)
+@mixin log-icon-info {
+  @include log-icon-base;
+}
+
+/// Reasoning log icon with AI glow
+/// Used for: Agent reasoning entries
+@mixin log-icon-reasoning {
+  @include log-icon-base;
+  background-color: var(--color-ai-bg);
+  box-shadow: 0 0 0 1px var(--color-ai-glow);
+  padding: 4px;
+}
+
+/// Success log icon
+@mixin log-icon-success {
+  @include log-icon-base;
+  color: var(--color-success-light);
+}
+
+/// Warning log icon
+@mixin log-icon-warning {
+  @include log-icon-base;
+  color: var(--color-warning);
+}
+
+/// Error log icon
+@mixin log-icon-error {
+  @include log-icon-base;
+  color: var(--color-error);
+}
+
+// === SCROLLBAR ===
+
+/// Custom scrollbar styling for dark theme
+/// Apply to scrollable containers
+@mixin custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--color-bg-secondary);
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-bg-tertiary);
+    border-radius: 4px;
+
+    &:hover {
+      background: var(--color-border-secondary);
+    }
+  }
+
+  // Firefox
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-bg-tertiary) var(--color-bg-secondary);
+}
+
+// === RATIONALE BOX ===
+
+/// Rationale/explanation box
+/// Used for: Stock card rationale sections
+@mixin rationale-box {
+  background-color: rgba(9, 9, 11, 0.5);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  padding: 13px;
+}
+
+// === LAYOUT HELPERS ===
+
+/// Flex space-between helper
+@mixin flex-between($align: center) {
+  display: flex;
+  justify-content: space-between;
+  align-items: $align;
+}
+
+/// Absolute positioning cover helper
+@mixin absolute-cover {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/// Focus visible styles for accessibility
+@mixin focus-visible {
+  outline: 2px solid var(--color-ai-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/// Hover lift effect
+@mixin hover-lift {
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// === AGENT BRAIN SPECIFIC ===
+
+/// Agent brain panel header
+@mixin agent-brain-header {
+  background-color: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border-primary);
+  padding: 0 var(--spacing-header-padding);
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/// Agent brain log container
+@mixin agent-brain-log-container {
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: var(--spacing-base);
+  height: 100%;
+  overflow-y: auto;
+  @include custom-scrollbar;
+}
+
+/// Agent brain log entry
+@mixin agent-brain-log-entry {
+  display: flex;
+  gap: var(--spacing-log-entry-gap);
+  padding: $spacing-xs 0;
+  
+  .timestamp {
+    min-width: 60px;
+    flex-shrink: 0;
+  }
+  
+  .icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+  
+  .message {
+    flex: 1;
+  }
+}
