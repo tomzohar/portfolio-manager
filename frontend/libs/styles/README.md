@@ -18,6 +18,7 @@ import { ButtonComponent, BadgeComponent } from '@frontend/styles';
 
 ### Phase 1: Foundation (✅ Complete)
 ### Phase 2: Typography System (✅ Complete)
+### Phase 3: Component Base Styles (✅ Complete)
 
 The design system includes:
 
@@ -29,6 +30,17 @@ The design system includes:
 - **Shadows**: Elevation levels from sm to xl, plus AI-themed shadow
 - **Transitions**: Fast (150ms), base (300ms), slow (500ms)
 - **Z-Index**: Consistent layering scale
+
+#### Component Base Styles (`_components.scss`)
+40+ component mixins for building UI elements:
+- **Cards**: card-base, card-solid, card-elevated, glassmorphism
+- **Badges**: badge-buy, badge-sell, badge-hold, badge-monitor
+- **Buttons**: button-primary, button-ghost, button-secondary
+- **Progress Bars**: progress-bar-container, progress-bar-fill, progress-bar-large
+- **Status Indicators**: status-pill-active, status-pill-idle, status-pill-warning
+- **Log Icons**: log-icon-reasoning, log-icon-success, log-icon-warning, log-icon-error
+- **Layout Helpers**: flex-between, absolute-cover, focus-visible, hover-lift
+- **Special**: tag-pill, custom-scrollbar, rationale-box, agent-brain mixins
 
 #### Typography Mixins (`_typography.scss`)
 20+ typography mixins for consistent text styling:
@@ -55,15 +67,49 @@ All design tokens are exposed as CSS custom properties:
 
 ### Usage Examples
 
+#### Using Component Mixins
+
+```scss
+@use 'scss' as *;
+
+.stock-card {
+  @include card-base;  // Glassmorphism card
+  padding: var(--spacing-xl);
+  
+  .badge {
+    @include badge-buy;  // or badge-sell, badge-hold
+  }
+  
+  .confidence-bar {
+    @include progress-bar-container;
+    
+    .fill {
+      @include progress-bar-fill;
+      width: 87%;  // Dynamic width
+    }
+  }
+  
+  .rationale {
+    @include rationale-box;
+    @include text-rationale;
+  }
+  
+  .tag {
+    @include tag-pill;
+  }
+  
+  &:hover {
+    @include hover-lift;
+  }
+}
+```
+
 #### Using Typography Mixins
 
 ```scss
 @use 'scss' as *;
 
 .stock-card {
-  background: var(--color-bg-card);
-  padding: var(--spacing-xl);
-  
   .ticker {
     @include heading-3;  // 20px bold
   }
@@ -74,14 +120,6 @@ All design tokens are exposed as CSS custom properties:
   
   .description {
     @include body-base;  // 14px regular
-  }
-  
-  .rationale {
-    @include text-rationale;  // 14px with relaxed line height
-  }
-  
-  .tag {
-    @include label-small;  // 12px medium
   }
 }
 ```
