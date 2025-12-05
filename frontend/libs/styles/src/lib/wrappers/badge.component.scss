@@ -1,0 +1,21 @@
+@use '../scss' as *;
+
+.badge {
+  @include badge-base;
+
+  &--buy {
+    @include badge-buy;
+  }
+
+  &--sell {
+    @include badge-sell;
+  }
+
+  &--hold {
+    @include badge-hold;
+  }
+
+  &--monitor {
+    @include badge-monitor;
+  }
+}

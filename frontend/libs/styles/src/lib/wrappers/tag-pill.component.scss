@@ -1,0 +1,5 @@
+@use '../scss' as *;
+
+.tag-pill {
+  @include tag-pill;
+}

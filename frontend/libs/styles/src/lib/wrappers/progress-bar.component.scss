@@ -1,0 +1,9 @@
+@use '../scss' as *;
+
+.progress-bar {
+  @include progress-bar-container;
+
+  &__fill {
+    @include progress-bar-fill;
+  }
+}
