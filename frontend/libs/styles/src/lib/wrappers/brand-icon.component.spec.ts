@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideZoneChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection } from '@angular/core';
 import { BrandIconComponent } from './brand-icon.component';
 import { BrandIconConfig } from '../types/brand-icon-config';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -16,7 +16,7 @@ describe('BrandIconComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [BrandIconComponent],
-      providers: [provideZoneChangeDetection()],
+      providers: [provideZonelessChangeDetection()],
     }).compileComponents();
 
     sanitizer = TestBed.inject(DomSanitizer);

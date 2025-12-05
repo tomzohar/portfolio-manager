@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideZoneChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection } from '@angular/core';
 import { TopNavComponent } from './topnav.component';
 import { TopNavConfig } from '../types/topnav-config';
 import { MenuItem } from '../types/menu-config';
@@ -22,7 +22,7 @@ describe('TopNavComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [TopNavComponent],
-      providers: [provideZoneChangeDetection()],
+      providers: [provideZonelessChangeDetection()],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TopNavComponent);
