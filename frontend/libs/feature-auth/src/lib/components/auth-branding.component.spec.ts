@@ -32,16 +32,16 @@ describe('AuthBrandingComponent', () => {
     expect(subtitle.textContent).toBe('Autonomous AI Portfolio Manager');
   });
 
-  it('should display brand icon', () => {
+  it('should display brand icon component', () => {
     const compiled = fixture.nativeElement;
-    const icon = compiled.querySelector('.brand-icon svg');
-    expect(icon).toBeTruthy();
+    const brandIcon = compiled.querySelector('lib-brand-icon');
+    expect(brandIcon).toBeTruthy();
   });
 
-  it('should have correct icon dimensions', () => {
-    const compiled = fixture.nativeElement;
-    const icon = compiled.querySelector('.brand-icon svg');
-    expect(icon.getAttribute('width')).toBe('32');
-    expect(icon.getAttribute('height')).toBe('32');
+  it('should have correct brand icon configuration', () => {
+    expect(component.brandIconConfig).toBeDefined();
+    expect(component.brandIconConfig.isMaterialIcon).toBe(false);
+    expect(component.brandIconConfig.size).toBe('md');
+    expect(component.brandIconConfig.ariaLabel).toBe('Portfolio Mind logo');
   });
 });

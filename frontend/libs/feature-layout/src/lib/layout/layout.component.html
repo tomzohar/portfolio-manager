@@ -1,0 +1,7 @@
+@if (isAuthenticated()) {
+  <lib-topnav [config]="topNavConfig()" (signOut)="onSignOut()" />
+}
+
+<div class="layout-content">
+  <ng-content select="router-outlet"></ng-content>
+</div>

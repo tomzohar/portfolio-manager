@@ -3,10 +3,21 @@
 .dashboard-container {
   @include flex-column($gap: 0);
   height: 100%;
+  padding: $spacing-lg;
 }
 
 .dashboard-content {
   @include container-center($max-width: $max-width-container, $padding: $spacing-lg);
+}
+
+.portfolio-selection-container {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  
+  .portfolio-actions {
+    margin-left: auto;
+  }
 }
 
 .asset-actions {

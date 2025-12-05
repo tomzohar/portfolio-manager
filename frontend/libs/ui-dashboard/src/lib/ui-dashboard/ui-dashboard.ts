@@ -12,7 +12,6 @@ import {
   SelectComponent,
   SelectOption,
   TableComponent,
-  ToolbarComponent,
 } from '@stocks-researcher/styles';
 import { DashboardAsset, DashboardPortfolio } from '@stocks-researcher/types';
 
@@ -23,7 +22,6 @@ import { DashboardAsset, DashboardPortfolio } from '@stocks-researcher/types';
     CardComponent,
     SelectComponent,
     TableComponent,
-    ToolbarComponent,
     EmptyStateComponent,
     ActionMenuComponent,
     ButtonComponent,

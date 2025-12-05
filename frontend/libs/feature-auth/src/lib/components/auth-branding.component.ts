@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { BrandIconComponent, BrandIconConfig, getBrandIcon } from '@stocks-researcher/styles';
 
 /**
  * AuthBrandingComponent
@@ -14,25 +15,10 @@ import { Component } from '@angular/core';
 @Component({
   selector: 'lib-auth-branding',
   standalone: true,
+  imports: [BrandIconComponent],
   template: `
     <div class="auth-header">
-      <div class="brand-icon">
-        <svg
-          width="32"
-          height="32"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M7 17L17 7M17 7H10M17 7V14"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-      </div>
+      <lib-brand-icon [config]="brandIconConfig" />
       <h1 class="brand-title">
         <span class="brand-text">Portfolio</span>
         <span class="brand-text brand-text--accent">Mind</span>
@@ -42,4 +28,15 @@ import { Component } from '@angular/core';
   `,
   styleUrl: './auth-branding.component.scss',
 })
-export class AuthBrandingComponent {}
+export class AuthBrandingComponent {
+  /**
+   * Brand icon configuration
+   * Uses the arrow trend icon from centralized brand icons
+   */
+  readonly brandIconConfig: BrandIconConfig = {
+    icon: getBrandIcon('arrow-trend'),
+    isMaterialIcon: false,
+    size: 'md',
+    ariaLabel: 'Portfolio Mind logo',
+  };
+}

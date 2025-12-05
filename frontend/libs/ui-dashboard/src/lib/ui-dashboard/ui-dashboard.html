@@ -1,11 +1,4 @@
 <div class="dashboard-container">
-  <lib-toolbar title="Portfolio Dashboard">
-    <lib-action-menu
-      [config]="actionMenuConfig()"
-      (itemSelected)="onActionMenuItemSelected($event)"
-    />
-  </lib-toolbar>
-
   <div class="dashboard-content">
     @if (portfolios().length === 0) {
       <!-- Empty State -->
@@ -17,13 +10,22 @@
         (actionClick)="onCreatePortfolio()"
       />
     } @else {
-      <!-- Portfolio Selection -->
+      <!-- Portfolio Selection with Actions -->
       <lib-card title="Select Portfolio">
-        <lib-select 
-          [options]="portfolioOptions()"
-          [selected]="selectedPortfolioId()"
-          (selectionChange)="onPortfolioSelect($event)">
-        </lib-select>
+        <div class="portfolio-selection-container">
+          <lib-select 
+            [options]="portfolioOptions()"
+            [selected]="selectedPortfolioId()"
+            (selectionChange)="onPortfolioSelect($event)"
+            class="portfolio-select">
+          </lib-select>
+          
+          <lib-action-menu
+            [config]="actionMenuConfig()"
+            (itemSelected)="onActionMenuItemSelected($event)"
+            class="portfolio-actions"
+          />
+        </div>
       </lib-card>
 
       <!-- Asset List -->

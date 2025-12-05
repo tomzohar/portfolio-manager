@@ -7,18 +7,6 @@
   gap: var(--spacing-base);
 }
 
-.brand-icon {
-  width: 64px;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #7f22fe, #4f39f6);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-ai);
-  color: white;
-}
-
 .brand-title {
   @include heading-2;
   margin: 0;

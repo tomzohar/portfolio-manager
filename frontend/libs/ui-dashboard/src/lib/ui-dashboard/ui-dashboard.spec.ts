@@ -42,12 +42,13 @@ describe('UiDashboardComponent', () => {
     expect(options[1]).toEqual({ value: '2', label: 'Portfolio 2' });
   });
 
-  it('should render toolbar with title', () => {
+  it('should render action menu when portfolios exist', () => {
+    fixture.componentRef.setInput('portfolios', mockPortfolios);
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const toolbar = compiled.querySelector('lib-toolbar');
-    expect(toolbar).toBeTruthy();
+    const actionMenu = compiled.querySelector('lib-action-menu');
+    expect(actionMenu).toBeTruthy();
   });
 
   it('should render portfolio selection card', () => {
