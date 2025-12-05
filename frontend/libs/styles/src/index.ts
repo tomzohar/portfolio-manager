@@ -16,6 +16,8 @@ export * from './lib/wrappers/badge.component';
 export * from './lib/wrappers/progress-bar.component';
 export * from './lib/wrappers/tag-pill.component';
 export * from './lib/wrappers/brand-icon.component';
+export * from './lib/wrappers/loader.component';
+export * from './lib/wrappers/loading-page.component';
 
 // Types
 export * from './lib/types/button-config';
@@ -25,7 +27,12 @@ export * from './lib/types/action-menu-config';
 export * from './lib/types/topnav-config';
 export * from './lib/types/badge-config';
 export * from './lib/types/brand-icon-config';
+export * from './lib/types/loader-config';
+export * from './lib/types/loading-page-config';
 export * from './lib/types/design-tokens';
+
+// Directives
+export * from './lib/directives/fill-available-height.directive';
 
 // Icon constants
 export * from './lib/constants/material-icons';

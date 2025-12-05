@@ -1,0 +1,142 @@
+@use 'scss' as *;
+
+.loader-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.loader {
+  position: relative;
+  
+  // Circle border
+  .loader-circle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 2px solid var(--color-border-secondary);
+    border-radius: 50%;
+  }
+  
+  // Orbit containers
+  .orbit {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    
+    &--outer {
+      animation: orbit-outer 3s linear infinite;
+    }
+    
+    &--inner {
+      animation: orbit-inner 2s linear infinite;
+    }
+  }
+  
+  // Orbiting dots
+  .orbit-dot {
+    border-radius: 50%;
+    position: absolute;
+    
+    &--outer {
+      background-color: #8e51ff; // Purple
+      box-shadow: 0 0 8px rgba(142, 81, 255, 0.6);
+    }
+    
+    &--inner {
+      background-color: #615fff; // Indigo
+      box-shadow: 0 0 8px rgba(97, 95, 255, 0.6);
+    }
+  }
+  
+  // Size variants
+  &--sm {
+    width: 32px;
+    height: 32px;
+    
+    .orbit-dot {
+      width: 6px;
+      height: 6px;
+      
+      &--outer {
+        top: -18px;
+        left: -3px;
+      }
+      
+      &--inner {
+        top: -12px;
+        left: -3px;
+      }
+    }
+  }
+  
+  &--md {
+    width: 48px;
+    height: 48px;
+    
+    .orbit-dot {
+      width: 9px;
+      height: 9px;
+      
+      &--outer {
+        top: -28px;
+        left: -4.5px;
+      }
+      
+      &--inner {
+        top: -18px;
+        left: -4.5px;
+      }
+    }
+  }
+  
+  &--lg {
+    width: 64px;
+    height: 64px;
+    
+    .orbit-dot {
+      width: 12px;
+      height: 12px;
+      
+      &--outer {
+        top: -38px;
+        left: -6px;
+      }
+      
+      &--inner {
+        top: -24px;
+        left: -6px;
+      }
+    }
+  }
+}
+
+.loader-label {
+  @include body-small;
+  margin: 0;
+  color: var(--color-text-subtle);
+  text-align: center;
+}
+
+// Keyframe animations
+@keyframes orbit-outer {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbit-inner {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
