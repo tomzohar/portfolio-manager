@@ -17,8 +17,9 @@ import { ButtonComponent, BadgeComponent } from '@frontend/styles';
 ## 🎨 Design System
 
 ### Phase 1: Foundation (✅ Complete)
+### Phase 2: Typography System (✅ Complete)
 
-The design system foundation includes:
+The design system includes:
 
 #### Design Tokens (`_tokens.scss`)
 - **Colors**: Background, text, border, AI/brand, status, and badge colors
@@ -28,6 +29,15 @@ The design system foundation includes:
 - **Shadows**: Elevation levels from sm to xl, plus AI-themed shadow
 - **Transitions**: Fast (150ms), base (300ms), slow (500ms)
 - **Z-Index**: Consistent layering scale
+
+#### Typography Mixins (`_typography.scss`)
+20+ typography mixins for consistent text styling:
+- **Headings**: heading-1, heading-2, heading-3
+- **Body Text**: body-large, body-base, body-small
+- **Labels**: label-large, label-medium, label-small, label-uppercase
+- **Values**: value-large, value-medium, value-small
+- **Special**: code-block, timestamp, text-rationale, text-ai-reasoning
+- **Utilities**: text-truncate, text-truncate-lines, text-no-select
 
 #### CSS Custom Properties (`_theme.scss`)
 All design tokens are exposed as CSS custom properties:
@@ -45,10 +55,41 @@ All design tokens are exposed as CSS custom properties:
 
 ### Usage Examples
 
+#### Using Typography Mixins
+
+```scss
+@use 'scss' as *;
+
+.stock-card {
+  background: var(--color-bg-card);
+  padding: var(--spacing-xl);
+  
+  .ticker {
+    @include heading-3;  // 20px bold
+  }
+  
+  .price {
+    @include value-small;  // 18px bold
+  }
+  
+  .description {
+    @include body-base;  // 14px regular
+  }
+  
+  .rationale {
+    @include text-rationale;  // 14px with relaxed line height
+  }
+  
+  .tag {
+    @include label-small;  // 12px medium
+  }
+}
+```
+
 #### Using Design Tokens in SCSS
 
 ```scss
-@use '@frontend/styles/scss' as *;
+@use 'scss' as *;
 
 .my-card {
   background-color: $color-bg-card;
