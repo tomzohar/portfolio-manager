@@ -12,7 +12,7 @@
       
       .mat-icon {
         margin-right: $spacing-sm;
-        color: $color-text-secondary;
+        color: inherit; // Inherit from parent menu item which uses --color-text-primary
       }
     }
   }

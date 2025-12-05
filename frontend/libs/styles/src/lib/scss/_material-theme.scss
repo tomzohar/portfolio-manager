@@ -650,6 +650,10 @@ h2.mat-mdc-dialog-title {
   &.mat-mdc-menu-item-highlighted {
     background-color: var(--color-bg-tertiary) !important;
   }
+  
+  .mat-icon {
+    color: var(--color-text-primary) !important;
+  }
 }
 
 // === SNACKBAR ===
