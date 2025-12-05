@@ -99,7 +99,10 @@ All design tokens are exposed as CSS custom properties:
   box-shadow: $shadow-lg;
 
   h2 {
-    @include heading-2;  // Use typography mixin instead of individual properties
+    font-family: $font-family-primary;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
   }
 }
 ```
