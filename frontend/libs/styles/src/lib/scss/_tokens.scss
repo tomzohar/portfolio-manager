@@ -1,0 +1,176 @@
+// ============================================================================
+// DESIGN TOKENS
+// ============================================================================
+// These tokens define the core values of the design system.
+// They map directly to the Figma design specifications.
+// ============================================================================
+
+// === BACKGROUND COLORS ===
+$color-bg-primary: #09090b;           // zinc-950 - Main app background
+$color-bg-secondary: #18181b;         // zinc-900 - Secondary surfaces
+$color-bg-tertiary: #27272a;          // zinc-800 - Tertiary surfaces
+$color-bg-overlay: rgba(0, 0, 0, 0.5); // Modal/overlay background
+$color-bg-card: rgba(24, 24, 27, 0.5); // Card background (glassmorphism)
+$color-bg-elevated: rgba(9, 9, 11, 0.8); // Elevated surfaces (header)
+
+// === TEXT COLORS ===
+$color-text-primary: #ffffff;         // Primary text
+$color-text-secondary: #f4f4f5;       // zinc-100 - Secondary text
+$color-text-tertiary: #e4e4e7;        // zinc-200 - Tertiary text
+$color-text-muted: #d4d4d8;           // zinc-300 - Muted text
+$color-text-disabled: #9f9fa9;        // Disabled text
+$color-text-subtle: #71717b;          // Subtle/helper text
+$color-text-faint: #52525c;           // Faint text (timestamps, versions)
+
+// === BORDER COLORS ===
+$color-border-primary: #27272a;       // zinc-800 - Primary borders
+$color-border-secondary: #3f3f46;     // zinc-700 - Secondary borders
+$color-border-subtle: rgba(39, 39, 42, 0.5); // Subtle borders
+
+// === AI/BRAND COLORS ===
+$color-ai-primary: #a684ff;           // Main AI accent color
+$color-ai-secondary: #8e51ff;         // Secondary AI accent
+$color-ai-glow: rgba(142, 81, 255, 0.3); // AI glow effect
+$color-ai-bg: rgba(142, 81, 255, 0.1); // AI background tint
+$color-ai-text: #ddd6ff;              // AI-tinted text (reasoning logs)
+
+// === STATUS COLORS ===
+$color-success: #00d492;              // Success/positive
+$color-success-light: #5ee9b5;        // Light success variant
+$color-error: #ff637e;                // Error/negative
+$color-warning: #ffd230;              // Warning
+$color-caution: #ffb900;              // Caution (hold)
+$color-info: #2196f3;                 // Info
+
+// === ACTION BADGE COLORS ===
+// BUY Badge
+$color-buy-bg: rgba(0, 212, 146, 0.1);
+$color-buy-border: rgba(0, 212, 146, 0.2);
+$color-buy-text: #00d492;
+
+// SELL Badge
+$color-sell-bg: rgba(255, 99, 126, 0.1);
+$color-sell-border: rgba(255, 99, 126, 0.2);
+$color-sell-text: #ff637e;
+
+// HOLD Badge
+$color-hold-bg: rgba(254, 154, 0, 0.1);
+$color-hold-border: rgba(254, 154, 0, 0.2);
+$color-hold-text: #ffb900;
+
+// MONITOR Badge
+$color-monitor-bg: rgba(33, 150, 243, 0.1);
+$color-monitor-border: rgba(33, 150, 243, 0.2);
+$color-monitor-text: #2196f3;
+
+// === TYPOGRAPHY ===
+// Font Families
+$font-family-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+$font-family-mono: 'JetBrains Mono', 'Roboto Mono', 'Courier New', monospace;
+
+// Font Sizes
+$font-size-2xs: 10px;                 // Tag pills
+$font-size-xs: 12px;                  // Small text, timestamps
+$font-size-sm: 14px;                  // Base body text
+$font-size-base: 16px;                // Medium body text
+$font-size-md: 18px;                  // Large body text
+$font-size-lg: 20px;                  // H3
+$font-size-xl: 24px;                  // H2, confidence scores
+$font-size-2xl: 30px;                 // H1, large values
+
+// Font Weights
+$font-weight-regular: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+// Line Heights
+$line-height-tight: 1.2;              // Headlines
+$line-height-normal: 1.5;             // Body text
+$line-height-relaxed: 1.625;          // Rationale text (22.75px / 14px)
+
+// Letter Spacing
+$letter-spacing-tight: -0.44px;       // Large headlines
+$letter-spacing-normal: -0.15px;      // Body text
+$letter-spacing-wide: 0.6px;          // Uppercase labels
+
+// === SPACING ===
+$spacing-xxs: 2px;
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-base: 16px;
+$spacing-lg: 20px;
+$spacing-xl: 24px;
+$spacing-2xl: 32px;
+$spacing-3xl: 48px;
+
+// Specific Component Spacing
+$spacing-card-padding: 24px;
+$spacing-log-entry-gap: 12px;
+$spacing-header-padding: 16px;
+
+// === BORDER RADIUS ===
+$radius-sm: 8px;                      // Buttons, badges
+$radius-md: 10px;                     // Rationale boxes
+$radius-lg: 14px;                     // Cards, panels
+$radius-pill: 9999px;                 // Status pills, progress bars
+
+// === SHADOWS & ELEVATION ===
+$shadow-none: none;
+$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
+$shadow-md: 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+$shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+$shadow-xl: 0 10px 20px rgba(0, 0, 0, 0.15);
+$shadow-ai: 0 10px 15px -3px rgba(142, 81, 255, 0.2), 0 4px 6px -4px rgba(142, 81, 255, 0.2);
+
+// === TRANSITIONS & ANIMATIONS ===
+$transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+$transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+$transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+
+$easing-default: cubic-bezier(0.4, 0, 0.2, 1);
+$easing-in: cubic-bezier(0.4, 0, 1, 1);
+$easing-out: cubic-bezier(0, 0, 0.2, 1);
+
+// === LAYOUT ===
+$max-width-container: 1200px;
+$max-width-narrow: 800px;
+$max-width-wide: 1600px;
+
+// === Z-INDEX SCALE ===
+$z-index-dropdown: 1000;
+$z-index-sticky: 1020;
+$z-index-fixed: 1030;
+$z-index-modal-backdrop: 1040;
+$z-index-modal: 1050;
+$z-index-popover: 1060;
+$z-index-tooltip: 1070;
+
+// === COMPONENT-SPECIFIC TOKENS ===
+// Progress Bar
+$progress-bar-height: 6px;
+$progress-bar-height-lg: 8px;
+
+// Badge
+$badge-padding-y: 3px;
+$badge-padding-x: 9px;
+$badge-font-size: $font-size-xs;
+
+// Tag Pill
+$tag-padding-y: 4.5px;
+$tag-padding-x: 8px;
+$tag-font-size: $font-size-2xs;
+
+// Header
+$header-height: 65px;
+
+// Summary Card
+$summary-card-height: 150px;
+
+// Icon Sizes
+$icon-size-xs: 12px;
+$icon-size-sm: 16px;
+$icon-size-base: 20px;
+$icon-size-md: 24px;
+$icon-size-lg: 32px;
