@@ -42,25 +42,20 @@
 // Mixin: Responsive Breakpoint
 @mixin respond-to($breakpoint) {
   @if $breakpoint == 'sm' {
-    @media (min-width: $breakpoint-sm) { @content; }
+    @media (min-width: legacy.$breakpoint-sm) { @content; }
   }
   @else if $breakpoint == 'md' {
-    @media (min-width: $breakpoint-md) { @content; }
+    @media (min-width: legacy.$breakpoint-md) { @content; }
   }
   @else if $breakpoint == 'lg' {
-    @media (min-width: $breakpoint-lg) { @content; }
+    @media (min-width: legacy.$breakpoint-lg) { @content; }
   }
   @else if $breakpoint == 'xl' {
-    @media (min-width: $breakpoint-xl) { @content; }
+    @media (min-width: legacy.$breakpoint-xl) { @content; }
   }
 }
 
-// Mixin: Truncate text with ellipsis
-@mixin text-truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+// NOTE: text-truncate mixins moved to _typography.scss
 
 // Mixin: Reset button styles
 @mixin button-reset {

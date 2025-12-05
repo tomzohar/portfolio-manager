@@ -1,0 +1,88 @@
+// ============================================================================
+// FONTS
+// ============================================================================
+// ⚠️ NOTE: Fonts are loaded via <link> tags in client/src/index.html
+// This approach is recommended for performance (parallel loading, better caching).
+//
+// This file exists for:
+// 1. Documentation of what fonts are loaded
+// 2. Optional self-hosting template (see below)
+// 3. Satisfying the @forward in index.scss
+//
+// ❌ DO NOT add @import statements here - it's redundant and slower than HTML loading
+// ============================================================================
+
+// === FONTS LOADED VIA HTML (client/src/index.html) ===
+//
+// Inter: weights 400 (regular), 500 (medium), 600 (semibold), 700 (bold)
+// - Used for: All UI text, headings, labels, body text
+// - CDN: https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700
+//
+// JetBrains Mono: weights 400 (regular), 500 (medium), 700 (bold)
+// - Used for: Code blocks, log entries, technical data
+// - CDN: https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700
+
+// === SELF-HOSTING TEMPLATE (Currently Unused) ===
+// If you need to self-host fonts (for offline support, privacy, etc.):
+// 1. Download fonts from Google Fonts or fonts.google.com
+// 2. Place .woff2 files in client/public/fonts/
+// 3. Uncomment the @font-face declarations below
+// 4. Remove the <link> tags from index.html
+
+/*
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/JetBrainsMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/JetBrainsMono-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/JetBrainsMono-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+*/

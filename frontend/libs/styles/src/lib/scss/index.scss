@@ -7,15 +7,21 @@
 // @use '@frontend/styles/scss' as *;
 // ============================================================================
 
-// 1. Load design tokens (new design system)
+// 1. Load fonts
+@forward './fonts';
+
+// 2. Load design tokens (new design system)
 @forward './tokens';
 
-// 2. Load theme (CSS custom properties)
+// 3. Load theme (CSS custom properties)
 @forward './theme';
 
-// 3. Load legacy variables (backward compatibility)
+// 4. Load typography mixins
+@forward './typography';
+
+// 5. Load legacy variables (backward compatibility)
 @forward './variables';
 
-// 4. Load mixins
+// 6. Load mixins
 @forward './mixins';
 

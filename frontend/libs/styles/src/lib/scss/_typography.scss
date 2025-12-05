@@ -1,0 +1,273 @@
+// ============================================================================
+// TYPOGRAPHY MIXINS
+// ============================================================================
+// Reusable typography styles based on Figma design specs.
+// Use these mixins to ensure consistent text styling across components.
+//
+// Usage:
+// @use 'scss' as *;
+// 
+// .my-heading {
+//   @include heading-1;
+// }
+// ============================================================================
+
+@use './tokens' as *;
+
+// === HEADINGS ===
+
+/// Heading 1 - Large page titles (30px)
+/// Used for: Main dashboard title, page headers
+@mixin heading-1 {
+  font-family: $font-family-primary;
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-tight;
+  letter-spacing: $letter-spacing-tight;
+  color: var(--color-text-primary);
+}
+
+/// Heading 2 - Section titles (24px)
+/// Used for: Card headers, section headers
+@mixin heading-2 {
+  font-family: $font-family-primary;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-tight;
+  letter-spacing: $letter-spacing-normal;
+  color: var(--color-text-primary);
+}
+
+/// Heading 3 - Subsection titles (20px)
+/// Used for: Stock ticker symbols, card subtitles
+@mixin heading-3 {
+  font-family: $font-family-primary;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-tight;
+  color: var(--color-text-primary);
+}
+
+// === BODY TEXT ===
+
+/// Body Large - 16px
+/// Used for: Primary content, important paragraphs
+@mixin body-large {
+  font-family: $font-family-primary;
+  font-size: $font-size-base;
+  font-weight: $font-weight-regular;
+  line-height: $line-height-normal;
+  letter-spacing: $letter-spacing-normal;
+  color: var(--color-text-primary);
+}
+
+/// Body Base - 14px (Default body text)
+/// Used for: Most content, log entries, descriptions
+@mixin body-base {
+  font-family: $font-family-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-regular;
+  line-height: $line-height-normal;
+  letter-spacing: $letter-spacing-normal;
+  color: var(--color-text-tertiary);
+}
+
+/// Body Small - 12px
+/// Used for: Helper text, metadata, secondary info
+@mixin body-small {
+  font-family: $font-family-primary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-regular;
+  line-height: $line-height-normal;
+  color: var(--color-text-muted);
+}
+
+// === LABELS ===
+
+/// Label Large - 16px medium
+/// Used for: Form labels, important labels
+@mixin label-large {
+  font-family: $font-family-primary;
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  line-height: $line-height-normal;
+  letter-spacing: $letter-spacing-normal;
+  color: var(--color-text-primary);
+}
+
+/// Label Medium - 14px medium
+/// Used for: Card labels, button text, navigation
+@mixin label-medium {
+  font-family: $font-family-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  line-height: $line-height-normal;
+  letter-spacing: $letter-spacing-normal;
+  color: var(--color-text-secondary);
+}
+
+/// Label Small - 12px medium
+/// Used for: Small labels, tags, indicators
+@mixin label-small {
+  font-family: $font-family-primary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  line-height: $line-height-normal;
+  color: var(--color-text-subtle);
+}
+
+/// Label Uppercase - 12px uppercase
+/// Used for: Section labels, "RATIONALE", category headers
+@mixin label-uppercase {
+  font-family: $font-family-primary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-regular;
+  line-height: $line-height-normal;
+  text-transform: uppercase;
+  letter-spacing: $letter-spacing-wide;
+  color: var(--color-text-subtle);
+}
+
+// === NUMERIC VALUES ===
+
+/// Value Large - 30px bold
+/// Used for: Portfolio total, large dollar amounts
+@mixin value-large {
+  font-family: $font-family-primary;
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-tight;
+  letter-spacing: 0.4px;
+  color: var(--color-text-primary);
+}
+
+/// Value Medium - 24px bold
+/// Used for: Confidence scores, secondary values
+@mixin value-medium {
+  font-family: $font-family-primary;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-tight;
+  color: var(--color-text-primary);
+}
+
+/// Value Small - 18px bold
+/// Used for: Stock prices, small metrics
+@mixin value-small {
+  font-family: $font-family-primary;
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-tight;
+  letter-spacing: $letter-spacing-tight;
+  color: var(--color-text-primary);
+}
+
+// === MONOSPACE / CODE ===
+
+/// Code Block - 12px monospace
+/// Used for: Log entries, code snippets, technical data
+@mixin code-block {
+  font-family: $font-family-mono;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-regular;
+  line-height: $line-height-normal;
+  color: var(--color-text-tertiary);
+}
+
+/// Timestamp - 12px
+/// Used for: Log timestamps, last updated times
+@mixin timestamp {
+  font-family: $font-family-primary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-regular;
+  line-height: $line-height-normal;
+  color: var(--color-text-faint);
+}
+
+// === SPECIAL TEXT STYLES ===
+
+/// Rationale Text - 14px with relaxed line height
+/// Used for: Stock card rationale boxes, explanations
+@mixin text-rationale {
+  font-family: $font-family-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-regular;
+  line-height: $line-height-relaxed;
+  letter-spacing: $letter-spacing-normal;
+  color: var(--color-text-muted);
+}
+
+/// AI Reasoning Text - 14px with AI text color
+/// Used for: Agent reasoning log entries, AI explanations
+@mixin text-ai-reasoning {
+  font-family: $font-family-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-regular;
+  line-height: $line-height-normal;
+  color: var(--color-ai-text);
+}
+
+/// Success Text - Body base with success color
+/// Used for: Positive messages, success indicators
+@mixin text-success {
+  font-family: $font-family-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-regular;
+  line-height: $line-height-normal;
+  color: var(--color-success-light);
+}
+
+/// Warning Text - Body base with warning color
+/// Used for: Warning messages, alerts
+@mixin text-warning {
+  font-family: $font-family-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-regular;
+  line-height: $line-height-normal;
+  color: var(--color-warning);
+}
+
+/// Error Text - Body base with error color
+/// Used for: Error messages, negative indicators
+@mixin text-error {
+  font-family: $font-family-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-regular;
+  line-height: $line-height-normal;
+  color: var(--color-error);
+}
+
+// === UTILITY MIXINS ===
+
+/// Truncate text with ellipsis
+/// Limits text to single line with "..." overflow
+@mixin text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/// Truncate text to multiple lines
+/// @param {number} $lines - Number of lines to show before truncating
+@mixin text-truncate-lines($lines: 2) {
+  display: -webkit-box;
+  -webkit-line-clamp: $lines;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/// Remove default text selection styling
+@mixin text-no-select {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/// Enable smooth font rendering
+@mixin text-smooth {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
