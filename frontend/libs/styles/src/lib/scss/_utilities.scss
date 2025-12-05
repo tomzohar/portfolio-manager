@@ -1,0 +1,355 @@
+// ============================================================================
+// UTILITY CLASSES
+// ============================================================================
+// Common utility classes for rapid development.
+// Use sparingly - prefer semantic classes and component mixins in most cases.
+//
+// These utilities are designed for:
+// - Quick prototyping
+// - One-off spacing adjustments
+// - Dynamic class binding in templates
+//
+// Usage:
+// <div class="flex-between mt-lg">...</div>
+// ============================================================================
+
+@use './tokens' as *;
+
+// === SPACING UTILITIES ===
+
+// Margin Top
+.mt-xxs { margin-top: var(--spacing-xxs); }
+.mt-xs { margin-top: var(--spacing-xs); }
+.mt-sm { margin-top: var(--spacing-sm); }
+.mt-md { margin-top: var(--spacing-md); }
+.mt-base { margin-top: var(--spacing-base); }
+.mt-lg { margin-top: var(--spacing-lg); }
+.mt-xl { margin-top: var(--spacing-xl); }
+.mt-2xl { margin-top: var(--spacing-2xl); }
+.mt-3xl { margin-top: var(--spacing-3xl); }
+
+// Margin Bottom
+.mb-xxs { margin-bottom: var(--spacing-xxs); }
+.mb-xs { margin-bottom: var(--spacing-xs); }
+.mb-sm { margin-bottom: var(--spacing-sm); }
+.mb-md { margin-bottom: var(--spacing-md); }
+.mb-base { margin-bottom: var(--spacing-base); }
+.mb-lg { margin-bottom: var(--spacing-lg); }
+.mb-xl { margin-bottom: var(--spacing-xl); }
+.mb-2xl { margin-bottom: var(--spacing-2xl); }
+.mb-3xl { margin-bottom: var(--spacing-3xl); }
+
+// Margin Left
+.ml-xxs { margin-left: var(--spacing-xxs); }
+.ml-xs { margin-left: var(--spacing-xs); }
+.ml-sm { margin-left: var(--spacing-sm); }
+.ml-md { margin-left: var(--spacing-md); }
+.ml-base { margin-left: var(--spacing-base); }
+.ml-lg { margin-left: var(--spacing-lg); }
+.ml-xl { margin-left: var(--spacing-xl); }
+
+// Margin Right
+.mr-xxs { margin-right: var(--spacing-xxs); }
+.mr-xs { margin-right: var(--spacing-xs); }
+.mr-sm { margin-right: var(--spacing-sm); }
+.mr-md { margin-right: var(--spacing-md); }
+.mr-base { margin-right: var(--spacing-base); }
+.mr-lg { margin-right: var(--spacing-lg); }
+.mr-xl { margin-right: var(--spacing-xl); }
+
+// Margin All Sides
+.m-0 { margin: 0; }
+.m-auto { margin: auto; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+
+// Padding
+.p-xxs { padding: var(--spacing-xxs); }
+.p-xs { padding: var(--spacing-xs); }
+.p-sm { padding: var(--spacing-sm); }
+.p-md { padding: var(--spacing-md); }
+.p-base { padding: var(--spacing-base); }
+.p-lg { padding: var(--spacing-lg); }
+.p-xl { padding: var(--spacing-xl); }
+.p-2xl { padding: var(--spacing-2xl); }
+.p-card { padding: var(--spacing-card-padding); }
+
+// Padding Horizontal
+.px-xs { padding-left: var(--spacing-xs); padding-right: var(--spacing-xs); }
+.px-sm { padding-left: var(--spacing-sm); padding-right: var(--spacing-sm); }
+.px-md { padding-left: var(--spacing-md); padding-right: var(--spacing-md); }
+.px-base { padding-left: var(--spacing-base); padding-right: var(--spacing-base); }
+.px-lg { padding-left: var(--spacing-lg); padding-right: var(--spacing-lg); }
+.px-xl { padding-left: var(--spacing-xl); padding-right: var(--spacing-xl); }
+
+// Padding Vertical
+.py-xs { padding-top: var(--spacing-xs); padding-bottom: var(--spacing-xs); }
+.py-sm { padding-top: var(--spacing-sm); padding-bottom: var(--spacing-sm); }
+.py-md { padding-top: var(--spacing-md); padding-bottom: var(--spacing-md); }
+.py-base { padding-top: var(--spacing-base); padding-bottom: var(--spacing-base); }
+.py-lg { padding-top: var(--spacing-lg); padding-bottom: var(--spacing-lg); }
+.py-xl { padding-top: var(--spacing-xl); padding-bottom: var(--spacing-xl); }
+
+// === GAP UTILITIES (for flexbox/grid) ===
+.gap-xs { gap: var(--spacing-xs); }
+.gap-sm { gap: var(--spacing-sm); }
+.gap-md { gap: var(--spacing-md); }
+.gap-base { gap: var(--spacing-base); }
+.gap-lg { gap: var(--spacing-lg); }
+.gap-xl { gap: var(--spacing-xl); }
+.gap-2xl { gap: var(--spacing-2xl); }
+
+// === TEXT COLOR UTILITIES ===
+.text-primary { color: var(--color-text-primary) !important; }
+.text-secondary { color: var(--color-text-secondary) !important; }
+.text-tertiary { color: var(--color-text-tertiary) !important; }
+.text-muted { color: var(--color-text-muted) !important; }
+.text-subtle { color: var(--color-text-subtle) !important; }
+.text-disabled { color: var(--color-text-disabled) !important; }
+.text-faint { color: var(--color-text-faint) !important; }
+
+// Status Colors
+.text-success { color: var(--color-success) !important; }
+.text-error { color: var(--color-error) !important; }
+.text-warning { color: var(--color-warning) !important; }
+.text-caution { color: var(--color-caution) !important; }
+.text-info { color: var(--color-info) !important; }
+
+// AI Colors
+.text-ai { color: var(--color-ai-primary) !important; }
+.text-ai-secondary { color: var(--color-ai-secondary) !important; }
+.text-ai-text { color: var(--color-ai-text) !important; }
+
+// === BACKGROUND COLOR UTILITIES ===
+.bg-primary { background-color: var(--color-bg-primary) !important; }
+.bg-secondary { background-color: var(--color-bg-secondary) !important; }
+.bg-tertiary { background-color: var(--color-bg-tertiary) !important; }
+.bg-card { background-color: var(--color-bg-card) !important; }
+.bg-overlay { background-color: var(--color-bg-overlay) !important; }
+
+// Status Backgrounds
+.bg-success { background-color: var(--color-success) !important; }
+.bg-error { background-color: var(--color-error) !important; }
+.bg-warning { background-color: var(--color-warning) !important; }
+
+// AI Backgrounds
+.bg-ai { background-color: var(--color-ai-bg) !important; }
+
+// === DISPLAY UTILITIES ===
+.flex { display: flex !important; }
+.inline-flex { display: inline-flex !important; }
+.block { display: block !important; }
+.inline-block { display: inline-block !important; }
+.grid { display: grid !important; }
+.inline { display: inline !important; }
+.hidden { display: none !important; }
+.visible { display: block !important; }
+
+// === FLEX UTILITIES ===
+.flex-row { 
+  display: flex !important;
+  flex-direction: row !important;
+}
+
+.flex-column { 
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.flex-wrap { flex-wrap: wrap !important; }
+.flex-nowrap { flex-wrap: nowrap !important; }
+
+// Alignment
+.items-start { align-items: flex-start !important; }
+.items-center { align-items: center !important; }
+.items-end { align-items: flex-end !important; }
+.items-stretch { align-items: stretch !important; }
+
+.justify-start { justify-content: flex-start !important; }
+.justify-center { justify-content: center !important; }
+.justify-end { justify-content: flex-end !important; }
+.justify-between { justify-content: space-between !important; }
+.justify-around { justify-content: space-around !important; }
+
+// Common flex combinations
+.flex-center { 
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.flex-between { 
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+// === GRID UTILITIES ===
+.grid-cols-2 { grid-template-columns: repeat(2, 1fr) !important; }
+.grid-cols-3 { grid-template-columns: repeat(3, 1fr) !important; }
+.grid-cols-4 { grid-template-columns: repeat(4, 1fr) !important; }
+
+// === SIZING UTILITIES ===
+.w-full { width: 100% !important; }
+.w-auto { width: auto !important; }
+.w-fit { width: fit-content !important; }
+
+.h-full { height: 100% !important; }
+.h-auto { height: auto !important; }
+.h-fit { height: fit-content !important; }
+
+.size-full { 
+  width: 100% !important;
+  height: 100% !important;
+}
+
+// === POSITION UTILITIES ===
+.relative { position: relative !important; }
+.absolute { position: absolute !important; }
+.fixed { position: fixed !important; }
+.sticky { position: sticky !important; }
+
+// === OVERFLOW UTILITIES ===
+.overflow-hidden { overflow: hidden !important; }
+.overflow-auto { overflow: auto !important; }
+.overflow-scroll { overflow: scroll !important; }
+.overflow-visible { overflow: visible !important; }
+
+.overflow-x-hidden { overflow-x: hidden !important; }
+.overflow-y-hidden { overflow-y: hidden !important; }
+.overflow-x-auto { overflow-x: auto !important; }
+.overflow-y-auto { overflow-y: auto !important; }
+
+// === TEXT UTILITIES ===
+.text-left { text-align: left !important; }
+.text-center { text-align: center !important; }
+.text-right { text-align: right !important; }
+
+.text-uppercase { text-transform: uppercase !important; }
+.text-lowercase { text-transform: lowercase !important; }
+.text-capitalize { text-transform: capitalize !important; }
+
+.text-truncate {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.text-nowrap { white-space: nowrap !important; }
+.text-wrap { white-space: normal !important; }
+
+.font-normal { font-weight: var(--font-weight-regular) !important; }
+.font-medium { font-weight: var(--font-weight-medium) !important; }
+.font-semibold { font-weight: var(--font-weight-semibold) !important; }
+.font-bold { font-weight: var(--font-weight-bold) !important; }
+
+// === BORDER UTILITIES ===
+.rounded-sm { border-radius: var(--radius-sm) !important; }
+.rounded-md { border-radius: var(--radius-md) !important; }
+.rounded-lg { border-radius: var(--radius-lg) !important; }
+.rounded-pill { border-radius: var(--radius-pill) !important; }
+.rounded-full { border-radius: 50% !important; }
+.rounded-none { border-radius: 0 !important; }
+
+.border { border: 1px solid var(--color-border-primary) !important; }
+.border-t { border-top: 1px solid var(--color-border-primary) !important; }
+.border-b { border-bottom: 1px solid var(--color-border-primary) !important; }
+.border-l { border-left: 1px solid var(--color-border-primary) !important; }
+.border-r { border-right: 1px solid var(--color-border-primary) !important; }
+.border-none { border: none !important; }
+
+// === OPACITY UTILITIES ===
+.opacity-0 { opacity: 0 !important; }
+.opacity-25 { opacity: 0.25 !important; }
+.opacity-50 { opacity: 0.5 !important; }
+.opacity-75 { opacity: 0.75 !important; }
+.opacity-100 { opacity: 1 !important; }
+
+// === CURSOR UTILITIES ===
+.cursor-pointer { cursor: pointer !important; }
+.cursor-default { cursor: default !important; }
+.cursor-not-allowed { cursor: not-allowed !important; }
+
+// === USER SELECT UTILITIES ===
+.select-none { user-select: none !important; }
+.select-text { user-select: text !important; }
+.select-all { user-select: all !important; }
+
+// === POINTER EVENTS ===
+.pointer-events-none { pointer-events: none !important; }
+.pointer-events-auto { pointer-events: auto !important; }
+
+// === VISIBILITY ===
+.visible { visibility: visible !important; }
+.invisible { visibility: hidden !important; }
+
+// === Z-INDEX UTILITIES ===
+.z-dropdown { z-index: var(--z-index-dropdown) !important; }
+.z-sticky { z-index: var(--z-index-sticky) !important; }
+.z-fixed { z-index: var(--z-index-fixed) !important; }
+.z-modal { z-index: var(--z-index-modal) !important; }
+
+// === SHADOW UTILITIES ===
+.shadow-none { box-shadow: var(--shadow-none) !important; }
+.shadow-sm { box-shadow: var(--shadow-sm) !important; }
+.shadow-md { box-shadow: var(--shadow-md) !important; }
+.shadow-lg { box-shadow: var(--shadow-lg) !important; }
+.shadow-xl { box-shadow: var(--shadow-xl) !important; }
+.shadow-ai { box-shadow: var(--shadow-ai) !important; }
+
+// === TRANSITION UTILITIES ===
+.transition-none { transition: none !important; }
+.transition-fast { transition: all var(--transition-fast) !important; }
+.transition-base { transition: all var(--transition-base) !important; }
+.transition-slow { transition: all var(--transition-slow) !important; }
+
+// === FLEX GROW/SHRINK ===
+.flex-1 { flex: 1 1 0% !important; }
+.flex-auto { flex: 1 1 auto !important; }
+.flex-initial { flex: 0 1 auto !important; }
+.flex-none { flex: none !important; }
+
+.flex-grow { flex-grow: 1 !important; }
+.flex-grow-0 { flex-grow: 0 !important; }
+.flex-shrink { flex-shrink: 1 !important; }
+.flex-shrink-0 { flex-shrink: 0 !important; }
+
+// === COMMON PATTERNS ===
+
+// Full viewport height
+.min-h-screen {
+  min-height: 100vh !important;
+}
+
+// Center content
+.center-content {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+// Scrollable container
+.scrollable {
+  overflow-y: auto !important;
+  
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--color-bg-secondary);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-bg-tertiary);
+    border-radius: 4px;
+
+    &:hover {
+      background: var(--color-border-secondary);
+    }
+  }
+}
+
+// Card padding preset
+.card-padding {
+  padding: var(--spacing-card-padding) !important;
+}

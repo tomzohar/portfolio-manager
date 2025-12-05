@@ -22,9 +22,12 @@
 // 5. Load component base styles
 @forward './components';
 
-// 6. Load legacy variables (backward compatibility)
+// 6. Load utility classes
+@forward './utilities';
+
+// 7. Load legacy variables (backward compatibility)
 @forward './variables';
 
-// 7. Load mixins
+// 8. Load mixins
 @forward './mixins';
 
