@@ -1,0 +1,33 @@
+@use 'scss' as *;
+
+.loading-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  background-color: var(--color-bg-primary);
+}
+
+.loading-page-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-xl;
+}
+
+.loading-page-title {
+  @include body-large;
+  margin: 0;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  text-align: center;
+  letter-spacing: -0.3125px;
+}
+
+.loading-page-subtitle {
+  @include body-small;
+  margin: 0;
+  color: var(--color-text-subtle);
+  text-align: center;
+}

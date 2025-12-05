@@ -1,68 +1,75 @@
 <div class="dashboard-container">
   <div class="dashboard-content">
-    @if (portfolios().length === 0) {
-      <!-- Empty State -->
-      <lib-empty-state
-        [icon]="'account_balance_wallet'"
-        [title]="'No Portfolios Yet'"
-        [message]="'Get started by creating your first portfolio to track your investments'"
-        [buttonConfig]="{ label: 'Create Portfolio' }"
-        (actionClick)="onCreatePortfolio()"
-      />
+    @if (portfolios().length === 0 && !loading()) {
+    <!-- Empty State -->
+    <lib-empty-state
+      [icon]="'account_balance_wallet'"
+      [title]="'No Portfolios Yet'"
+      [message]="'Get started by creating your first portfolio to track your investments'"
+      [buttonConfig]="{ label: 'Create Portfolio' }"
+      (actionClick)="onCreatePortfolio()"
+    />
     } @else {
-      <!-- Portfolio Selection with Actions -->
-      <lib-card title="Select Portfolio">
-        <div class="portfolio-selection-container">
-          <lib-select 
-            [options]="portfolioOptions()"
-            [selected]="selectedPortfolioId()"
-            (selectionChange)="onPortfolioSelect($event)"
-            class="portfolio-select">
-          </lib-select>
-          
-          <lib-action-menu
-            [config]="actionMenuConfig()"
-            (itemSelected)="onActionMenuItemSelected($event)"
-            class="portfolio-actions"
-          />
-        </div>
-      </lib-card>
+    <!-- Portfolio Selection with Actions -->
+    <lib-card title="Select Portfolio">
+      <div class="portfolio-selection-container">
+        <lib-select
+          [options]="portfolioOptions()"
+          [selected]="selectedPortfolioId()"
+          (selectionChange)="onPortfolioSelect($event)"
+          class="portfolio-select"
+        >
+        </lib-select>
 
-      <!-- Asset List -->
-      @if (selectedPortfolioId()) {
-        <lib-card 
-          title="Portfolio Assets" 
-          [subtitle]="assets().length + ' positions'"
-          [headerActions]="true">
-          
-          <!-- Header Actions -->
-          <div headerActions>
-            <lib-button
-              [config]="addAssetButtonConfig"
-              (clicked)="onAddAsset()"
-            />
-          </div>
+        <lib-action-menu
+          [config]="actionMenuConfig()"
+          (itemSelected)="onActionMenuItemSelected($event)"
+          class="portfolio-actions"
+        />
+      </div>
+    </lib-card>
 
-          <!-- Content -->
-          @if (assets().length === 0) {
-            <!-- Empty State for Assets -->
-            <lib-empty-state
-              [icon]="'inventory_2'"
-              [title]="'No Assets Yet'"
-              [message]="'Add your first asset to start tracking this portfolio'"
-              [buttonConfig]="{ label: 'Add Asset' }"
-              (actionClick)="onAddAsset()"
-            />
-          } @else {
-            <lib-table 
-              [data]="assets()" 
-              [columns]="assetColumns"
-              [actionsTemplate]="assetActions">
-            </lib-table>
-          }
-        </lib-card>
+    <!-- Asset List -->
+    @if (loading()) {
+    <!-- Loading State -->
+    <lib-loading-page
+      [config]="{
+          title: 'Loading Portfolio Data...',
+          subtitle: 'Please wait while we fetch your portfolios and assets'
+        }"
+    />
+    } @else if (selectedPortfolioId()) {
+    <lib-card
+      title="Portfolio Assets"
+      [subtitle]="assets().length + ' positions'"
+      [headerActions]="true"
+    >
+      <!-- Header Actions -->
+      <div headerActions>
+        <lib-button [config]="addAssetButtonConfig" (clicked)="onAddAsset()" />
+      </div>
+
+      <!-- Content -->
+      @if (assets().length === 0) {
+      <!-- Empty State for Assets -->
+      <lib-empty-state
+        [icon]="'inventory_2'"
+        [title]="'No Assets Yet'"
+        [message]="'Add your first asset to start tracking this portfolio'"
+        [buttonConfig]="{ label: 'Add Asset' }"
+        (actionClick)="onAddAsset()"
+      />
+      } @else {
+      <lib-table
+        [data]="assets()"
+        [columns]="assetColumns"
+        [actionsTemplate]="assetActions"
+        [scrollable]="true"
+      >
+      </lib-table>
       }
-    }
+    </lib-card>
+    } }
   </div>
 </div>
 

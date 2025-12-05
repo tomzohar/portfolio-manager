@@ -8,6 +8,7 @@ import {
   CardComponent,
   ColumnDef,
   EmptyStateComponent,
+  LoadingPageComponent,
   MenuItem,
   SelectComponent,
   SelectOption,
@@ -25,6 +26,7 @@ import { DashboardAsset, DashboardPortfolio } from '@stocks-researcher/types';
     EmptyStateComponent,
     ActionMenuComponent,
     ButtonComponent,
+    LoadingPageComponent,
   ],
   templateUrl: './ui-dashboard.html',
   styleUrl: './ui-dashboard.scss',
@@ -33,6 +35,7 @@ export class UiDashboardComponent {
   portfolios = input<DashboardPortfolio[]>([]);
   assets = input<DashboardAsset[]>([]);
   selectedPortfolioId = input<string | null>(null);
+  loading = input<boolean>(true);
 
   portfolioSelected = output<string>();
   createPortfolio = output<void>();

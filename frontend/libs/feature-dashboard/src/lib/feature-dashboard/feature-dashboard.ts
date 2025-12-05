@@ -39,6 +39,7 @@ export class FeatureDashboardComponent implements OnInit {
   portfolios = this.facade.portfolios;
   currentAssets = this.facade.currentAssets;
   selectedPortfolioId = this.facade.selectedId;
+  loading = this.facade.loading;
 
   ngOnInit(): void {
     // Initialize portfolio data on component init

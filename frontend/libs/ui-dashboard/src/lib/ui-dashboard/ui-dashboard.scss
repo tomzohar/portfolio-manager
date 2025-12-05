@@ -8,6 +8,13 @@
 
 .dashboard-content {
   @include container-center($max-width: $max-width-container, $padding: $spacing-lg);
+  height: 100%;
+  
+  // Ensure loading page can fill available height
+  lib-loading-page {
+    display: block;
+    height: 100%;
+  }
 }
 
 .portfolio-selection-container {

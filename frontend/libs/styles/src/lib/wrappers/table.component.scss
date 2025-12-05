@@ -1,5 +1,27 @@
 @use 'scss' as *;
 
+.table-container {
+  width: 100%;
+  
+  &--scrollable {
+    overflow-y: auto;
+    overflow-x: hidden;
+    
+    // Apply custom scrollbar styling
+    @include custom-scrollbar;
+  }
+}
+
 .lib-table {
   width: 100%;
+}
+
+:host {
+  ::ng-deep {
+    .mat-mdc-header-row {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    }
 }
