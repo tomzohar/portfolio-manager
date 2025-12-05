@@ -1,41 +1,32 @@
-// Design Tokens - Spacing
-$spacing-xs: 4px;
-$spacing-sm: 8px;
-$spacing-md: 16px;
-$spacing-lg: 24px;
-$spacing-xl: 32px;
-$spacing-2xl: 48px;
+// ============================================================================
+// LEGACY VARIABLES (BACKWARD COMPATIBILITY)
+// ============================================================================
+// These Material Design-inspired values are kept ONLY for backward 
+// compatibility with existing auth components and Material theme integration.
+//
+// ⚠️ DO NOT USE IN NEW CODE - Use design tokens from _tokens.scss instead!
+//
+// These will be removed in Phase 3 when we migrate existing components.
+// ============================================================================
 
-// Design Tokens - Layout
-$max-width-container: 1200px;
-$max-width-narrow: 800px;
-$max-width-wide: 1600px;
-
-// Design Tokens - Colors (Material Design inspired)
-$color-primary: #1976d2;
+// === Material Design Colors (for Material theme integration only) ===
+$color-primary: #1976d2;        // Material blue - used by Angular Material
 $color-primary-light: #42a5f5;
 $color-primary-dark: #1565c0;
 
-$color-accent: #ff4081;
+$color-accent: #ff4081;         // Material pink - used by Angular Material
 $color-accent-light: #ff79b0;
 $color-accent-dark: #c60055;
 
-$color-warn: #f44336;
-$color-success: #4caf50;
-$color-info: #2196f3;
+$color-warn: #f44336;           // Material red - used by Angular Material
 
-// Design Tokens - Text Colors
-$color-text-primary: rgba(0, 0, 0, 0.87);
-$color-text-secondary: rgba(0, 0, 0, 0.54);
-$color-text-disabled: rgba(0, 0, 0, 0.38);
-
-// Design Tokens - Background Colors
-$color-background: #fafafa;
+// Light theme backgrounds (for auth components only)
+$color-background: #fafafa;     // Used by login/signup pages
 $color-surface: #ffffff;
 $color-surface-elevated: #ffffff;
 
-// Design Tokens - Borders
-$border-radius-sm: 4px;
+// Light theme borders (for existing components)
+$border-radius-sm: 4px;         // Material default
 $border-radius-md: 8px;
 $border-radius-lg: 12px;
 
@@ -46,24 +37,7 @@ $border-width-thick: 4px;
 $border-color: rgba(0, 0, 0, 0.12);
 $border-color-light: rgba(0, 0, 0, 0.06);
 
-// Design Tokens - Shadows
-$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
-$shadow-md: 0 4px 6px rgba(0, 0, 0, 0.12);
-$shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.15);
-
-// Design Tokens - Typography
-$font-size-xs: 12px;
-$font-size-sm: 14px;
-$font-size-base: 16px;
-$font-size-lg: 18px;
-$font-size-xl: 24px;
-$font-size-2xl: 32px;
-
-$font-weight-normal: 400;
-$font-weight-medium: 500;
-$font-weight-bold: 700;
-
-// Design Tokens - Breakpoints
+// === Breakpoints (Standard across all components) ===
 $breakpoint-xs: 0;
 $breakpoint-sm: 600px;
 $breakpoint-md: 960px;

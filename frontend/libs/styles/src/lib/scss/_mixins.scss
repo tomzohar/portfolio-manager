@@ -1,4 +1,5 @@
-@use './variables' as *;
+@use './tokens' as *;
+@use './variables' as legacy;
 
 // Mixin: Centered Container
 @mixin container-center($max-width: $max-width-container, $padding: $spacing-lg) {
@@ -24,16 +25,16 @@
   gap: $gap;
 }
 
-// Mixin: Card/Surface styling
+// Mixin: Card/Surface styling (LEGACY - for light theme components)
 @mixin card-surface {
-  background-color: $color-surface;
-  border-radius: $border-radius-md;
+  background-color: legacy.$color-surface;
+  border-radius: legacy.$border-radius-md;
   box-shadow: $shadow-sm;
   padding: $spacing-md;
 }
 
-// Mixin: Standard Border
-@mixin border($color: $border-color, $width: $border-width-thin, $radius: $border-radius-sm) {
+// Mixin: Standard Border (LEGACY - for light theme components)
+@mixin border($color: legacy.$border-color, $width: legacy.$border-width-thin, $radius: legacy.$border-radius-sm) {
   border: $width solid $color;
   border-radius: $radius;
 }

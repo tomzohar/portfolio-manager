@@ -1,0 +1,168 @@
+// ============================================================================
+// THEME - CSS CUSTOM PROPERTIES
+// ============================================================================
+// Exposes design tokens as CSS custom properties for runtime access.
+// Components should use var(--property-name) to access these values.
+// ============================================================================
+
+@use './tokens' as *;
+
+:root {
+  // === BACKGROUND COLORS ===
+  --color-bg-primary: #{$color-bg-primary};
+  --color-bg-secondary: #{$color-bg-secondary};
+  --color-bg-tertiary: #{$color-bg-tertiary};
+  --color-bg-overlay: #{$color-bg-overlay};
+  --color-bg-card: #{$color-bg-card};
+  --color-bg-elevated: #{$color-bg-elevated};
+
+  // === TEXT COLORS ===
+  --color-text-primary: #{$color-text-primary};
+  --color-text-secondary: #{$color-text-secondary};
+  --color-text-tertiary: #{$color-text-tertiary};
+  --color-text-muted: #{$color-text-muted};
+  --color-text-disabled: #{$color-text-disabled};
+  --color-text-subtle: #{$color-text-subtle};
+  --color-text-faint: #{$color-text-faint};
+
+  // === BORDER COLORS ===
+  --color-border-primary: #{$color-border-primary};
+  --color-border-secondary: #{$color-border-secondary};
+  --color-border-subtle: #{$color-border-subtle};
+
+  // === AI/BRAND COLORS ===
+  --color-ai-primary: #{$color-ai-primary};
+  --color-ai-secondary: #{$color-ai-secondary};
+  --color-ai-glow: #{$color-ai-glow};
+  --color-ai-bg: #{$color-ai-bg};
+  --color-ai-text: #{$color-ai-text};
+
+  // === STATUS COLORS ===
+  --color-success: #{$color-success};
+  --color-success-light: #{$color-success-light};
+  --color-error: #{$color-error};
+  --color-warning: #{$color-warning};
+  --color-caution: #{$color-caution};
+  --color-info: #{$color-info};
+
+  // === ACTION BADGE COLORS ===
+  --color-buy-bg: #{$color-buy-bg};
+  --color-buy-border: #{$color-buy-border};
+  --color-buy-text: #{$color-buy-text};
+
+  --color-sell-bg: #{$color-sell-bg};
+  --color-sell-border: #{$color-sell-border};
+  --color-sell-text: #{$color-sell-text};
+
+  --color-hold-bg: #{$color-hold-bg};
+  --color-hold-border: #{$color-hold-border};
+  --color-hold-text: #{$color-hold-text};
+
+  --color-monitor-bg: #{$color-monitor-bg};
+  --color-monitor-border: #{$color-monitor-border};
+  --color-monitor-text: #{$color-monitor-text};
+
+  // === TYPOGRAPHY ===
+  --font-family-primary: #{$font-family-primary};
+  --font-family-mono: #{$font-family-mono};
+
+  --font-size-2xs: #{$font-size-2xs};
+  --font-size-xs: #{$font-size-xs};
+  --font-size-sm: #{$font-size-sm};
+  --font-size-base: #{$font-size-base};
+  --font-size-md: #{$font-size-md};
+  --font-size-lg: #{$font-size-lg};
+  --font-size-xl: #{$font-size-xl};
+  --font-size-2xl: #{$font-size-2xl};
+
+  --font-weight-regular: #{$font-weight-regular};
+  --font-weight-medium: #{$font-weight-medium};
+  --font-weight-semibold: #{$font-weight-semibold};
+  --font-weight-bold: #{$font-weight-bold};
+
+  --line-height-tight: #{$line-height-tight};
+  --line-height-normal: #{$line-height-normal};
+  --line-height-relaxed: #{$line-height-relaxed};
+
+  --letter-spacing-tight: #{$letter-spacing-tight};
+  --letter-spacing-normal: #{$letter-spacing-normal};
+  --letter-spacing-wide: #{$letter-spacing-wide};
+
+  // === SPACING ===
+  --spacing-xxs: #{$spacing-xxs};
+  --spacing-xs: #{$spacing-xs};
+  --spacing-sm: #{$spacing-sm};
+  --spacing-md: #{$spacing-md};
+  --spacing-base: #{$spacing-base};
+  --spacing-lg: #{$spacing-lg};
+  --spacing-xl: #{$spacing-xl};
+  --spacing-2xl: #{$spacing-2xl};
+  --spacing-3xl: #{$spacing-3xl};
+
+  --spacing-card-padding: #{$spacing-card-padding};
+  --spacing-log-entry-gap: #{$spacing-log-entry-gap};
+  --spacing-header-padding: #{$spacing-header-padding};
+
+  // === BORDER RADIUS ===
+  --radius-sm: #{$radius-sm};
+  --radius-md: #{$radius-md};
+  --radius-lg: #{$radius-lg};
+  --radius-pill: #{$radius-pill};
+
+  // === SHADOWS ===
+  --shadow-none: #{$shadow-none};
+  --shadow-sm: #{$shadow-sm};
+  --shadow-md: #{$shadow-md};
+  --shadow-lg: #{$shadow-lg};
+  --shadow-xl: #{$shadow-xl};
+  --shadow-ai: #{$shadow-ai};
+
+  // === TRANSITIONS ===
+  --transition-fast: #{$transition-fast};
+  --transition-base: #{$transition-base};
+  --transition-slow: #{$transition-slow};
+
+  // === LAYOUT ===
+  --max-width-container: #{$max-width-container};
+  --max-width-narrow: #{$max-width-narrow};
+  --max-width-wide: #{$max-width-wide};
+
+  // === Z-INDEX ===
+  --z-index-dropdown: #{$z-index-dropdown};
+  --z-index-sticky: #{$z-index-sticky};
+  --z-index-fixed: #{$z-index-fixed};
+  --z-index-modal-backdrop: #{$z-index-modal-backdrop};
+  --z-index-modal: #{$z-index-modal};
+  --z-index-popover: #{$z-index-popover};
+  --z-index-tooltip: #{$z-index-tooltip};
+
+  // === COMPONENT-SPECIFIC ===
+  --progress-bar-height: #{$progress-bar-height};
+  --progress-bar-height-lg: #{$progress-bar-height-lg};
+  --badge-padding-y: #{$badge-padding-y};
+  --badge-padding-x: #{$badge-padding-x};
+  --badge-font-size: #{$badge-font-size};
+  --tag-padding-y: #{$tag-padding-y};
+  --tag-padding-x: #{$tag-padding-x};
+  --tag-font-size: #{$tag-font-size};
+  --header-height: #{$header-height};
+  --summary-card-height: #{$summary-card-height};
+  --icon-size-xs: #{$icon-size-xs};
+  --icon-size-sm: #{$icon-size-sm};
+  --icon-size-base: #{$icon-size-base};
+  --icon-size-md: #{$icon-size-md};
+  --icon-size-lg: #{$icon-size-lg};
+}
+
+// === LIGHT THEME (Future) ===
+// Uncomment when light theme is needed
+/*
+[data-theme='light'] {
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f5f5f5;
+  --color-bg-tertiary: #e5e5e5;
+  --color-text-primary: #000000;
+  --color-text-secondary: #333333;
+  // ... override all colors for light theme
+}
+*/
