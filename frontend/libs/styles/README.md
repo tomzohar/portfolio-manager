@@ -19,6 +19,7 @@ import { ButtonComponent, BadgeComponent } from '@frontend/styles';
 ### Phase 1: Foundation (✅ Complete)
 ### Phase 2: Typography System (✅ Complete)
 ### Phase 3: Component Base Styles (✅ Complete)
+### Phase 4: Icon System (✅ Complete)
 
 The design system includes:
 
@@ -30,6 +31,14 @@ The design system includes:
 - **Shadows**: Elevation levels from sm to xl, plus AI-themed shadow
 - **Transitions**: Fast (150ms), base (300ms), slow (500ms)
 - **Z-Index**: Consistent layering scale
+
+#### Icon System (`IconComponent` + constants)
+Unified icon system with 80+ icons:
+- **Material Icons**: 60+ icons via icon font (dashboard, trending_up, settings, etc.)
+- **Custom Icons**: 30+ custom SVG icons (brain, sparkle, candlestick, etc.)
+- **Categories**: Agent, Chart, News, Risk, Control, Arrow, Status, UI
+- **Component**: IconComponent supports both Material and custom icons
+- **Type-safe**: TypeScript types for all icon names
 
 #### Component Base Styles (`_components.scss`)
 40+ component mixins for building UI elements:
@@ -66,6 +75,26 @@ All design tokens are exposed as CSS custom properties:
 ```
 
 ### Usage Examples
+
+#### Using Icons
+
+```typescript
+import { IconComponent } from '@frontend/styles';
+
+@Component({
+  selector: 'app-my-component',
+  imports: [IconComponent],
+  template: `
+    <!-- Material Icons -->
+    <lib-icon name="dashboard" />
+    <lib-icon name="trending_up" [size]="24" />
+    
+    <!-- Custom SVG Icons -->
+    <lib-icon name="brain" type="custom" />
+    <lib-icon name="sparkle" type="custom" [size]="20" />
+  `
+})
+```
 
 #### Using Component Mixins
 
