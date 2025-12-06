@@ -1,0 +1,68 @@
+@use 'scss' as *;
+
+:host {
+  display: block;
+}
+
+.portfolio-widget {
+  @include card-base;
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+
+  // Header section
+  &__header {
+    @include flex-row($spacing-sm);
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  &__label {
+    @include label-medium;
+    color: var(--color-text-disabled);
+    font-size: var(--font-size-sm);
+  }
+
+  &__info-button {
+    @include button-reset;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-pill);
+    background-color: rgba(39, 39, 42, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color var(--transition-fast);
+    flex-shrink: 0;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: var(--color-text-disabled);
+    }
+
+    &:hover:not(:disabled) {
+      background-color: var(--color-bg-tertiary);
+
+      mat-icon {
+        color: var(--color-text-primary);
+      }
+    }
+
+    &:focus-visible {
+      @include focus-visible;
+    }
+  }
+
+  // Value section
+  &__value {
+    // margin-top: var(--spacing-md);
+  }
+
+  // Badge section
+  &__badge {
+    margin-top: var(--spacing-xs);
+  }
+}

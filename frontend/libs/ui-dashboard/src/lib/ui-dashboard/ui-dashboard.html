@@ -29,6 +29,16 @@
       </div>
     </lib-card>
 
+    <!-- Portfolio Widgets -->
+    @if (!loading() && selectedPortfolioId()) {
+      <div class="portfolio-widgets">
+        <lib-net-account-value-widget
+          [value]="netAccountValue()"
+          [buyingPower]="buyingPower()"
+        />
+      </div>
+    }
+
     <!-- Asset List -->
     @if (loading()) {
     <!-- Loading State -->
@@ -43,6 +53,7 @@
       title="Portfolio Assets"
       [subtitle]="assets().length + ' positions'"
       [headerActions]="true"
+      class="assets-table"
     >
       <!-- Header Actions -->
       <div headerActions>

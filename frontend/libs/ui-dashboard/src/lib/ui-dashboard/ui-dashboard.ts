@@ -15,6 +15,7 @@ import {
   TableComponent,
 } from '@stocks-researcher/styles';
 import { DashboardAsset, DashboardPortfolio } from '@stocks-researcher/types';
+import { NetAccountValueWidgetComponent } from '../net-account-value-widget/net-account-value-widget';
 
 @Component({
   selector: 'lib-ui-dashboard',
@@ -27,6 +28,7 @@ import { DashboardAsset, DashboardPortfolio } from '@stocks-researcher/types';
     ActionMenuComponent,
     ButtonComponent,
     LoadingPageComponent,
+    NetAccountValueWidgetComponent,
   ],
   templateUrl: './ui-dashboard.html',
   styleUrl: './ui-dashboard.scss',
@@ -36,6 +38,7 @@ export class UiDashboardComponent {
   assets = input<DashboardAsset[]>([]);
   selectedPortfolioId = input<string | null>(null);
   loading = input<boolean>(true);
+  buyingPower = input<number | null>(null);
 
   portfolioSelected = output<string>();
   createPortfolio = output<void>();
@@ -43,6 +46,18 @@ export class UiDashboardComponent {
   addAsset = output<void>();
   editAsset = output<DashboardAsset>();
   deleteAsset = output<DashboardAsset>();
+
+  /**
+   * Calculate net account value from assets
+   * Net Account Value = Sum of all (quantity * currentPrice) or (quantity * avgPrice) if currentPrice unavailable
+   */
+  netAccountValue = computed<number>(() => {
+    return this.assets().reduce((total, asset) => {
+      const price = asset.currentPrice ?? asset.avgPrice ?? 0;
+      const value = asset.quantity * price;
+      return total + value;
+    }, 0);
+  });
 
   /**
    * Action menu configuration

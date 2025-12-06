@@ -27,9 +27,22 @@
   }
 }
 
+.portfolio-widgets {
+  // display: grid;
+  // grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  // gap: var(--spacing-lg);
+  display: flex;
+  margin-top: var(--spacing-lg);
+}
+
 .asset-actions {
   display: flex;
   gap: $spacing-xs;
   justify-content: center;
   align-items: center;
+}
+
+.assets-table {
+  margin-top: var(--spacing-lg);
+  display: block;
 }

@@ -1,0 +1,32 @@
+@use 'scss' as *;
+
+:host {
+  display: block;
+}
+
+// Value display
+.nav-value {
+  @include value-large;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: 0.3955px;
+}
+
+// Buying power badge
+.buying-power-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 9px;
+  background-color: rgba(142, 81, 255, 0.1);
+  border: 1px solid rgba(142, 81, 255, 0.2);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: 16px;
+  color: #c4b4ff;
+  white-space: nowrap;
+}

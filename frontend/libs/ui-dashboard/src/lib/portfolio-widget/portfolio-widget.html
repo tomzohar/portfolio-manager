@@ -1,0 +1,25 @@
+<div class="portfolio-widget">
+  <!-- Header -->
+  <div class="portfolio-widget__header">
+    <span class="portfolio-widget__label">{{ label() }}</span>
+    @if (showInfoIcon()) {
+      <button 
+        class="portfolio-widget__info-button"
+        (click)="infoIconClick() ? infoIconClick()!() : undefined"
+        [attr.aria-label]="'More information about ' + label()"
+      >
+        <mat-icon>info</mat-icon>
+      </button>
+    }
+  </div>
+
+  <!-- Value Content -->
+  <div class="portfolio-widget__value">
+    <ng-content select="[value]" />
+  </div>
+
+  <!-- Optional Badge Content -->
+  <div class="portfolio-widget__badge">
+    <ng-content select="[badge]" />
+  </div>
+</div>

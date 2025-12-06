@@ -1,0 +1,17 @@
+<lib-portfolio-widget
+  [label]="'Net Account Value'"
+  [showInfoIcon]="showInfoIcon()"
+  [infoIconClick]="onInfoClick.bind(this)"
+>
+  <!-- Value Display -->
+  <div value class="nav-value">
+    {{ formattedValue() }}
+  </div>
+
+  <!-- Buying Power Badge -->
+  @if (showBuyingPower()) {
+    <div badge class="buying-power-badge">
+      Buying Power: {{ formattedBuyingPower() }}
+    </div>
+  }
+</lib-portfolio-widget>
