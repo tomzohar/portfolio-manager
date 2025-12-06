@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Asset } from './asset.entity';
+import { Transaction } from './transaction.entity';
 
 @Entity('portfolios')
 export class Portfolio {
@@ -23,6 +24,11 @@ export class Portfolio {
 
   @OneToMany(() => Asset, (asset) => asset.portfolio, { cascade: true })
   assets: Asset[];
+
+  @OneToMany(() => Transaction, (transaction) => transaction.portfolio, {
+    cascade: true,
+  })
+  transactions: Transaction[];
 
   @CreateDateColumn()
   createdAt: Date;
