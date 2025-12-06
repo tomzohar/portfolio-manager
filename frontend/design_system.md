@@ -94,6 +94,23 @@ This document outlines the complete design system foundation required before imp
 
 ---
 
+## Form Inputs (New)
+
+The shared `InputComponent` wrapper now supports multi-line text areas. Prefer this option over ad-hoc `<textarea>` tags to keep typography, spacing, and validation consistent.
+
+```ts
+const descriptionInput: InputConfig = {
+  control: this.form.controls.description,
+  label: 'Description',
+  textarea: true,
+  rows: 4,
+  maxlength: 400,
+  fullWidth: true,
+};
+```
+
+Set `textarea: true` and optionally override `rows` when the design calls for narrative fields (portfolio descriptions, rationales, etc.).
+
 ## 1. Design Tokens
 
 Design tokens are the atomic values that make up the design system. They ensure consistency and make theme changes easy.

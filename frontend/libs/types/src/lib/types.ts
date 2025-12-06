@@ -29,8 +29,13 @@ export interface DashboardAsset {
 }
 
 // DTOs for API operations
+export type PortfolioRiskProfile = 'conservative' | 'moderate' | 'aggressive';
+
 export interface CreatePortfolioDto {
   name: string;
+  description?: string;
+  initialInvestment?: number;
+  riskProfile?: PortfolioRiskProfile;
 }
 
 export interface AddAssetDto {
