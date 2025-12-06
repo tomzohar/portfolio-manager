@@ -5,18 +5,19 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { of } from 'rxjs';
 import { Repository } from 'typeorm';
 import { PolygonApiService } from '../assets/services/polygon-api.service';
-import { SerializedUser } from '../users/serializers/user.serializer';
 import { UsersService } from '../users/users.service';
 import { EnrichedAssetDto } from './dto/asset-response.dto';
 import { Asset } from './entities/asset.entity';
 import { Portfolio } from './entities/portfolio.entity';
+import { Transaction, TransactionType } from './entities/transaction.entity';
 import { PortfolioService } from './portfolio.service';
+import { User } from '../users/entities/user.entity';
+import { PortfolioSummaryDto } from './dto/portfolio-summary.dto';
 
 describe('PortfolioService', () => {
   let service: PortfolioService;
   let portfolioRepository: jest.Mocked<Repository<Portfolio>>;
-  let assetRepository: jest.Mocked<Repository<Asset>>;
-  let usersService: jest.Mocked<UsersService>;
+  let transactionRepository: jest.Mocked<Repository<Transaction>>;
   let polygonApiService: jest.Mocked<PolygonApiService>;
 
   const mockUserId = 'user-123';
@@ -27,13 +28,14 @@ describe('PortfolioService', () => {
     email: 'test@example.com',
     createdAt: new Date(),
     updatedAt: new Date(),
-  } as SerializedUser;
+  } as User;
 
   const mockPortfolio = {
     id: mockPortfolioId,
     name: 'Test Portfolio',
     user: mockUser,
     assets: [],
+    transactions: [],
     createdAt: new Date(),
     updatedAt: new Date(),
   } as Portfolio;
@@ -79,6 +81,12 @@ describe('PortfolioService', () => {
           },
         },
         {
+          provide: getRepositoryToken(Transaction),
+          useValue: {
+            find: jest.fn(),
+          },
+        },
+        {
           provide: UsersService,
           useValue: {
             findOne: jest.fn(),
@@ -95,8 +103,7 @@ describe('PortfolioService', () => {
 
     service = module.get<PortfolioService>(PortfolioService);
     portfolioRepository = module.get(getRepositoryToken(Portfolio));
-    assetRepository = module.get(getRepositoryToken(Asset));
-    usersService = module.get(UsersService);
+    transactionRepository = module.get(getRepositoryToken(Transaction));
     polygonApiService = module.get(PolygonApiService);
   });
 
@@ -367,6 +374,188 @@ describe('PortfolioService', () => {
       expect(result).toHaveLength(1);
       expect(result[0].currentPrice).toBeUndefined();
       expect(result[0].ticker).toBe('AAPL');
+    });
+  });
+
+  describe('Portfolio Summary', () => {
+    describe('getPortfolioSummary', () => {
+      it('should return empty summary for portfolio with no transactions', async () => {
+        jest.spyOn(service, 'findOne').mockResolvedValue(mockPortfolio);
+        transactionRepository.find.mockResolvedValue([]);
+
+        const result = await service.getPortfolioSummary(
+          mockPortfolioId,
+          mockUserId,
+        );
+
+        expect(result).toBeInstanceOf(PortfolioSummaryDto);
+        expect(result.totalValue).toBe(0);
+        expect(result.totalCostBasis).toBe(0);
+        expect(result.unrealizedPL).toBe(0);
+        expect(result.positions).toEqual([]);
+      });
+
+      it('should calculate position from single BUY transaction', async () => {
+        const transactions: Transaction[] = [
+          {
+            id: 'tx-1',
+            type: TransactionType.BUY,
+            ticker: 'AAPL',
+            quantity: 10,
+            price: 150.0,
+            transactionDate: new Date('2024-01-01'),
+            portfolio: mockPortfolio,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ];
+
+        const mockSnapshot = {
+          ticker: {
+            ticker: 'AAPL',
+            todaysChangePerc: 2.5,
+            todaysChange: 3.75,
+            updated: 1234567890,
+            day: {
+              o: 150.0,
+              h: 155.0,
+              l: 149.0,
+              c: 160.0,
+              v: 1000000,
+              vw: 151.5,
+            },
+            prevDay: {
+              o: 148.0,
+              h: 151.0,
+              l: 147.0,
+              c: 150.0,
+              v: 900000,
+              vw: 149.5,
+            },
+          },
+          status: 'OK',
+          request_id: 'test-1',
+        };
+
+        jest.spyOn(service, 'findOne').mockResolvedValue(mockPortfolio);
+        transactionRepository.find.mockResolvedValue(transactions);
+        jest
+          .spyOn(polygonApiService, 'getTickerSnapshot')
+          .mockReturnValue(of(mockSnapshot));
+
+        const result = await service.getPortfolioSummary(
+          mockPortfolioId,
+          mockUserId,
+        );
+
+        expect(result.positions).toHaveLength(1);
+        expect(result.positions[0].ticker).toBe('AAPL');
+        expect(result.positions[0].quantity).toBe(10);
+        expect(result.positions[0].avgCostBasis).toBe(150.0);
+        expect(result.positions[0].currentPrice).toBe(160.0);
+        expect(result.positions[0].marketValue).toBe(1600.0);
+        expect(result.totalCostBasis).toBe(1500.0);
+        expect(result.totalValue).toBe(1600.0);
+        expect(result.unrealizedPL).toBe(100.0);
+      });
+
+      it('should calculate weighted average cost from multiple BUY transactions', async () => {
+        const transactions: Transaction[] = [
+          {
+            id: 'tx-1',
+            type: TransactionType.BUY,
+            ticker: 'AAPL',
+            quantity: 10,
+            price: 150.0,
+            transactionDate: new Date('2024-01-01'),
+            portfolio: mockPortfolio,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          {
+            id: 'tx-2',
+            type: TransactionType.BUY,
+            ticker: 'AAPL',
+            quantity: 10,
+            price: 170.0,
+            transactionDate: new Date('2024-01-15'),
+            portfolio: mockPortfolio,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ];
+
+        const mockSnapshot = {
+          ticker: {
+            ticker: 'AAPL',
+            day: { c: 180.0 } as any,
+          },
+        };
+
+        jest.spyOn(service, 'findOne').mockResolvedValue(mockPortfolio);
+        transactionRepository.find.mockResolvedValue(transactions);
+        jest
+          .spyOn(polygonApiService, 'getTickerSnapshot')
+          .mockReturnValue(of(mockSnapshot as any));
+
+        const result = await service.getPortfolioSummary(
+          mockPortfolioId,
+          mockUserId,
+        );
+
+        expect(result.positions[0].quantity).toBe(20);
+        // Weighted avg: (10*150 + 10*170) / 20 = 3200 / 20 = 160
+        expect(result.positions[0].avgCostBasis).toBe(160.0);
+        expect(result.totalCostBasis).toBe(3200.0);
+      });
+
+      it('should handle BUY and SELL transactions correctly', async () => {
+        const transactions: Transaction[] = [
+          {
+            id: 'tx-1',
+            type: TransactionType.BUY,
+            ticker: 'AAPL',
+            quantity: 10,
+            price: 150.0,
+            transactionDate: new Date('2024-01-01'),
+            portfolio: mockPortfolio,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          {
+            id: 'tx-2',
+            type: TransactionType.SELL,
+            ticker: 'AAPL',
+            quantity: 5,
+            price: 160.0,
+            transactionDate: new Date('2024-01-15'),
+            portfolio: mockPortfolio,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ];
+
+        const mockSnapshot = {
+          ticker: {
+            ticker: 'AAPL',
+            day: { c: 170.0 } as any,
+          },
+        };
+
+        jest.spyOn(service, 'findOne').mockResolvedValue(mockPortfolio);
+        transactionRepository.find.mockResolvedValue(transactions);
+        jest
+          .spyOn(polygonApiService, 'getTickerSnapshot')
+          .mockReturnValue(of(mockSnapshot as any));
+
+        const result = await service.getPortfolioSummary(
+          mockPortfolioId,
+          mockUserId,
+        );
+
+        expect(result.positions[0].quantity).toBe(5);
+        expect(result.positions[0].avgCostBasis).toBe(150.0);
+      });
     });
   });
 });
