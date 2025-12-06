@@ -42,9 +42,7 @@
           }"
         />
 
-        <button type="submit" class="auth-button" [disabled]="loading()">
-          {{ loading() ? 'Creating account...' : 'Sign Up' }}
-        </button>
+        <lib-button [config]="submitButtonConfig()" />
       </form>
 
       <div class="auth-footer">

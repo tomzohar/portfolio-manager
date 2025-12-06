@@ -1,19 +1,19 @@
 @use 'scss' as *;
 
 .portfolio-card {
-  // Card base styling - matching Figma design
-  background: $color-bg-secondary;
-  border: 1px solid $color-border-primary;
-  border-radius: $border-radius-lg;
-  padding: $spacing-lg;
+  // Card base styling - exact Figma match
+  background: #18181b; // zinc-900
+  border: 1px solid #27272a; // zinc-800
+  border-radius: 14px;
+  padding: 25px 25px 24px 25px;
   display: flex;
   flex-direction: column;
-  gap: $spacing-md;
+  gap: 16px;
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    border-color: $color-border-secondary;
+    border-color: #3f3f46; // zinc-700
     transform: translateY(-2px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
   }
@@ -23,25 +23,31 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: $spacing-md;
+    gap: 16px;
+    height: 48px;
   }
 
   &__title-section {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: $spacing-xs;
+    gap: 4px;
   }
 
   &__title-row {
     display: flex;
     align-items: center;
-    gap: $spacing-sm;
+    gap: 8px;
+    height: 24px;
   }
 
   &__title {
-    @include text-heading-3;
-    color: $color-text-primary;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 24px;
+    letter-spacing: -0.3125px;
+    color: #ffffff;
     margin: 0;
   }
 
@@ -53,10 +59,10 @@
     display: flex;
     align-items: center;
     transition: transform 0.2s ease;
-    color: $color-text-subtle;
+    color: #71717b;
 
     &.is-favorite {
-      color: $color-warning;
+      color: #ffd230;
     }
 
     &:hover {
@@ -65,20 +71,27 @@
   }
 
   &__description {
-    @include text-body-sm;
-    color: $color-text-subtle;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+    letter-spacing: -0.1504px;
+    color: #71717b;
     margin: 0;
   }
 
   // Risk profile badge
   &__badge {
-    padding: $spacing-xs $spacing-sm;
-    border-radius: $border-radius-sm;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-medium;
-    line-height: 1.33;
+    padding: 3px 9px;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
     white-space: nowrap;
-    height: fit-content;
+    height: 22px;
+    display: flex;
+    align-items: center;
 
     &.risk-aggressive {
       background: rgba(251, 44, 54, 0.1);
@@ -89,32 +102,37 @@
     &.risk-moderate {
       background: rgba(254, 154, 0, 0.1);
       border: 1px solid rgba(254, 154, 0, 0.2);
-      color: $color-warning;
+      color: #ffd230;
     }
 
     &.risk-conservative {
       background: rgba(0, 212, 146, 0.1);
       border: 1px solid rgba(0, 212, 146, 0.2);
-      color: $color-success;
+      color: #00d492;
     }
   }
 
   // Total value section
   &__value-section {
-    border-bottom: 1px solid $color-border-primary;
-    padding-bottom: $spacing-md;
+    border-bottom: 1px solid #27272a;
+    padding-bottom: 16px;
+    min-height: 73px;
   }
 
   &__total-value {
-    @include text-heading-1;
-    color: $color-text-secondary;
-    margin-bottom: $spacing-sm;
+    font-family: 'Inter', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 32px;
+    color: #f4f4f5; // zinc-100
+    margin: 0 0 4px 0;
   }
 
   &__change-row {
     display: flex;
     align-items: center;
-    gap: $spacing-sm;
+    gap: 8px;
+    height: 20px;
   }
 
   &__change-icon {
@@ -126,116 +144,92 @@
     }
 
     &.negative {
-      color: $color-error;
+      color: #ff637e;
     }
   }
 
   &__change-value {
-    @include text-body-sm;
-    font-weight: $font-weight-regular;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
 
     &.positive {
       color: #00c950;
     }
 
     &.negative {
-      color: $color-error;
+      color: #ff637e;
     }
   }
 
   &__change-label {
-    @include text-caption;
-    color: $color-text-subtle;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
+    color: #71717b;
   }
 
   // Performance metrics
   &__performance {
     display: flex;
-    gap: $spacing-lg;
+    gap: 0;
+    height: 40px;
   }
 
   &__metric {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: $spacing-xs;
+    gap: 4px;
   }
 
   &__metric-label {
-    @include text-caption;
-    color: $color-text-subtle;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
+    color: #71717b;
   }
 
   &__metric-value {
-    @include text-body-sm;
-    font-weight: $font-weight-medium;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
 
     &.positive {
       color: #05df72;
     }
 
     &.negative {
-      color: $color-error;
+      color: #ff637e;
     }
   }
 
-  // Asset allocation
-  &__allocation {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-sm;
-  }
-
-  &__allocation-header {
+  // Positions count
+  &__positions {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    height: 16px;
   }
 
-  &__allocation-label {
-    @include text-caption;
-    color: $color-text-subtle;
+  &__positions-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
+    color: #71717b;
   }
 
-  &__allocation-count {
-    @include text-caption;
-    color: $color-text-subtle;
-  }
-
-  &__allocation-bar {
-    display: flex;
-    height: 8px;
-    background: $color-bg-tertiary;
-    border-radius: 999px;
-    overflow: hidden;
-  }
-
-  &__allocation-segment {
-    height: 100%;
-    transition: width 0.3s ease;
-  }
-
-  &__allocation-legend {
-    display: flex;
-    gap: $spacing-md;
-    flex-wrap: wrap;
-  }
-
-  &__allocation-item {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-  }
-
-  &__allocation-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-  }
-
-  &__allocation-text {
-    @include text-caption;
-    color: $color-text-subtle;
+  &__positions-count {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
+    color: #71717b;
   }
 
   // Footer
@@ -243,16 +237,23 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    height: 16px;
   }
 
   &__updated {
-    @include text-caption;
-    color: $color-text-subtle;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
+    color: #71717b;
   }
 
   &__link {
-    @include text-caption;
-    color: $color-ai-primary;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
+    color: #a684ff;
     cursor: pointer;
 
     &:hover {

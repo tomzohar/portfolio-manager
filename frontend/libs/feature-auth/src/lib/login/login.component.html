@@ -41,9 +41,7 @@
           }"
         />
 
-        <button type="submit" class="auth-button" [disabled]="loading()">
-          {{ loading() ? 'Signing in...' : 'Sign In' }}
-        </button>
+        <lib-button [config]="submitButtonConfig()" />
       </form>
 
       <div class="auth-footer">

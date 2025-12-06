@@ -1,1 +1,1 @@
-// Export data access services here
+export * from './lib/portfolios-page.facade';

@@ -147,6 +147,7 @@ export class PortfolioService {
   /**
    * Enrich assets with current market data from Polygon API
    * Fetches ticker snapshots in parallel and returns enriched assets
+   * Special handling for CASH: always set price to 1.0, skip API call
    * @param assets - Array of assets to enrich
    * @returns Promise of enriched assets with market data
    */
@@ -156,6 +157,11 @@ export class PortfolioService {
     // Fetch current price data for all assets in parallel
     const snapshotPromises = assets.map(
       async (asset): Promise<PolygonSnapshotResponse | null> => {
+        // Skip API call for CASH - it's always 1:1
+        if (asset.ticker === 'CASH') {
+          return null;
+        }
+
         try {
           return await lastValueFrom(
             this.polygonApiService.getTickerSnapshot(asset.ticker),
@@ -171,6 +177,16 @@ export class PortfolioService {
 
     // Enrich assets with current price data
     return assets.map((asset, index) => {
+      // Special handling for CASH - always 1.0
+      if (asset.ticker === 'CASH') {
+        return new EnrichedAssetDto(asset, {
+          currentPrice: 1.0,
+          todaysChange: 0,
+          todaysChangePerc: 0,
+          lastUpdated: Date.now(),
+        });
+      }
+
       const snapshot = snapshots[index];
 
       if (snapshot?.ticker?.day) {
@@ -394,6 +410,7 @@ export class PortfolioService {
 
   /**
    * Enrich positions with current market data from Polygon API
+   * Special handling for CASH: always set price to 1.0, skip API call
    */
   private async enrichPositionsWithMarketData(
     positions: Array<{
@@ -405,6 +422,11 @@ export class PortfolioService {
     // Fetch current price data for all positions in parallel
     const snapshotPromises = positions.map(
       async (position): Promise<PolygonSnapshotResponse | null> => {
+        // Skip API call for CASH - it's always 1:1
+        if (position.ticker === 'CASH') {
+          return null;
+        }
+
         try {
           return await lastValueFrom(
             this.polygonApiService.getTickerSnapshot(position.ticker),
@@ -420,6 +442,16 @@ export class PortfolioService {
 
     // Enrich positions with current price data
     return positions.map((position, index) => {
+      // Special handling for CASH - always 1.0
+      if (position.ticker === 'CASH') {
+        return new PositionSummaryDto({
+          ticker: position.ticker,
+          quantity: position.quantity,
+          avgCostBasis: position.avgCostBasis,
+          currentPrice: 1.0,
+        });
+      }
+
       const snapshot = snapshots[index];
 
       if (snapshot?.ticker?.day) {

@@ -10,15 +10,6 @@ export interface PortfolioPerformance {
 }
 
 /**
- * Asset allocation breakdown
- */
-export interface AssetAllocation {
-  category: string;
-  percentage: number;
-  color: string;
-}
-
-/**
  * Portfolio card data model
  * Extends basic portfolio with enriched data for card display
  */
@@ -31,7 +22,6 @@ export interface PortfolioCardData {
   todayChange: number; // Dollar amount
   todayChangePercentage: number;
   performance: PortfolioPerformance;
-  assetAllocation: AssetAllocation[];
   positionCount: number;
   lastUpdated: Date;
   isFavorite?: boolean;

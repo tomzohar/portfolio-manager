@@ -1,3 +1,27 @@
 <div class="portfolios-page">
-  <h1>Portfolios</h1>
+  <div class="portfolios-page__header">
+    <h1>My Portfolios</h1>
+    <lib-button [config]="createButtonConfig" (clicked)="onCreatePortfolio()" />
+  </div>
+
+  @if (loading()) {
+  <div class="portfolios-page__loading">
+    <p>Loading portfolios...</p>
+  </div>
+  } @if (!loading() && portfolios().length === 0) {
+  <div class="portfolios-page__empty">
+    <p>No portfolios yet. Create your first portfolio to get started!</p>
+  </div>
+  } @if (!loading() && portfolios().length > 0) {
+  <div class="portfolios-page__grid">
+    @for (portfolio of portfolios(); track portfolio.id) {
+    <lib-portfolio-card
+      [portfolio]="portfolio"
+      (cardClicked)="onCardClicked($event)"
+      (favoriteToggled)="onFavoriteToggled($event)"
+    />
+    }
+  </div>
+  }
 </div>
+

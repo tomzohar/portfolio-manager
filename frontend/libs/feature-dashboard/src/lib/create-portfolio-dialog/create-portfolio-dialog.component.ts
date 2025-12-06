@@ -136,7 +136,6 @@ export class CreatePortfolioDialogComponent {
     return {
       control: this.nameControl,
       label: 'Portfolio Name',
-      placeholder: 'e.g., Growth Portfolio, Retirement Fund',
       required: true,
       fullWidth: true,
       errorMessages: {
@@ -150,7 +149,6 @@ export class CreatePortfolioDialogComponent {
     return {
       control: this.descriptionControl,
       label: 'Description',
-      placeholder: 'Brief description of your portfolio strategy…',
       textarea: true,
       rows: 4,
       maxlength: 400,
@@ -162,7 +160,6 @@ export class CreatePortfolioDialogComponent {
     return {
       control: this.initialInvestmentControl,
       label: 'Initial Investment',
-      placeholder: '$10,000',
       type: 'number',
       min: 100,
       step: 100,

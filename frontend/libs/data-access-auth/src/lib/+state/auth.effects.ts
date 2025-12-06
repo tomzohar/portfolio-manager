@@ -68,7 +68,7 @@ export class AuthEffects {
         ofType(AuthActions.loginSuccess),
         tap(({ response }) => {
           this.authStorage.setToken(response.token);
-          this.router.navigate(['/dashboard']);
+          this.router.navigate(['/portfolios']);
         })
       ),
     { dispatch: false }
@@ -80,7 +80,7 @@ export class AuthEffects {
         ofType(AuthActions.signupSuccess),
         tap(({ response }) => {
           this.authStorage.setToken(response.token);
-          this.router.navigate(['/dashboard']);
+          this.router.navigate(['/portfolios']);
         })
       ),
     { dispatch: false }
@@ -120,7 +120,7 @@ export class AuthEffects {
           // If already on login/signup, redirect to dashboard
           const currentUrl = this.router.url;
           if (currentUrl === '/login' || currentUrl === '/signup') {
-            this.router.navigate(['/dashboard']);
+            this.router.navigate(['/portfolios']);
           }
         })
       ),

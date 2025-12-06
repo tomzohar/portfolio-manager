@@ -11,6 +11,27 @@ import {
 } from '@stocks-researcher/types';
 
 /**
+ * Portfolio Summary DTO (matching backend)
+ */
+export interface PortfolioSummaryDto {
+  totalValue: number;
+  totalCostBasis: number;
+  unrealizedPL: number;
+  unrealizedPLPercent: number;
+  positions: PositionSummaryDto[];
+}
+
+export interface PositionSummaryDto {
+  ticker: string;
+  quantity: number;
+  avgCostBasis: number;
+  currentPrice?: number;
+  marketValue?: number;
+  unrealizedPL?: number;
+  unrealizedPLPercent?: number;
+}
+
+/**
  * PortfolioApiService
  * 
  * HTTP service for portfolio and asset data operations.
@@ -90,6 +111,16 @@ export class PortfolioApiService {
    */
   deletePortfolio(portfolioId: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${portfolioId}`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Gets portfolio summary with aggregated metrics
+   * @param portfolioId - The portfolio ID
+   */
+  getPortfolioSummary(portfolioId: string): Observable<PortfolioSummaryDto> {
+    return this.http.get<PortfolioSummaryDto>(`${this.apiUrl}/${portfolioId}/summary`).pipe(
       catchError(this.handleError)
     );
   }

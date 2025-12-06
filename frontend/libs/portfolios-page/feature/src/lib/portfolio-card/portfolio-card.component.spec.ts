@@ -21,12 +21,6 @@ describe('PortfolioCardComponent', () => {
       ninetyDays: 12.8,
       oneYear: 28.4,
     },
-    assetAllocation: [
-      { category: 'Stocks', percentage: 85, color: '#8e51ff' },
-      { category: 'Bonds', percentage: 5, color: '#2b7fff' },
-      { category: 'Crypto', percentage: 8, color: '#ff6900' },
-      { category: 'Cash', percentage: 2, color: '#00c950' },
-    ],
     positionCount: 12,
     lastUpdated: new Date(Date.now() - 2 * 60 * 1000), // 2 minutes ago
     isFavorite: true,
@@ -84,10 +78,10 @@ describe('PortfolioCardComponent', () => {
     expect(metrics[2].textContent?.trim()).toBe('+28.40%');
   });
 
-  it('should display asset allocation items', () => {
+  it('should display positions count', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    const items = compiled.querySelectorAll('.portfolio-card__allocation-item');
-    expect(items.length).toBe(4);
+    const positionsCount = compiled.querySelector('.portfolio-card__positions-count');
+    expect(positionsCount?.textContent?.trim()).toBe('12');
   });
 
   it('should emit cardClicked event when card is clicked', () => {
