@@ -32,25 +32,37 @@ interface RiskProfileOption {
   icon: string;
 }
 
+const RiskProfileLables = {
+  [PortfolioRiskProfile.CONSERVATIVE]: 'Conservative',
+  [PortfolioRiskProfile.MODERATE]: 'Moderate',
+  [PortfolioRiskProfile.AGGRESSIVE]: 'Aggressive',
+}
+
+const RiskLevelIcons = {
+  [PortfolioRiskProfile.CONSERVATIVE]: 'shield',
+  [PortfolioRiskProfile.MODERATE]: 'trending_up',
+  [PortfolioRiskProfile.AGGRESSIVE]: 'bolt',
+}
+
 const DEFAULT_INITIAL_INVESTMENT = 10000;
 const RISK_PROFILE_OPTIONS: RiskProfileOption[] = [
   {
-    value: 'conservative',
-    label: 'Conservative',
+    value: PortfolioRiskProfile.CONSERVATIVE,
+    label: RiskProfileLables[PortfolioRiskProfile.CONSERVATIVE],
     description: 'Capital preservation with low volatility allocation.',
-    icon: 'shield',
+    icon: RiskLevelIcons[PortfolioRiskProfile.CONSERVATIVE],
   },
   {
-    value: 'moderate',
-    label: 'Moderate',
+    value: PortfolioRiskProfile.MODERATE,
+    label: RiskProfileLables[PortfolioRiskProfile.MODERATE],
     description: 'Balanced growth guided by AI risk modeling.',
-    icon: 'trending_up',
+    icon: RiskLevelIcons[PortfolioRiskProfile.MODERATE],
   },
   {
-    value: 'aggressive',
-    label: 'Aggressive',
+    value: PortfolioRiskProfile.AGGRESSIVE,
+    label: RiskProfileLables[PortfolioRiskProfile.AGGRESSIVE],
     description: 'Higher growth potential with tactical rebalancing.',
-    icon: 'bolt',
+    icon: RiskLevelIcons[PortfolioRiskProfile.AGGRESSIVE],
   },
 ];
 
@@ -96,7 +108,7 @@ export class CreatePortfolioDialogComponent {
       [Validators.required, Validators.min(100)],
     ],
     riskProfile: [
-      this.data?.riskProfile ?? 'moderate',
+      this.data?.riskProfile ?? PortfolioRiskProfile.MODERATE,
       [Validators.required],
     ],
   });

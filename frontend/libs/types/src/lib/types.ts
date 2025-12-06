@@ -2,10 +2,19 @@ export function types(): string {
   return 'types';
 }
 
+// Enums
+export enum PortfolioRiskProfile {
+  CONSERVATIVE = 'conservative',
+  MODERATE = 'moderate',
+  AGGRESSIVE = 'aggressive',
+}
+
 // Portfolio Dashboard Types (matching backend entities)
 export interface DashboardPortfolio {
   id: string;
   name: string;
+  description?: string;
+  riskProfile?: PortfolioRiskProfile;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -29,7 +38,6 @@ export interface DashboardAsset {
 }
 
 // DTOs for API operations
-export type PortfolioRiskProfile = 'conservative' | 'moderate' | 'aggressive';
 
 export interface CreatePortfolioDto {
   name: string;
