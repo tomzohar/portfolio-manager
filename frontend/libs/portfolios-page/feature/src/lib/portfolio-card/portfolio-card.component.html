@@ -1,0 +1,161 @@
+<div class="portfolio-card" (click)="onCardClick()">
+  <!-- Header -->
+  <div class="portfolio-card__header">
+    <div class="portfolio-card__title-section">
+      <div class="portfolio-card__title-row">
+        <h3 class="portfolio-card__title">{{ portfolio().name }}</h3>
+        @if (portfolio().isFavorite !== undefined) {
+        <button
+          class="portfolio-card__favorite"
+          [class.is-favorite]="portfolio().isFavorite"
+          (click)="onFavoriteToggle($event)"
+          [attr.aria-label]="
+            portfolio().isFavorite
+              ? 'Remove from favorites'
+              : 'Add to favorites'
+          "
+        >
+          <lib-icon
+            [name]="portfolio().isFavorite ? 'star' : 'star_outline'"
+            [size]="16"
+          />
+        </button>
+        }
+      </div>
+      @if (portfolio().description) {
+      <p class="portfolio-card__description">{{ portfolio().description }}</p>
+      }
+    </div>
+    @if (portfolio().riskProfile) {
+    <div class="portfolio-card__badge" [ngClass]="getRiskProfileConfig().class">
+      <span>{{ getRiskProfileConfig().text }}</span>
+    </div>
+    }
+  </div>
+
+  <!-- Total Value -->
+  <div class="portfolio-card__value-section">
+    <div class="portfolio-card__total-value">
+      {{ formatCurrency(portfolio().totalValue) }}
+    </div>
+    <div class="portfolio-card__change-row">
+      <span
+        class="portfolio-card__change-icon"
+        [ngClass]="{
+          positive: isPositive(portfolio().todayChange),
+          negative: !isPositive(portfolio().todayChange)
+        }"
+      >
+        <lib-icon
+          [name]="
+            isPositive(portfolio().todayChange)
+              ? 'trending_up'
+              : 'trending_down'
+          "
+          [size]="16"
+        />
+      </span>
+      <span
+        class="portfolio-card__change-value"
+        [ngClass]="{
+          positive: isPositive(portfolio().todayChange),
+          negative: !isPositive(portfolio().todayChange)
+        }"
+      >
+        {{ formatCurrency(portfolio().todayChange) }} ({{
+          formatPercentage(portfolio().todayChangePercentage)
+        }})
+      </span>
+      <span class="portfolio-card__change-label">today</span>
+    </div>
+  </div>
+
+  <!-- Performance Metrics -->
+  <div class="portfolio-card__performance">
+    <div class="portfolio-card__metric">
+      <span class="portfolio-card__metric-label">30 Days</span>
+      <span
+        class="portfolio-card__metric-value"
+        [ngClass]="{
+          positive: isPositive(portfolio().performance.thirtyDays),
+          negative: !isPositive(portfolio().performance.thirtyDays)
+        }"
+      >
+        {{ formatPercentage(portfolio().performance.thirtyDays) }}
+      </span>
+    </div>
+    <div class="portfolio-card__metric">
+      <span class="portfolio-card__metric-label">90 Days</span>
+      <span
+        class="portfolio-card__metric-value"
+        [ngClass]="{
+          positive: isPositive(portfolio().performance.ninetyDays),
+          negative: !isPositive(portfolio().performance.ninetyDays)
+        }"
+      >
+        {{ formatPercentage(portfolio().performance.ninetyDays) }}
+      </span>
+    </div>
+    <div class="portfolio-card__metric">
+      <span class="portfolio-card__metric-label">1 Year</span>
+      <span
+        class="portfolio-card__metric-value"
+        [ngClass]="{
+          positive: isPositive(portfolio().performance.oneYear),
+          negative: !isPositive(portfolio().performance.oneYear)
+        }"
+      >
+        {{ formatPercentage(portfolio().performance.oneYear) }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Asset Allocation -->
+  <div class="portfolio-card__allocation">
+    <div class="portfolio-card__allocation-header">
+      <span class="portfolio-card__allocation-label">Asset Allocation</span>
+      <span class="portfolio-card__allocation-count"
+        >{{ portfolio().positionCount }} positions</span
+      >
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="portfolio-card__allocation-bar">
+      @for (allocation of portfolio().assetAllocation; track
+      allocation.category) {
+      <div
+        class="portfolio-card__allocation-segment"
+        [style.width.%]="allocation.percentage"
+        [style.background-color]="allocation.color"
+        [attr.aria-label]="
+          allocation.category + ' ' + allocation.percentage + '%'
+        "
+      ></div>
+      }
+    </div>
+
+    <!-- Legend -->
+    <div class="portfolio-card__allocation-legend">
+      @for (allocation of portfolio().assetAllocation; track
+      allocation.category) {
+      <div class="portfolio-card__allocation-item">
+        <div
+          class="portfolio-card__allocation-dot"
+          [style.background-color]="allocation.color"
+        ></div>
+        <span class="portfolio-card__allocation-text">
+          {{ allocation.category }} {{ allocation.percentage }}%
+        </span>
+      </div>
+      }
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="portfolio-card__footer">
+    <span class="portfolio-card__updated">
+      Updated {{ getTimeAgo(portfolio().lastUpdated) }}
+    </span>
+    <span class="portfolio-card__link">View Details →</span>
+  </div>
+</div>

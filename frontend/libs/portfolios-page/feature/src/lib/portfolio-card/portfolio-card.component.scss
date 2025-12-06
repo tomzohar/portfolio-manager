@@ -1,0 +1,262 @@
+@use 'scss' as *;
+
+.portfolio-card {
+  // Card base styling - matching Figma design
+  background: $color-bg-secondary;
+  border: 1px solid $color-border-primary;
+  border-radius: $border-radius-lg;
+  padding: $spacing-lg;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: $color-border-secondary;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  }
+
+  // Header section
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $spacing-md;
+  }
+
+  &__title-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  &__title-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__title {
+    @include text-heading-3;
+    color: $color-text-primary;
+    margin: 0;
+  }
+
+  &__favorite {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: transform 0.2s ease;
+    color: $color-text-subtle;
+
+    &.is-favorite {
+      color: $color-warning;
+    }
+
+    &:hover {
+      transform: scale(1.2);
+    }
+  }
+
+  &__description {
+    @include text-body-sm;
+    color: $color-text-subtle;
+    margin: 0;
+  }
+
+  // Risk profile badge
+  &__badge {
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $border-radius-sm;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    line-height: 1.33;
+    white-space: nowrap;
+    height: fit-content;
+
+    &.risk-aggressive {
+      background: rgba(251, 44, 54, 0.1);
+      border: 1px solid rgba(251, 44, 54, 0.2);
+      color: #ff6467;
+    }
+
+    &.risk-moderate {
+      background: rgba(254, 154, 0, 0.1);
+      border: 1px solid rgba(254, 154, 0, 0.2);
+      color: $color-warning;
+    }
+
+    &.risk-conservative {
+      background: rgba(0, 212, 146, 0.1);
+      border: 1px solid rgba(0, 212, 146, 0.2);
+      color: $color-success;
+    }
+  }
+
+  // Total value section
+  &__value-section {
+    border-bottom: 1px solid $color-border-primary;
+    padding-bottom: $spacing-md;
+  }
+
+  &__total-value {
+    @include text-heading-1;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__change-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__change-icon {
+    display: flex;
+    align-items: center;
+
+    &.positive {
+      color: #00c950;
+    }
+
+    &.negative {
+      color: $color-error;
+    }
+  }
+
+  &__change-value {
+    @include text-body-sm;
+    font-weight: $font-weight-regular;
+
+    &.positive {
+      color: #00c950;
+    }
+
+    &.negative {
+      color: $color-error;
+    }
+  }
+
+  &__change-label {
+    @include text-caption;
+    color: $color-text-subtle;
+  }
+
+  // Performance metrics
+  &__performance {
+    display: flex;
+    gap: $spacing-lg;
+  }
+
+  &__metric {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  &__metric-label {
+    @include text-caption;
+    color: $color-text-subtle;
+  }
+
+  &__metric-value {
+    @include text-body-sm;
+    font-weight: $font-weight-medium;
+
+    &.positive {
+      color: #05df72;
+    }
+
+    &.negative {
+      color: $color-error;
+    }
+  }
+
+  // Asset allocation
+  &__allocation {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__allocation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  &__allocation-label {
+    @include text-caption;
+    color: $color-text-subtle;
+  }
+
+  &__allocation-count {
+    @include text-caption;
+    color: $color-text-subtle;
+  }
+
+  &__allocation-bar {
+    display: flex;
+    height: 8px;
+    background: $color-bg-tertiary;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  &__allocation-segment {
+    height: 100%;
+    transition: width 0.3s ease;
+  }
+
+  &__allocation-legend {
+    display: flex;
+    gap: $spacing-md;
+    flex-wrap: wrap;
+  }
+
+  &__allocation-item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  &__allocation-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  &__allocation-text {
+    @include text-caption;
+    color: $color-text-subtle;
+  }
+
+  // Footer
+  &__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  &__updated {
+    @include text-caption;
+    color: $color-text-subtle;
+  }
+
+  &__link {
+    @include text-caption;
+    color: $color-ai-primary;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

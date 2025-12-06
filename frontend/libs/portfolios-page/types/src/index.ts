@@ -1,1 +1,1 @@
-// Export types here
+export * from './lib/portfolio-card.types';
