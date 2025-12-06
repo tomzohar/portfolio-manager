@@ -51,6 +51,10 @@ export class TransactionsService {
 
     const transaction = this.transactionRepository.create({
       ...createTransactionDto,
+      // Parse string date or default to now if not provided
+      transactionDate: createTransactionDto.transactionDate
+        ? new Date(createTransactionDto.transactionDate)
+        : new Date(),
       portfolio: { id: portfolioId } as Portfolio,
     });
 
@@ -85,10 +89,13 @@ export class TransactionsService {
 
     if (filters?.startDate || filters?.endDate) {
       if (filters.startDate && filters.endDate) {
-        where.transactionDate = Between(filters.startDate, filters.endDate);
+        where.transactionDate = Between(
+          new Date(filters.startDate),
+          new Date(filters.endDate),
+        );
       } else if (filters.startDate) {
         // Only start date provided
-        where.transactionDate = Between(filters.startDate, new Date());
+        where.transactionDate = Between(new Date(filters.startDate), new Date());
       }
     }
 
