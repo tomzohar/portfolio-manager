@@ -7,7 +7,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Portfolio } from './entities/portfolio.entity';
 import { Asset } from './entities/asset.entity';
+import { Transaction, TransactionType } from './entities/transaction.entity';
 import { CreatePortfolioDto, AddAssetDto } from './dto/portfolio.dto';
+import {
+  PortfolioSummaryDto,
+  PositionSummaryDto,
+} from './dto/portfolio-summary.dto';
 import { UsersService } from '../users/users.service';
 import { PolygonApiService } from '../assets/services/polygon-api.service';
 import type { PolygonSnapshotResponse } from '../assets/types/polygon-api.types';
@@ -21,6 +26,8 @@ export class PortfolioService {
     private portfolioRepository: Repository<Portfolio>,
     @InjectRepository(Asset)
     private assetRepository: Repository<Asset>,
+    @InjectRepository(Transaction)
+    private transactionRepository: Repository<Transaction>,
     private usersService: UsersService,
     private polygonApiService: PolygonApiService,
   ) {}
@@ -213,7 +220,7 @@ export class PortfolioService {
 
   /**
    * Delete a portfolio (with ownership verification)
-   * Will cascade delete all associated assets
+   * Will cascade delete all associated assets and transactions
    */
   async deletePortfolio(portfolioId: string, userId: string): Promise<void> {
     // Verify ownership first
@@ -231,7 +238,187 @@ export class PortfolioService {
       throw new ForbiddenException('Access denied to this portfolio');
     }
 
-    // Delete the portfolio (assets will cascade delete due to relation configuration)
+    // Delete the portfolio (assets and transactions will cascade delete)
     await this.portfolioRepository.remove(portfolio);
+  }
+
+  /**
+   * Get portfolio summary with aggregated metrics
+   * Calculates positions from transactions and enriches with current market data
+   */
+  async getPortfolioSummary(
+    portfolioId: string,
+    userId: string,
+  ): Promise<PortfolioSummaryDto> {
+    // Verify ownership
+    const portfolio = await this.findOne(portfolioId, userId);
+    if (!portfolio) {
+      throw new NotFoundException('Portfolio not found');
+    }
+
+    // Get all transactions for the portfolio
+    const transactions = await this.transactionRepository.find({
+      where: { portfolio: { id: portfolioId } },
+      order: { transactionDate: 'ASC' },
+    });
+
+    // If no transactions, return empty summary
+    if (transactions.length === 0) {
+      return new PortfolioSummaryDto({
+        totalValue: 0,
+        totalCostBasis: 0,
+        unrealizedPL: 0,
+        unrealizedPLPercent: 0,
+        positions: [],
+      });
+    }
+
+    // Calculate positions by ticker
+    const positions = this.calculatePositionsFromTransactions(transactions);
+
+    // Filter out positions with zero quantity
+    const activePositions = positions.filter((pos) => pos.quantity > 0);
+
+    // If no active positions, return empty summary
+    if (activePositions.length === 0) {
+      return new PortfolioSummaryDto({
+        totalValue: 0,
+        totalCostBasis: 0,
+        unrealizedPL: 0,
+        unrealizedPLPercent: 0,
+        positions: [],
+      });
+    }
+
+    // Enrich positions with current market prices
+    const enrichedPositions =
+      await this.enrichPositionsWithMarketData(activePositions);
+
+    // Calculate portfolio-level metrics
+    let totalValue = 0;
+    let totalCostBasis = 0;
+
+    for (const position of enrichedPositions) {
+      totalCostBasis += position.avgCostBasis * position.quantity;
+      if (position.marketValue !== undefined) {
+        totalValue += position.marketValue;
+      }
+    }
+
+    const unrealizedPL = totalValue - totalCostBasis;
+    const unrealizedPLPercent =
+      totalCostBasis !== 0 ? unrealizedPL / totalCostBasis : 0;
+
+    return new PortfolioSummaryDto({
+      totalValue,
+      totalCostBasis,
+      unrealizedPL,
+      unrealizedPLPercent,
+      positions: enrichedPositions,
+    });
+  }
+
+  /**
+   * Calculate positions from transactions using weighted average cost basis
+   * Groups transactions by ticker and processes chronologically
+   */
+  private calculatePositionsFromTransactions(
+    transactions: Transaction[],
+  ): Array<{ ticker: string; quantity: number; avgCostBasis: number }> {
+    const positionMap = new Map<
+      string,
+      { quantity: number; totalCost: number }
+    >();
+
+    // Process transactions chronologically
+    for (const transaction of transactions) {
+      const ticker = transaction.ticker;
+      const qty = Number(transaction.quantity);
+      const price = Number(transaction.price);
+
+      const position = positionMap.get(ticker) || { quantity: 0, totalCost: 0 };
+
+      if (transaction.type === TransactionType.BUY) {
+        // Add to position and update total cost
+        position.quantity += qty;
+        position.totalCost += qty * price;
+      } else if (transaction.type === TransactionType.SELL) {
+        // Reduce position proportionally
+        if (position.quantity > 0) {
+          const avgCost = position.totalCost / position.quantity;
+          position.quantity -= qty;
+          position.totalCost = position.quantity * avgCost;
+        }
+      }
+
+      positionMap.set(ticker, position);
+    }
+
+    // Convert map to array of positions
+    const positions: Array<{
+      ticker: string;
+      quantity: number;
+      avgCostBasis: number;
+    }> = [];
+
+    for (const [ticker, position] of positionMap.entries()) {
+      if (position.quantity > 0) {
+        positions.push({
+          ticker,
+          quantity: position.quantity,
+          avgCostBasis: position.totalCost / position.quantity,
+        });
+      }
+    }
+
+    return positions;
+  }
+
+  /**
+   * Enrich positions with current market data from Polygon API
+   */
+  private async enrichPositionsWithMarketData(
+    positions: Array<{
+      ticker: string;
+      quantity: number;
+      avgCostBasis: number;
+    }>,
+  ): Promise<PositionSummaryDto[]> {
+    // Fetch current price data for all positions in parallel
+    const snapshotPromises = positions.map(
+      async (position): Promise<PolygonSnapshotResponse | null> => {
+        try {
+          return await lastValueFrom(
+            this.polygonApiService.getTickerSnapshot(position.ticker),
+          );
+        } catch {
+          // Return null if snapshot fetch fails
+          return null;
+        }
+      },
+    );
+
+    const snapshots = await Promise.all(snapshotPromises);
+
+    // Enrich positions with current price data
+    return positions.map((position, index) => {
+      const snapshot = snapshots[index];
+
+      if (snapshot?.ticker?.day) {
+        return new PositionSummaryDto({
+          ticker: position.ticker,
+          quantity: position.quantity,
+          avgCostBasis: position.avgCostBasis,
+          currentPrice: snapshot.ticker.day.c,
+        });
+      }
+
+      // If snapshot failed or unavailable, return position without market data
+      return new PositionSummaryDto({
+        ticker: position.ticker,
+        quantity: position.quantity,
+        avgCostBasis: position.avgCostBasis,
+      });
+    });
   }
 }

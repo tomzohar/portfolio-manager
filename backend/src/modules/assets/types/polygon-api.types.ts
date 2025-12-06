@@ -50,4 +50,3 @@ export interface PolygonSnapshotResponse {
   status: string;
   request_id: string;
 }
-
