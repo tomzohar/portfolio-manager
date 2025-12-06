@@ -95,7 +95,10 @@ export class TransactionsService {
         );
       } else if (filters.startDate) {
         // Only start date provided
-        where.transactionDate = Between(new Date(filters.startDate), new Date());
+        where.transactionDate = Between(
+          new Date(filters.startDate),
+          new Date(),
+        );
       }
     }
 
