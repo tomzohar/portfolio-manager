@@ -140,7 +140,7 @@ describe('FeatureDashboardComponent', () => {
     expect(mockDialogService.open).toHaveBeenCalledWith({
       component: CreatePortfolioDialogComponent,
       data: {},
-      width: '500px',
+      width: '560px',
       disableClose: false,
     });
   });

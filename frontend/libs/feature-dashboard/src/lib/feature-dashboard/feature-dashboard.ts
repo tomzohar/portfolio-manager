@@ -12,7 +12,11 @@ import {
   DashboardAsset,
 } from '@stocks-researcher/types';
 import { take } from 'rxjs';
-import { CreatePortfolioDialogComponent } from '../create-portfolio-dialog/create-portfolio-dialog.component';
+import {
+  CreatePortfolioDialogComponent,
+  CreatePortfolioDialogData,
+  CreatePortfolioDialogResult,
+} from '../create-portfolio-dialog/create-portfolio-dialog.component';
 import {
   AddAssetDialogComponent,
   AddAssetDialogData,
@@ -51,23 +55,22 @@ export class FeatureDashboardComponent implements OnInit {
   }
 
   onCreatePortfolio(): void {
-    const dialogRef = this.dialogService.open({
+    const dialogRef = this.dialogService.open<
+      CreatePortfolioDialogData | undefined,
+      CreatePortfolioDialogResult
+    >({
       component: CreatePortfolioDialogComponent,
       data: {},
-      width: '500px',
+      width: '560px',
       disableClose: false,
     });
 
     // Handle dialog result
     dialogRef.afterClosedObservable
       .pipe(take(1))
-      .subscribe((result: { name: string } | undefined) => {
-        if (result?.name) {
-          const dto: CreatePortfolioDto = {
-            name: result.name,
-          };
-
-          this.facade.createPortfolio(dto);
+      .subscribe((result: CreatePortfolioDialogResult | undefined) => {
+        if (result) {
+          this.facade.createPortfolio(result);
         }
       });
   }

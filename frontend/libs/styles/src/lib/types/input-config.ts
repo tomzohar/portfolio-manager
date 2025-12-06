@@ -107,6 +107,20 @@ export interface InputConfig {
   maxlength?: number;
 
   /**
+   * Renders a textarea instead of a standard input
+   * Useful for multi-line descriptions or notes
+   * @default false
+   */
+  textarea?: boolean;
+
+  /**
+   * Number of rows to display for textarea inputs
+   * Only applies when textarea is true
+   * @default 4
+   */
+  rows?: number;
+
+  /**
    * Minimum value for number inputs
    * @default undefined
    */

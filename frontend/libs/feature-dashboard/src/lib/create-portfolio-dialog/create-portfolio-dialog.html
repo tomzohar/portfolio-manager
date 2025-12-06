@@ -1,9 +1,61 @@
-<h2 mat-dialog-title>Create Portfolio</h2>
+<h2 mat-dialog-title>{{ title }}</h2>
 
 <mat-dialog-content>
-  <form [formGroup]="form">
-    <lib-input [config]="portfolioNameInputConfig" />
-  </form>
+  <div class="dialog-wrapper">
+    <p class="dialog-subtitle">
+      {{ subtitle }}
+    </p>
+
+    <form class="dialog-form" [formGroup]="form" novalidate>
+      <div class="form-stack">
+        <lib-input [config]="portfolioNameInputConfig" />
+        <lib-input [config]="descriptionInputConfig" />
+      </div>
+
+      <section class="investment-card">
+        <div class="section-heading">
+          <div>
+            <p class="section-label">Funding</p>
+            <h3>Initial Investment</h3>
+          </div>
+          <span class="section-helper">Used to seed the initial allocation baseline.</span>
+        </div>
+        <lib-input [config]="initialInvestmentInputConfig" />
+      </section>
+
+      <section class="risk-section">
+        <div class="section-heading">
+          <div>
+            <p class="section-label">Risk Profile & Allocation</p>
+            <h3>Risk Profile</h3>
+          </div>
+          <span class="section-helper">
+            Choose how the AI balances volatility against growth.
+          </span>
+        </div>
+
+        <div class="risk-options">
+          @for (option of riskProfiles; track option.value) {
+            <button
+              type="button"
+              class="risk-option"
+              [class.selected]="isSelectedRiskProfile(option.value)"
+              (click)="selectRiskProfile(option.value)"
+              [attr.aria-pressed]="isSelectedRiskProfile(option.value)"
+            >
+              <span class="risk-icon">
+                <mat-icon>{{ option.icon }}</mat-icon>
+              </span>
+              <span class="risk-copy">
+                <span class="risk-label">{{ option.label }}</span>
+                <span class="risk-description">{{ option.description }}</span>
+              </span>
+            </button>
+          }
+        </div>
+      </section>
+    </form>
+  </div>
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
@@ -12,11 +64,7 @@
     (clicked)="onCancel()"
   />
   <lib-button
-    [config]="{ 
-      label: 'Create', 
-      variant: 'raised',
-      disabled: !isFormValid
-    }"
+    [config]="createButtonConfig()"
     (clicked)="onSubmit()"
   />
 </mat-dialog-actions>

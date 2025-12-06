@@ -34,13 +34,15 @@ export class PortfolioService {
 
   /**
    * Create a new portfolio for the authenticated user
+   * If initialInvestment is provided, creates a CASH deposit transaction
    * Returns only portfolio data without user relation to avoid exposing sensitive data
    */
   async create(
     userId: string,
     createPortfolioDto: CreatePortfolioDto,
   ): Promise<Portfolio> {
-    const { name } = createPortfolioDto;
+    const { name, description, riskProfile, initialInvestment } =
+      createPortfolioDto;
     const user = await this.usersService.findOne(userId);
 
     if (!user) {
@@ -49,10 +51,26 @@ export class PortfolioService {
 
     const portfolio = this.portfolioRepository.create({
       name,
+      description,
+      riskProfile,
       user,
     });
 
     const savedPortfolio = await this.portfolioRepository.save(portfolio);
+
+    // Create initial cash deposit transaction if initialInvestment is provided
+    if (initialInvestment && initialInvestment > 0) {
+      await this.transactionRepository.save(
+        this.transactionRepository.create({
+          type: TransactionType.BUY,
+          ticker: 'CASH',
+          quantity: initialInvestment,
+          price: 1, // Cash is always 1:1
+          transactionDate: new Date(),
+          portfolio: savedPortfolio,
+        }),
+      );
+    }
 
     // Return portfolio without user relation to avoid exposing user data
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -1,16 +1,131 @@
 @use 'scss' as *;
 
-mat-dialog-content {
-  min-width: 400px;
-  padding: $spacing-md;
+:host {
+  display: block;
 }
 
-.full-width {
-  width: 100%;
+mat-dialog-content {
+  padding: 0 $spacing-xl $spacing-xl;
+  min-width: 520px;
+}
+
+.dialog-wrapper {
+  @include flex-column($spacing-xl);
+  padding: 0 0 $spacing-lg;
+}
+
+.dialog-subtitle {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+
+.dialog-form {
+  @include flex-column($spacing-xl);
+}
+
+.form-stack {
+  @include flex-column($spacing-md);
+}
+
+.investment-card {
+  @include card-elevated;
+  padding: $spacing-lg;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-primary);
+  background-color: var(--color-bg-tertiary);
+}
+
+.section-heading {
+  @include flex-between(flex-start);
+  margin-bottom: $spacing-md;
+
+  h3 {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+  }
+}
+
+.section-label {
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-subtle);
+  margin: 0 0 $spacing-xxs;
+}
+
+.section-helper {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-subtle);
+  max-width: 220px;
+}
+
+.risk-section {
+  @include flex-column($spacing-md);
+}
+
+.risk-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: $spacing-md;
+}
+
+.risk-option {
+  @include flex-column($spacing-sm);
+  padding: $spacing-lg;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-primary);
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+
+  .risk-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-ai-primary);
+
+    mat-icon {
+      font-size: 20px;
+    }
+  }
+
+  .risk-label {
+    font-weight: var(--font-weight-medium);
+    font-size: var(--font-size-base);
+  }
+
+  .risk-description {
+    display: block;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-subtle);
+  }
+
+  &:focus-visible {
+    @include focus-visible;
+  }
+
+  &.selected {
+    border-color: var(--color-ai-primary);
+    background: linear-gradient(
+      135deg,
+      rgba(166, 132, 255, 0.18),
+      rgba(142, 81, 255, 0.08)
+    );
+    box-shadow: var(--shadow-md);
+  }
 }
 
 mat-dialog-actions {
-  padding: $spacing-md;
+  padding: 0 $spacing-xl $spacing-xl;
   margin: 0;
+  gap: $spacing-md;
 }
 

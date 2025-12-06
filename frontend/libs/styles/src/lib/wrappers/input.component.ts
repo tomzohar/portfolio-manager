@@ -99,6 +99,20 @@ export class InputComponent {
   }
 
   /**
+   * Determine if the control should render as a textarea
+   */
+  isTextarea(): boolean {
+    return !!this.config().textarea;
+  }
+
+  /**
+   * Number of rows for textarea variant
+   */
+  getRows(): number {
+    return this.config().rows ?? 4;
+  }
+
+  /**
    * Get the effective appearance (with default)
    */
   getAppearance(): 'fill' | 'outline' {

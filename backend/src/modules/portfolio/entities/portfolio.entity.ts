@@ -11,6 +11,12 @@ import { User } from '../../users/entities/user.entity';
 import { Asset } from './asset.entity';
 import { Transaction } from './transaction.entity';
 
+export enum PortfolioRiskProfile {
+  CONSERVATIVE = 'conservative',
+  MODERATE = 'moderate',
+  AGGRESSIVE = 'aggressive',
+}
+
 @Entity('portfolios')
 export class Portfolio {
   @PrimaryGeneratedColumn('uuid')
@@ -18,6 +24,16 @@ export class Portfolio {
 
   @Column()
   name: string;
+
+  @Column({ nullable: true })
+  description?: string;
+
+  @Column({
+    type: 'enum',
+    enum: PortfolioRiskProfile,
+    nullable: true,
+  })
+  riskProfile?: PortfolioRiskProfile;
 
   @ManyToOne(() => User, (user) => user.portfolios)
   user: User;
