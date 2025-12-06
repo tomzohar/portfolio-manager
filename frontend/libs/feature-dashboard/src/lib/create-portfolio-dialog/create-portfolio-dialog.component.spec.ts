@@ -41,7 +41,7 @@ describe('CreatePortfolioDialogComponent', () => {
       name: 'AI Growth',
       description: 'Leverages AI to rebalance weekly.',
       initialInvestment: 5000,
-      riskProfile: 'aggressive',
+      riskProfile: PortfolioRiskProfile.AGGRESSIVE,
     });
   });
 
@@ -108,7 +108,7 @@ describe('CreatePortfolioDialogComponent', () => {
   });
 
   it('should update risk profile selection through helper', () => {
-    const target: PortfolioRiskProfile = 'conservative';
+    const target: PortfolioRiskProfile = PortfolioRiskProfile.CONSERVATIVE;
     component.selectRiskProfile(target);
 
     expect(component.riskProfileControl.value).toBe(target);
