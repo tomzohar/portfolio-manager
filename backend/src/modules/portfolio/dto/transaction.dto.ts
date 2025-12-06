@@ -12,10 +12,7 @@ export const CreateTransactionSchema = z.object({
     .transform((val) => val.toUpperCase()),
   quantity: z.number().positive(),
   price: z.number().nonnegative(),
-  transactionDate: z.coerce
-    .date()
-    .optional()
-    .default(() => new Date()),
+  transactionDate: z.string().datetime().optional(),
 });
 
 export class CreateTransactionDto extends createZodDto(
@@ -98,8 +95,8 @@ export class TransactionResponseDto {
 // Query filters for getting transactions
 export const GetTransactionsQuerySchema = z.object({
   ticker: z.string().optional(),
-  startDate: z.coerce.date().optional(),
-  endDate: z.coerce.date().optional(),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
   type: z.nativeEnum(TransactionType).optional(),
 });
 
