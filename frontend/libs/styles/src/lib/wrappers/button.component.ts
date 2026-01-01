@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, HostBinding } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ButtonConfig } from '../types/button-config';
@@ -56,6 +56,29 @@ export class ButtonComponent {
    * Emitted when the button is clicked
    */
   clicked = output<MouseEvent>();
+
+  /**
+   * Bind size class to host element
+   */
+  @HostBinding('class')
+  get hostClasses(): string {
+    const classes: string[] = [];
+    
+    if (this.config().fullWidth) {
+      classes.push('full-width');
+    }
+
+    const size = this.config().size;
+    if (size) {
+      classes.push(`size-${size}`);
+    }
+
+    if (this.config().ghost) {
+      classes.push('ghost');
+    }
+    
+    return classes.join(' ');
+  }
 
   /**
    * Handle button click
@@ -124,21 +147,11 @@ export class ButtonComponent {
   }
 
   /**
-   * Get CSS classes for the button
+   * Get CSS classes for the button element
    */
   getClasses(): string {
-    const classes: string[] = [];
-    
-    if (this.config().fullWidth) {
-      classes.push('full-width');
-    }
-    
     const cssClass = this.config().cssClass;
-    if (cssClass) {
-      classes.push(cssClass);
-    }
-    
-    return classes.join(' ');
+    return cssClass || '';
   }
 }
 

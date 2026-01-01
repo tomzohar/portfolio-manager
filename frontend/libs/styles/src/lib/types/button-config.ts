@@ -21,6 +21,18 @@ export interface ButtonConfig {
   color?: 'primary' | 'accent' | 'warn';
 
   /**
+   * Button size
+   * @default undefined (normal size)
+   */
+  size?: 'xs' | 'sm' | 'md' | 'lg';
+
+  /**
+   * Ghost mode - no hover effects
+   * @default false
+   */
+  ghost?: boolean;
+
+  /**
    * Whether the button is disabled
    * @default false
    */
