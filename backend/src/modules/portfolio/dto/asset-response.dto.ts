@@ -100,7 +100,7 @@ export class EnrichedAssetDto {
     if (marketData) {
       this.currentPrice = marketData.currentPrice;
       this.todaysChange = marketData.todaysChange;
-      if (marketData.todaysChangePerc) {
+      if (marketData.todaysChangePerc !== undefined) {
         this.todaysChangePerc =
           Number(marketData.todaysChangePerc.toFixed(2)) / 100;
       }

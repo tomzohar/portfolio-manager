@@ -96,6 +96,7 @@ describe('PortfolioService', () => {
           provide: PolygonApiService,
           useValue: {
             getTickerSnapshot: jest.fn(),
+            getPreviousClose: jest.fn(),
           },
         },
       ],
@@ -122,65 +123,55 @@ describe('PortfolioService', () => {
         assets: [mockAsset1, mockAsset2],
       };
 
-      const mockSnapshot1 = {
-        ticker: {
-          ticker: 'AAPL',
-          todaysChangePerc: 2.5,
-          todaysChange: 3.75,
-          updated: 1234567890,
-          day: {
-            o: 150.0,
-            h: 155.0,
-            l: 149.0,
-            c: 153.75,
+      const mockPreviousClose1 = {
+        ticker: 'AAPL',
+        queryCount: 1,
+        resultsCount: 1,
+        adjusted: true,
+        results: [
+          {
+            T: 'AAPL',
             v: 1000000,
             vw: 151.5,
+            o: 150.0,
+            c: 153.75,
+            h: 155.0,
+            l: 149.0,
+            t: 1234567890,
+            n: 5000,
           },
-          prevDay: {
-            o: 148.0,
-            h: 151.0,
-            l: 147.0,
-            c: 150.0,
-            v: 900000,
-            vw: 149.5,
-          },
-        },
+        ],
         status: 'OK',
         request_id: 'test-1',
       };
 
-      const mockSnapshot2 = {
-        ticker: {
-          ticker: 'GOOGL',
-          todaysChangePerc: -1.5,
-          todaysChange: -42.5,
-          updated: 1234567891,
-          day: {
-            o: 2800.0,
-            h: 2810.0,
-            l: 2755.0,
-            c: 2757.5,
+      const mockPreviousClose2 = {
+        ticker: 'GOOGL',
+        queryCount: 1,
+        resultsCount: 1,
+        adjusted: true,
+        results: [
+          {
+            T: 'GOOGL',
             v: 500000,
             vw: 2780.0,
+            o: 2800.0,
+            c: 2757.5,
+            h: 2810.0,
+            l: 2755.0,
+            t: 1234567891,
+            n: 3000,
           },
-          prevDay: {
-            o: 2790.0,
-            h: 2805.0,
-            l: 2785.0,
-            c: 2800.0,
-            v: 450000,
-            vw: 2795.0,
-          },
-        },
+        ],
         status: 'OK',
         request_id: 'test-2',
       };
 
       portfolioRepository.findOne.mockResolvedValue(portfolioWithAssets);
       jest
-        .spyOn(polygonApiService, 'getTickerSnapshot')
-        .mockReturnValueOnce(of(mockSnapshot1))
-        .mockReturnValueOnce(of(mockSnapshot2));
+        .spyOn(polygonApiService, 'getPreviousClose')
+        .mockReturnValueOnce(of(mockPreviousClose1))
+        .mockReturnValueOnce(of(mockPreviousClose2));
 
       const result = await service.getAssets(mockPortfolioId, mockUserId);
 
@@ -188,8 +179,8 @@ describe('PortfolioService', () => {
       expect(result[0]).toBeInstanceOf(EnrichedAssetDto);
       expect(result[0].ticker).toBe('AAPL');
       expect(result[0].currentPrice).toBe(153.75);
-      expect(result[0].todaysChange).toBe(3.75);
-      expect(result[0].todaysChangePerc).toBe(0.025); // 2.5% -> 0.025 (converted to decimal)
+      expect(result[0].todaysChange).toBe(0); // No intraday change with previous close
+      expect(result[0].todaysChangePerc).toBe(0); // No intraday change with previous close
       expect(result[0].lastUpdated).toBe(1234567890);
       // Calculated fields: avgPrice = 150, currentPrice = 153.75, quantity = 10
       expect(result[0].marketValue).toBe(1537.5); // 153.75 * 10
@@ -199,16 +190,16 @@ describe('PortfolioService', () => {
       expect(result[1]).toBeInstanceOf(EnrichedAssetDto);
       expect(result[1].ticker).toBe('GOOGL');
       expect(result[1].currentPrice).toBe(2757.5);
-      expect(result[1].todaysChange).toBe(-42.5);
-      expect(result[1].todaysChangePerc).toBe(-0.015); // -1.5% -> -0.015 (converted to decimal)
+      expect(result[1].todaysChange).toBe(0); // No intraday change with previous close
+      expect(result[1].todaysChangePerc).toBe(0); // No intraday change with previous close
       // Calculated fields: avgPrice = 2800, currentPrice = 2757.5, quantity = 5
       expect(result[1].marketValue).toBe(13787.5); // 2757.5 * 5
       expect(result[1].pl).toBe(-212.5); // (2757.5 - 2800) * 5
       expect(result[1].plPercent).toBeCloseTo(-0.015179, 4); // (2757.5 - 2800) / 2800
 
-      expect(polygonApiService.getTickerSnapshot).toHaveBeenCalledTimes(2);
-      expect(polygonApiService.getTickerSnapshot).toHaveBeenCalledWith('AAPL');
-      expect(polygonApiService.getTickerSnapshot).toHaveBeenCalledWith('GOOGL');
+      expect(polygonApiService.getPreviousClose).toHaveBeenCalledTimes(2);
+      expect(polygonApiService.getPreviousClose).toHaveBeenCalledWith('AAPL');
+      expect(polygonApiService.getPreviousClose).toHaveBeenCalledWith('GOOGL');
     });
 
     it('should handle API failures gracefully and return assets without price data', async () => {
@@ -247,37 +238,32 @@ describe('PortfolioService', () => {
         assets: [mockAsset1, mockAsset2],
       };
 
-      const mockSnapshot1 = {
-        ticker: {
-          ticker: 'AAPL',
-          todaysChangePerc: 2.5,
-          todaysChange: 3.75,
-          updated: 1234567890,
-          day: {
-            o: 150.0,
-            h: 155.0,
-            l: 149.0,
-            c: 153.75,
+      const mockPreviousClose1 = {
+        ticker: 'AAPL',
+        queryCount: 1,
+        resultsCount: 1,
+        adjusted: true,
+        results: [
+          {
+            T: 'AAPL',
             v: 1000000,
             vw: 151.5,
+            o: 150.0,
+            c: 153.75,
+            h: 155.0,
+            l: 149.0,
+            t: 1234567890,
+            n: 5000,
           },
-          prevDay: {
-            o: 148.0,
-            h: 151.0,
-            l: 147.0,
-            c: 150.0,
-            v: 900000,
-            vw: 149.5,
-          },
-        },
+        ],
         status: 'OK',
         request_id: 'test-1',
       };
 
       portfolioRepository.findOne.mockResolvedValue(portfolioWithAssets);
       jest
-        .spyOn(polygonApiService, 'getTickerSnapshot')
-        .mockReturnValueOnce(of(mockSnapshot1)) // Success for AAPL
+        .spyOn(polygonApiService, 'getPreviousClose')
+        .mockReturnValueOnce(of(mockPreviousClose1)) // Success for AAPL
         .mockReturnValueOnce(of(null)); // Failure for GOOGL
 
       const result = await service.getAssets(mockPortfolioId, mockUserId);
