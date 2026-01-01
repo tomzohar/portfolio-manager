@@ -6,6 +6,7 @@ import { TickerResultDto } from '../dto/ticker-result.dto';
 import {
   PolygonTickerResponse,
   PolygonSnapshotResponse,
+  PolygonPreviousCloseResponse,
 } from '../types/polygon-api.types';
 
 @Injectable()
@@ -91,6 +92,43 @@ export class PolygonApiService {
         catchError((error: Error) => {
           this.logger.error(
             `Polygon API snapshot error for ${ticker}: ${error.message}`,
+            error.stack,
+          );
+          return of(null);
+        }),
+      );
+  }
+
+  /**
+   * Get the previous day's close data for a single ticker
+   * @param ticker - The ticker symbol
+   * @returns Observable of previous close data or null on error
+   */
+  getPreviousClose(
+    ticker: string,
+  ): Observable<PolygonPreviousCloseResponse | null> {
+    this.logger.log(`Fetching previous close for ticker: ${ticker}`);
+
+    const params = {
+      adjusted: 'true', // Use adjusted prices (accounts for splits/dividends)
+      apiKey: this.apiKey,
+    };
+
+    return this.httpService
+      .get<PolygonPreviousCloseResponse>(
+        `${this.baseUrl.replace('/v3', '/v2')}/aggs/ticker/${ticker}/prev`,
+        { params },
+      )
+      .pipe(
+        map((response) => {
+          this.logger.log(
+            `Successfully fetched previous close for ${ticker}: $${response.data.results?.[0]?.c}`,
+          );
+          return response.data;
+        }),
+        catchError((error: Error) => {
+          this.logger.error(
+            `Polygon API previous close error for ${ticker}: ${error.message}`,
             error.stack,
           );
           return of(null);

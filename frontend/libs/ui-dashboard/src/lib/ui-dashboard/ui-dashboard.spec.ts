@@ -62,18 +62,20 @@ describe('UiDashboardComponent', () => {
     expect(loadingPage).toBeTruthy();
   });
 
-  it('should render action menu when portfolios exist and not loading', () => {
+  it('should render page header when portfolios exist and not loading', () => {
     fixture.componentRef.setInput('portfolios', mockPortfolios);
     fixture.componentRef.setInput('loading', false);
+    fixture.componentRef.setInput('selectedPortfolioId', '1');
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const actionMenu = compiled.querySelector('lib-action-menu');
-    expect(actionMenu).toBeTruthy();
+    const pageHeader = compiled.querySelector('lib-page-header');
+    expect(pageHeader).toBeTruthy();
   });
 
-  it('should render portfolio selection card', () => {
+  it('should render assets card when portfolio is selected', () => {
     fixture.componentRef.setInput('portfolios', mockPortfolios);
+    fixture.componentRef.setInput('selectedPortfolioId', '1');
     fixture.componentRef.setInput('loading', false);
     fixture.detectChanges();
 
@@ -144,27 +146,27 @@ describe('UiDashboardComponent', () => {
       expect(emptyState).toBeTruthy();
     });
 
-    it('should not display empty state when portfolios exist', () => {
+    it('should render page header when portfolios exist', () => {
       fixture.componentRef.setInput('portfolios', mockPortfolios);
+      fixture.componentRef.setInput('selectedPortfolioId', '1');
       fixture.componentRef.setInput('loading', false);
       fixture.detectChanges();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      // Should not show the portfolio empty state when portfolios exist
-      const emptyStates = compiled.querySelectorAll('lib-empty-state');
-      const portfolioSelect = compiled.querySelector('lib-select');
+      // Should show page header when portfolios exist
+      const pageHeader = compiled.querySelector('lib-page-header');
       
-      expect(portfolioSelect).toBeTruthy();
+      expect(pageHeader).toBeTruthy();
     });
 
-    it('should not display portfolio selection card when portfolios are empty', () => {
+    it('should not display page header when portfolios are empty', () => {
       fixture.componentRef.setInput('portfolios', []);
       fixture.componentRef.setInput('loading', false);
       fixture.detectChanges();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      const select = compiled.querySelector('lib-select');
-      expect(select).toBeNull();
+      const pageHeader = compiled.querySelector('lib-page-header');
+      expect(pageHeader).toBeNull();
     });
 
     it('should emit createPortfolio event when empty state action is clicked', (done) => {

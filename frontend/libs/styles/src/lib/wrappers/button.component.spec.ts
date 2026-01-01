@@ -209,16 +209,16 @@ describe('ButtonComponent', () => {
   });
 
   describe('CSS Classes', () => {
-    it('should apply full-width class when fullWidth is true', () => {
+    it('should apply full-width class to host when fullWidth is true', () => {
       const config: ButtonConfig = { ...defaultConfig, fullWidth: true };
       fixture.componentRef.setInput('config', config);
       fixture.detectChanges();
 
-      const button = fixture.nativeElement.querySelector('button');
-      expect(button.classList.contains('full-width')).toBe(true);
+      const host = fixture.nativeElement;
+      expect(host.classList.contains('full-width')).toBe(true);
     });
 
-    it('should apply custom CSS class', () => {
+    it('should apply custom CSS class to button element', () => {
       const config: ButtonConfig = { ...defaultConfig, cssClass: 'custom-class' };
       fixture.componentRef.setInput('config', config);
       fixture.detectChanges();
@@ -227,13 +227,21 @@ describe('ButtonComponent', () => {
       expect(button.classList.contains('custom-class')).toBe(true);
     });
 
-    it('should apply multiple classes', () => {
-      const config: ButtonConfig = { ...defaultConfig, fullWidth: true, cssClass: 'custom' };
+    it('should apply size and ghost classes to host element', () => {
+      const config: ButtonConfig = { 
+        ...defaultConfig, 
+        size: 'xs',
+        ghost: true,
+        cssClass: 'custom'
+      };
       fixture.componentRef.setInput('config', config);
       fixture.detectChanges();
 
+      const host = fixture.nativeElement;
+      expect(host.classList.contains('size-xs')).toBe(true);
+      expect(host.classList.contains('ghost')).toBe(true);
+      
       const button = fixture.nativeElement.querySelector('button');
-      expect(button.classList.contains('full-width')).toBe(true);
       expect(button.classList.contains('custom')).toBe(true);
     });
   });

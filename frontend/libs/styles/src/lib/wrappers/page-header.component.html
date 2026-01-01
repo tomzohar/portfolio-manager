@@ -1,0 +1,28 @@
+<header class="page-header">
+  <div class="page-header__left">
+    @if (config().backButton) {
+      <div class="page-header__back">
+        <lib-button
+          [config]="backButtonConfig()"
+          (clicked)="onBackClick()"
+        />
+      </div>
+    }
+    <h1 class="page-header__title">{{ config().title }}</h1>
+  </div>
+
+  <div class="page-header__right">
+    @if (config().ctaButton) {
+      <lib-button
+        [config]="config().ctaButton!"
+        (clicked)="onCtaClick()"
+      />
+    }
+    @if (config().actionMenu) {
+      <lib-action-menu
+        [config]="config().actionMenu!"
+        (itemSelected)="onMenuItemClick($event)"
+      />
+    }
+  </div>
+</header>

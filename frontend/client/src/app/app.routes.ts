@@ -14,8 +14,20 @@ export interface RouteData {
 export const appRoutes: Route[] = [
   {
     path: '',
-    redirectTo: 'dashboard',
+    redirectTo: 'portfolios',
     pathMatch: 'full',
+  },
+  {
+    path: 'portfolios',
+    canActivate: [authGuard],
+    data: { 
+      title: 'Portfolios',
+      icon: 'chart-bars' as BrandIconName
+    } satisfies RouteData,
+    loadComponent: () =>
+      import('@frontend/portfolios-page-feature').then(
+        (m) => m.PortfoliosPageComponent
+      ),
   },
   {
     path: 'dashboard',

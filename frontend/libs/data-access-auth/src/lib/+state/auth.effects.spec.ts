@@ -167,29 +167,33 @@ describe('AuthEffects', () => {
   });
 
   describe('loginSuccess$', () => {
-    it('should store token and navigate to dashboard', (done) => {
+    it('should store token and navigate to portfolios', (done) => {
       const response = { token: 'test-token', user: { id: '1', email: 'test@example.com' } };
-      
+
       actions$ = of(AuthActions.loginSuccess({ response }));
 
-      effects.loginSuccess$.subscribe(() => {
-        expect(authStorage.setToken).toHaveBeenCalledWith(response.token);
-        expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
-        done();
+      effects.loginSuccess$.subscribe({
+        complete: () => {
+          expect(authStorage.setToken).toHaveBeenCalledWith(response.token);
+          expect(router.navigate).toHaveBeenCalledWith(['/portfolios']);
+          done();
+        }
       });
     });
   });
 
   describe('signupSuccess$', () => {
-    it('should store token and navigate to dashboard', (done) => {
+    it('should store token and navigate to portfolios', (done) => {
       const response = { token: 'test-token', user: { id: '1', email: 'test@example.com' } };
-      
+
       actions$ = of(AuthActions.signupSuccess({ response }));
 
-      effects.signupSuccess$.subscribe(() => {
-        expect(authStorage.setToken).toHaveBeenCalledWith(response.token);
-        expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
-        done();
+      effects.signupSuccess$.subscribe({
+        complete: () => {
+          expect(authStorage.setToken).toHaveBeenCalledWith(response.token);
+          expect(router.navigate).toHaveBeenCalledWith(['/portfolios']);
+          done();
+        }
       });
     });
   });
@@ -224,35 +228,39 @@ describe('AuthEffects', () => {
   });
 
   describe('checkAuthSuccess$', () => {
-    it('should navigate to dashboard when on login page', (done) => {
+    it('should navigate to portfolios when on login page', (done) => {
       Object.defineProperty(router, 'url', {
         get: jest.fn().mockReturnValue('/login'),
         configurable: true,
       });
-      
-      actions$ = of(AuthActions.checkAuthSuccess({ 
-        response: { token: 'test', user: { id: '1', email: 'test@example.com' } } 
+
+      actions$ = of(AuthActions.checkAuthSuccess({
+        response: { token: 'test', user: { id: '1', email: 'test@example.com' } }
       }));
 
-      effects.checkAuthSuccess$.subscribe(() => {
-        expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
-        done();
+      effects.checkAuthSuccess$.subscribe({
+        complete: () => {
+          expect(router.navigate).toHaveBeenCalledWith(['/portfolios']);
+          done();
+        }
       });
     });
 
-    it('should navigate to dashboard when on signup page', (done) => {
+    it('should navigate to portfolios when on signup page', (done) => {
       Object.defineProperty(router, 'url', {
         get: jest.fn().mockReturnValue('/signup'),
         configurable: true,
       });
-      
-      actions$ = of(AuthActions.checkAuthSuccess({ 
-        response: { token: 'test', user: { id: '1', email: 'test@example.com' } } 
+
+      actions$ = of(AuthActions.checkAuthSuccess({
+        response: { token: 'test', user: { id: '1', email: 'test@example.com' } }
       }));
 
-      effects.checkAuthSuccess$.subscribe(() => {
-        expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
-        done();
+      effects.checkAuthSuccess$.subscribe({
+        complete: () => {
+          expect(router.navigate).toHaveBeenCalledWith(['/portfolios']);
+          done();
+        }
       });
     });
 
@@ -261,14 +269,16 @@ describe('AuthEffects', () => {
         get: jest.fn().mockReturnValue('/dashboard'),
         configurable: true,
       });
-      
-      actions$ = of(AuthActions.checkAuthSuccess({ 
-        response: { token: 'test', user: { id: '1', email: 'test@example.com' } } 
+
+      actions$ = of(AuthActions.checkAuthSuccess({
+        response: { token: 'test', user: { id: '1', email: 'test@example.com' } }
       }));
 
-      effects.checkAuthSuccess$.subscribe(() => {
-        expect(router.navigate).not.toHaveBeenCalled();
-        done();
+      effects.checkAuthSuccess$.subscribe({
+        complete: () => {
+          expect(router.navigate).not.toHaveBeenCalled();
+          done();
+        }
       });
     });
   });

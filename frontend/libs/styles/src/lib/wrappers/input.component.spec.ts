@@ -94,6 +94,30 @@ describe('InputComponent', () => {
     });
   });
 
+  describe('Textarea Support', () => {
+    it('should render textarea when textarea flag is true', () => {
+      const config: InputConfig = { ...createDefaultConfig(), textarea: true, rows: 6 };
+      fixture.componentRef.setInput('config', config);
+      fixture.detectChanges();
+
+      const textarea = fixture.nativeElement.querySelector('textarea');
+      const input = fixture.nativeElement.querySelector('input');
+
+      expect(textarea).toBeTruthy();
+      expect(textarea.getAttribute('rows')).toBe('6');
+      expect(input).toBeFalsy();
+    });
+
+    it('should default textarea rows to 4 when not provided', () => {
+      const config: InputConfig = { ...createDefaultConfig(), textarea: true };
+      fixture.componentRef.setInput('config', config);
+      fixture.detectChanges();
+
+      const textarea = fixture.nativeElement.querySelector('textarea');
+      expect(textarea?.getAttribute('rows')).toBe('4');
+    });
+  });
+
   describe('Appearance', () => {
     it('should use fill appearance by default', () => {
       fixture.componentRef.setInput('config', createDefaultConfig());

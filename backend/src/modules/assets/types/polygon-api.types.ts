@@ -50,3 +50,23 @@ export interface PolygonSnapshotResponse {
   status: string;
   request_id: string;
 }
+
+export interface PolygonPreviousCloseResponse {
+  ticker: string;
+  queryCount: number;
+  resultsCount: number;
+  adjusted: boolean;
+  results: Array<{
+    T: string; // Ticker symbol
+    v: number; // Volume
+    vw: number; // Volume weighted average price
+    o: number; // Open price
+    c: number; // Close price (we'll use this as currentPrice)
+    h: number; // High price
+    l: number; // Low price
+    t: number; // Unix timestamp (milliseconds)
+    n: number; // Number of transactions
+  }>;
+  status: string;
+  request_id: string;
+}

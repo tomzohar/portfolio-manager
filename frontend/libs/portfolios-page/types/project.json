@@ -1,0 +1,26 @@
+{
+  "name": "portfolios-page-types",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/portfolios-page/types/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/portfolios-page/types",
+        "main": "libs/portfolios-page/types/src/index.ts",
+        "tsConfig": "libs/portfolios-page/types/tsconfig.lib.json",
+        "assets": ["libs/portfolios-page/types/*.md"]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "libs/portfolios-page/types/jest.config.ts"
+      }
+    }
+  }
+}

@@ -1,13 +1,13 @@
-import { Component, effect, inject } from '@angular/core';
+import { Component, effect, inject, computed } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthFacade } from '@frontend/data-access-auth';
-import { InputComponent } from '@stocks-researcher/styles';
+import { InputComponent, ButtonComponent, ButtonConfig } from '@stocks-researcher/styles';
 import { AuthBrandingComponent } from '../components/auth-branding.component';
 
 @Component({
   selector: 'lib-signup',
-  imports: [ReactiveFormsModule, RouterLink, InputComponent, AuthBrandingComponent],
+  imports: [ReactiveFormsModule, RouterLink, InputComponent, ButtonComponent, AuthBrandingComponent],
   templateUrl: './signup.component.html',
   styleUrl: './signup.component.scss',
 })
@@ -18,6 +18,16 @@ export class SignupComponent {
   // Signal-based state
   readonly loading = this.authFacade.loading;
   readonly error = this.authFacade.error;
+
+  // Button configuration
+  readonly submitButtonConfig = computed<ButtonConfig>(() => ({
+    label: this.loading() ? 'Creating account...' : 'Sign Up',
+    type: 'submit',
+    color: 'primary',
+    variant: 'raised',
+    fullWidth: true,
+    disabled: this.loading(),
+  }));
 
   // Reactive form
   readonly signupForm: FormGroup = this.fb.group({

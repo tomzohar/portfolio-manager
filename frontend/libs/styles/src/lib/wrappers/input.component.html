@@ -10,21 +10,35 @@
     <mat-icon matIconPrefix>{{ config().prefixIcon }}</mat-icon>
   }
   
-  <!-- Input Element -->
-  <input 
-    matInput 
-    [formControl]="config().control"
-    [type]="getType() || 'text'"
-    [placeholder]="config().placeholder || ''"
-    [required]="config().required || false"
-    [readonly]="config().readonly || false"
-    [attr.aria-label]="getAriaLabel()"
-    [attr.autocomplete]="config().autocomplete"
-    [attr.maxlength]="config().maxlength"
-    [attr.min]="config().min"
-    [attr.max]="config().max"
-    [attr.step]="config().step"
-  />
+  <!-- Input / Textarea Element -->
+  @if (isTextarea()) {
+    <textarea
+      matInput
+      [formControl]="config().control"
+      [placeholder]="config().placeholder || ''"
+      [required]="config().required || false"
+      [readonly]="config().readonly || false"
+      [attr.aria-label]="getAriaLabel()"
+      [attr.autocomplete]="config().autocomplete"
+      [attr.maxlength]="config().maxlength"
+      [rows]="getRows()"
+    ></textarea>
+  } @else {
+    <input 
+      matInput 
+      [formControl]="config().control"
+      [type]="getType() || 'text'"
+      [placeholder]="config().placeholder || ''"
+      [required]="config().required || false"
+      [readonly]="config().readonly || false"
+      [attr.aria-label]="getAriaLabel()"
+      [attr.autocomplete]="config().autocomplete"
+      [attr.maxlength]="config().maxlength"
+      [attr.min]="config().min"
+      [attr.max]="config().max"
+      [attr.step]="config().step"
+    />
+  }
   
   <!-- Suffix Icon -->
   @if (config().suffixIcon) {

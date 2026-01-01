@@ -15,7 +15,10 @@ import {
 } from './dto/portfolio-summary.dto';
 import { UsersService } from '../users/users.service';
 import { PolygonApiService } from '../assets/services/polygon-api.service';
-import type { PolygonSnapshotResponse } from '../assets/types/polygon-api.types';
+import type {
+  PolygonSnapshotResponse,
+  PolygonPreviousCloseResponse,
+} from '../assets/types/polygon-api.types';
 import { EnrichedAssetDto } from './dto/asset-response.dto';
 import { lastValueFrom } from 'rxjs';
 
@@ -34,13 +37,15 @@ export class PortfolioService {
 
   /**
    * Create a new portfolio for the authenticated user
+   * If initialInvestment is provided, creates a CASH deposit transaction
    * Returns only portfolio data without user relation to avoid exposing sensitive data
    */
   async create(
     userId: string,
     createPortfolioDto: CreatePortfolioDto,
   ): Promise<Portfolio> {
-    const { name } = createPortfolioDto;
+    const { name, description, riskProfile, initialInvestment } =
+      createPortfolioDto;
     const user = await this.usersService.findOne(userId);
 
     if (!user) {
@@ -49,10 +54,26 @@ export class PortfolioService {
 
     const portfolio = this.portfolioRepository.create({
       name,
+      description,
+      riskProfile,
       user,
     });
 
     const savedPortfolio = await this.portfolioRepository.save(portfolio);
+
+    // Create initial cash deposit transaction if initialInvestment is provided
+    if (initialInvestment && initialInvestment > 0) {
+      await this.transactionRepository.save(
+        this.transactionRepository.create({
+          type: TransactionType.BUY,
+          ticker: 'CASH',
+          quantity: initialInvestment,
+          price: 1, // Cash is always 1:1
+          transactionDate: new Date(),
+          portfolio: savedPortfolio,
+        }),
+      );
+    }
 
     // Return portfolio without user relation to avoid exposing user data
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -129,6 +150,7 @@ export class PortfolioService {
   /**
    * Enrich assets with current market data from Polygon API
    * Fetches ticker snapshots in parallel and returns enriched assets
+   * Special handling for CASH: always set price to 1.0, skip API call
    * @param assets - Array of assets to enrich
    * @returns Promise of enriched assets with market data
    */
@@ -137,10 +159,15 @@ export class PortfolioService {
   ): Promise<EnrichedAssetDto[]> {
     // Fetch current price data for all assets in parallel
     const snapshotPromises = assets.map(
-      async (asset): Promise<PolygonSnapshotResponse | null> => {
+      async (asset): Promise<PolygonPreviousCloseResponse | null> => {
+        // Skip API call for CASH - it's always 1:1
+        if (asset.ticker === 'CASH') {
+          return null;
+        }
+
         try {
           return await lastValueFrom(
-            this.polygonApiService.getTickerSnapshot(asset.ticker),
+            this.polygonApiService.getPreviousClose(asset.ticker),
           );
         } catch {
           // Return null if snapshot fetch fails
@@ -153,18 +180,29 @@ export class PortfolioService {
 
     // Enrich assets with current price data
     return assets.map((asset, index) => {
-      const snapshot = snapshots[index];
-
-      if (snapshot?.ticker?.day) {
+      // Special handling for CASH - always 1.0
+      if (asset.ticker === 'CASH') {
         return new EnrichedAssetDto(asset, {
-          currentPrice: snapshot.ticker.day.c,
-          todaysChange: snapshot.ticker.todaysChange,
-          todaysChangePerc: snapshot.ticker.todaysChangePerc,
-          lastUpdated: snapshot.ticker.updated,
+          currentPrice: 1.0,
+          todaysChange: 0,
+          todaysChangePerc: 0,
+          lastUpdated: Date.now(),
         });
       }
 
-      // If snapshot failed or unavailable, return asset without market data
+      const previousClose = snapshots[index];
+
+      if (previousClose?.results?.[0]) {
+        const result = previousClose.results[0];
+        return new EnrichedAssetDto(asset, {
+          currentPrice: result.c, // Previous day's close price
+          todaysChange: 0, // No intraday change available
+          todaysChangePerc: 0, // No intraday change percentage
+          lastUpdated: result.t, // Unix timestamp in milliseconds
+        });
+      }
+
+      // If previous close failed or unavailable, return asset without market data
       return new EnrichedAssetDto(asset);
     });
   }
@@ -376,6 +414,7 @@ export class PortfolioService {
 
   /**
    * Enrich positions with current market data from Polygon API
+   * Special handling for CASH: always set price to 1.0, skip API call
    */
   private async enrichPositionsWithMarketData(
     positions: Array<{
@@ -387,6 +426,11 @@ export class PortfolioService {
     // Fetch current price data for all positions in parallel
     const snapshotPromises = positions.map(
       async (position): Promise<PolygonSnapshotResponse | null> => {
+        // Skip API call for CASH - it's always 1:1
+        if (position.ticker === 'CASH') {
+          return null;
+        }
+
         try {
           return await lastValueFrom(
             this.polygonApiService.getTickerSnapshot(position.ticker),
@@ -402,6 +446,16 @@ export class PortfolioService {
 
     // Enrich positions with current price data
     return positions.map((position, index) => {
+      // Special handling for CASH - always 1.0
+      if (position.ticker === 'CASH') {
+        return new PositionSummaryDto({
+          ticker: position.ticker,
+          quantity: position.quantity,
+          avgCostBasis: position.avgCostBasis,
+          currentPrice: 1.0,
+        });
+      }
+
       const snapshot = snapshots[index];
 
       if (snapshot?.ticker?.day) {
