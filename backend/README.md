@@ -112,14 +112,50 @@ $ docker-compose logs -f postgres
 $ docker-compose ps
 ```
 
+## pgAdmin (Database GUI)
+
+pgAdmin is a powerful Open Source administration and development platform for PostgreSQL. It provides a web-based graphical interface to:
+- **Explore your schema**: View tables, columns, indexes, and relationships.
+- **Manage data**: Manually add, edit, or delete rows for testing.
+- **Run Queries**: Execute complex SQL queries and view results in a grid.
+- **Monitor performance**: View active sessions and database statistics.
+
+**When to use it**: Use pgAdmin during development when you need to verify that data is being saved correctly, to manually seed data, or to troubleshoot database issues without writing code.
+
+### Accessing pgAdmin
+
+- **URL**: [http://localhost:5050](http://localhost:5050)
+- **Login Email**: `admin@admin.com`
+- **Login Password**: `admin`
+
+### Connecting to the Database in pgAdmin
+
+1. Log in to pgAdmin.
+2. Right-click on **Servers** > **Register** > **Server...**.
+3. In the **General** tab, give it a name (e.g., `Stocks Researcher`).
+4. In the **Connection** tab, use these details:
+   - **Host name/address**: `postgres` (this is the service name in docker-compose)
+   - **Port**: `5432`
+   - **Maintenance database**: `stocks_researcher`
+   - **Username**: `postgres`
+   - **Password**: `postgres`
+5. Click **Save**.
+
 ## Compile and run the project
 
+### Recommended Development Mode
+This script starts the backend in watch mode and automatically opens pgAdmin in your browser once it's ready.
 ```bash
-# development
-$ npm run start
+$ npm run dev
+```
 
-# watch mode
+### Other Scripts
+```bash
+# watch mode only
 $ npm run start:dev
+
+# manual pgadmin opener
+$ npm run pgadmin
 
 # production mode
 $ npm run start:prod
