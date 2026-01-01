@@ -1,10 +1,12 @@
 <header class="page-header">
   <div class="page-header__left">
     @if (config().backButton) {
-      <lib-button
-        [config]="backButtonConfig()"
-        (clicked)="onBackClick()"
-      />
+      <div class="page-header__back">
+        <lib-button
+          [config]="backButtonConfig()"
+          (clicked)="onBackClick()"
+        />
+      </div>
     }
     <h1 class="page-header__title">{{ config().title }}</h1>
   </div>
