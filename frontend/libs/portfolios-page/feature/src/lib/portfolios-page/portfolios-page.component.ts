@@ -10,7 +10,7 @@ import {
   CreatePortfolioDialogData,
   CreatePortfolioDialogResult,
 } from '@frontend/feature-dashboard';
-import { PageHeaderComponent, PageHeaderConfig } from '@stocks-researcher/styles';
+import { PageHeaderComponent, PageHeaderConfig, LoaderComponent } from '@stocks-researcher/styles';
 import { take } from 'rxjs';
 
 /**
@@ -22,7 +22,7 @@ import { take } from 'rxjs';
 @Component({
   selector: 'lib-portfolios-page',
   standalone: true,
-  imports: [CommonModule, PortfolioCardComponent, PageHeaderComponent],
+  imports: [CommonModule, PortfolioCardComponent, PageHeaderComponent, LoaderComponent],
   templateUrl: './portfolios-page.component.html',
   styleUrl: './portfolios-page.component.scss',
 })

@@ -3,7 +3,7 @@
 
   @if (loading()) {
   <div class="portfolios-page__loading">
-    <p>Loading portfolios...</p>
+    <lib-loader [config]="{ size: 'md' }" />
   </div>
   } @if (!loading() && portfolios().length === 0) {
   <div class="portfolios-page__empty">
