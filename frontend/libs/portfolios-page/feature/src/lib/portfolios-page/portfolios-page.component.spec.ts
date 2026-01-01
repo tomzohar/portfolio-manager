@@ -65,10 +65,10 @@ describe('PortfoliosPageComponent', () => {
     expect(mockFacade.init).toHaveBeenCalled();
   });
 
-  it('should render the page title', () => {
+  it('should render the page header', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    const title = compiled.querySelector('h1');
-    expect(title?.textContent).toBe('My Portfolios');
+    const header = compiled.querySelector('lib-page-header');
+    expect(header).toBeTruthy();
   });
 
   it('should display empty state when no portfolios', () => {
@@ -91,10 +91,11 @@ describe('PortfoliosPageComponent', () => {
     expect(mockFacade.refresh).toHaveBeenCalled();
   });
 
-  it('should render create portfolio button', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const button = compiled.querySelector('lib-button');
-    expect(button).toBeTruthy();
+  it('should have correct header config with CTA button', () => {
+    expect(component.headerConfig.title).toBe('My Portfolios');
+    expect(component.headerConfig.ctaButton).toBeDefined();
+    expect(component.headerConfig.ctaButton?.label).toBe('Create Portfolio');
+    expect(component.headerConfig.ctaButton?.icon).toBe('add');
   });
 
   it('should open dialog when create portfolio button is clicked', () => {

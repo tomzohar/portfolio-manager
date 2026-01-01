@@ -18,6 +18,7 @@ export * from './lib/wrappers/tag-pill.component';
 export * from './lib/wrappers/brand-icon.component';
 export * from './lib/wrappers/loader.component';
 export * from './lib/wrappers/loading-page.component';
+export * from './lib/wrappers/page-header.component';
 
 // Types
 export * from './lib/types/button-config';
@@ -30,6 +31,7 @@ export * from './lib/types/brand-icon-config';
 export * from './lib/types/loader-config';
 export * from './lib/types/loading-page-config';
 export * from './lib/types/design-tokens';
+export * from './lib/types/page-header-config';
 
 // Directives
 export * from './lib/directives/fill-available-height.directive';

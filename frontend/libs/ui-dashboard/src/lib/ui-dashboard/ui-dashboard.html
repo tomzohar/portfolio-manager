@@ -10,24 +10,11 @@
       (actionClick)="onCreatePortfolio()"
     />
     } @else {
-    <!-- Portfolio Selection with Actions -->
-    <lib-card>
-      <div class="portfolio-selection-container">
-        <lib-select
-          [options]="portfolioOptions()"
-          [selected]="selectedPortfolioId()"
-          (selectionChange)="onPortfolioSelect($event)"
-          class="portfolio-select"
-        >
-        </lib-select>
-
-        <lib-action-menu
-          [config]="actionMenuConfig()"
-          (itemSelected)="onActionMenuItemSelected($event)"
-          class="portfolio-actions"
-        />
-      </div>
-    </lib-card>
+    <!-- Page Header -->
+    <lib-page-header
+      [config]="pageHeaderConfig()"
+      (menuItemClicked)="onHeaderMenuItemClick($event)"
+    />
 
     <!-- Portfolio Widgets -->
     @if (!loading() && selectedPortfolioId()) {

@@ -10,7 +10,7 @@ import {
   CreatePortfolioDialogData,
   CreatePortfolioDialogResult,
 } from '@frontend/feature-dashboard';
-import { ButtonComponent, ButtonConfig } from '@stocks-researcher/styles';
+import { PageHeaderComponent, PageHeaderConfig } from '@stocks-researcher/styles';
 import { take } from 'rxjs';
 
 /**
@@ -22,7 +22,7 @@ import { take } from 'rxjs';
 @Component({
   selector: 'lib-portfolios-page',
   standalone: true,
-  imports: [CommonModule, PortfolioCardComponent, ButtonComponent],
+  imports: [CommonModule, PortfolioCardComponent, PageHeaderComponent],
   templateUrl: './portfolios-page.component.html',
   styleUrl: './portfolios-page.component.scss',
 })
@@ -36,12 +36,15 @@ export class PortfoliosPageComponent implements OnInit {
   portfolios = this.facade.portfolioCards;
   loading = this.facade.loading;
 
-  // Button configuration
-  createButtonConfig: ButtonConfig = {
-    label: 'Create Portfolio',
-    icon: 'add',
-    color: 'primary',
-    variant: 'raised',
+  // Page header configuration
+  headerConfig: PageHeaderConfig = {
+    title: 'My Portfolios',
+    ctaButton: {
+      label: 'Create Portfolio',
+      icon: 'add',
+      color: 'primary',
+      variant: 'raised',
+    },
   };
 
   ngOnInit(): void {

@@ -10,7 +10,8 @@ import {
   EmptyStateComponent,
   LoadingPageComponent,
   MenuItem,
-  SelectComponent,
+  PageHeaderComponent,
+  PageHeaderConfig,
   SelectOption,
   TableComponent,
 } from '@stocks-researcher/styles';
@@ -22,13 +23,13 @@ import { NetAccountValueWidgetComponent } from '../net-account-value-widget/net-
   standalone: true,
   imports: [
     CardComponent,
-    SelectComponent,
     TableComponent,
     EmptyStateComponent,
     ActionMenuComponent,
     ButtonComponent,
     LoadingPageComponent,
     NetAccountValueWidgetComponent,
+    PageHeaderComponent,
   ],
   templateUrl: './ui-dashboard.html',
   styleUrl: './ui-dashboard.scss',
@@ -48,6 +49,45 @@ export class UiDashboardComponent {
   deleteAsset = output<DashboardAsset>();
 
   /**
+   * Get the selected portfolio name for the header
+   */
+  selectedPortfolioName = computed<string>(() => {
+    const selectedId = this.selectedPortfolioId();
+    const portfolio = this.portfolios().find((p) => p.id === selectedId);
+    return portfolio?.name || 'Portfolio';
+  });
+
+  /**
+   * Page header configuration
+   */
+  pageHeaderConfig = computed<PageHeaderConfig>(() => ({
+    title: this.selectedPortfolioName(),
+    backButton: {
+      route: '/portfolios',
+      label: 'All Portfolios',
+    },
+    actionMenu: {
+      button: {
+        label: 'Actions',
+        icon: ACTION_ICONS.MORE,
+        variant: 'icon',
+        color: 'accent',
+        ariaLabel: 'Portfolio actions menu',
+      },
+      menu: {
+        items: [
+          {
+            id: 'delete-portfolio',
+            label: 'Delete Portfolio',
+            icon: ACTION_ICONS.DELETE,
+          },
+        ],
+        ariaLabel: 'Portfolio actions',
+      },
+    },
+  }));
+
+  /**
    * Calculate net account value from assets
    * Net Account Value = Sum of all (quantity * currentPrice) or (quantity * avgPrice) if currentPrice unavailable
    */
@@ -65,7 +105,7 @@ export class UiDashboardComponent {
    */
   actionMenuConfig = computed<ActionMenuConfig>(() => {
     const hasSelectedPortfolio = !!this.selectedPortfolioId();
-    
+
     return {
       button: {
         label: 'Actions',
@@ -81,11 +121,15 @@ export class UiDashboardComponent {
             label: 'Create Portfolio',
             icon: ACTION_ICONS.ADD,
           },
-          ...(hasSelectedPortfolio ? [{
-            id: 'delete-portfolio',
-            label: 'Delete Portfolio',
-            icon: ACTION_ICONS.DELETE,
-          }] : []),
+          ...(hasSelectedPortfolio
+            ? [
+                {
+                  id: 'delete-portfolio',
+                  label: 'Delete Portfolio',
+                  icon: ACTION_ICONS.DELETE,
+                },
+              ]
+            : []),
         ],
         ariaLabel: 'Portfolio actions',
       },
@@ -103,9 +147,7 @@ export class UiDashboardComponent {
     { key: 'ticker', header: 'Ticker', type: 'text' },
     { key: 'quantity', header: 'Quantity', type: 'number' },
     { key: 'avgPrice', header: 'Avg Price', type: 'currency' },
-    { key: 'currentPrice', header: 'Current Price', type: 'currency' },
-    { key: 'todaysChange', header: "Today's Change", type: 'currency' },
-    { key: 'todaysChangePerc', header: "Today's Change %", type: 'percent' },
+    { key: 'currentPrice', header: 'Last Close', type: 'currency' },
     { key: 'marketValue', header: 'Market Value', type: 'currency' },
     { key: 'pl', header: 'P/L', type: 'currency' },
     { key: 'plPercent', header: 'P/L %', type: 'percent' },
@@ -184,6 +226,13 @@ export class UiDashboardComponent {
         this.onDeletePortfolio();
         break;
     }
+  }
+
+  /**
+   * Handle page header menu item click
+   */
+  onHeaderMenuItemClick(item: MenuItem): void {
+    this.onActionMenuItemSelected(item);
   }
 
   getAssetActionsMenuConfig(asset: DashboardAsset): ActionMenuConfig {

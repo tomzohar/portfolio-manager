@@ -1,0 +1,54 @@
+@use 'scss' as *;
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+
+  &__back {
+    display: flex;
+    align-items: center;
+    margin-bottom: $spacing-xs;
+
+    // Override button color for back button
+    ::ng-deep lib-button button {
+      color: $color-text-secondary !important;
+    }
+  }
+
+  &__main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: $spacing-lg;
+
+    // Responsive: stack on small screens
+    @media (max-width: 768px) {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: $spacing-md;
+    }
+  }
+
+  &__title {
+    @include heading-1;
+    color: $color-text-primary;
+    margin: 0;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+
+    // Full width on mobile
+    @media (max-width: 768px) {
+      width: 100%;
+      justify-content: flex-end;
+    }
+  }
+}
