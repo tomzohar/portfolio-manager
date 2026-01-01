@@ -15,7 +15,10 @@ import {
 } from './dto/portfolio-summary.dto';
 import { UsersService } from '../users/users.service';
 import { PolygonApiService } from '../assets/services/polygon-api.service';
-import type { PolygonSnapshotResponse } from '../assets/types/polygon-api.types';
+import type {
+  PolygonSnapshotResponse,
+  PolygonPreviousCloseResponse,
+} from '../assets/types/polygon-api.types';
 import { EnrichedAssetDto } from './dto/asset-response.dto';
 import { lastValueFrom } from 'rxjs';
 
@@ -156,7 +159,7 @@ export class PortfolioService {
   ): Promise<EnrichedAssetDto[]> {
     // Fetch current price data for all assets in parallel
     const snapshotPromises = assets.map(
-      async (asset): Promise<PolygonSnapshotResponse | null> => {
+      async (asset): Promise<PolygonPreviousCloseResponse | null> => {
         // Skip API call for CASH - it's always 1:1
         if (asset.ticker === 'CASH') {
           return null;
@@ -164,7 +167,7 @@ export class PortfolioService {
 
         try {
           return await lastValueFrom(
-            this.polygonApiService.getTickerSnapshot(asset.ticker),
+            this.polygonApiService.getPreviousClose(asset.ticker),
           );
         } catch {
           // Return null if snapshot fetch fails
@@ -187,18 +190,19 @@ export class PortfolioService {
         });
       }
 
-      const snapshot = snapshots[index];
+      const previousClose = snapshots[index];
 
-      if (snapshot?.ticker?.day) {
+      if (previousClose?.results?.[0]) {
+        const result = previousClose.results[0];
         return new EnrichedAssetDto(asset, {
-          currentPrice: snapshot.ticker.day.c,
-          todaysChange: snapshot.ticker.todaysChange,
-          todaysChangePerc: snapshot.ticker.todaysChangePerc,
-          lastUpdated: snapshot.ticker.updated,
+          currentPrice: result.c, // Previous day's close price
+          todaysChange: 0, // No intraday change available
+          todaysChangePerc: 0, // No intraday change percentage
+          lastUpdated: result.t, // Unix timestamp in milliseconds
         });
       }
 
-      // If snapshot failed or unavailable, return asset without market data
+      // If previous close failed or unavailable, return asset without market data
       return new EnrichedAssetDto(asset);
     });
   }
