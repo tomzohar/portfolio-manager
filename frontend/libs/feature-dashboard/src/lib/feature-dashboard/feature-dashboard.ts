@@ -50,6 +50,7 @@ export class FeatureDashboardComponent implements OnInit {
   loading = this.facade.loading;
   transactions = this.facade.transactions;
   transactionsLoading = this.facade.transactionsLoading;
+  transactionsError = this.facade.transactionsError;
 
   constructor() {
     // Watch for portfolioId query param changes and select the portfolio
@@ -89,6 +90,15 @@ export class FeatureDashboardComponent implements OnInit {
         if (!portfolioStillExists) {
           void this.router.navigate(['/portfolios']);
         }
+      }
+    });
+
+    // Watch for transaction errors and display them
+    effect(() => {
+      const error = this.transactionsError();
+      
+      if (error) {
+        this.dialogService.showError(error, 'Transaction Failed');
       }
     });
   }

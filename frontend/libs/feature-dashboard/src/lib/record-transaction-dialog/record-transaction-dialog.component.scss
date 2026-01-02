@@ -11,16 +11,6 @@
   margin-top: $spacing-md;
 }
 
-.transaction-type-group {
-  display: flex;
-  gap: $spacing-lg;
-  margin-bottom: $spacing-sm;
-  
-  mat-radio-button {
-    flex: 1;
-  }
-}
-
 .current-position {
   display: flex;
   align-items: center;
@@ -38,7 +28,6 @@
   }
   
   span {
-    @include text-body-sm;
     color: var(--color-text-secondary);
   }
 }
@@ -60,7 +49,6 @@
   }
   
   span {
-    @include text-body-sm;
     color: #ef4444;
   }
 }

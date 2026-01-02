@@ -19,6 +19,7 @@ export * from './lib/wrappers/brand-icon.component';
 export * from './lib/wrappers/loader.component';
 export * from './lib/wrappers/loading-page.component';
 export * from './lib/wrappers/page-header.component';
+export * from './lib/wrappers/radio-button-group/radio-button-group.component';
 
 // Types
 export * from './lib/types/button-config';

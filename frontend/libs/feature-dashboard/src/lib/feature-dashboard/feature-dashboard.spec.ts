@@ -71,6 +71,9 @@ describe('FeatureDashboardComponent', () => {
       selectedId: selectedIdSignal,
       loading: loadingSignal,
       error: signal<string | null>(null),
+      transactions: signal([]),
+      transactionsLoading: signal(false),
+      transactionsError: signal<string | null>(null),
     };
 
     mockAuthFacade = {

@@ -3,6 +3,7 @@ import {
   inject,
   signal,
   computed,
+  model,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import {
@@ -20,7 +21,6 @@ import {
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
-import { MatRadioModule } from '@angular/material/radio';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { CommonModule } from '@angular/common';
@@ -29,6 +29,8 @@ import {
   InputComponent,
   InputConfig,
   ButtonConfig,
+  RadioButtonGroupComponent,
+  RadioButtonGroupConfig,
 } from '@stocks-researcher/styles';
 import { 
   TickerResult, 
@@ -37,6 +39,7 @@ import {
   DashboardAsset
 } from '@stocks-researcher/types';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { PortfolioFacade } from '@frontend/data-access-portfolio';
 
 /**
  * Data passed to the Record Transaction Dialog
@@ -84,11 +87,11 @@ export interface RecordTransactionDialogResult {
     MatFormFieldModule,
     MatInputModule,
     MatIconModule,
-    MatRadioModule,
     MatDatepickerModule,
     MatNativeDateModule,
     ButtonComponent,
     InputComponent,
+    RadioButtonGroupComponent,
   ],
   templateUrl: './record-transaction-dialog.component.html',
   styleUrl: './record-transaction-dialog.component.scss',
@@ -101,6 +104,7 @@ export class RecordTransactionDialogComponent {
       MatDialogRef
     );
   private readonly dialogData = inject<RecordTransactionDialogData>(MAT_DIALOG_DATA);
+  private readonly facade = inject(PortfolioFacade);
 
   /** Signal for the selected ticker */
   readonly ticker = signal(this.dialogData.ticker);
@@ -116,6 +120,20 @@ export class RecordTransactionDialogComponent {
 
   /** Maximum date for transaction date picker (today) */
   readonly maxDate = new Date();
+
+  /** Radio button configuration for transaction type */
+  readonly transactionTypeRadioConfig: RadioButtonGroupConfig<TransactionType> = {
+    options: [
+      { value: TransactionType.BUY, label: 'Buy' },
+      { value: TransactionType.SELL, label: 'Sell' },
+    ],
+    ariaLabel: 'Transaction type',
+  };
+
+  /** Model for transaction type (two-way binding with radio group) */
+  readonly transactionTypeModel = model<TransactionType>(
+    this.dialogData.transactionType || TransactionType.BUY
+  );
 
   /** Form group for transaction details */
   readonly form: FormGroup = this.formBuilder.group({
@@ -133,14 +151,18 @@ export class RecordTransactionDialogComponent {
   /** Computed: Whether the form is valid */
   readonly isFormValid = computed(() => {
     // Trigger reactivity by reading formChanges
-    this.formChanges();
+    const formValue = this.formChanges();
     
     // Additional validation for SELL transactions
-    const type = this.typeControl.value;
-    const quantity = parseFloat(this.quantityControl.value);
-    const currentQuantity = this.currentAsset()?.quantity || 0;
+    const type = formValue?.type || this.typeControl.value;
+    const quantityValue = formValue?.quantity || this.quantityControl.value;
+    const quantity = parseFloat(quantityValue);
     
-    if (type === TransactionType.SELL && quantity > currentQuantity) {
+    // For SELL, validate we have enough shares (only if quantity is valid number)
+    const current = this.currentPosition();
+    const currentQty = current ? Number(current.quantity) : 0;
+    
+    if (type === TransactionType.SELL && !isNaN(quantity) && quantity > currentQty) {
       return false; // Can't sell more than owned
     }
     
@@ -167,32 +189,60 @@ export class RecordTransactionDialogComponent {
 
   /** Computed: Warning message for SELL transactions */
   readonly sellWarning = computed(() => {
-    const type = this.typeControl.value;
-    const quantity = parseFloat(this.quantityControl.value) || 0;
-    const currentQuantity = this.currentAsset()?.quantity || 0;
+    // Trigger reactivity by reading formChanges
+    const formValue = this.formChanges();
     
-    if (type === TransactionType.SELL && quantity > currentQuantity) {
+    const type = formValue?.type || this.typeControl.value;
+    const quantityValue = formValue?.quantity || this.quantityControl.value;
+    const quantity = parseFloat(quantityValue) || 0;
+    
+    const current = this.currentPosition();
+    const currentQuantity = current ? Number(current.quantity) : 0;
+    
+    if (type === TransactionType.SELL && quantity > 0 && quantity > currentQuantity) {
       return `Cannot sell ${quantity} shares. You only own ${currentQuantity} shares.`;
     }
     return null;
   });
 
+  /** Computed: Current position from either passed asset or by looking up from portfolio assets */
+  readonly currentPosition = computed(() => {
+    // If currentAsset was passed (opened from Sell action), use it
+    const passedAsset = this.currentAsset();
+    if (passedAsset) return passedAsset;
+    
+    // Otherwise, look it up from the facade's current assets
+    // This happens when user switches from BUY to SELL in the same dialog
+    const ticker = this.ticker()?.ticker || this.tickerControl.value;
+    if (!ticker) return undefined;
+    
+    const portfolioAssets = this.facade.currentAssets();
+    return portfolioAssets.find(asset => asset.ticker.toUpperCase() === ticker.toUpperCase());
+  });
+
   /** Computed: Current position display for SELL transactions */
   readonly currentPositionDisplay = computed(() => {
-    const asset = this.currentAsset();
+    const asset = this.currentPosition();
     if (!asset) return null;
     
-    return `Current position: ${asset.quantity} shares @ $${asset.avgPrice.toFixed(2)}`;
+    const avgPrice = Number(asset.avgPrice);
+    return `Current position: ${asset.quantity} shares @ $${avgPrice.toFixed(2)}`;
   });
 
   /** Computed: Submit button configuration */
   readonly submitButtonConfig = computed(
-    (): ButtonConfig => ({
-      label: this.typeControl.value === TransactionType.BUY ? 'Record Buy' : 'Record Sell',
-      variant: 'raised',
-      color: 'primary',
-      disabled: !this.isFormValid(),
-    })
+    (): ButtonConfig => {
+      // Read formChanges to trigger reactivity
+      this.formChanges();
+      
+      const type = this.typeControl.value;
+      return {
+        label: type === TransactionType.BUY ? 'Record Buy' : 'Record Sell',
+        variant: 'raised',
+        color: 'primary',
+        disabled: !this.isFormValid(),
+      };
+    }
   );
 
   /** Cancel button configuration */
@@ -209,7 +259,6 @@ export class RecordTransactionDialogComponent {
     return {
       control: this.tickerControl,
       label: 'Ticker Symbol',
-      placeholder: 'e.g., AAPL',
       type: 'text',
       required: true,
       fullWidth: true,
@@ -227,7 +276,6 @@ export class RecordTransactionDialogComponent {
     return {
       control: this.quantityControl,
       label: 'Quantity',
-      placeholder: 'Enter number of shares',
       type: 'number',
       required: true,
       fullWidth: true,
@@ -245,7 +293,6 @@ export class RecordTransactionDialogComponent {
     return {
       control: this.priceControl,
       label: 'Price per Share',
-      placeholder: 'Enter transaction price',
       type: 'number',
       required: true,
       fullWidth: true,

@@ -23,6 +23,9 @@
           [value]="netAccountValue()"
           [buyingPower]="buyingPower()"
         />
+        <lib-cash-balance-widget
+          [balance]="cashBalance()"
+        />
       </div>
     }
 
@@ -38,7 +41,7 @@
     } @else if (selectedPortfolioId()) {
     <lib-card
       title="Portfolio Assets"
-      [subtitle]="assets().length + ' positions'"
+      [subtitle]="nonCashAssets().length + ' positions'"
       [headerActions]="true"
       class="assets-table"
     >
@@ -49,7 +52,7 @@
       </div>
 
       <!-- Content -->
-      @if (assets().length === 0) {
+      @if (nonCashAssets().length === 0) {
       <!-- Empty State for Assets -->
       <lib-empty-state
         [icon]="'inventory_2'"
@@ -60,7 +63,7 @@
       />
       } @else {
       <lib-table
-        [data]="assets()"
+        [data]="nonCashAssets()"
         [columns]="assetColumns"
         [actionsTemplate]="assetActions"
         [scrollable]="true"

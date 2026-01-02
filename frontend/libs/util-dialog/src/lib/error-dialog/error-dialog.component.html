@@ -1,0 +1,22 @@
+<h2 mat-dialog-title class="error-dialog-title">
+  @if (icon()) {
+    <mat-icon class="error-dialog-icon">{{ icon() }}</mat-icon>
+  }
+  <span>{{ title() }}</span>
+</h2>
+
+<mat-dialog-content class="error-dialog-content">
+  <p class="error-dialog-message">{{ message() }}</p>
+  
+  @if (details()) {
+    <div class="error-dialog-details">
+      <p class="error-dialog-details-label">Details:</p>
+      <p class="error-dialog-details-text">{{ details() }}</p>
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <lib-button [config]="okButtonConfig" (clicked)="onOk()" />
+</mat-dialog-actions>
+

@@ -18,6 +18,7 @@
 
 .portfolio-widgets {
   display: flex;
+  gap: $spacing-md;
   margin-top: var(--spacing-lg);
 }
 

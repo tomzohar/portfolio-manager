@@ -17,6 +17,10 @@ import {
 } from '@stocks-researcher/styles';
 import { DashboardAsset, DashboardPortfolio } from '@stocks-researcher/types';
 import { NetAccountValueWidgetComponent } from '../net-account-value-widget/net-account-value-widget';
+import { CashBalanceWidgetComponent } from '../cash-balance-widget/cash-balance-widget.component';
+
+// CASH ticker constant (matches backend)
+const CASH_TICKER = 'CASH';
 
 @Component({
   selector: 'lib-ui-dashboard',
@@ -29,6 +33,7 @@ import { NetAccountValueWidgetComponent } from '../net-account-value-widget/net-
     ButtonComponent,
     LoadingPageComponent,
     NetAccountValueWidgetComponent,
+    CashBalanceWidgetComponent,
     PageHeaderComponent,
   ],
   templateUrl: './ui-dashboard.html',
@@ -86,6 +91,24 @@ export class UiDashboardComponent {
       },
     },
   }));
+
+  /**
+   * Filter out CASH from assets for display
+   */
+  nonCashAssets = computed<DashboardAsset[]>(() => {
+    return this.assets().filter(asset => asset.ticker !== CASH_TICKER);
+  });
+
+  /**
+   * Get CASH balance from assets
+   */
+  cashBalance = computed<number>(() => {
+    const cashAsset = this.assets().find(asset => asset.ticker === CASH_TICKER);
+    if (!cashAsset) return 0;
+    
+    const price = Number(cashAsset.currentPrice ?? cashAsset.avgPrice ?? 1);
+    return Number(cashAsset.quantity) * price;
+  });
 
   /**
    * Calculate net account value from assets

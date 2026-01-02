@@ -10,10 +10,11 @@
 
   <form [formGroup]="form" class="transaction-form">
     <!-- Transaction Type -->
-    <mat-radio-group formControlName="type" class="transaction-type-group">
-      <mat-radio-button [value]="TransactionType.BUY">Buy</mat-radio-button>
-      <mat-radio-button [value]="TransactionType.SELL">Sell</mat-radio-button>
-    </mat-radio-group>
+    <lib-radio-button-group
+      [config]="transactionTypeRadioConfig"
+      [(value)]="transactionTypeModel"
+      (valueChange)="form.patchValue({ type: $event })"
+    />
 
     <!-- Ticker (read-only if pre-selected) -->
     <lib-input [config]="tickerInputConfig"></lib-input>
