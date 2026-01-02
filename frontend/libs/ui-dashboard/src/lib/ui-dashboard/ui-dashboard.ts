@@ -54,6 +54,7 @@ export class UiDashboardComponent {
   buyAsset = output<void>();
   sellAsset = output<DashboardAsset>();
   viewTransactions = output<string | undefined>();
+  manageCash = output<void>();
 
   /**
    * Get the selected portfolio name for the header
@@ -83,6 +84,11 @@ export class UiDashboardComponent {
       },
       menu: {
         items: [
+          {
+            id: 'manage-cash',
+            label: 'Deposit/Withdraw Cash',
+            icon: 'account_balance_wallet',
+          },
           {
             id: 'delete-portfolio',
             label: 'Delete Portfolio',
@@ -257,7 +263,18 @@ export class UiDashboardComponent {
    * Handle page header menu item click
    */
   onHeaderMenuItemClick(item: MenuItem): void {
-    this.onActionMenuItemSelected(item);
+    switch (item.id) {
+      case 'manage-cash':
+        this.onManageCash();
+        break;
+      default:
+        this.onActionMenuItemSelected(item);
+        break;
+    }
+  }
+
+  onManageCash() {
+    this.manageCash.emit();
   }
 
   getAssetActionsMenuConfig(asset: DashboardAsset): ActionMenuConfig {

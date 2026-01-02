@@ -1,0 +1,52 @@
+<h2 mat-dialog-title>{{ dialogTitle() }}</h2>
+
+<mat-dialog-content>
+  <!-- Current Balance Info -->
+  <div class="current-position">
+    <mat-icon>account_balance_wallet</mat-icon>
+    <span>Current Balance: {{ currentCashBalance() | currency }}</span>
+  </div>
+
+  <form [formGroup]="form" class="transaction-form">
+    <!-- Transaction Mode (Deposit/Withdraw) -->
+    <lib-radio-button-group
+      [config]="transactionModeRadioConfig"
+      [(value)]="transactionModeModel"
+      (valueChange)="form.patchValue({ mode: $event })"
+    />
+
+    <!-- Amount -->
+    <lib-input [config]="amountInputConfig()"></lib-input>
+
+    <!-- Transaction Date (Optional) -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Transaction Date (Optional)</mat-label>
+      <input 
+        matInput 
+        [matDatepicker]="picker" 
+        formControlName="transactionDate"
+        [max]="maxDate"
+      />
+      <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+      <mat-datepicker #picker></mat-datepicker>
+      <mat-hint>Leave blank to use current date</mat-hint>
+    </mat-form-field>
+
+    <!-- Warning for WITHDRAW transactions -->
+    @if (withdrawalWarning()) {
+      <div class="withdrawal-warning">
+        <mat-icon>warning</mat-icon>
+        <span>{{ withdrawalWarning() }}</span>
+      </div>
+    }
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <lib-button [config]="cancelButtonConfig" (clicked)="onCancel()" />
+  <lib-button
+    [config]="submitButtonConfig()"
+    (clicked)="onSubmit()"
+  />
+</mat-dialog-actions>
+

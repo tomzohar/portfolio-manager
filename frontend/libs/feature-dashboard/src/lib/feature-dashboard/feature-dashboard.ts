@@ -26,6 +26,11 @@ import {
   TransactionHistoryDialogComponent,
   TransactionHistoryDialogData,
 } from '../transaction-history-dialog/transaction-history-dialog.component';
+import {
+  CashTransactionDialogComponent,
+  CashTransactionDialogData,
+  CashTransactionDialogResult,
+} from '../cash-transaction-dialog/cash-transaction-dialog.component';
 
 @Component({
   selector: 'lib-feature-dashboard',
@@ -323,5 +328,56 @@ export class FeatureDashboardComponent implements OnInit {
     }
 
     this.facade.deleteTransaction(portfolioId, transactionId);
+  }
+
+  /**
+   * Opens the cash transaction dialog to deposit or withdraw cash
+   */
+  onManageCash(): void {
+    const portfolioId = this.selectedPortfolioId();
+    
+    if (!portfolioId) {
+      console.warn('No portfolio selected');
+      return;
+    }
+
+    // Get cash balance from summary (preferred) or fallback to assets
+    const summary = this.currentSummary();
+    let currentCashBalance = 0;
+    
+    if (summary && summary.cashBalance !== undefined) {
+      // Use summary as the single source of truth if available
+      currentCashBalance = summary.cashBalance;
+    } else {
+      // Fallback: If summary not loaded, check assets for CASH ticker
+      const cashAsset = this.currentAssets().find(asset => asset.ticker === 'CASH');
+      if (cashAsset) {
+        // For CASH, marketValue is the actual balance (price is always 1.0)
+        currentCashBalance = cashAsset.marketValue || (cashAsset.quantity * cashAsset.avgPrice);
+      }
+    }
+
+    // Open cash transaction dialog
+    const dialogRef = this.dialogService.open<
+      CashTransactionDialogData,
+      CashTransactionDialogResult
+    >({
+      component: CashTransactionDialogComponent,
+      data: { 
+        portfolioId,
+        currentCashBalance,
+      },
+      width: '500px',
+      disableClose: false,
+    });
+
+    // Handle dialog result
+    dialogRef.afterClosedObservable
+      .pipe(take(1))
+      .subscribe((result: CashTransactionDialogResult | undefined) => {
+        if (result) {
+          this.facade.createTransaction(result.portfolioId, result.dto);
+        }
+      });
   }
 }
