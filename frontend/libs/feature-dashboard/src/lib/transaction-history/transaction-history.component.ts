@@ -64,6 +64,9 @@ export class TransactionHistoryComponent {
   /** Input: Loading state */
   loading = input<boolean>(false);
 
+  /** Input: Enable scrollable mode for table (use false when inside scrolling container like dialog) */
+  scrollable = input<boolean>(true);
+
   /** Output: Delete transaction event */
   deleteTransaction = output<string>();
 

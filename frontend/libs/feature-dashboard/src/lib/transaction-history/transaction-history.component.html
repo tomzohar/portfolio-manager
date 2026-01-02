@@ -11,7 +11,7 @@
   [data]="transactions()"
   [columns]="tableColumns()"
   [actionsTemplate]="transactionActions"
-  [scrollable]="true"
+  [scrollable]="scrollable()"
 >
   <!-- Custom template for transaction type badge -->
   <ng-template #typeColumn let-transaction>

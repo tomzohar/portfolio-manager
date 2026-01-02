@@ -71,6 +71,7 @@ export interface TransactionHistoryDialogData {
       <lib-transaction-history
         [transactions]="formattedTransactions()"
         [loading]="loading()"
+        [scrollable]="false"
         (deleteTransaction)="onDeleteTransaction($event)"
       />
     </mat-dialog-content>

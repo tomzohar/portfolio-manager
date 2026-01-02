@@ -109,6 +109,18 @@ describe('TransactionHistoryComponent', () => {
       
       expect(component.loading()).toBe(true);
     });
+
+    it('should default scrollable to true', () => {
+      fixture.detectChanges();
+      expect(component.scrollable()).toBe(true);
+    });
+
+    it('should accept scrollable input', () => {
+      fixture.componentRef.setInput('scrollable', false);
+      fixture.detectChanges();
+      
+      expect(component.scrollable()).toBe(false);
+    });
   });
 
   describe('Badge Variants', () => {
