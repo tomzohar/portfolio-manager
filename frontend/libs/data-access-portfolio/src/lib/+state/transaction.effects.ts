@@ -43,7 +43,7 @@ export class TransactionEffects {
   /**
    * Effect: Create Transaction
    * Creates a new transaction with optimistic updates.
-   * After success, reloads assets to sync materialized positions.
+   * After success, reloads assets and summary to sync materialized positions and metrics.
    */
   createTransaction$ = createEffect(() =>
     this.actions$.pipe(
@@ -57,7 +57,9 @@ export class TransactionEffects {
               tempId 
             }),
             // Reload assets to get updated materialized positions
-            PortfolioActions.loadAssets({ portfolioId })
+            PortfolioActions.loadAssets({ portfolioId }),
+            // Reload summary to get updated metrics
+            PortfolioActions.loadSummary({ portfolioId })
           ]),
           catchError((error) =>
             of(TransactionActions.createTransactionFailure({ 
@@ -73,7 +75,7 @@ export class TransactionEffects {
 
   /**
    * Effect: Delete Transaction
-   * Deletes a transaction and reloads assets to sync materialized positions.
+   * Deletes a transaction and reloads assets and summary to sync materialized positions and metrics.
    */
   deleteTransaction$ = createEffect(() =>
     this.actions$.pipe(
@@ -86,7 +88,9 @@ export class TransactionEffects {
               transactionId 
             }),
             // Reload assets to get updated materialized positions
-            PortfolioActions.loadAssets({ portfolioId })
+            PortfolioActions.loadAssets({ portfolioId }),
+            // Reload summary to get updated metrics
+            PortfolioActions.loadSummary({ portfolioId })
           ]),
           catchError((error) =>
             of(TransactionActions.deleteTransactionFailure({ 

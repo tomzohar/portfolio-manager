@@ -79,6 +79,7 @@ Backend server for the Stocks Researcher application. This NestJS application pr
 #### POST `/api/portfolios/:id/transactions`
 - Records a BUY or SELL transaction
 - Automatically recalculates positions (assets table)
+- **Frontend automatically reloads both assets and summary** for UI consistency
 - Request: `CreateTransactionDto { type, ticker, quantity, price, transactionDate? }`
 - Response: `TransactionResponseDto`
 
@@ -90,6 +91,7 @@ Backend server for the Stocks Researcher application. This NestJS application pr
 #### DELETE `/api/portfolios/:id/transactions/:transactionId`
 - Deletes a transaction
 - Automatically recalculates positions
+- **Frontend automatically reloads both assets and summary** for UI consistency
 
 ## Data Architecture
 

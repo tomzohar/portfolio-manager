@@ -58,7 +58,7 @@ For migration details, see [Migration Notes](#migration-notes) below.
   - `loadTransactions` / `loadTransactionsSuccess` / `loadTransactionsFailure`
   - `createTransaction` / `createTransactionSuccess` / `createTransactionFailure`
   - `deleteTransaction` / `deleteTransactionSuccess` / `deleteTransactionFailure`
-- Automatically triggers asset reload after transaction create/delete
+- **Automatically triggers asset AND summary reload** after transaction create/delete for data consistency
 
 **State Shape**:
 ```typescript
