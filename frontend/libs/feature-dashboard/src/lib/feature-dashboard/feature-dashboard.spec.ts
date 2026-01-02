@@ -68,6 +68,7 @@ describe('FeatureDashboardComponent', () => {
       deletePortfolio: jest.fn(),
       portfolios: portfoliosSignal,
       currentAssets: signal(mockAssets),
+      currentSummary: signal(null),
       selectedId: selectedIdSignal,
       loading: loadingSignal,
       error: signal<string | null>(null),

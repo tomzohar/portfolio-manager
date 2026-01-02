@@ -6,9 +6,12 @@ import {
   selectError,
   selectCurrentAssets,
   selectSelectedPortfolio,
+  selectAllSummaries,
+  selectCurrentSummary,
 } from './portfolio.selectors';
 import { PortfolioState } from './portfolio.reducer';
 import { DashboardPortfolio, DashboardAsset } from '@stocks-researcher/types';
+import { PortfolioSummaryDto } from '../services/portfolio-api.service';
 
 describe('Portfolio Selectors', () => {
   const mockPortfolios: DashboardPortfolio[] = [
@@ -52,9 +55,57 @@ describe('Portfolio Selectors', () => {
     ],
   };
 
+  const mockSummaries: Record<string, PortfolioSummaryDto> = {
+    '1': {
+      totalValue: 11497,
+      totalCostBasis: 11000,
+      unrealizedPL: 497,
+      unrealizedPLPercent: 0.0452,
+      cashBalance: 1460,
+      positions: [
+        {
+          ticker: 'IREN',
+          quantity: 100,
+          avgCostBasis: 54,
+          currentPrice: 37.77,
+          marketValue: 3777,
+          unrealizedPL: -1623,
+          unrealizedPLPercent: -0.3006,
+        },
+        {
+          ticker: 'GOOGL',
+          quantity: 20,
+          avgCostBasis: 207,
+          currentPrice: 313,
+          marketValue: 6260,
+          unrealizedPL: 2120,
+          unrealizedPLPercent: 0.5121,
+        },
+        {
+          ticker: 'CASH',
+          quantity: 1460,
+          avgCostBasis: 1,
+          currentPrice: 1,
+          marketValue: 1460,
+          unrealizedPL: 0,
+          unrealizedPLPercent: 0,
+        },
+      ],
+    },
+    '2': {
+      totalValue: 13500,
+      totalCostBasis: 12500,
+      unrealizedPL: 1000,
+      unrealizedPLPercent: 0.08,
+      cashBalance: 0,
+      positions: [],
+    },
+  };
+
   const mockState: PortfolioState = {
     portfolios: mockPortfolios,
     assets: mockAssets,
+    summaries: mockSummaries,
     selectedId: '1',
     loading: false,
     error: null,
@@ -154,6 +205,39 @@ describe('Portfolio Selectors', () => {
 
     it('should return null for non-existent portfolio', () => {
       const result = selectSelectedPortfolio.projector(mockPortfolios, '999');
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('selectAllSummaries', () => {
+    it('should select all summaries', () => {
+      const result = selectAllSummaries.projector(mockState);
+      expect(result).toEqual(mockSummaries);
+    });
+  });
+
+  describe('selectCurrentSummary', () => {
+    it('should return summary for selected portfolio', () => {
+      const result = selectCurrentSummary.projector(mockSummaries, '1');
+      expect(result).toEqual(mockSummaries['1']);
+      expect(result?.totalValue).toBe(11497);
+      expect(result?.cashBalance).toBe(1460);
+    });
+
+    it('should return another portfolio summary', () => {
+      const result = selectCurrentSummary.projector(mockSummaries, '2');
+      expect(result).toEqual(mockSummaries['2']);
+      expect(result?.totalValue).toBe(13500);
+      expect(result?.cashBalance).toBe(0);
+    });
+
+    it('should return null when no portfolio selected', () => {
+      const result = selectCurrentSummary.projector(mockSummaries, null);
+      expect(result).toBeNull();
+    });
+
+    it('should return null for non-existent portfolio', () => {
+      const result = selectCurrentSummary.projector(mockSummaries, '999');
       expect(result).toBeNull();
     });
   });
