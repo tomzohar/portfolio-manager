@@ -43,12 +43,13 @@ For migration details, see [Migration Notes](#migration-notes) below.
 ### State Management (NgRx)
 
 **Portfolio State** (`portfolio.actions.ts`, `portfolio.reducer.ts`)
-- Manages portfolio and asset data (read-only)
+- Manages portfolio, asset, and summary data (read-only)
 - Actions:
   - `enterDashboard`: Triggers initial data load
   - `loadPortfolios` / `loadPortfoliosSuccess` / `loadPortfoliosFailure`
-  - `selectPortfolio`: Selects a portfolio and triggers asset loading
+  - `selectPortfolio`: Selects a portfolio and triggers asset + summary loading
   - `loadAssets` / `loadAssetsSuccess` / `loadAssetsFailure`
+  - **`loadSummary` / `loadSummarySuccess` / `loadSummaryFailure`** (NEW)
   - `createPortfolio` / `deletePortfolio`: Portfolio CRUD operations
 
 **Transaction State** (NEW) (`transaction.actions.ts`, `transaction.reducer.ts`)
@@ -64,7 +65,8 @@ For migration details, see [Migration Notes](#migration-notes) below.
 // Portfolio State
 {
   portfolios: DashboardPortfolio[];
-  assets: Record<string, DashboardAsset[]>; // Materialized views
+  assets: Record<string, DashboardAsset[]>; // Materialized views (for table display)
+  summaries: Record<string, PortfolioSummaryDto>; // NEW: Single source of truth for metrics
   selectedId: string | null;
   loading: boolean;
   error: string | null;
@@ -78,6 +80,21 @@ For migration details, see [Migration Notes](#migration-notes) below.
 }
 ```
 
+### Portfolio Summary - Single Source of Truth
+
+The `/summary` endpoint is the **authoritative source** for all high-level portfolio metrics:
+
+- **Net Account Value** (`totalValue`): Total portfolio value (cash + all assets)
+- **Cash Balance** (`cashBalance`): Separate cash amount for widgets
+- **Cost Basis** (`totalCostBasis`): Total amount invested
+- **Unrealized P/L**: Profit/loss calculations
+
+**Why separate endpoints?**
+- `/summary`: Optimized for aggregated metrics and widget display
+- `/assets`: Optimized for detailed asset table with individual positions
+
+**Data consistency**: Both endpoints use the same Polygon API (`getPreviousClose`) and share the same fallback logic (cost basis when market data unavailable).
+
 ### Facade Pattern
 **`PortfolioFacade`**
 - Bridges NgRx (RxJS Observables) with Signals (Zoneless)
@@ -86,11 +103,12 @@ For migration details, see [Migration Notes](#migration-notes) below.
   // Portfolio Signals
   readonly portfolios: Signal<DashboardPortfolio[]>
   readonly currentAssets: Signal<DashboardAsset[]>
+  readonly currentSummary: Signal<PortfolioSummaryDto | null> // NEW
   readonly selectedId: Signal<string | null>
   readonly loading: Signal<boolean>
   readonly error: Signal<string | null>
 
-  // Transaction Signals (NEW)
+  // Transaction Signals
   readonly transactions: Signal<DashboardTransaction[]>
   readonly transactionsLoading: Signal<boolean>
   readonly transactionsError: Signal<string | null>

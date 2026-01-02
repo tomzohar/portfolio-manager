@@ -31,6 +31,80 @@ Backend server for the Stocks Researcher application. This NestJS application pr
 - **Configuration**: Environment-based configuration with @nestjs/config
 - **Auto-sync**: Database schema synchronization in development mode
 - **Type Safety**: Full TypeScript support
+- **Polygon API Integration**: Real-time stock market data
+- **Transaction-Based Portfolio Management**: Immutable audit trail for positions
+
+## API Endpoints
+
+### Portfolio Management
+
+#### GET `/api/portfolios`
+- Returns all portfolios for the authenticated user
+- Response: `DashboardPortfolio[]`
+
+#### GET `/api/portfolios/:id`
+- Returns a specific portfolio with ownership verification
+- Response: `Portfolio`
+
+#### GET `/api/portfolios/:id/assets`
+- Returns current positions (materialized view calculated from transactions)
+- Each asset includes:
+  - Current market price from Polygon API (previous close)
+  - Market value with fallback to cost basis if price unavailable
+  - Profit/Loss calculations
+- Response: `EnrichedAssetDto[]`
+
+#### GET `/api/portfolios/:id/summary`
+- **Single source of truth for high-level portfolio metrics**
+- Returns aggregated portfolio data with:
+  - `totalValue`: Sum of all positions (stocks + cash) at market price or cost basis
+  - `cashBalance`: Separate cash balance for widgets
+  - `totalCostBasis`: Total amount invested
+  - `unrealizedPL`: Total unrealized profit/loss
+  - `positions`: Array of all positions with market data
+- Uses Polygon `getPreviousClose` API for consistent pricing
+- **Note**: Both `/assets` and `/summary` use the same Polygon endpoint for data consistency
+- Response: `PortfolioSummaryDto`
+
+#### POST `/api/portfolios`
+- Creates a new portfolio
+- Request: `CreatePortfolioDto { name, description?, riskProfile? }`
+- Response: `Portfolio`
+
+#### DELETE `/api/portfolios/:id`
+- Deletes a portfolio and all associated transactions/assets
+
+### Transaction Management
+
+#### POST `/api/portfolios/:id/transactions`
+- Records a BUY or SELL transaction
+- Automatically recalculates positions (assets table)
+- Request: `CreateTransactionDto { type, ticker, quantity, price, transactionDate? }`
+- Response: `TransactionResponseDto`
+
+#### GET `/api/portfolios/:id/transactions`
+- Returns transaction history with optional filters
+- Query params: `ticker?`, `type?`, `startDate?`, `endDate?`
+- Response: `TransactionResponseDto[]`
+
+#### DELETE `/api/portfolios/:id/transactions/:transactionId`
+- Deletes a transaction
+- Automatically recalculates positions
+
+## Data Architecture
+
+### Transaction-Based System
+- **Transactions** are the single source of truth
+- **Assets table** is a materialized view (performance cache)
+- When a transaction is created/deleted, positions are automatically recalculated
+- This ensures data integrity and provides full audit trail
+
+### Market Data Integration
+- **Polygon API** integration for real-time stock prices
+- **Fallback strategy**: If market data is unavailable or invalid (0, negative), uses cost basis
+- **Price validation**: Rejects prices ≤ 0 to ensure data quality
+- **Consistent endpoints**: Both `/assets` and `/summary` use `getPreviousClose` for pricing
+- **CASH ticker**: Always priced at $1.00, no API call needed
 
 ## Project setup
 
