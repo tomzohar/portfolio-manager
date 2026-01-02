@@ -12,7 +12,12 @@ import {
   TransactionResponseDto,
 } from './dto/transaction.dto';
 import { Portfolio } from './entities/portfolio.entity';
-import { Transaction, TransactionType } from './entities/transaction.entity';
+import {
+  Transaction,
+  TransactionType,
+  CASH_TICKER,
+} from './entities/transaction.entity';
+import { PortfolioService } from './portfolio.service';
 
 @Injectable()
 export class TransactionsService {
@@ -21,11 +26,13 @@ export class TransactionsService {
     private transactionRepository: Repository<Transaction>,
     @InjectRepository(Portfolio)
     private portfolioRepository: Repository<Portfolio>,
+    private portfolioService: PortfolioService,
   ) {}
 
   /**
    * Create a new transaction for a portfolio
    * Validates that SELL transactions don't exceed current holdings
+   * Automatically creates offsetting CASH transactions for double-entry bookkeeping
    */
   async createTransaction(
     portfolioId: string,
@@ -35,30 +42,75 @@ export class TransactionsService {
     // Verify ownership
     await this.verifyPortfolioOwnership(portfolioId, userId);
 
-    // For SELL transactions, validate that user has enough shares
-    if (createTransactionDto.type === TransactionType.SELL) {
-      const currentPosition = await this.calculatePositionForTicker(
-        portfolioId,
-        createTransactionDto.ticker,
-      );
+    const ticker = createTransactionDto.ticker.toUpperCase();
+    const transactionValue =
+      createTransactionDto.quantity * createTransactionDto.price;
 
-      if (currentPosition < createTransactionDto.quantity) {
-        throw new BadRequestException(
-          `Cannot sell ${createTransactionDto.quantity} shares of ${createTransactionDto.ticker}. Current position: ${currentPosition}`,
+    // For non-CASH transactions, validate CASH balance
+    if (ticker !== CASH_TICKER) {
+      if (createTransactionDto.type === TransactionType.BUY) {
+        // Validate sufficient CASH for purchase
+        const cashPosition = await this.calculatePositionForTicker(
+          portfolioId,
+          CASH_TICKER,
         );
+        if (cashPosition < transactionValue) {
+          throw new BadRequestException(
+            `Insufficient cash balance. Required: $${transactionValue.toFixed(2)}, Available: $${cashPosition.toFixed(2)}`,
+          );
+        }
+      }
+
+      // For SELL transactions, validate that user has enough shares
+      if (createTransactionDto.type === TransactionType.SELL) {
+        const currentPosition = await this.calculatePositionForTicker(
+          portfolioId,
+          ticker,
+        );
+
+        if (currentPosition < createTransactionDto.quantity) {
+          throw new BadRequestException(
+            `Cannot sell ${createTransactionDto.quantity} shares of ${ticker}. Current position: ${currentPosition}`,
+          );
+        }
       }
     }
 
+    const transactionDate = createTransactionDto.transactionDate
+      ? new Date(createTransactionDto.transactionDate)
+      : new Date();
+
+    // Create the main transaction
     const transaction = this.transactionRepository.create({
       ...createTransactionDto,
-      // Parse string date or default to now if not provided
-      transactionDate: createTransactionDto.transactionDate
-        ? new Date(createTransactionDto.transactionDate)
-        : new Date(),
+      ticker,
+      transactionDate,
       portfolio: { id: portfolioId } as Portfolio,
     });
 
     const savedTransaction = await this.transactionRepository.save(transaction);
+
+    // Create offsetting CASH transaction for non-CASH transactions (double-entry bookkeeping)
+    if (ticker !== CASH_TICKER) {
+      const cashTransactionType =
+        createTransactionDto.type === TransactionType.BUY
+          ? TransactionType.SELL // Buying stock reduces CASH
+          : TransactionType.BUY; // Selling stock increases CASH
+
+      const cashTransaction = this.transactionRepository.create({
+        type: cashTransactionType,
+        ticker: CASH_TICKER,
+        quantity: transactionValue,
+        price: 1, // CASH is always 1:1
+        transactionDate,
+        portfolio: { id: portfolioId } as Portfolio,
+      });
+
+      await this.transactionRepository.save(cashTransaction);
+    }
+
+    // Recalculate positions to keep assets table in sync
+    await this.portfolioService.recalculatePositions(portfolioId);
 
     return new TransactionResponseDto(savedTransaction);
   }
@@ -114,6 +166,7 @@ export class TransactionsService {
 
   /**
    * Delete a transaction from a portfolio
+   * Also deletes the corresponding CASH transaction for double-entry bookkeeping
    */
   async deleteTransaction(
     transactionId: string,
@@ -123,14 +176,47 @@ export class TransactionsService {
     // Verify ownership
     await this.verifyPortfolioOwnership(portfolioId, userId);
 
-    const result = await this.transactionRepository.delete({
+    // First, fetch the transaction to get its details for finding the offsetting CASH transaction
+    const transaction = await this.transactionRepository.findOne({
+      where: {
+        id: transactionId,
+        portfolio: { id: portfolioId },
+      },
+    });
+
+    if (!transaction) {
+      throw new NotFoundException('Transaction not found in this portfolio');
+    }
+
+    // Delete the main transaction
+    await this.transactionRepository.delete({
       id: transactionId,
       portfolio: { id: portfolioId },
     });
 
-    if (result.affected === 0) {
-      throw new NotFoundException('Transaction not found in this portfolio');
+    // Delete the corresponding CASH transaction if this wasn't a CASH transaction
+    if (transaction.ticker !== CASH_TICKER) {
+      const transactionValue =
+        Number(transaction.quantity) * Number(transaction.price);
+      const cashTransactionType =
+        transaction.type === TransactionType.BUY
+          ? TransactionType.SELL // BUY stock created a SELL CASH
+          : TransactionType.BUY; // SELL stock created a BUY CASH
+
+      // Find and delete the matching CASH transaction
+      // Match by: same date, same value, opposite type for CASH
+      await this.transactionRepository.delete({
+        portfolio: { id: portfolioId },
+        ticker: CASH_TICKER,
+        type: cashTransactionType,
+        quantity: transactionValue,
+        price: 1,
+        transactionDate: transaction.transactionDate,
+      });
     }
+
+    // Recalculate positions to keep assets table in sync
+    await this.portfolioService.recalculatePositions(portfolioId);
   }
 
   /**

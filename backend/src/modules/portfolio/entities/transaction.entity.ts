@@ -14,6 +14,12 @@ export enum TransactionType {
   SELL = 'SELL',
 }
 
+/**
+ * Special ticker symbol for cash positions
+ * Used for double-entry bookkeeping in portfolio transactions
+ */
+export const CASH_TICKER = 'CASH';
+
 @Entity('transactions')
 @Index(['portfolio', 'ticker'])
 @Index(['portfolio', 'transactionDate'])

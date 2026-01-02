@@ -4,11 +4,15 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Portfolio } from './entities/portfolio.entity';
 import { Asset } from './entities/asset.entity';
-import { Transaction, TransactionType } from './entities/transaction.entity';
-import { CreatePortfolioDto, AddAssetDto } from './dto/portfolio.dto';
+import {
+  Transaction,
+  TransactionType,
+  CASH_TICKER,
+} from './entities/transaction.entity';
+import { CreatePortfolioDto } from './dto/portfolio.dto';
 import {
   PortfolioSummaryDto,
   PositionSummaryDto,
@@ -33,6 +37,7 @@ export class PortfolioService {
     private transactionRepository: Repository<Transaction>,
     private usersService: UsersService,
     private polygonApiService: PolygonApiService,
+    private dataSource: DataSource,
   ) {}
 
   /**
@@ -66,7 +71,7 @@ export class PortfolioService {
       await this.transactionRepository.save(
         this.transactionRepository.create({
           type: TransactionType.BUY,
-          ticker: 'CASH',
+          ticker: CASH_TICKER,
           quantity: initialInvestment,
           price: 1, // Cash is always 1:1
           transactionDate: new Date(),
@@ -161,7 +166,7 @@ export class PortfolioService {
     const snapshotPromises = assets.map(
       async (asset): Promise<PolygonPreviousCloseResponse | null> => {
         // Skip API call for CASH - it's always 1:1
-        if (asset.ticker === 'CASH') {
+        if (asset.ticker === CASH_TICKER) {
           return null;
         }
 
@@ -208,55 +213,6 @@ export class PortfolioService {
   }
 
   /**
-   * Add an asset to a portfolio (with ownership verification)
-   * Returns only the asset ID as confirmation
-   */
-  async addAsset(
-    portfolioId: string,
-    userId: string,
-    addAssetDto: AddAssetDto,
-  ): Promise<{ id: string }> {
-    const portfolio = await this.findOne(portfolioId, userId);
-    if (!portfolio) {
-      throw new NotFoundException('Portfolio not found');
-    }
-
-    const asset = this.assetRepository.create({
-      ...addAssetDto,
-      portfolio,
-    });
-
-    const savedAsset = await this.assetRepository.save(asset);
-
-    // Return only the ID
-    return { id: savedAsset.id };
-  }
-
-  /**
-   * Remove an asset from a portfolio (with ownership verification)
-   */
-  async removeAsset(
-    portfolioId: string,
-    assetId: string,
-    userId: string,
-  ): Promise<void> {
-    // Verify ownership first
-    const portfolio = await this.findOne(portfolioId, userId);
-    if (!portfolio) {
-      throw new NotFoundException('Portfolio not found');
-    }
-
-    const result = await this.assetRepository.delete({
-      id: assetId,
-      portfolio: { id: portfolioId },
-    });
-
-    if (result.affected === 0) {
-      throw new NotFoundException('Asset not found in this portfolio');
-    }
-  }
-
-  /**
    * Delete a portfolio (with ownership verification)
    * Will cascade delete all associated assets and transactions
    */
@@ -281,8 +237,92 @@ export class PortfolioService {
   }
 
   /**
+   * Recalculate positions from transactions and sync with assets table
+   * This is the core method that maintains the materialized view
+   * PUBLIC method - called by TransactionsService after create/delete operations
+   */
+  async recalculatePositions(portfolioId: string): Promise<void> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Fetch all transactions for the portfolio
+      const transactions = await queryRunner.manager.find(Transaction, {
+        where: { portfolio: { id: portfolioId } },
+        order: { transactionDate: 'ASC' },
+      });
+
+      // Calculate current positions from transactions
+      const calculatedPositions =
+        this.calculatePositionsFromTransactions(transactions);
+
+      // Fetch current assets for this portfolio
+      const currentAssets = await queryRunner.manager.find(Asset, {
+        where: { portfolio: { id: portfolioId } },
+      });
+
+      // Create maps for easy comparison
+      const calculatedPositionsMap = new Map(
+        calculatedPositions.map((pos) => [pos.ticker, pos]),
+      );
+      const currentAssetsMap = new Map(
+        currentAssets.map((asset) => [asset.ticker, asset]),
+      );
+
+      // Process each calculated position
+      for (const [ticker, calculatedPosition] of calculatedPositionsMap) {
+        const existingAsset = currentAssetsMap.get(ticker);
+
+        if (existingAsset) {
+          // UPDATE existing asset if values changed
+          const quantityChanged =
+            Number(existingAsset.quantity) !== calculatedPosition.quantity;
+          const avgPriceChanged =
+            Number(existingAsset.avgPrice) !== calculatedPosition.avgCostBasis;
+
+          if (quantityChanged || avgPriceChanged) {
+            await queryRunner.manager.update(
+              Asset,
+              { id: existingAsset.id },
+              {
+                quantity: calculatedPosition.quantity,
+                avgPrice: calculatedPosition.avgCostBasis,
+              },
+            );
+          }
+          // Mark as processed
+          currentAssetsMap.delete(ticker);
+        } else {
+          // INSERT new position
+          const newAsset = queryRunner.manager.create(Asset, {
+            ticker: calculatedPosition.ticker,
+            quantity: calculatedPosition.quantity,
+            avgPrice: calculatedPosition.avgCostBasis,
+            portfolio: { id: portfolioId } as Portfolio,
+          });
+          await queryRunner.manager.save(Asset, newAsset);
+        }
+      }
+
+      // DELETE assets that no longer have positions
+      for (const [, asset] of currentAssetsMap) {
+        await queryRunner.manager.delete(Asset, { id: asset.id });
+      }
+
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  /**
    * Get portfolio summary with aggregated metrics
-   * Calculates positions from transactions and enriches with current market data
+   * OPTIMIZED: Reads from assets table (materialized view) for fast performance
+   * Falls back to calculating from transactions if assets table is empty
    */
   async getPortfolioSummary(
     portfolioId: string,
@@ -294,31 +334,42 @@ export class PortfolioService {
       throw new NotFoundException('Portfolio not found');
     }
 
-    // Get all transactions for the portfolio
-    const transactions = await this.transactionRepository.find({
+    // Read from assets table (fast!)
+    const assets = await this.assetRepository.find({
       where: { portfolio: { id: portfolioId } },
-      order: { transactionDate: 'ASC' },
     });
 
-    // If no transactions, return empty summary
-    if (transactions.length === 0) {
-      return new PortfolioSummaryDto({
-        totalValue: 0,
-        totalCostBasis: 0,
-        unrealizedPL: 0,
-        unrealizedPLPercent: 0,
-        positions: [],
+    // Convert assets to position format
+    let positions: Array<{
+      ticker: string;
+      quantity: number;
+      avgCostBasis: number;
+    }> = [];
+
+    if (assets.length > 0) {
+      // Use assets table data
+      positions = assets.map((asset) => ({
+        ticker: asset.ticker,
+        quantity: Number(asset.quantity),
+        avgCostBasis: Number(asset.avgPrice),
+      }));
+    } else {
+      // Fallback: Calculate from transactions (defensive programming)
+      // This should only happen if portfolio was just created or migration hasn't run
+      const transactions = await this.transactionRepository.find({
+        where: { portfolio: { id: portfolioId } },
+        order: { transactionDate: 'ASC' },
       });
+
+      if (transactions.length > 0) {
+        const calculated =
+          this.calculatePositionsFromTransactions(transactions);
+        positions = calculated.filter((pos) => pos.quantity > 0);
+      }
     }
 
-    // Calculate positions by ticker
-    const positions = this.calculatePositionsFromTransactions(transactions);
-
-    // Filter out positions with zero quantity
-    const activePositions = positions.filter((pos) => pos.quantity > 0);
-
-    // If no active positions, return empty summary
-    if (activePositions.length === 0) {
+    // If no positions, return empty summary
+    if (positions.length === 0) {
       return new PortfolioSummaryDto({
         totalValue: 0,
         totalCostBasis: 0,
@@ -330,7 +381,7 @@ export class PortfolioService {
 
     // Enrich positions with current market prices
     const enrichedPositions =
-      await this.enrichPositionsWithMarketData(activePositions);
+      await this.enrichPositionsWithMarketData(positions);
 
     // Calculate portfolio-level metrics
     let totalValue = 0;
@@ -427,7 +478,7 @@ export class PortfolioService {
     const snapshotPromises = positions.map(
       async (position): Promise<PolygonSnapshotResponse | null> => {
         // Skip API call for CASH - it's always 1:1
-        if (position.ticker === 'CASH') {
+        if (position.ticker === CASH_TICKER) {
           return null;
         }
 

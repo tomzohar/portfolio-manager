@@ -1,11 +1,14 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import { DashboardPortfolio, DashboardAsset, CreatePortfolioDto, AddAssetDto } from '@stocks-researcher/types';
+import { DashboardPortfolio, DashboardAsset, CreatePortfolioDto } from '@stocks-researcher/types';
 
 /**
  * Portfolio Actions
  * 
  * Actions for managing portfolio state in the application.
  * Following NgRx best practices with createActionGroup.
+ * 
+ * Note: Asset management actions have been removed. 
+ * Use TransactionActions instead - transactions are the source of truth.
  */
 export const PortfolioActions = createActionGroup({
   source: 'Portfolio',
@@ -24,12 +27,6 @@ export const PortfolioActions = createActionGroup({
     'Delete Portfolio': props<{ portfolioId: string }>(),
     'Delete Portfolio Success': props<{ portfolioId: string }>(),
     'Delete Portfolio Failure': props<{ error: string }>(),
-    'Add Asset': props<{ portfolioId: string; dto: AddAssetDto; tempId: string }>(),
-    'Add Asset Success': props<{ portfolioId: string; tempId: string; assetId: string }>(),
-    'Add Asset Failure': props<{ portfolioId: string; tempId: string; error: string }>(),
-    'Remove Asset': props<{ portfolioId: string; assetId: string }>(),
-    'Remove Asset Success': props<{ portfolioId: string; assets: DashboardAsset[] }>(),
-    'Remove Asset Failure': props<{ error: string }>(),
   }
 });
 

@@ -52,6 +52,48 @@ export interface AddAssetDto {
   avgPrice: number;
 }
 
+// Transaction Types
+export enum TransactionType {
+  BUY = 'BUY',
+  SELL = 'SELL',
+  DEPOSIT = 'DEPOSIT'
+}
+
+export interface DashboardTransaction {
+  id: string;
+  portfolioId: string;
+  type: TransactionType;
+  ticker: string;
+  quantity: number;
+  price: number;
+  totalValue: number;
+  transactionDate: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Display version of transaction with formatted fields for UI presentation
+ */
+export interface DisplayTransaction extends Omit<DashboardTransaction, 'transactionDate'> {
+  transactionDate: string | Date; // Can be formatted string or Date
+}
+
+export interface CreateTransactionDto {
+  type: TransactionType;
+  ticker: string;
+  quantity: number;
+  price: number;
+  transactionDate?: Date; // Optional, defaults to now
+}
+
+export interface TransactionFilters {
+  ticker?: string;
+  type?: TransactionType;
+  startDate?: string; // ISO 8601 date string
+  endDate?: string;   // ISO 8601 date string
+}
+
 // Backend Portfolio response with assets
 export interface PortfolioWithAssets extends DashboardPortfolio {
   assets: DashboardAsset[];

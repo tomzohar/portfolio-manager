@@ -1,0 +1,36 @@
+@if (loading()) {
+<lib-loading-page message="Loading transactions..." />
+} @else { @if (transactions().length === 0) {
+<lib-empty-state
+  [icon]="'receipt_long'"
+  [title]="'No Transactions Yet'"
+  [message]="'Transaction history will appear here when you buy or sell assets'"
+/>
+} @else {
+<lib-table
+  [data]="transactions()"
+  [columns]="tableColumns"
+  [actionsTemplate]="transactionActions"
+  [scrollable]="true"
+>
+  <!-- Custom template for transaction type badge -->
+  <ng-template #typeColumn let-transaction>
+    <lib-badge
+      [config]="{
+        variant: getTransactionTypeBadgeVariant(transaction.type),
+        label: transaction.type
+      }"
+    />
+  </ng-template>
+</lib-table>
+} }
+
+<!-- Transaction Actions Template -->
+<ng-template #transactionActions let-transaction>
+  <div class="transaction-actions">
+    <lib-action-menu
+      [config]="getTransactionActionsMenuConfig(transaction)"
+      (itemSelected)="onTransactionActionSelected(transaction, $event)"
+    />
+  </div>
+</ng-template>

@@ -5,68 +5,104 @@ This library implements the **Portfolio Data Access Layer** for the Stocks Resea
 ## Overview
 
 The `data-access-portfolio` library handles:
-- Portfolio and asset data management
+- Portfolio and asset data management (read-only, calculated from transactions)
+- **Transaction management** (source of truth for portfolio positions)
 - NgRx state for reactive data flow
-- Mock API service (ready to be replaced with real HTTP calls)
+- HTTP API services for backend communication
 - Signal-based Facade for Zoneless Angular consumption
+
+## Important: Transaction-Based Architecture
+
+**As of January 1, 2026**, this library follows a transaction-based architecture where:
+- **Transactions are the single source of truth** for all portfolio positions
+- **Assets are materialized views** (performance cache) automatically calculated from transactions
+- **Direct asset manipulation is deprecated** - use transaction endpoints instead
+
+For migration details, see [Migration Notes](#migration-notes) below.
 
 ## Architecture
 
 ### Service Layer
+
 **`PortfolioApiService`**
-- Simulates API calls with mock data
-- Returns RxJS Observables
+- HTTP service for portfolio data operations
 - Methods:
   - `getPortfolios()`: Returns list of portfolios
-  - `getAssets(portfolioId)`: Returns assets for a specific portfolio
+  - `getAssets(portfolioId)`: Returns assets (materialized positions)
+  - `createPortfolio(dto)`: Creates a new portfolio
+  - `deletePortfolio(portfolioId)`: Deletes a portfolio
+  - `getPortfolioSummary(portfolioId)`: Gets aggregated metrics
+
+**`TransactionApiService`** (NEW)
+- HTTP service for transaction operations
+- Methods:
+  - `createTransaction(portfolioId, dto)`: Records a BUY/SELL transaction
+  - `getTransactions(portfolioId, filters?)`: Gets transaction history with filters
+  - `deleteTransaction(portfolioId, transactionId)`: Deletes a transaction
 
 ### State Management (NgRx)
-**Actions** (`portfolio.actions.ts`)
-- `enterDashboard`: Triggers initial data load
-- `loadPortfolios` / `loadPortfoliosSuccess` / `loadPortfoliosFailure`
-- `selectPortfolio`: Selects a portfolio and triggers asset loading
-- `loadAssets` / `loadAssetsSuccess` / `loadAssetsFailure`
 
-**Reducer** (`portfolio.reducer.ts`)
-- Manages immutable state updates
-- State shape:
-  ```typescript
-  {
-    portfolios: DashboardPortfolio[];
-    assets: Record<string, DashboardAsset[]>;
-    selectedId: string | null;
-    loading: boolean;
-    error: string | null;
-  }
-  ```
+**Portfolio State** (`portfolio.actions.ts`, `portfolio.reducer.ts`)
+- Manages portfolio and asset data (read-only)
+- Actions:
+  - `enterDashboard`: Triggers initial data load
+  - `loadPortfolios` / `loadPortfoliosSuccess` / `loadPortfoliosFailure`
+  - `selectPortfolio`: Selects a portfolio and triggers asset loading
+  - `loadAssets` / `loadAssetsSuccess` / `loadAssetsFailure`
+  - `createPortfolio` / `deletePortfolio`: Portfolio CRUD operations
 
-**Selectors** (`portfolio.selectors.ts`)
-- `selectPortfolios`: All portfolios
-- `selectCurrentAssets`: Assets for the selected portfolio
-- `selectSelectedId`: Currently selected portfolio ID
-- `selectLoading`: Loading state
-- `selectError`: Error state
+**Transaction State** (NEW) (`transaction.actions.ts`, `transaction.reducer.ts`)
+- Manages transaction data with optimistic updates
+- Actions:
+  - `loadTransactions` / `loadTransactionsSuccess` / `loadTransactionsFailure`
+  - `createTransaction` / `createTransactionSuccess` / `createTransactionFailure`
+  - `deleteTransaction` / `deleteTransactionSuccess` / `deleteTransactionFailure`
+- Automatically triggers asset reload after transaction create/delete
 
-**Effects** (`portfolio.effects.ts`)
-- Orchestrates side effects (API calls)
-- Chains actions (e.g., `selectPortfolio` → `loadAssets`)
+**State Shape**:
+```typescript
+// Portfolio State
+{
+  portfolios: DashboardPortfolio[];
+  assets: Record<string, DashboardAsset[]>; // Materialized views
+  selectedId: string | null;
+  loading: boolean;
+  error: string | null;
+}
+
+// Transaction State
+{
+  transactions: Record<string, DashboardTransaction[]>; // Keyed by portfolioId
+  loading: boolean;
+  error: string | null;
+}
+```
 
 ### Facade Pattern
 **`PortfolioFacade`**
 - Bridges NgRx (RxJS Observables) with Signals (Zoneless)
 - Exposes Signal-based API:
   ```typescript
+  // Portfolio Signals
   readonly portfolios: Signal<DashboardPortfolio[]>
   readonly currentAssets: Signal<DashboardAsset[]>
   readonly selectedId: Signal<string | null>
   readonly loading: Signal<boolean>
   readonly error: Signal<string | null>
+
+  // Transaction Signals (NEW)
+  readonly transactions: Signal<DashboardTransaction[]>
+  readonly transactionsLoading: Signal<boolean>
+  readonly transactionsError: Signal<string | null>
   ```
 - Methods:
   - `init()`: Initialize data loading
   - `selectPortfolio(id)`: Select a portfolio
   - `loadPortfolios()`: Manually refresh portfolios
   - `loadAssets(portfolioId)`: Manually load assets
+  - **`createTransaction(portfolioId, dto)`**: Record a transaction (NEW)
+  - **`loadTransactions(portfolioId, filters?)`**: Load transaction history (NEW)
+  - **`deleteTransaction(portfolioId, transactionId)`**: Delete a transaction (NEW)
 
 ## Usage
 
@@ -147,30 +183,66 @@ Run tests:
 nx test data-access-portfolio
 ```
 
-## Future Development
+## Migration Notes
 
-### Replacing Mock Data with Real API
-1. Update `PortfolioApiService` to use `HttpClient`
-2. Point methods to actual backend endpoints
-3. Add proper error handling and retry logic
-4. No changes needed to Effects, Reducer, or Facade
+### Breaking Changes (January 1, 2026)
 
-Example:
+The portfolio system has been refactored to use **transactions as the single source of truth**. This is a **breaking change** that affects how you manage portfolio positions.
+
+#### What Changed
+
+**Before (Deprecated)**:
 ```typescript
-@Injectable({ providedIn: 'root' })
-export class PortfolioApiService {
-  private http = inject(HttpClient);
-  private baseUrl = '/api/portfolios';
-
-  getPortfolios(): Observable<DashboardPortfolio[]> {
-    return this.http.get<DashboardPortfolio[]>(this.baseUrl).pipe(
-      catchError(this.handleError)
-    );
-  }
-  
-  // ... etc
-}
+// ❌ Old way - Direct asset management (REMOVED)
+facade.addAsset(portfolioId, { ticker: 'AAPL', quantity: 100, avgPrice: 150 });
+facade.removeAsset(portfolioId, assetId);
 ```
+
+**After (Current)**:
+```typescript
+// ✅ New way - Transaction-based management
+facade.createTransaction(portfolioId, {
+  type: TransactionType.BUY,
+  ticker: 'AAPL',
+  quantity: 100,
+  price: 150,
+  transactionDate: new Date() // Optional
+});
+
+facade.createTransaction(portfolioId, {
+  type: TransactionType.SELL,
+  ticker: 'AAPL',
+  quantity: 50,
+  price: 160,
+});
+```
+
+#### Why This Change
+
+1. **Data Integrity**: Transactions provide an immutable audit trail
+2. **Accurate Positions**: Assets are always calculated from transaction history
+3. **Better UX**: Users can view transaction history and delete incorrect entries
+4. **Performance**: Summary calculations are faster (materialized views)
+
+#### Migration Path
+
+1. **Remove UI calls to**:
+   - `facade.addAsset()` - Replace with `facade.createTransaction()` with `type: 'BUY'`
+   - `facade.removeAsset()` - Replace with `facade.createTransaction()` with `type: 'SELL'`
+
+2. **Add transaction history UI**:
+   - Use `facade.loadTransactions(portfolioId)` to fetch history
+   - Use `facade.transactions` signal to display transactions
+   - Use `facade.deleteTransaction(portfolioId, transactionId)` to remove errors
+
+3. **Update user messaging**:
+   - "Add Asset" → "Buy Asset"
+   - "Remove Asset" → "Sell Shares"
+   - Show transaction history for transparency
+
+#### No Data Loss
+
+All existing assets have been migrated to transactions on the backend. Users will see their portfolios unchanged, but now with proper transaction history.
 
 ## Dependencies
 - `@ngrx/store`

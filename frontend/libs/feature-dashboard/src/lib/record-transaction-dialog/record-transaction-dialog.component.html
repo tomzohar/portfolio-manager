@@ -1,0 +1,58 @@
+<h2 mat-dialog-title>{{ dialogTitle() }}</h2>
+
+<mat-dialog-content>
+  @if (currentPositionDisplay()) {
+    <div class="current-position">
+      <mat-icon>info</mat-icon>
+      <span>{{ currentPositionDisplay() }}</span>
+    </div>
+  }
+
+  <form [formGroup]="form" class="transaction-form">
+    <!-- Transaction Type -->
+    <mat-radio-group formControlName="type" class="transaction-type-group">
+      <mat-radio-button [value]="TransactionType.BUY">Buy</mat-radio-button>
+      <mat-radio-button [value]="TransactionType.SELL">Sell</mat-radio-button>
+    </mat-radio-group>
+
+    <!-- Ticker (read-only if pre-selected) -->
+    <lib-input [config]="tickerInputConfig"></lib-input>
+
+    <!-- Quantity -->
+    <lib-input [config]="quantityInputConfig"></lib-input>
+
+    <!-- Price -->
+    <lib-input [config]="priceInputConfig"></lib-input>
+
+    <!-- Transaction Date (Optional) -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Transaction Date (Optional)</mat-label>
+      <input 
+        matInput 
+        [matDatepicker]="picker" 
+        formControlName="transactionDate"
+        [max]="maxDate"
+      />
+      <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+      <mat-datepicker #picker></mat-datepicker>
+      <mat-hint>Leave blank to use current date</mat-hint>
+    </mat-form-field>
+
+    <!-- Warning for SELL transactions -->
+    @if (sellWarning()) {
+      <div class="sell-warning">
+        <mat-icon>warning</mat-icon>
+        <span>{{ sellWarning() }}</span>
+      </div>
+    }
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <lib-button [config]="cancelButtonConfig" (clicked)="onCancel()" />
+  <lib-button
+    [config]="submitButtonConfig()"
+    (clicked)="onSubmit()"
+  />
+</mat-dialog-actions>
+

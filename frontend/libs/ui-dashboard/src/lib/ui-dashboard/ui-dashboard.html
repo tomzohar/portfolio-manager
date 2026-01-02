@@ -44,7 +44,8 @@
     >
       <!-- Header Actions -->
       <div headerActions>
-        <lib-button [config]="addAssetButtonConfig" (clicked)="onAddAsset()" />
+        <lib-button [config]="viewTransactionsButtonConfig" (clicked)="onViewTransactions()" />
+        <lib-button [config]="buyAssetButtonConfig" (clicked)="onBuyAsset()" />
       </div>
 
       <!-- Content -->
@@ -53,9 +54,9 @@
       <lib-empty-state
         [icon]="'inventory_2'"
         [title]="'No Assets Yet'"
-        [message]="'Add your first asset to start tracking this portfolio'"
-        [buttonConfig]="{ label: 'Add Asset' }"
-        (actionClick)="onAddAsset()"
+        [message]="'Buy your first asset to start tracking this portfolio'"
+        [buttonConfig]="{ label: 'Buy Asset' }"
+        (actionClick)="onBuyAsset()"
       />
       } @else {
       <lib-table

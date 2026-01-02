@@ -1,5 +1,13 @@
 @use 'scss' as *;
 
+:host {
+  display: block;
+  margin-top: $spacing-2xl;
+  
+  &[with-back-button="true"] {
+    margin-top: $spacing-sm;  
+  }
+}
 .page-header {
   display: flex;
   justify-content: space-between;

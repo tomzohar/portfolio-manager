@@ -31,6 +31,9 @@ export const initialState: PortfolioState = {
  * 
  * Manages state transitions for portfolio-related actions.
  * Follows immutability principles required for Zoneless architecture.
+ * 
+ * Note: Asset management reducers have been removed.
+ * Assets are now read-only and calculated from transactions on the backend.
  */
 export const portfolioReducer = createReducer(
   initialState,
@@ -69,7 +72,7 @@ export const portfolioReducer = createReducer(
     loading: true,
   })),
 
-  // Load Assets
+  // Load Assets (Read-Only)
   on(PortfolioActions.loadAssets, (state) => ({
     ...state,
     loading: true,
@@ -160,98 +163,6 @@ export const portfolioReducer = createReducer(
   })),
 
   on(PortfolioActions.deletePortfolioFailure, (state, { error }) => ({
-    ...state,
-    loading: false,
-    error,
-  })),
-
-  // Add Asset - Optimistic Update
-  on(PortfolioActions.addAsset, (state, { portfolioId, dto, tempId }) => {
-    // Create optimistic asset with temp ID from action
-    const optimisticAsset: DashboardAsset = {
-      id: tempId,
-      ticker: dto.ticker,
-      quantity: dto.quantity,
-      avgPrice: dto.avgPrice,
-      createdAt: new Date(),
-    };
-
-    // Get existing assets for this portfolio or empty array
-    const currentAssets = state.assets[portfolioId] || [];
-    
-    return {
-      ...state,
-      assets: {
-        ...state.assets,
-        [portfolioId]: [...currentAssets, optimisticAsset],
-      },
-      loading: true,
-      error: null,
-    };
-  }),
-
-  on(PortfolioActions.addAssetSuccess, (state, { portfolioId, tempId, assetId }) => {
-    // Replace the temporary asset ID with the real one
-    const portfolioAssets = state.assets[portfolioId] || [];
-    const updatedAssets = portfolioAssets.map((asset) =>
-      asset.id === tempId ? { ...asset, id: assetId } : asset
-    );
-
-    return {
-      ...state,
-      assets: {
-        ...state.assets,
-        [portfolioId]: updatedAssets,
-      },
-      loading: false,
-      error: null,
-    };
-  }),
-
-  on(PortfolioActions.addAssetFailure, (state, { portfolioId, tempId, error }) => {
-    // Remove the temporary asset on failure (rollback)
-    const portfolioAssets = state.assets[portfolioId] || [];
-    const updatedAssets = portfolioAssets.filter((asset) => asset.id !== tempId);
-
-    return {
-      ...state,
-      assets: {
-        ...state.assets,
-        [portfolioId]: updatedAssets,
-      },
-      loading: false,
-      error,
-    };
-  }),
-
-  // Remove Asset - Optimistic Update
-  on(PortfolioActions.removeAsset, (state, { portfolioId, assetId }) => {
-    // Immediately remove the asset optimistically
-    const portfolioAssets = state.assets[portfolioId] || [];
-    const updatedAssets = portfolioAssets.filter((asset) => asset.id !== assetId);
-
-    return {
-      ...state,
-      assets: {
-        ...state.assets,
-        [portfolioId]: updatedAssets,
-      },
-      loading: true,
-      error: null,
-    };
-  }),
-
-  on(PortfolioActions.removeAssetSuccess, (state, { portfolioId, assets }) => ({
-    ...state,
-    assets: {
-      ...state.assets,
-      [portfolioId]: assets,
-    },
-    loading: false,
-    error: null,
-  })),
-
-  on(PortfolioActions.removeAssetFailure, (state, { error }) => ({
     ...state,
     loading: false,
     error,

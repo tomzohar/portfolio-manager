@@ -3,7 +3,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { of } from 'rxjs';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { PolygonApiService } from '../assets/services/polygon-api.service';
 import { UsersService } from '../users/users.service';
 import { EnrichedAssetDto } from './dto/asset-response.dto';
@@ -13,12 +13,15 @@ import { Transaction, TransactionType } from './entities/transaction.entity';
 import { PortfolioService } from './portfolio.service';
 import { User } from '../users/entities/user.entity';
 import { PortfolioSummaryDto } from './dto/portfolio-summary.dto';
+import { QueryRunner } from 'typeorm/browser';
 
 describe('PortfolioService', () => {
   let service: PortfolioService;
   let portfolioRepository: jest.Mocked<Repository<Portfolio>>;
+  let assetRepository: jest.Mocked<Repository<Asset>>;
   let transactionRepository: jest.Mocked<Repository<Transaction>>;
   let polygonApiService: jest.Mocked<PolygonApiService>;
+  let dataSource: jest.Mocked<DataSource>;
 
   const mockUserId = 'user-123';
   const mockPortfolioId = 'portfolio-456';
@@ -77,6 +80,7 @@ describe('PortfolioService', () => {
           useValue: {
             create: jest.fn(),
             save: jest.fn(),
+            find: jest.fn(),
             delete: jest.fn(),
           },
         },
@@ -99,13 +103,21 @@ describe('PortfolioService', () => {
             getPreviousClose: jest.fn(),
           },
         },
+        {
+          provide: DataSource,
+          useValue: {
+            createQueryRunner: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<PortfolioService>(PortfolioService);
     portfolioRepository = module.get(getRepositoryToken(Portfolio));
+    assetRepository = module.get(getRepositoryToken(Asset));
     transactionRepository = module.get(getRepositoryToken(Transaction));
     polygonApiService = module.get(PolygonApiService);
+    dataSource = module.get(DataSource);
   });
 
   afterEach(() => {
@@ -367,7 +379,8 @@ describe('PortfolioService', () => {
     describe('getPortfolioSummary', () => {
       it('should return empty summary for portfolio with no transactions', async () => {
         jest.spyOn(service, 'findOne').mockResolvedValue(mockPortfolio);
-        transactionRepository.find.mockResolvedValue([]);
+        assetRepository.find.mockResolvedValue([]);
+        transactionRepository.find.mockResolvedValue([]); // Fallback also returns empty
 
         const result = await service.getPortfolioSummary(
           mockPortfolioId,
@@ -382,18 +395,16 @@ describe('PortfolioService', () => {
       });
 
       it('should calculate position from single BUY transaction', async () => {
-        const transactions: Transaction[] = [
+        const mockAssets = [
           {
-            id: 'tx-1',
-            type: TransactionType.BUY,
+            id: 'asset-1',
             ticker: 'AAPL',
             quantity: 10,
-            price: 150.0,
-            transactionDate: new Date('2024-01-01'),
+            avgPrice: 150.0,
             portfolio: mockPortfolio,
             createdAt: new Date(),
             updatedAt: new Date(),
-          },
+          } as Asset,
         ];
 
         const mockSnapshot = {
@@ -424,7 +435,7 @@ describe('PortfolioService', () => {
         };
 
         jest.spyOn(service, 'findOne').mockResolvedValue(mockPortfolio);
-        transactionRepository.find.mockResolvedValue(transactions);
+        assetRepository.find.mockResolvedValue(mockAssets);
         jest
           .spyOn(polygonApiService, 'getTickerSnapshot')
           .mockReturnValue(of(mockSnapshot));
@@ -446,40 +457,27 @@ describe('PortfolioService', () => {
       });
 
       it('should calculate weighted average cost from multiple BUY transactions', async () => {
-        const transactions: Transaction[] = [
+        const mockAssets = [
           {
-            id: 'tx-1',
-            type: TransactionType.BUY,
+            id: 'asset-1',
             ticker: 'AAPL',
-            quantity: 10,
-            price: 150.0,
-            transactionDate: new Date('2024-01-01'),
+            quantity: 20,
+            avgPrice: 160.0, // Weighted avg: (10*150 + 10*170) / 20 = 160
             portfolio: mockPortfolio,
             createdAt: new Date(),
             updatedAt: new Date(),
-          },
-          {
-            id: 'tx-2',
-            type: TransactionType.BUY,
-            ticker: 'AAPL',
-            quantity: 10,
-            price: 170.0,
-            transactionDate: new Date('2024-01-15'),
-            portfolio: mockPortfolio,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
+          } as Asset,
         ];
 
         const mockSnapshot = {
           ticker: {
             ticker: 'AAPL',
-            day: { c: 180.0 } as any,
+            day: { c: 180.0 },
           },
         };
 
         jest.spyOn(service, 'findOne').mockResolvedValue(mockPortfolio);
-        transactionRepository.find.mockResolvedValue(transactions);
+        assetRepository.find.mockResolvedValue(mockAssets);
         jest
           .spyOn(polygonApiService, 'getTickerSnapshot')
           .mockReturnValue(of(mockSnapshot as any));
@@ -496,29 +494,16 @@ describe('PortfolioService', () => {
       });
 
       it('should handle BUY and SELL transactions correctly', async () => {
-        const transactions: Transaction[] = [
+        const mockAssets = [
           {
-            id: 'tx-1',
-            type: TransactionType.BUY,
+            id: 'asset-1',
             ticker: 'AAPL',
-            quantity: 10,
-            price: 150.0,
-            transactionDate: new Date('2024-01-01'),
+            quantity: 5, // 10 bought - 5 sold = 5 remaining
+            avgPrice: 150.0, // Original purchase price
             portfolio: mockPortfolio,
             createdAt: new Date(),
             updatedAt: new Date(),
-          },
-          {
-            id: 'tx-2',
-            type: TransactionType.SELL,
-            ticker: 'AAPL',
-            quantity: 5,
-            price: 160.0,
-            transactionDate: new Date('2024-01-15'),
-            portfolio: mockPortfolio,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
+          } as Asset,
         ];
 
         const mockSnapshot = {
@@ -529,7 +514,7 @@ describe('PortfolioService', () => {
         };
 
         jest.spyOn(service, 'findOne').mockResolvedValue(mockPortfolio);
-        transactionRepository.find.mockResolvedValue(transactions);
+        assetRepository.find.mockResolvedValue(mockAssets);
         jest
           .spyOn(polygonApiService, 'getTickerSnapshot')
           .mockReturnValue(of(mockSnapshot as any));
@@ -542,6 +527,344 @@ describe('PortfolioService', () => {
         expect(result.positions[0].quantity).toBe(5);
         expect(result.positions[0].avgCostBasis).toBe(150.0);
       });
+    });
+  });
+
+  describe('recalculatePositions', () => {
+    let mockQueryRunner: QueryRunner;
+
+    beforeEach(() => {
+      // Create a comprehensive mock QueryRunner
+      mockQueryRunner = {
+        connect: jest.fn(),
+        startTransaction: jest.fn(),
+        commitTransaction: jest.fn(),
+        rollbackTransaction: jest.fn(),
+        release: jest.fn(),
+        manager: {
+          find: jest.fn(),
+          create: jest.fn(),
+          save: jest.fn(),
+          update: jest.fn(),
+          delete: jest.fn(),
+        },
+      };
+
+      dataSource.createQueryRunner.mockReturnValue(mockQueryRunner);
+    });
+
+    it('should handle empty portfolio (no transactions)', async () => {
+      mockQueryRunner.manager.find
+        .mockResolvedValueOnce([]) // transactions
+        .mockResolvedValueOnce([]); // current assets
+
+      await service.recalculatePositions(mockPortfolioId);
+
+      expect(mockQueryRunner.connect).toHaveBeenCalled();
+      expect(mockQueryRunner.startTransaction).toHaveBeenCalled();
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
+      expect(mockQueryRunner.release).toHaveBeenCalled();
+      expect(mockQueryRunner.manager.save).not.toHaveBeenCalled();
+      expect(mockQueryRunner.manager.delete).not.toHaveBeenCalled();
+    });
+
+    it('should create asset for single BUY transaction', async () => {
+      const mockTransaction = {
+        id: 'tx-1',
+        type: TransactionType.BUY,
+        ticker: 'AAPL',
+        quantity: 100,
+        price: 150.0,
+        transactionDate: new Date('2024-01-01'),
+      } as Transaction;
+
+      mockQueryRunner.manager.find
+        .mockResolvedValueOnce([mockTransaction]) // transactions
+        .mockResolvedValueOnce([]); // current assets (empty)
+
+      const mockNewAsset = {
+        ticker: 'AAPL',
+        quantity: 100,
+        avgPrice: 150.0,
+        portfolio: { id: mockPortfolioId },
+      };
+
+      mockQueryRunner.manager.create.mockReturnValue(mockNewAsset);
+
+      await service.recalculatePositions(mockPortfolioId);
+
+      expect(mockQueryRunner.manager.create).toHaveBeenCalledWith(Asset, {
+        ticker: 'AAPL',
+        quantity: 100,
+        avgPrice: 150.0,
+        portfolio: { id: mockPortfolioId },
+      });
+      expect(mockQueryRunner.manager.save).toHaveBeenCalledWith(
+        Asset,
+        mockNewAsset,
+      );
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
+    });
+
+    it('should calculate weighted average cost for multiple BUY transactions', async () => {
+      const mockTransactions = [
+        {
+          id: 'tx-1',
+          type: TransactionType.BUY,
+          ticker: 'AAPL',
+          quantity: 100,
+          price: 150.0, // Total cost: 15000
+          transactionDate: new Date('2024-01-01'),
+        },
+        {
+          id: 'tx-2',
+          type: TransactionType.BUY,
+          ticker: 'AAPL',
+          quantity: 50,
+          price: 160.0, // Total cost: 8000
+          transactionDate: new Date('2024-01-15'),
+        },
+      ] as Transaction[];
+
+      // Expected: quantity=150, avgPrice=(15000+8000)/150=153.33
+
+      mockQueryRunner.manager.find
+        .mockResolvedValueOnce(mockTransactions) // transactions
+        .mockResolvedValueOnce([]); // current assets
+
+      mockQueryRunner.manager.create.mockImplementation((entity, data) => data);
+
+      await service.recalculatePositions(mockPortfolioId);
+
+      expect(mockQueryRunner.manager.create).toHaveBeenCalledWith(
+        Asset,
+        expect.objectContaining({
+          ticker: 'AAPL',
+          quantity: 150,
+          avgPrice: expect.closeTo(153.33, 2),
+        }),
+      );
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
+    });
+
+    it('should reduce quantity for BUY then SELL transactions', async () => {
+      const mockTransactions = [
+        {
+          id: 'tx-1',
+          type: TransactionType.BUY,
+          ticker: 'GOOGL',
+          quantity: 100,
+          price: 2800.0,
+          transactionDate: new Date('2024-01-01'),
+        },
+        {
+          id: 'tx-2',
+          type: TransactionType.SELL,
+          ticker: 'GOOGL',
+          quantity: 40,
+          price: 2900.0,
+          transactionDate: new Date('2024-02-01'),
+        },
+      ] as Transaction[];
+
+      // Expected: quantity=60, avgPrice=2800 (sells don't change avg cost)
+
+      mockQueryRunner.manager.find
+        .mockResolvedValueOnce(mockTransactions) // transactions
+        .mockResolvedValueOnce([]); // current assets
+
+      mockQueryRunner.manager.create.mockImplementation((entity, data) => data);
+
+      await service.recalculatePositions(mockPortfolioId);
+
+      expect(mockQueryRunner.manager.create).toHaveBeenCalledWith(
+        Asset,
+        expect.objectContaining({
+          ticker: 'GOOGL',
+          quantity: 60,
+          avgPrice: 2800.0,
+        }),
+      );
+    });
+
+    it('should remove asset when all shares are sold', async () => {
+      const mockTransactions = [
+        {
+          id: 'tx-1',
+          type: TransactionType.BUY,
+          ticker: 'TSLA',
+          quantity: 50,
+          price: 200.0,
+          transactionDate: new Date('2024-01-01'),
+        },
+        {
+          id: 'tx-2',
+          type: TransactionType.SELL,
+          ticker: 'TSLA',
+          quantity: 50,
+          price: 250.0,
+          transactionDate: new Date('2024-02-01'),
+        },
+      ] as Transaction[];
+
+      const existingAsset = {
+        id: 'asset-1',
+        ticker: 'TSLA',
+        quantity: 50,
+        avgPrice: 200.0,
+      } as Asset;
+
+      mockQueryRunner.manager.find
+        .mockResolvedValueOnce(mockTransactions) // transactions
+        .mockResolvedValueOnce([existingAsset]); // current assets
+
+      await service.recalculatePositions(mockPortfolioId);
+
+      // Should delete the asset since quantity is now 0
+      expect(mockQueryRunner.manager.delete).toHaveBeenCalledWith(Asset, {
+        id: 'asset-1',
+      });
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
+    });
+
+    it('should handle multiple tickers independently', async () => {
+      const mockTransactions = [
+        {
+          id: 'tx-1',
+          type: TransactionType.BUY,
+          ticker: 'AAPL',
+          quantity: 100,
+          price: 150.0,
+          transactionDate: new Date('2024-01-01'),
+        },
+        {
+          id: 'tx-2',
+          type: TransactionType.BUY,
+          ticker: 'GOOGL',
+          quantity: 50,
+          price: 2800.0,
+          transactionDate: new Date('2024-01-02'),
+        },
+        {
+          id: 'tx-3',
+          type: TransactionType.BUY,
+          ticker: 'MSFT',
+          quantity: 75,
+          price: 380.0,
+          transactionDate: new Date('2024-01-03'),
+        },
+      ] as Transaction[];
+
+      mockQueryRunner.manager.find
+        .mockResolvedValueOnce(mockTransactions) // transactions
+        .mockResolvedValueOnce([]); // current assets
+
+      mockQueryRunner.manager.create.mockImplementation((entity, data) => data);
+
+      await service.recalculatePositions(mockPortfolioId);
+
+      // Should create 3 separate assets
+      expect(mockQueryRunner.manager.save).toHaveBeenCalledTimes(3);
+      expect(mockQueryRunner.manager.create).toHaveBeenCalledWith(
+        Asset,
+        expect.objectContaining({ ticker: 'AAPL' }),
+      );
+      expect(mockQueryRunner.manager.create).toHaveBeenCalledWith(
+        Asset,
+        expect.objectContaining({ ticker: 'GOOGL' }),
+      );
+      expect(mockQueryRunner.manager.create).toHaveBeenCalledWith(
+        Asset,
+        expect.objectContaining({ ticker: 'MSFT' }),
+      );
+    });
+
+    it('should update existing asset when values change', async () => {
+      const mockTransactions = [
+        {
+          id: 'tx-1',
+          type: TransactionType.BUY,
+          ticker: 'AAPL',
+          quantity: 100,
+          price: 150.0,
+          transactionDate: new Date('2024-01-01'),
+        },
+        {
+          id: 'tx-2',
+          type: TransactionType.BUY,
+          ticker: 'AAPL',
+          quantity: 50,
+          price: 160.0,
+          transactionDate: new Date('2024-01-15'),
+        },
+      ] as Transaction[];
+
+      const existingAsset = {
+        id: 'asset-1',
+        ticker: 'AAPL',
+        quantity: 100, // Old value
+        avgPrice: 150.0, // Old value
+      } as Asset;
+
+      mockQueryRunner.manager.find
+        .mockResolvedValueOnce(mockTransactions) // transactions
+        .mockResolvedValueOnce([existingAsset]); // current assets
+
+      await service.recalculatePositions(mockPortfolioId);
+
+      // Should UPDATE the existing asset
+      expect(mockQueryRunner.manager.update).toHaveBeenCalledWith(
+        Asset,
+        { id: 'asset-1' },
+        {
+          quantity: 150,
+          avgPrice: expect.closeTo(153.33, 2),
+        },
+      );
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
+    });
+
+    it('should rollback on error', async () => {
+      const mockError = new Error('Database error');
+      mockQueryRunner.manager.find.mockRejectedValue(mockError);
+
+      await expect(
+        service.recalculatePositions(mockPortfolioId),
+      ).rejects.toThrow('Database error');
+
+      expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
+      expect(mockQueryRunner.release).toHaveBeenCalled();
+      expect(mockQueryRunner.commitTransaction).not.toHaveBeenCalled();
+    });
+
+    it('should handle CASH transactions correctly', async () => {
+      const mockTransactions = [
+        {
+          id: 'tx-1',
+          type: TransactionType.BUY,
+          ticker: 'CASH',
+          quantity: 10000,
+          price: 1.0,
+          transactionDate: new Date('2024-01-01'),
+        },
+      ] as Transaction[];
+
+      mockQueryRunner.manager.find
+        .mockResolvedValueOnce(mockTransactions) // transactions
+        .mockResolvedValueOnce([]); // current assets
+
+      mockQueryRunner.manager.create.mockImplementation((entity, data) => data);
+
+      await service.recalculatePositions(mockPortfolioId);
+
+      expect(mockQueryRunner.manager.create).toHaveBeenCalledWith(
+        Asset,
+        expect.objectContaining({
+          ticker: 'CASH',
+          quantity: 10000,
+          avgPrice: 1.0,
+        }),
+      );
     });
   });
 });
