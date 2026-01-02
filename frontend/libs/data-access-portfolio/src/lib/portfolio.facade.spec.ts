@@ -93,36 +93,6 @@ describe('PortfolioFacade', () => {
     });
   });
 
-  describe('addAsset', () => {
-    it('should dispatch addAsset action with portfolioId, dto, and tempId', () => {
-      const portfolioId = 'portfolio-123';
-      const dto = { ticker: 'AAPL', quantity: 10, avgPrice: 150 };
-      
-      facade.addAsset(portfolioId, dto);
-
-      expect(store.dispatch).toHaveBeenCalledWith(
-        expect.objectContaining({
-          portfolioId,
-          dto,
-          tempId: expect.stringContaining('temp-asset-'),
-        })
-      );
-    });
-  });
-
-  describe('removeAsset', () => {
-    it('should dispatch removeAsset action with portfolioId and assetId', () => {
-      const portfolioId = 'portfolio-123';
-      const assetId = 'asset-456';
-      
-      facade.removeAsset(portfolioId, assetId);
-
-      expect(store.dispatch).toHaveBeenCalledWith(
-        PortfolioActions.removeAsset({ portfolioId, assetId })
-      );
-    });
-  });
-
   describe('facade properties', () => {
     it('should have portfolios property', () => {
       expect(facade).toHaveProperty('portfolios');

@@ -1,6 +1,7 @@
 import { provideZonelessChangeDetection, signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideAnimations } from '@angular/platform-browser/animations';
+import { ActivatedRoute } from '@angular/router';
 import { PortfolioFacade } from '@frontend/data-access-portfolio';
 import { AuthFacade } from '@frontend/data-access-auth';
 import { DialogService } from '@frontend/util-dialog';
@@ -77,6 +78,10 @@ describe('FeatureDashboardComponent', () => {
       }),
     };
 
+    const mockActivatedRoute = {
+      queryParams: of({}),
+    };
+
     await TestBed.configureTestingModule({
       imports: [FeatureDashboardComponent],
       providers: [
@@ -85,6 +90,7 @@ describe('FeatureDashboardComponent', () => {
         { provide: PortfolioFacade, useValue: mockFacade },
         { provide: AuthFacade, useValue: mockAuthFacade },
         { provide: DialogService, useValue: mockDialogService },
+        { provide: ActivatedRoute, useValue: mockActivatedRoute },
       ],
     }).compileComponents();
 

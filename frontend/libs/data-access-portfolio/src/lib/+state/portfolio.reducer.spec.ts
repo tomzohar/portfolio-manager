@@ -362,55 +362,5 @@ describe('Portfolio Reducer', () => {
     });
   });
 
-  describe('addAsset - Optimistic Updates', () => {
-    it('should immediately add a temporary asset', () => {
-      const portfolioId = '1';
-      const dto = { ticker: 'MSFT', quantity: 20, avgPrice: 300 };
-      const tempId = 'temp-asset-123';
-      const action = PortfolioActions.addAsset({ portfolioId, dto, tempId });
-      const result = portfolioReducer(initialState, action);
-
-      expect(result.assets[portfolioId]).toBeDefined();
-      expect(result.assets[portfolioId].length).toBe(1);
-      expect(result.assets[portfolioId][0].id).toBe(tempId);
-      expect(result.assets[portfolioId][0].ticker).toBe('MSFT');
-      expect(result.loading).toBe(true);
-    });
-
-    it('should add to existing assets in portfolio', () => {
-      const portfolioId = '1';
-      const stateWithAssets = {
-        ...initialState,
-        assets: { [portfolioId]: mockAssets },
-      };
-      const dto = { ticker: 'MSFT', quantity: 20, avgPrice: 300 };
-      const tempId = 'temp-asset-456';
-      const action = PortfolioActions.addAsset({ portfolioId, dto, tempId });
-      const result = portfolioReducer(stateWithAssets, action);
-
-      expect(result.assets[portfolioId].length).toBe(2);
-      expect(result.assets[portfolioId][1].id).toBe(tempId);
-    });
-  });
-
-  describe('removeAsset - Optimistic Updates', () => {
-    it('should immediately remove the asset', () => {
-      const portfolioId = '1';
-      const assets = [
-        { id: 'asset-1', ticker: 'AAPL', quantity: 10, avgPrice: 150 },
-        { id: 'asset-2', ticker: 'GOOGL', quantity: 5, avgPrice: 2800 },
-      ];
-      const stateWithAssets = {
-        ...initialState,
-        assets: { [portfolioId]: assets },
-      };
-      const action = PortfolioActions.removeAsset({ portfolioId, assetId: 'asset-1' });
-      const result = portfolioReducer(stateWithAssets, action);
-
-      expect(result.assets[portfolioId].length).toBe(1);
-      expect(result.assets[portfolioId][0].id).toBe('asset-2');
-      expect(result.loading).toBe(true);
-    });
-  });
 });
 

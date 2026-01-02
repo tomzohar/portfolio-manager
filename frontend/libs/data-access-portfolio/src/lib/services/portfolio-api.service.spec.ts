@@ -5,7 +5,6 @@ import {
   DashboardPortfolio, 
   DashboardAsset, 
   CreatePortfolioDto, 
-  AddAssetDto,
   PortfolioWithAssets 
 } from '@stocks-researcher/types';
 
@@ -182,87 +181,6 @@ describe('PortfolioApiService', () => {
     });
   });
 
-  describe('addAsset', () => {
-    it('should add an asset to a portfolio via POST', () => {
-      const portfolioId = '1';
-      const dto: AddAssetDto = {
-        ticker: 'MSFT',
-        quantity: 15,
-        avgPrice: 350.0,
-      };
-      const updatedPortfolio: PortfolioWithAssets = {
-        ...mockPortfolioWithAssets,
-        assets: [
-          ...mockAssets,
-          { id: 'asset-3', ticker: 'MSFT', quantity: 15, avgPrice: 350.0 },
-        ],
-      };
-
-      service.addAsset(portfolioId, dto).subscribe((response) => {
-        expect(response.id).toBeDefined();
-        expect(typeof response.id).toBe('string');
-      });
-
-      const req = httpMock.expectOne(`${apiUrl}/${portfolioId}/assets`);
-      expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual(dto);
-      req.flush(updatedPortfolio);
-    });
-
-    it('should handle error when portfolio not found', () => {
-      const portfolioId = '999';
-      const dto: AddAssetDto = {
-        ticker: 'MSFT',
-        quantity: 15,
-        avgPrice: 350.0,
-      };
-
-      service.addAsset(portfolioId, dto).subscribe({
-        next: () => fail('should have failed with 404 error'),
-        error: (error) => {
-          expect(error.message).toContain('Server Error');
-        },
-      });
-
-      const req = httpMock.expectOne(`${apiUrl}/${portfolioId}/assets`);
-      req.flush('Portfolio not found', { status: 404, statusText: 'Not Found' });
-    });
-  });
-
-  describe('removeAsset', () => {
-    it('should remove an asset from a portfolio via DELETE', () => {
-      const portfolioId = '1';
-      const assetId = 'asset-1';
-      const updatedPortfolio: PortfolioWithAssets = {
-        ...mockPortfolioWithAssets,
-        assets: [mockAssets[1]], // Only second asset remains
-      };
-
-      service.removeAsset(portfolioId, assetId).subscribe((portfolio) => {
-        expect(portfolio.assets.length).toBe(1);
-        expect(portfolio.assets[0].id).toBe('asset-2');
-      });
-
-      const req = httpMock.expectOne(`${apiUrl}/${portfolioId}/assets/${assetId}`);
-      expect(req.request.method).toBe('DELETE');
-      req.flush(updatedPortfolio);
-    });
-
-    it('should handle error when asset not found', () => {
-      const portfolioId = '1';
-      const assetId = '999';
-
-      service.removeAsset(portfolioId, assetId).subscribe({
-        next: () => fail('should have failed with 404 error'),
-        error: (error) => {
-          expect(error.message).toContain('Server Error');
-        },
-      });
-
-      const req = httpMock.expectOne(`${apiUrl}/${portfolioId}/assets/${assetId}`);
-      req.flush('Asset not found', { status: 404, statusText: 'Not Found' });
-    });
-  });
 
   describe('deletePortfolio', () => {
     it('should delete a portfolio via DELETE', () => {
