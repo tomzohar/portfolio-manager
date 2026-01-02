@@ -1,27 +1,31 @@
 import { Injectable, inject, Signal, computed, Injector } from '@angular/core';
-import { MatDialog, MatDialogConfig, MatDialogRef } from '@angular/material/dialog';
+import {
+  MatDialog,
+  MatDialogConfig,
+  MatDialogRef,
+} from '@angular/material/dialog';
 import { Observable } from 'rxjs';
 import { DialogConfig } from './types/dialog-config';
 import { DialogRef } from './types/dialog-ref';
 
 /**
  * DialogService
- * 
+ *
  * Centralized service for managing Material dialogs across the application.
  * Provides a type-safe, Signal-friendly API for opening dialogs with any component.
- * 
+ *
  * @example
  * ```typescript
  * export class MyComponent {
  *   private dialogService = inject(DialogService);
- *   
+ *
  *   openDialog() {
  *     const ref = this.dialogService.open<MyData, MyResult>({
  *       component: MyDialogComponent,
  *       data: { userId: '123' },
  *       width: '500px'
  *     });
- *     
+ *
  *     // Use Signal for Zoneless reactivity
  *     const result = ref.afterClosedSignal;
  *   }
@@ -49,7 +53,7 @@ export class DialogService {
 
   constructor() {
     this.afterAllClosed = this.matDialog.afterAllClosed;
-    
+
     // Create a computed signal that tracks the openDialogs array
     // We use effect to create reactivity, but wrap it in computed for read-only access
     this.openDialogs = computed(() => {
@@ -60,12 +64,12 @@ export class DialogService {
 
   /**
    * Opens a dialog with the specified component and configuration
-   * 
+   *
    * @template TData - Type of data passed to the dialog
    * @template TResult - Type of result returned from the dialog
    * @param config - Dialog configuration
    * @returns DialogRef wrapper with Signal support
-   * 
+   *
    * @example
    * ```typescript
    * const dialogRef = this.dialogService.open({
@@ -84,8 +88,50 @@ export class DialogService {
       config.component,
       matConfig
     );
-    
+
     return new DialogRef<TResult>(matDialogRef, this.injector);
+  }
+
+  /**
+   * Convenience method to show an error dialog
+   *
+   * @param message - Error message to display
+   * @param title - Optional custom title (defaults to 'Error')
+   * @param details - Optional technical details
+   * @returns DialogRef for the error dialog
+   *
+   * @example
+   * ```typescript
+   * this.dialogService.showError('Insufficient cash balance');
+   *
+   * // With details
+   * this.dialogService.showError(
+   *   'Transaction failed',
+   *   'Insufficient Funds',
+   *   'Required: $6000.00, Available: $4000.00'
+   * );
+   * ```
+   */
+  async showError(
+    message: string,
+    title?: string,
+    details?: string
+  ): Promise<DialogRef<void>> {
+    // Lazy import to avoid circular dependencies
+    const { ErrorDialogComponent } = await import(
+      './error-dialog/error-dialog.component'
+    );
+    return this.open({
+      component: ErrorDialogComponent,
+      data: {
+        title: title || 'Error',
+        message,
+        details,
+        icon: 'error',
+      },
+      width: '450px',
+      disableClose: false,
+    });
   }
 
   /**
@@ -140,7 +186,7 @@ export class DialogService {
     }
 
     // Remove undefined values to let Material use its defaults
-    Object.keys(matConfig).forEach(key => {
+    Object.keys(matConfig).forEach((key) => {
       if (matConfig[key as keyof MatDialogConfig] === undefined) {
         delete matConfig[key as keyof MatDialogConfig];
       }
@@ -149,5 +195,3 @@ export class DialogService {
     return matConfig;
   }
 }
-
-

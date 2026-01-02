@@ -4,8 +4,8 @@ import { provideZoneChangeDetection, signal } from '@angular/core';
 import { PortfoliosPageFacade } from '@frontend/portfolios-page-data-access';
 import { PortfolioFacade } from '@frontend/data-access-portfolio';
 import { DialogService } from '@frontend/util-dialog';
-import { Router } from '@angular/router';
-import { of } from 'rxjs';
+import { Router, NavigationEnd } from '@angular/router';
+import { of, Subject } from 'rxjs';
 
 describe('PortfoliosPageComponent', () => {
   let component: PortfoliosPageComponent;
@@ -14,6 +14,7 @@ describe('PortfoliosPageComponent', () => {
   let mockPortfolioFacade: jest.Mocked<PortfolioFacade>;
   let mockDialogService: jest.Mocked<DialogService>;
   let mockRouter: jest.Mocked<Router>;
+  let routerEventsSubject: Subject<any>;
 
   beforeEach(async () => {
     // Create mock facade
@@ -36,9 +37,11 @@ describe('PortfoliosPageComponent', () => {
       }),
     } as any;
 
-    // Create mock router
+    // Create mock router with events observable
+    routerEventsSubject = new Subject();
     mockRouter = {
       navigate: jest.fn(),
+      events: routerEventsSubject.asObservable(),
     } as any;
 
     await TestBed.configureTestingModule({
@@ -101,5 +104,45 @@ describe('PortfoliosPageComponent', () => {
   it('should open dialog when create portfolio button is clicked', () => {
     component.onCreatePortfolio();
     expect(mockDialogService.open).toHaveBeenCalled();
+  });
+
+  describe('Navigation-based refresh', () => {
+    it('should refresh portfolios when navigating to /portfolios route', () => {
+      // Reset the refresh call from initial init
+      jest.clearAllMocks();
+
+      // Simulate navigation to /portfolios
+      const navigationEndEvent = new NavigationEnd(
+        1,
+        '/portfolios',
+        '/portfolios'
+      );
+      routerEventsSubject.next(navigationEndEvent);
+
+      expect(mockFacade.refresh).toHaveBeenCalled();
+    });
+
+    it('should not refresh when navigating to other routes', () => {
+      jest.clearAllMocks();
+
+      // Simulate navigation to /dashboard
+      const navigationEndEvent = new NavigationEnd(
+        1,
+        '/dashboard',
+        '/dashboard'
+      );
+      routerEventsSubject.next(navigationEndEvent);
+
+      expect(mockFacade.refresh).not.toHaveBeenCalled();
+    });
+
+    it('should not refresh on non-NavigationEnd events', () => {
+      jest.clearAllMocks();
+
+      // Simulate some other router event
+      routerEventsSubject.next({ id: 1, url: '/portfolios' });
+
+      expect(mockFacade.refresh).not.toHaveBeenCalled();
+    });
   });
 });

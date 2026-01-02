@@ -17,6 +17,10 @@ import {
 } from '@stocks-researcher/styles';
 import { DashboardAsset, DashboardPortfolio } from '@stocks-researcher/types';
 import { NetAccountValueWidgetComponent } from '../net-account-value-widget/net-account-value-widget';
+import { CashBalanceWidgetComponent } from '../cash-balance-widget/cash-balance-widget.component';
+
+// CASH ticker constant (matches backend)
+const CASH_TICKER = 'CASH';
 
 @Component({
   selector: 'lib-ui-dashboard',
@@ -29,6 +33,7 @@ import { NetAccountValueWidgetComponent } from '../net-account-value-widget/net-
     ButtonComponent,
     LoadingPageComponent,
     NetAccountValueWidgetComponent,
+    CashBalanceWidgetComponent,
     PageHeaderComponent,
   ],
   templateUrl: './ui-dashboard.html',
@@ -44,9 +49,9 @@ export class UiDashboardComponent {
   portfolioSelected = output<string>();
   createPortfolio = output<void>();
   deletePortfolio = output<void>();
-  addAsset = output<void>();
-  editAsset = output<DashboardAsset>();
-  deleteAsset = output<DashboardAsset>();
+  buyAsset = output<void>();
+  sellAsset = output<DashboardAsset>();
+  viewTransactions = output<void>();
 
   /**
    * Get the selected portfolio name for the header
@@ -86,6 +91,24 @@ export class UiDashboardComponent {
       },
     },
   }));
+
+  /**
+   * Filter out CASH from assets for display
+   */
+  nonCashAssets = computed<DashboardAsset[]>(() => {
+    return this.assets().filter(asset => asset.ticker !== CASH_TICKER);
+  });
+
+  /**
+   * Get CASH balance from assets
+   */
+  cashBalance = computed<number>(() => {
+    const cashAsset = this.assets().find(asset => asset.ticker === CASH_TICKER);
+    if (!cashAsset) return 0;
+    
+    const price = Number(cashAsset.currentPrice ?? cashAsset.avgPrice ?? 1);
+    return Number(cashAsset.quantity) * price;
+  });
 
   /**
    * Calculate net account value from assets
@@ -154,12 +177,20 @@ export class UiDashboardComponent {
     { key: 'actions', header: 'Actions', type: 'actions' },
   ];
 
-  readonly addAssetButtonConfig: ButtonConfig = {
-    label: 'Add Asset',
+  readonly buyAssetButtonConfig: ButtonConfig = {
+    label: 'Buy Asset',
     variant: 'icon',
     icon: ACTION_ICONS.ADD,
     color: 'primary',
-    ariaLabel: 'Add new asset to portfolio',
+    ariaLabel: 'Buy new asset',
+  };
+
+  readonly viewTransactionsButtonConfig: ButtonConfig = {
+    label: 'Transactions',
+    variant: 'icon',
+    icon: 'receipt_long',
+    color: 'accent',
+    ariaLabel: 'View transaction history',
   };
 
   constructor() {
@@ -188,16 +219,16 @@ export class UiDashboardComponent {
     this.deletePortfolio.emit();
   }
 
-  onAddAsset() {
-    this.addAsset.emit();
+  onBuyAsset() {
+    this.buyAsset.emit();
   }
 
-  onEditAsset(asset: DashboardAsset) {
-    this.editAsset.emit(asset);
+  onSellAsset(asset: DashboardAsset) {
+    this.sellAsset.emit(asset);
   }
 
-  onDeleteAsset(asset: DashboardAsset) {
-    this.deleteAsset.emit(asset);
+  onViewTransactions() {
+    this.viewTransactions.emit();
   }
 
   /**
@@ -205,11 +236,11 @@ export class UiDashboardComponent {
    */
   onAssetActionSelected(asset: DashboardAsset, action: MenuItem): void {
     switch (action.id) {
-      case 'edit':
-        this.onEditAsset(asset);
+      case 'sell':
+        this.onSellAsset(asset);
         break;
-      case 'delete':
-        this.onDeleteAsset(asset);
+      case 'view-transactions':
+        this.onViewTransactions();
         break;
     }
   }
@@ -245,8 +276,8 @@ export class UiDashboardComponent {
       },
       menu: {
         items: [
-          { id: 'edit', label: 'Edit', icon: 'edit' },
-          { id: 'delete', label: 'Delete', icon: 'delete' },
+          { id: 'sell', label: 'Sell Shares', icon: 'sell' },
+          { id: 'view-transactions', label: 'View Transactions', icon: 'receipt_long' },
         ],
         ariaLabel: 'Asset actions',
       },

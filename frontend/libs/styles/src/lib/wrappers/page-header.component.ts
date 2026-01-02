@@ -1,4 +1,12 @@
-import { Component, computed, input, output } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  input,
+  output,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { ButtonComponent } from './button.component';
@@ -87,7 +95,20 @@ export class PageHeaderComponent {
    */
   menuItemClicked = output<MenuItem>();
 
-  constructor(private router: Router) {}
+  private elementRef = inject(ElementRef);
+  private router = inject(Router);
+
+  constructor() {
+    effect(() => {
+      if (!this.elementRef?.nativeElement) return;
+      const config = this.config();
+      const element = this.elementRef.nativeElement as HTMLDivElement;
+      element.setAttribute(
+        'with-back-button',
+        Boolean(config.backButton).toString()
+      );
+    });
+  }
 
   /**
    * Handle back button click

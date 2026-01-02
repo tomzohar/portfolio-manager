@@ -1,0 +1,44 @@
+@use 'scss' as *;
+
+.radio-button-group {
+  display: flex;
+  gap: $spacing-lg;
+  
+  mat-radio-button {
+    flex: 1;
+  }
+}
+
+// Override Material radio button styles for dark theme
+:host ::ng-deep {
+  .mat-mdc-radio-button {
+    // Label text color
+    .mdc-form-field {
+      color: var(--color-text-primary) !important;
+    }
+    
+    .mdc-label {
+      color: var(--color-text-primary) !important;
+    }
+    
+    // Radio circle color when unchecked
+    .mdc-radio__native-control:not(:checked) ~ .mdc-radio__background .mdc-radio__outer-circle {
+      border-color: var(--color-text-secondary) !important;
+    }
+    
+    // Radio circle color when checked
+    .mdc-radio__native-control:checked ~ .mdc-radio__background .mdc-radio__outer-circle {
+      border-color: var(--color-ai-primary) !important;
+    }
+    
+    .mdc-radio__native-control:checked ~ .mdc-radio__background .mdc-radio__inner-circle {
+      border-color: var(--color-ai-primary) !important;
+    }
+    
+    // Hover state
+    &:hover .mdc-radio__native-control:not(:disabled) ~ .mdc-radio__background .mdc-radio__outer-circle {
+      border-color: var(--color-text-primary) !important;
+    }
+  }
+}
+

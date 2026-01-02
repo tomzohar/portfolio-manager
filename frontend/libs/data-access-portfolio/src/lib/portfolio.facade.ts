@@ -1,6 +1,7 @@
-import { Injectable, Signal, inject } from '@angular/core';
+import { Injectable, Signal, inject, computed } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { PortfolioActions } from './+state/portfolio.actions';
+import { TransactionActions } from './+state/transaction.actions';
 import {
   selectPortfolios,
   selectCurrentAssets,
@@ -9,7 +10,19 @@ import {
   selectError,
   selectSelectedPortfolio,
 } from './+state/portfolio.selectors';
-import { DashboardPortfolio, DashboardAsset, CreatePortfolioDto, AddAssetDto } from '@stocks-researcher/types';
+import {
+  selectTransactionsByPortfolio,
+  selectTransactionsLoading,
+  selectTransactionsError,
+} from './+state/transaction.selectors';
+import { 
+  DashboardPortfolio, 
+  DashboardAsset, 
+  CreatePortfolioDto, 
+  DashboardTransaction,
+  CreateTransactionDto,
+  TransactionFilters
+} from '@stocks-researcher/types';
 
 /**
  * PortfolioFacade
@@ -60,6 +73,19 @@ export class PortfolioFacade {
   readonly error: Signal<string | null> = 
     this.store.selectSignal(selectError);
 
+  // Transaction Signal-based selectors
+  readonly transactions: Signal<DashboardTransaction[]> = computed(() => {
+    const portfolioId = this.selectedId();
+    if (!portfolioId) return [];
+    return this.store.selectSignal(selectTransactionsByPortfolio(portfolioId))();
+  });
+
+  readonly transactionsLoading: Signal<boolean> = 
+    this.store.selectSignal(selectTransactionsLoading);
+
+  readonly transactionsError: Signal<string | null> = 
+    this.store.selectSignal(selectTransactionsError);
+
   /**
    * Initializes the portfolio data.
    * Should be called when entering the dashboard.
@@ -106,28 +132,39 @@ export class PortfolioFacade {
   }
 
   /**
-   * Adds an asset to a portfolio with optimistic updates.
-   * The asset is immediately shown in the UI with a temporary ID,
-   * then updated with the real ID once the server confirms, or removed if it fails.
+   * Loads transactions for a specific portfolio with optional filters.
    * 
    * @param portfolioId - The portfolio ID
-   * @param dto - Asset data (ticker, quantity, avgPrice)
+   * @param filters - Optional filters (ticker, type, date range)
    */
-  addAsset(portfolioId: string, dto: AddAssetDto): void {
-    // Generate temp ID for optimistic update
-    const tempId = `temp-asset-${Date.now()}`;
-    this.store.dispatch(PortfolioActions.addAsset({ portfolioId, dto, tempId }));
+  loadTransactions(portfolioId: string, filters?: TransactionFilters): void {
+    this.store.dispatch(TransactionActions.loadTransactions({ portfolioId, filters }));
   }
 
   /**
-   * Removes an asset from a portfolio.
-   * The portfolio's assets will be automatically updated after success.
+   * Creates a new transaction (BUY/SELL/DEPOSIT) with optimistic updates.
+   * The transaction is immediately shown in the UI with a temporary ID,
+   * then updated with the real ID once the server confirms, or removed if it fails.
+   * After successful creation, assets are automatically reloaded.
    * 
    * @param portfolioId - The portfolio ID
-   * @param assetId - The asset ID to remove
+   * @param dto - Transaction data (type, ticker, quantity, price, transactionDate)
    */
-  removeAsset(portfolioId: string, assetId: string): void {
-    this.store.dispatch(PortfolioActions.removeAsset({ portfolioId, assetId }));
+  createTransaction(portfolioId: string, dto: CreateTransactionDto): void {
+    // Generate temp ID for optimistic update
+    const tempId = `temp-transaction-${Date.now()}`;
+    this.store.dispatch(TransactionActions.createTransaction({ portfolioId, dto, tempId }));
+  }
+
+  /**
+   * Deletes a transaction.
+   * After successful deletion, assets are automatically reloaded to sync materialized positions.
+   * 
+   * @param portfolioId - The portfolio ID
+   * @param transactionId - The transaction ID to delete
+   */
+  deleteTransaction(portfolioId: string, transactionId: string): void {
+    this.store.dispatch(TransactionActions.deleteTransaction({ portfolioId, transactionId }));
   }
 
   /**

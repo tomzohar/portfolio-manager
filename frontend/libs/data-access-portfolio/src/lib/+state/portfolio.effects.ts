@@ -10,6 +10,9 @@ import { PortfolioActions } from './portfolio.actions';
  * 
  * Handles side effects for portfolio actions.
  * Uses RxJS operators to manage asynchronous operations.
+ * 
+ * Note: Asset management effects have been removed.
+ * Use TransactionEffects instead - transactions are the source of truth.
  */
 @Injectable()
 export class PortfolioEffects {
@@ -61,8 +64,9 @@ export class PortfolioEffects {
   );
 
   /**
-   * Effect: Load Assets
-   * Fetches assets for a specific portfolio
+   * Effect: Load Assets (Read-Only)
+   * Fetches assets for a specific portfolio.
+   * Assets are materialized views calculated from transactions on the backend.
    */
   loadAssets$ = createEffect(() =>
     this.actions$.pipe(
@@ -107,59 +111,13 @@ export class PortfolioEffects {
   );
 
   /**
-   * Effect: Add Asset
-   * Adds an asset to a portfolio with optimistic updates.
-   * The reducer immediately adds a temporary asset with a temp ID,
-   * and this effect either confirms it with the real ID or removes it on failure.
+   * Effect: Create Portfolio Success
+   * After successfully creating a portfolio, select it and load its assets
    */
-  addAsset$ = createEffect(() =>
+  createPortfolioSuccess$ = createEffect(() =>
     this.actions$.pipe(
-      ofType(PortfolioActions.addAsset),
-      switchMap((action) => {
-        const { portfolioId, dto, tempId } = action;
-        
-        return this.portfolioApiService.addAsset(portfolioId, dto).pipe(
-          map((response) =>
-            PortfolioActions.addAssetSuccess({ 
-              portfolioId, 
-              tempId,
-              assetId: response.id
-            })
-          ),
-          catchError((error) =>
-            of(PortfolioActions.addAssetFailure({ 
-              portfolioId,
-              tempId,
-              error: error?.message || 'Failed to add asset' 
-            }))
-          )
-        );
-      })
-    )
-  );
-
-  /**
-   * Effect: Remove Asset
-   * Removes an asset from a portfolio
-   */
-  removeAsset$ = createEffect(() =>
-    this.actions$.pipe(
-      ofType(PortfolioActions.removeAsset),
-      switchMap(({ portfolioId, assetId }) =>
-        this.portfolioApiService.removeAsset(portfolioId, assetId).pipe(
-          map((portfolio) =>
-            PortfolioActions.removeAssetSuccess({ 
-              portfolioId, 
-              assets: portfolio.assets 
-            })
-          ),
-          catchError((error) =>
-            of(PortfolioActions.removeAssetFailure({ 
-              error: error?.message || 'Failed to remove asset' 
-            }))
-          )
-        )
-      )
+      ofType(PortfolioActions.createPortfolioSuccess),
+      map(({ portfolio }) => PortfolioActions.selectPortfolio({ id: portfolio.id }))
     )
   );
 

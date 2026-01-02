@@ -1,0 +1,16 @@
+<mat-radio-group
+  class="radio-button-group"
+  [attr.aria-label]="config().ariaLabel"
+  [ngModel]="value()"
+  (ngModelChange)="onValueChange($event)"
+>
+  @for (option of config().options; track option.value) {
+    <mat-radio-button
+      [value]="option.value"
+      [disabled]="option.disabled || false"
+    >
+      {{ option.label }}
+    </mat-radio-button>
+  }
+</mat-radio-group>
+

@@ -23,6 +23,9 @@
           [value]="netAccountValue()"
           [buyingPower]="buyingPower()"
         />
+        <lib-cash-balance-widget
+          [balance]="cashBalance()"
+        />
       </div>
     }
 
@@ -38,28 +41,29 @@
     } @else if (selectedPortfolioId()) {
     <lib-card
       title="Portfolio Assets"
-      [subtitle]="assets().length + ' positions'"
+      [subtitle]="nonCashAssets().length + ' positions'"
       [headerActions]="true"
       class="assets-table"
     >
       <!-- Header Actions -->
       <div headerActions>
-        <lib-button [config]="addAssetButtonConfig" (clicked)="onAddAsset()" />
+        <lib-button [config]="viewTransactionsButtonConfig" (clicked)="onViewTransactions()" />
+        <lib-button [config]="buyAssetButtonConfig" (clicked)="onBuyAsset()" />
       </div>
 
       <!-- Content -->
-      @if (assets().length === 0) {
+      @if (nonCashAssets().length === 0) {
       <!-- Empty State for Assets -->
       <lib-empty-state
         [icon]="'inventory_2'"
         [title]="'No Assets Yet'"
-        [message]="'Add your first asset to start tracking this portfolio'"
-        [buttonConfig]="{ label: 'Add Asset' }"
-        (actionClick)="onAddAsset()"
+        [message]="'Buy your first asset to start tracking this portfolio'"
+        [buttonConfig]="{ label: 'Buy Asset' }"
+        (actionClick)="onBuyAsset()"
       />
       } @else {
       <lib-table
-        [data]="assets()"
+        [data]="nonCashAssets()"
         [columns]="assetColumns"
         [actionsTemplate]="assetActions"
         [scrollable]="true"

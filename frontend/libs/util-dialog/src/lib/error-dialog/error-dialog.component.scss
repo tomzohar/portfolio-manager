@@ -1,0 +1,68 @@
+@use 'scss' as *;
+
+.error-dialog-title {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: $spacing-md;
+  color: var(--color-text-primary);
+  margin-top: $spacing-xl !important;
+  padding: 0 !important;
+  line-height: 32px; // Match icon height for perfect alignment
+  
+  span {
+    line-height: 32px; // Match icon height
+  }
+}
+
+:host ::ng-deep .error-dialog-icon {
+  color: #dc2626 !important; // Brighter red (Tailwind red-600)
+  font-size: 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  flex-shrink: 0 !important;
+  line-height: 32px !important;
+  
+  // Apply to Material icon specifically
+  &.mat-icon {
+    color: #dc2626 !important;
+    font-size: 32px !important;
+    width: 32px !important;
+    height: 32px !important;
+  }
+}
+
+.error-dialog-content {
+  min-width: 350px;
+  max-width: 500px;
+}
+
+.error-dialog-message {
+  color: var(--color-text-primary);
+  margin: 0 0 $spacing-md 0;
+}
+
+.error-dialog-details {
+  margin-top: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  background-color: var(--color-bg-secondary);
+  border-radius: $border-radius-sm;
+  border-left: 3px solid #ef4444;
+}
+
+.error-dialog-details-label {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin: 0 0 $spacing-xs 0;
+}
+
+.error-dialog-details-text {
+  color: var(--color-text-secondary);
+  margin: 0;
+  // font-family: $font-mono;
+}
+
+mat-dialog-actions {
+  padding: $spacing-md $spacing-lg;
+}
+

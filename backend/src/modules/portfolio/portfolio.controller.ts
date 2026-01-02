@@ -18,7 +18,7 @@ import {
 } from '@nestjs/swagger';
 import { PortfolioService } from './portfolio.service';
 import { TransactionsService } from './transactions.service';
-import { CreatePortfolioDto, AddAssetDto } from './dto/portfolio.dto';
+import { CreatePortfolioDto } from './dto/portfolio.dto';
 import {
   CreateTransactionDto,
   TransactionResponseDto,
@@ -78,7 +78,7 @@ export class PortfolioController {
   @Get(':id/assets')
   @ApiOperation({
     summary:
-      'Get assets for a specific portfolio (with ownership verification)',
+      'Get current positions for a specific portfolio (with ownership verification). Positions are calculated from transaction history.',
   })
   @ApiResponse({ status: 200, description: 'Assets retrieved.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
@@ -86,41 +86,6 @@ export class PortfolioController {
   @ApiResponse({ status: 404, description: 'Portfolio not found.' })
   async getAssets(@CurrentUser() user: User, @Param('id') id: string) {
     return this.portfolioService.getAssets(id, user.id);
-  }
-
-  @Post(':id/assets')
-  @ApiOperation({
-    summary: 'Add an asset to a portfolio (with ownership verification)',
-  })
-  @ApiResponse({
-    status: 201,
-    description: 'Asset added successfully. Returns asset ID.',
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({ status: 403, description: 'Access denied.' })
-  @ApiResponse({ status: 404, description: 'Portfolio not found.' })
-  addAsset(
-    @CurrentUser() user: User,
-    @Param('id') id: string,
-    @Body() addAssetDto: AddAssetDto,
-  ): Promise<{ id: string }> {
-    return this.portfolioService.addAsset(id, user.id, addAssetDto);
-  }
-
-  @Delete(':id/assets/:assetId')
-  @ApiOperation({
-    summary: 'Remove an asset from a portfolio (with ownership verification)',
-  })
-  @ApiResponse({ status: 200, description: 'Asset removed.' })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({ status: 403, description: 'Access denied.' })
-  @ApiResponse({ status: 404, description: 'Asset or Portfolio not found.' })
-  removeAsset(
-    @CurrentUser() user: User,
-    @Param('id') id: string,
-    @Param('assetId') assetId: string,
-  ) {
-    return this.portfolioService.removeAsset(id, assetId, user.id);
   }
 
   @Delete(':id')

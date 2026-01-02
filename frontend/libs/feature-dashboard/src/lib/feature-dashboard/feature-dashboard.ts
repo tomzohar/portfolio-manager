@@ -1,32 +1,31 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, effect } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { PortfolioFacade } from '@frontend/data-access-portfolio';
 import { UiDashboardComponent } from '@frontend/ui-dashboard';
-import { DialogService } from '@frontend/util-dialog';
-import { AssetSearchDialogComponent } from '@stocks-researcher/ui-asset-search';
-import { ConfirmationDialogComponent, ConfirmationDialogConfig } from '@frontend/util-dialog';
+import { ConfirmationDialogComponent, ConfirmationDialogConfig, DialogService } from '@frontend/util-dialog';
 import {
-  CreatePortfolioDto,
   AssetSearchConfig,
   AssetSearchResult,
-  AddAssetDto,
   DashboardAsset,
+  TransactionType,
 } from '@stocks-researcher/types';
+import { AssetSearchDialogComponent } from '@stocks-researcher/ui-asset-search';
 import { take } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
 import {
   CreatePortfolioDialogComponent,
   CreatePortfolioDialogData,
   CreatePortfolioDialogResult,
 } from '../create-portfolio-dialog/create-portfolio-dialog.component';
 import {
-  AddAssetDialogComponent,
-  AddAssetDialogData,
-  AddAssetDialogResult,
-} from '../add-asset-dialog/add-asset-dialog.component';
+  RecordTransactionDialogComponent,
+  RecordTransactionDialogData,
+  RecordTransactionDialogResult,
+} from '../record-transaction-dialog/record-transaction-dialog.component';
 import {
-  EditAssetDialogComponent,
-  EditAssetDialogData,
-  EditAssetDialogResult,
-} from '../edit-asset-dialog/edit-asset-dialog.component';
+  TransactionHistoryDialogComponent,
+  TransactionHistoryDialogData,
+} from '../transaction-history-dialog/transaction-history-dialog.component';
 
 @Component({
   selector: 'lib-feature-dashboard',
@@ -38,12 +37,71 @@ import {
 export class FeatureDashboardComponent implements OnInit {
   private facade = inject(PortfolioFacade);
   private dialogService = inject(DialogService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+
+  // Convert route query params to signal
+  private queryParams = toSignal(this.route.queryParams);
 
   // Expose facade signals directly to template
   portfolios = this.facade.portfolios;
   currentAssets = this.facade.currentAssets;
   selectedPortfolioId = this.facade.selectedId;
   loading = this.facade.loading;
+  transactions = this.facade.transactions;
+  transactionsLoading = this.facade.transactionsLoading;
+  transactionsError = this.facade.transactionsError;
+
+  constructor() {
+    // Watch for portfolioId query param changes and select the portfolio
+    effect(() => {
+      const params = this.queryParams();
+      const portfolioIdFromUrl = params?.['portfolioId'];
+      
+      // If we have portfolios loaded and a portfolioId in URL, validate it exists
+      if (portfolioIdFromUrl && this.portfolios().length > 0) {
+        const currentSelection = this.selectedPortfolioId();
+        const portfolioExists = this.portfolios().some(p => p.id === portfolioIdFromUrl);
+        
+        // If portfolio doesn't exist, navigate back to portfolios list
+        if (!portfolioExists) {
+          void this.router.navigate(['/portfolios']);
+          return;
+        }
+        
+        // Only dispatch if it's different from current selection to avoid loops
+        if (currentSelection !== portfolioIdFromUrl) {
+          this.facade.selectPortfolio(portfolioIdFromUrl);
+        }
+      }
+    });
+
+    // Watch for portfolio deletion - navigate back to portfolios list
+    effect(() => {
+      const params = this.queryParams();
+      const portfolioIdFromUrl = params?.['portfolioId'];
+      const portfolios = this.portfolios();
+      const loading = this.loading();
+      
+      // If we had a selected portfolio but it no longer exists and we're not loading
+      // This indicates a successful deletion
+      if (portfolioIdFromUrl && portfolios.length > 0 && !loading) {
+        const portfolioStillExists = portfolios.some(p => p.id === portfolioIdFromUrl);
+        if (!portfolioStillExists) {
+          void this.router.navigate(['/portfolios']);
+        }
+      }
+    });
+
+    // Watch for transaction errors and display them
+    effect(() => {
+      const error = this.transactionsError();
+      
+      if (error) {
+        this.dialogService.showError(error, 'Transaction Failed');
+      }
+    });
+  }
 
   ngOnInit(): void {
     // Initialize portfolio data on component init
@@ -114,15 +172,16 @@ export class FeatureDashboardComponent implements OnInit {
       .subscribe((confirmed: boolean | undefined) => {
         if (confirmed) {
           this.facade.deletePortfolio(portfolioId);
+          // Navigation happens automatically via effect when portfolio disappears from list
         }
       });
   }
 
   /**
-   * Opens the asset search dialog to add assets to the selected portfolio
-   * Chains with the add asset details dialog for quantity and price input
+   * Opens the asset search dialog to buy assets in the selected portfolio
+   * Chains with the record transaction dialog for transaction details
    */
-  onAddAsset(): void {
+  onBuyAsset(): void {
     const portfolioId = this.selectedPortfolioId();
     
     if (!portfolioId) {
@@ -133,7 +192,7 @@ export class FeatureDashboardComponent implements OnInit {
     // Step 1: Open asset search dialog
     const searchConfig: AssetSearchConfig = {
       mode: 'single',
-      title: 'Search Asset',
+      title: 'Search Asset to Buy',
       placeholder: 'Search by ticker or company name...',
     };
 
@@ -154,35 +213,29 @@ export class FeatureDashboardComponent implements OnInit {
         if (searchResult && searchResult.length > 0) {
           const selectedTicker = searchResult[0];
 
-          // Step 2: Open add asset details dialog
-          const detailsData: AddAssetDialogData = {
+          // Step 2: Open record transaction dialog with BUY pre-selected
+          const transactionData: RecordTransactionDialogData = {
             ticker: selectedTicker,
             portfolioId,
+            transactionType: TransactionType.BUY,
           };
 
-          const detailsDialogRef = this.dialogService.open<
-            AddAssetDialogData,
-            AddAssetDialogResult
+          const transactionDialogRef = this.dialogService.open<
+            RecordTransactionDialogData,
+            RecordTransactionDialogResult
           >({
-            component: AddAssetDialogComponent,
-            data: detailsData,
+            component: RecordTransactionDialogComponent,
+            data: transactionData,
             width: '500px',
             disableClose: false,
           });
 
-          // Handle details dialog result
-          detailsDialogRef.afterClosedObservable
+          // Handle transaction dialog result
+          transactionDialogRef.afterClosedObservable
             .pipe(take(1))
-            .subscribe((detailsResult: AddAssetDialogResult | undefined) => {
-              if (detailsResult) {
-                // Step 3: Add asset to portfolio via facade
-                const dto: AddAssetDto = {
-                  ticker: detailsResult.ticker,
-                  quantity: detailsResult.quantity,
-                  avgPrice: detailsResult.avgPrice,
-                };
-
-                this.facade.addAsset(detailsResult.portfolioId, dto);
+            .subscribe((result: RecordTransactionDialogResult | undefined) => {
+              if (result) {
+                this.facade.createTransaction(result.portfolioId, result.dto);
               }
             });
         }
@@ -190,83 +243,80 @@ export class FeatureDashboardComponent implements OnInit {
   }
 
   /**
-   * Opens the edit asset dialog to update an existing asset
+   * Opens the record transaction dialog to sell shares of an asset
    */
-  onEditAsset(asset: DashboardAsset): void {
+  onSellAsset(asset: DashboardAsset): void {
     const portfolioId = this.selectedPortfolioId();
     
-    if (!portfolioId || !asset.id) {
-      console.warn('No portfolio selected or asset has no ID');
+    if (!portfolioId) {
+      console.warn('No portfolio selected');
       return;
     }
 
-    const editData: EditAssetDialogData = {
-      asset,
+    // Open record transaction dialog with SELL pre-selected
+    const transactionData: RecordTransactionDialogData = {
+      ticker: { 
+        ticker: asset.ticker, 
+        name: '', 
+        market: '', 
+        type: '' 
+      },
       portfolioId,
+      transactionType: TransactionType.SELL,
+      currentAsset: asset,
     };
 
-    const editDialogRef = this.dialogService.open<
-      EditAssetDialogData,
-      EditAssetDialogResult
+    const transactionDialogRef = this.dialogService.open<
+      RecordTransactionDialogData,
+      RecordTransactionDialogResult
     >({
-      component: EditAssetDialogComponent,
-      data: editData,
+      component: RecordTransactionDialogComponent,
+      data: transactionData,
       width: '500px',
       disableClose: false,
     });
 
-    // Handle edit dialog result
-    editDialogRef.afterClosedObservable
+    // Handle transaction dialog result
+    transactionDialogRef.afterClosedObservable
       .pipe(take(1))
-      .subscribe((result: EditAssetDialogResult | undefined) => {
+      .subscribe((result: RecordTransactionDialogResult | undefined) => {
         if (result) {
-          // TODO: Implement update asset in facade
-          console.log('Update asset:', result);
-          // this.facade.updateAsset(result.portfolioId, result.assetId, {
-          //   ticker: result.ticker,
-          //   quantity: result.quantity,
-          //   avgPrice: result.avgPrice,
-          // });
+          this.facade.createTransaction(result.portfolioId, result.dto);
         }
       });
   }
 
   /**
-   * Opens confirmation dialog and deletes the asset if confirmed
+   * Opens transaction history dialog for the selected portfolio
    */
-  onDeleteAsset(asset: DashboardAsset): void {
+  onViewTransactions(): void {
     const portfolioId = this.selectedPortfolioId();
     
-    if (!portfolioId || !asset.id) {
-      console.warn('No portfolio selected or asset has no ID');
+    if (!portfolioId) {
+      console.warn('No portfolio selected');
       return;
     }
 
-    const confirmConfig: ConfirmationDialogConfig = {
-      title: 'Delete Asset',
-      message: `Are you sure you want to delete ${asset.ticker} from this portfolio? This action cannot be undone.`,
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
-      confirmColor: 'warn',
-      icon: 'warning',
-    };
-
-    const confirmDialogRef = this.dialogService.open<
-      ConfirmationDialogConfig,
-      boolean
-    >({
-      component: ConfirmationDialogComponent,
-      data: confirmConfig,
-      width: '450px',
+    // Open transaction history dialog
+    this.dialogService.open<TransactionHistoryDialogData, void>({
+      component: TransactionHistoryDialogComponent,
+      data: { portfolioId },
+      width: '900px',
+      maxHeight: '80vh',
     });
+  }
 
-    // Handle confirmation result
-    confirmDialogRef.afterClosedObservable
-      .pipe(take(1))
-      .subscribe((confirmed: boolean | undefined) => {
-        if (confirmed && asset.id) {
-          this.facade.removeAsset(portfolioId, asset.id);
-        }
-      });
+  /**
+   * Deletes a transaction after confirmation
+   */
+  onDeleteTransaction(transactionId: string): void {
+    const portfolioId = this.selectedPortfolioId();
+    
+    if (!portfolioId) {
+      console.warn('No portfolio selected');
+      return;
+    }
+
+    this.facade.deleteTransaction(portfolioId, transactionId);
   }
 }

@@ -1,7 +1,9 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { PortfoliosPageFacade } from '@frontend/portfolios-page-data-access';
+import { filter } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { PortfolioCardComponent } from '../portfolio-card/portfolio-card.component';
 import { DialogService } from '@frontend/util-dialog';
 import { PortfolioFacade } from '@frontend/data-access-portfolio';
@@ -46,6 +48,19 @@ export class PortfoliosPageComponent implements OnInit {
       variant: 'raised',
     },
   };
+
+  constructor() {
+    // Refresh portfolios when navigating back to this page
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        filter(event => event.urlAfterRedirects === '/portfolios'),
+        takeUntilDestroyed()
+      )
+      .subscribe(() => {
+        this.facade.refresh();
+      });
+  }
 
   ngOnInit(): void {
     this.facade.init();

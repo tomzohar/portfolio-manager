@@ -6,7 +6,6 @@ import {
   DashboardPortfolio, 
   DashboardAsset, 
   CreatePortfolioDto, 
-  AddAssetDto,
   PortfolioWithAssets 
 } from '@stocks-researcher/types';
 
@@ -36,6 +35,9 @@ export interface PositionSummaryDto {
  * 
  * HTTP service for portfolio and asset data operations.
  * Communicates with the NestJS backend API.
+ * 
+ * Note: Asset creation/deletion methods have been removed.
+ * Use TransactionApiService instead - transactions are the source of truth.
  */
 @Injectable({
   providedIn: 'root'
@@ -79,28 +81,6 @@ export class PortfolioApiService {
    */
   createPortfolio(dto: CreatePortfolioDto): Observable<DashboardPortfolio> {
     return this.http.post<DashboardPortfolio>(this.apiUrl, dto).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  /**
-   * Adds an asset to a portfolio
-   * @param portfolioId - The portfolio ID
-   * @param dto - Asset data
-   */
-  addAsset(portfolioId: string, dto: AddAssetDto): Observable<{ id: string }> {
-    return this.http.post<{ id: string }>(`${this.apiUrl}/${portfolioId}/assets`, dto).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  /**
-   * Removes an asset from a portfolio
-   * @param portfolioId - The portfolio ID
-   * @param assetId - The asset ID to remove
-   */
-  removeAsset(portfolioId: string, assetId: string): Observable<PortfolioWithAssets> {
-    return this.http.delete<PortfolioWithAssets>(`${this.apiUrl}/${portfolioId}/assets/${assetId}`).pipe(
       catchError(this.handleError)
     );
   }

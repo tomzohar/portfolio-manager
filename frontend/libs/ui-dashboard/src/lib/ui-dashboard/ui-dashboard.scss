@@ -7,7 +7,6 @@
 }
 
 .dashboard-content {
-  @include container-center($max-width: $max-width-container, $padding: $spacing-xs);
   height: 100%;
 
   // Ensure loading page can fill available height
@@ -19,6 +18,7 @@
 
 .portfolio-widgets {
   display: flex;
+  gap: $spacing-md;
   margin-top: var(--spacing-lg);
 }
 

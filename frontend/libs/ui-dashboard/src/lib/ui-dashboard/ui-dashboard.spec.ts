@@ -223,16 +223,16 @@ describe('UiDashboardComponent', () => {
       fixture.componentRef.setInput('loading', false);
       fixture.detectChanges();
 
-      component.addAsset.subscribe(() => {
+      component.buyAsset.subscribe(() => {
         done();
       });
 
-      component.onAddAsset();
+      component.onBuyAsset();
     });
 
-    it('should have onAddAsset method', () => {
-      expect(component.onAddAsset).toBeDefined();
-      expect(typeof component.onAddAsset).toBe('function');
+    it('should have onBuyAsset method', () => {
+      expect(component.onBuyAsset).toBeDefined();
+      expect(typeof component.onBuyAsset).toBe('function');
     });
   });
 
@@ -282,36 +282,33 @@ describe('UiDashboardComponent', () => {
   });
 
   describe('Asset Actions', () => {
-    it('should have onEditAsset method', () => {
-      expect(component.onEditAsset).toBeDefined();
-      expect(typeof component.onEditAsset).toBe('function');
+    it('should have onSellAsset method', () => {
+      expect(component.onSellAsset).toBeDefined();
+      expect(typeof component.onSellAsset).toBe('function');
     });
 
-    it('should have onDeleteAsset method', () => {
-      expect(component.onDeleteAsset).toBeDefined();
-      expect(typeof component.onDeleteAsset).toBe('function');
+    it('should have onViewTransactions method', () => {
+      expect(component.onViewTransactions).toBeDefined();
+      expect(typeof component.onViewTransactions).toBe('function');
     });
 
-    it('should emit editAsset event when onEditAsset is called', (done) => {
+    it('should emit sellAsset event when onSellAsset is called', (done) => {
       const asset = mockAssets[0];
       
-      component.editAsset.subscribe((emittedAsset) => {
+      component.sellAsset.subscribe((emittedAsset) => {
         expect(emittedAsset).toEqual(asset);
         done();
       });
 
-      component.onEditAsset(asset);
+      component.onSellAsset(asset);
     });
 
-    it('should emit deleteAsset event when onDeleteAsset is called', (done) => {
-      const asset = mockAssets[0];
-      
-      component.deleteAsset.subscribe((emittedAsset) => {
-        expect(emittedAsset).toEqual(asset);
+    it('should emit viewTransactions event when onViewTransactions is called', (done) => {
+      component.viewTransactions.subscribe(() => {
         done();
       });
 
-      component.onDeleteAsset(asset);
+      component.onViewTransactions();
     });
   });
 });
