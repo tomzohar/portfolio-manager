@@ -92,8 +92,9 @@ export class EnrichedAssetDto {
   ) {
     this.id = asset.id;
     this.ticker = asset.ticker;
-    this.quantity = asset.quantity;
-    this.avgPrice = asset.avgPrice;
+    // Ensure numeric types are properly converted from Decimal
+    this.quantity = Number(asset.quantity);
+    this.avgPrice = Number(asset.avgPrice);
     this.createdAt = asset.createdAt;
     this.updatedAt = asset.updatedAt;
 
@@ -105,25 +106,34 @@ export class EnrichedAssetDto {
           Number(marketData.todaysChangePerc.toFixed(2)) / 100;
       }
       this.lastUpdated = marketData.lastUpdated;
+    }
 
-      // Calculate derived metrics when currentPrice is available
-      if (
-        this.currentPrice !== undefined &&
-        this.currentPrice !== null &&
-        this.avgPrice !== undefined &&
-        this.avgPrice !== null
-      ) {
-        // Market Value: currentPrice * quantity
-        this.marketValue = this.currentPrice * this.quantity;
+    // Calculate derived metrics based on currentPrice availability
+    if (
+      this.currentPrice !== undefined &&
+      this.currentPrice !== null &&
+      this.avgPrice !== undefined &&
+      this.avgPrice !== null
+    ) {
+      // Market Value: currentPrice * quantity
+      this.marketValue = this.currentPrice * this.quantity;
 
-        // Profit/Loss in dollars: (currentPrice - avgPrice) * quantity
-        this.pl = (this.currentPrice - this.avgPrice) * this.quantity;
+      // Profit/Loss in dollars: (currentPrice - avgPrice) * quantity
+      this.pl = (this.currentPrice - this.avgPrice) * this.quantity;
 
-        // Profit/Loss percentage: (currentPrice - avgPrice) / avgPrice
-        // Avoid division by zero
-        if (this.avgPrice !== 0) {
-          this.plPercent = (this.currentPrice - this.avgPrice) / this.avgPrice;
-        }
+      // Profit/Loss percentage: (currentPrice - avgPrice) / avgPrice
+      // Avoid division by zero
+      if (this.avgPrice !== 0) {
+        this.plPercent = (this.currentPrice - this.avgPrice) / this.avgPrice;
+      }
+    } else {
+      // Fallback: When current price is unavailable, use cost basis
+      // This ensures consistency with the portfolio summary calculation
+      if (this.avgPrice !== undefined && this.avgPrice !== null) {
+        this.marketValue = this.avgPrice * this.quantity;
+        // P/L is 0 when using cost basis (no gain/loss)
+        this.pl = 0;
+        this.plPercent = 0;
       }
     }
   }

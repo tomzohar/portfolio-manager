@@ -375,6 +375,7 @@ export class PortfolioService {
         totalCostBasis: 0,
         unrealizedPL: 0,
         unrealizedPLPercent: 0,
+        cashBalance: 0,
         positions: [],
       });
     }
@@ -389,20 +390,26 @@ export class PortfolioService {
 
     for (const position of enrichedPositions) {
       totalCostBasis += position.avgCostBasis * position.quantity;
-      if (position.marketValue !== undefined) {
-        totalValue += position.marketValue;
-      }
+      // marketValue is always set (either from currentPrice or cost basis fallback)
+      totalValue += position.marketValue ?? 0;
     }
 
     const unrealizedPL = totalValue - totalCostBasis;
     const unrealizedPLPercent =
       totalCostBasis !== 0 ? unrealizedPL / totalCostBasis : 0;
 
+    // Extract cash balance
+    const cashPosition = enrichedPositions.find(
+      (p) => p.ticker === CASH_TICKER,
+    );
+    const cashBalance = cashPosition?.marketValue ?? 0;
+
     return new PortfolioSummaryDto({
       totalValue,
       totalCostBasis,
       unrealizedPL,
       unrealizedPLPercent,
+      cashBalance,
       positions: enrichedPositions,
     });
   }
@@ -466,6 +473,7 @@ export class PortfolioService {
   /**
    * Enrich positions with current market data from Polygon API
    * Special handling for CASH: always set price to 1.0, skip API call
+   * Uses getPreviousClose for consistency with getAssets endpoint
    */
   private async enrichPositionsWithMarketData(
     positions: Array<{
@@ -475,8 +483,8 @@ export class PortfolioService {
     }>,
   ): Promise<PositionSummaryDto[]> {
     // Fetch current price data for all positions in parallel
-    const snapshotPromises = positions.map(
-      async (position): Promise<PolygonSnapshotResponse | null> => {
+    const previousClosePromises = positions.map(
+      async (position): Promise<PolygonPreviousCloseResponse | null> => {
         // Skip API call for CASH - it's always 1:1
         if (position.ticker === CASH_TICKER) {
           return null;
@@ -484,16 +492,16 @@ export class PortfolioService {
 
         try {
           return await lastValueFrom(
-            this.polygonApiService.getTickerSnapshot(position.ticker),
+            this.polygonApiService.getPreviousClose(position.ticker),
           );
         } catch {
-          // Return null if snapshot fetch fails
+          // Return null if fetch fails
           return null;
         }
       },
     );
 
-    const snapshots = await Promise.all(snapshotPromises);
+    const previousCloseData = await Promise.all(previousClosePromises);
 
     // Enrich positions with current price data
     return positions.map((position, index) => {
@@ -507,18 +515,24 @@ export class PortfolioService {
         });
       }
 
-      const snapshot = snapshots[index];
+      const previousClose = previousCloseData[index];
 
-      if (snapshot?.ticker?.day) {
-        return new PositionSummaryDto({
-          ticker: position.ticker,
-          quantity: position.quantity,
-          avgCostBasis: position.avgCostBasis,
-          currentPrice: snapshot.ticker.day.c,
-        });
+      if (previousClose?.results?.[0]) {
+        const result = previousClose.results[0];
+        const closePrice = result.c;
+        // Only use the price if it's a valid positive number
+        if (closePrice && closePrice > 0) {
+          return new PositionSummaryDto({
+            ticker: position.ticker,
+            quantity: position.quantity,
+            avgCostBasis: position.avgCostBasis,
+            currentPrice: closePrice,
+          });
+        }
       }
 
-      // If snapshot failed or unavailable, return position without market data
+      // If fetch failed, unavailable, or price is invalid (0 or negative)
+      // Return position without market data - will fallback to cost basis
       return new PositionSummaryDto({
         ticker: position.ticker,
         quantity: position.quantity,

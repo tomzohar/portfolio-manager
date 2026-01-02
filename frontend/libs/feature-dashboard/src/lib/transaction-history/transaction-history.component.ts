@@ -14,6 +14,7 @@ import {
     ColumnDef,
     EmptyStateComponent,
     LoadingPageComponent,
+    MenuItem,
     TableComponent,
 } from '@stocks-researcher/styles';
 import {
@@ -108,9 +109,9 @@ export class TransactionHistoryComponent {
    */
   onTransactionActionSelected(
     transaction: DisplayTransaction,
-    actionId: string
+    menuItem: MenuItem
   ): void {
-    if (actionId === 'delete') {
+    if (menuItem.id === 'delete') {
       this.confirmDelete(transaction);
     }
   }

@@ -62,6 +62,7 @@ export class PositionSummaryDto {
     this.quantity = data.quantity;
     this.avgCostBasis = data.avgCostBasis;
 
+    // Calculate derived metrics based on currentPrice availability
     if (data.currentPrice !== undefined && data.currentPrice !== null) {
       this.currentPrice = data.currentPrice;
       this.marketValue = data.currentPrice * data.quantity;
@@ -72,6 +73,15 @@ export class PositionSummaryDto {
       if (data.avgCostBasis !== 0) {
         this.unrealizedPLPercent =
           (data.currentPrice - data.avgCostBasis) / data.avgCostBasis;
+      }
+    } else {
+      // Fallback: When current price is unavailable, use cost basis
+      // This ensures marketValue is always set for totalValue calculation
+      if (data.avgCostBasis !== undefined && data.avgCostBasis !== null) {
+        this.marketValue = data.avgCostBasis * data.quantity;
+        // P/L is 0 when using cost basis (no gain/loss)
+        this.unrealizedPL = 0;
+        this.unrealizedPLPercent = 0;
       }
     }
   }
@@ -104,6 +114,12 @@ export class PortfolioSummaryDto {
   unrealizedPLPercent: number;
 
   @ApiProperty({
+    description: 'Cash balance (market value of CASH position)',
+    type: 'number',
+  })
+  cashBalance: number;
+
+  @ApiProperty({
     description: 'Array of positions by ticker',
     type: [PositionSummaryDto],
   })
@@ -114,12 +130,14 @@ export class PortfolioSummaryDto {
     totalCostBasis: number;
     unrealizedPL: number;
     unrealizedPLPercent: number;
+    cashBalance: number;
     positions: PositionSummaryDto[];
   }) {
     this.totalValue = data.totalValue;
     this.totalCostBasis = data.totalCostBasis;
     this.unrealizedPL = data.unrealizedPL;
     this.unrealizedPLPercent = data.unrealizedPLPercent;
+    this.cashBalance = data.cashBalance;
     this.positions = data.positions;
   }
 }

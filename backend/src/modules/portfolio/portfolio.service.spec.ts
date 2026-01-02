@@ -214,7 +214,7 @@ describe('PortfolioService', () => {
       expect(polygonApiService.getPreviousClose).toHaveBeenCalledWith('GOOGL');
     });
 
-    it('should handle API failures gracefully and return assets without price data', async () => {
+    it('should handle API failures gracefully and return assets with cost basis fallback', async () => {
       const portfolioWithAssets = {
         ...mockPortfolio,
         assets: [mockAsset1, mockAsset2],
@@ -222,9 +222,9 @@ describe('PortfolioService', () => {
 
       portfolioRepository.findOne.mockResolvedValue(portfolioWithAssets);
       jest
-        .spyOn(polygonApiService, 'getTickerSnapshot')
-        .mockReturnValueOnce(of(null)) // Simulate API failure for AAPL
-        .mockReturnValueOnce(of(null)); // Simulate API failure for GOOGL
+        .spyOn(polygonApiService, 'getPreviousClose')
+        .mockReturnValueOnce(of(null as any)) // Simulate API failure for AAPL
+        .mockReturnValueOnce(of(null as any)); // Simulate API failure for GOOGL
 
       const result = await service.getAssets(mockPortfolioId, mockUserId);
 
@@ -233,15 +233,17 @@ describe('PortfolioService', () => {
       expect(result[0].currentPrice).toBeUndefined();
       expect(result[0].todaysChange).toBeUndefined();
       expect(result[0].todaysChangePerc).toBeUndefined();
-      expect(result[0].marketValue).toBeUndefined();
-      expect(result[0].pl).toBeUndefined();
-      expect(result[0].plPercent).toBeUndefined();
+      // When market data is unavailable, marketValue falls back to avgPrice * quantity
+      expect(result[0].marketValue).toBe(1500); // 150 * 10
+      expect(result[0].pl).toBe(0); // No gain/loss when using cost basis
+      expect(result[0].plPercent).toBe(0);
 
       expect(result[1].ticker).toBe('GOOGL');
       expect(result[1].currentPrice).toBeUndefined();
-      expect(result[1].marketValue).toBeUndefined();
-      expect(result[1].pl).toBeUndefined();
-      expect(result[1].plPercent).toBeUndefined();
+      // When market data is unavailable, marketValue falls back to avgPrice * quantity
+      expect(result[1].marketValue).toBe(14000); // 2800 * 5
+      expect(result[1].pl).toBe(0); // No gain/loss when using cost basis
+      expect(result[1].plPercent).toBe(0);
     });
 
     it('should handle partial API failures (some succeed, some fail)', async () => {
@@ -276,13 +278,21 @@ describe('PortfolioService', () => {
       jest
         .spyOn(polygonApiService, 'getPreviousClose')
         .mockReturnValueOnce(of(mockPreviousClose1)) // Success for AAPL
-        .mockReturnValueOnce(of(null)); // Failure for GOOGL
+        .mockReturnValueOnce(of(null as any)); // Failure for GOOGL
 
       const result = await service.getAssets(mockPortfolioId, mockUserId);
 
       expect(result).toHaveLength(2);
+      
+      // AAPL: Has market data
       expect(result[0].currentPrice).toBe(153.75);
+      expect(result[0].marketValue).toBe(1537.5); // 153.75 * 10
+      
+      // GOOGL: Market data failed, falls back to cost basis
       expect(result[1].currentPrice).toBeUndefined();
+      expect(result[1].marketValue).toBe(14000); // 2800 * 5 (avgPrice * quantity)
+      expect(result[1].pl).toBe(0);
+      expect(result[1].plPercent).toBe(0);
     });
 
     it('should return empty array when portfolio has no assets', async () => {
@@ -391,6 +401,7 @@ describe('PortfolioService', () => {
         expect(result.totalValue).toBe(0);
         expect(result.totalCostBasis).toBe(0);
         expect(result.unrealizedPL).toBe(0);
+        expect(result.cashBalance).toBe(0);
         expect(result.positions).toEqual([]);
       });
 
@@ -407,29 +418,24 @@ describe('PortfolioService', () => {
           } as Asset,
         ];
 
-        const mockSnapshot = {
-          ticker: {
-            ticker: 'AAPL',
-            todaysChangePerc: 2.5,
-            todaysChange: 3.75,
-            updated: 1234567890,
-            day: {
-              o: 150.0,
-              h: 155.0,
-              l: 149.0,
-              c: 160.0,
+        const mockPreviousClose = {
+          ticker: 'AAPL',
+          queryCount: 1,
+          resultsCount: 1,
+          adjusted: true,
+          results: [
+            {
+              T: 'AAPL',
               v: 1000000,
               vw: 151.5,
+              o: 150.0,
+              c: 160.0,
+              h: 155.0,
+              l: 149.0,
+              t: 1234567890,
+              n: 5000,
             },
-            prevDay: {
-              o: 148.0,
-              h: 151.0,
-              l: 147.0,
-              c: 150.0,
-              v: 900000,
-              vw: 149.5,
-            },
-          },
+          ],
           status: 'OK',
           request_id: 'test-1',
         };
@@ -437,8 +443,8 @@ describe('PortfolioService', () => {
         jest.spyOn(service, 'findOne').mockResolvedValue(mockPortfolio);
         assetRepository.find.mockResolvedValue(mockAssets);
         jest
-          .spyOn(polygonApiService, 'getTickerSnapshot')
-          .mockReturnValue(of(mockSnapshot));
+          .spyOn(polygonApiService, 'getPreviousClose')
+          .mockReturnValue(of(mockPreviousClose as any));
 
         const result = await service.getPortfolioSummary(
           mockPortfolioId,
@@ -453,6 +459,7 @@ describe('PortfolioService', () => {
         expect(result.positions[0].marketValue).toBe(1600.0);
         expect(result.totalCostBasis).toBe(1500.0);
         expect(result.totalValue).toBe(1600.0);
+        expect(result.cashBalance).toBe(0); // No CASH position
         expect(result.unrealizedPL).toBe(100.0);
       });
 
@@ -526,6 +533,211 @@ describe('PortfolioService', () => {
 
         expect(result.positions[0].quantity).toBe(5);
         expect(result.positions[0].avgCostBasis).toBe(150.0);
+      });
+
+      it('should include positions without market data in totalValue using cost basis', async () => {
+        // Test case: Portfolio with CASH + 2 stocks (one with market data, one without)
+        const mockAssets = [
+          {
+            id: 'asset-1',
+            ticker: 'AAPL',
+            quantity: 10,
+            avgPrice: 150.0,
+            portfolio: mockPortfolio,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          } as Asset,
+          {
+            id: 'asset-2',
+            ticker: 'GOOGL',
+            quantity: 5,
+            avgPrice: 2000.0,
+            portfolio: mockPortfolio,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          } as Asset,
+          {
+            id: 'asset-3',
+            ticker: 'CASH',
+            quantity: 5000,
+            avgPrice: 1.0,
+            portfolio: mockPortfolio,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          } as Asset,
+        ];
+
+        // AAPL has market data (currentPrice = 160)
+        const applePreviousClose = {
+          ticker: 'AAPL',
+          results: [{ c: 160.0 }],
+        };
+
+        // GOOGL market data fails (returns null) - simulates API failure
+        const getPreviousCloseSpy = jest
+          .spyOn(polygonApiService, 'getPreviousClose')
+          .mockImplementation((ticker: string) => {
+            if (ticker === 'AAPL') {
+              return of(applePreviousClose as any);
+            }
+            // GOOGL fails - throw error to simulate API failure
+            throw new Error('Market data unavailable');
+          });
+
+        jest.spyOn(service, 'findOne').mockResolvedValue(mockPortfolio);
+        assetRepository.find.mockResolvedValue(mockAssets);
+
+        const result = await service.getPortfolioSummary(
+          mockPortfolioId,
+          mockUserId,
+        );
+
+        // Verify positions
+        expect(result.positions).toHaveLength(3);
+
+        // AAPL should have marketValue from currentPrice
+        const applePosition = result.positions.find((p) => p.ticker === 'AAPL');
+        expect(applePosition).toBeDefined();
+        expect(applePosition?.currentPrice).toBe(160.0);
+        expect(applePosition?.marketValue).toBe(1600.0); // 10 * 160
+
+        // GOOGL should have marketValue from cost basis fallback (no currentPrice)
+        const googlPosition = result.positions.find(
+          (p) => p.ticker === 'GOOGL',
+        );
+        expect(googlPosition).toBeDefined();
+        expect(googlPosition?.currentPrice).toBeUndefined();
+        expect(googlPosition?.marketValue).toBe(10000); // 2000 * 5 (cost basis fallback)
+        expect(googlPosition?.unrealizedPL).toBe(0); // No P/L when using cost basis
+        expect(googlPosition?.unrealizedPLPercent).toBe(0);
+
+        // CASH always has currentPrice = 1.0
+        const cashPosition = result.positions.find((p) => p.ticker === 'CASH');
+        expect(cashPosition).toBeDefined();
+        expect(cashPosition?.currentPrice).toBe(1.0);
+        expect(cashPosition?.marketValue).toBe(5000.0); // 5000 * 1.0
+
+        // Total cost basis = AAPL (10*150) + GOOGL (5*2000) + CASH (5000*1)
+        expect(result.totalCostBasis).toBe(16500.0); // 1500 + 10000 + 5000
+
+        // Total value should include ALL positions:
+        // - AAPL: marketValue = 1600 (has current price)
+        // - GOOGL: cost basis = 10000 (no market data, fallback to cost basis)
+        // - CASH: marketValue = 5000 (always has price = 1.0)
+        expect(result.totalValue).toBe(16600.0); // 1600 + 10000 + 5000
+
+        // Cash balance should be extracted from CASH position
+        expect(result.cashBalance).toBe(5000.0);
+
+        // Unrealized P/L = totalValue - totalCostBasis
+        expect(result.unrealizedPL).toBe(100.0); // 16600 - 16500
+
+        getPreviousCloseSpy.mockRestore();
+      });
+
+      it('should correctly calculate portfolio with real user data (IREN, GOOGL, CASH)', async () => {
+        // Real user portfolio data
+        const mockAssets = [
+          {
+            id: 'asset-1',
+            ticker: 'IREN',
+            quantity: 100,
+            avgPrice: 54.0,
+            portfolio: mockPortfolio,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          } as Asset,
+          {
+            id: 'asset-2',
+            ticker: 'GOOGL',
+            quantity: 20,
+            avgPrice: 207.0,
+            portfolio: mockPortfolio,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          } as Asset,
+          {
+            id: 'asset-3',
+            ticker: 'CASH',
+            quantity: 1460,
+            avgPrice: 1.0,
+            portfolio: mockPortfolio,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          } as Asset,
+        ];
+
+        // Mock market data responses
+        const irenPreviousClose = {
+          ticker: 'IREN',
+          results: [{ c: 37.77 }], // Current price from screenshot
+        };
+
+        const googlPreviousClose = {
+          ticker: 'GOOGL',
+          results: [{ c: 313.0 }], // Current price from screenshot
+        };
+
+        jest.spyOn(service, 'findOne').mockResolvedValue(mockPortfolio);
+        assetRepository.find.mockResolvedValue(mockAssets);
+        
+        jest
+          .spyOn(polygonApiService, 'getPreviousClose')
+          .mockImplementation((ticker: string) => {
+            if (ticker === 'IREN') {
+              return of(irenPreviousClose as any);
+            } else if (ticker === 'GOOGL') {
+              return of(googlPreviousClose as any);
+            }
+            throw new Error(`Unexpected ticker: ${ticker}`);
+          });
+
+        const result = await service.getPortfolioSummary(
+          mockPortfolioId,
+          mockUserId,
+        );
+
+        // Verify positions
+        expect(result.positions).toHaveLength(3);
+
+        // IREN: 100 shares @ $37.77
+        const irenPosition = result.positions.find((p) => p.ticker === 'IREN');
+        expect(irenPosition).toBeDefined();
+        expect(irenPosition?.quantity).toBe(100);
+        expect(irenPosition?.avgCostBasis).toBe(54.0);
+        expect(irenPosition?.currentPrice).toBe(37.77);
+        expect(irenPosition?.marketValue).toBeCloseTo(3777.0, 2); // 100 * 37.77
+
+        // GOOGL: 20 shares @ $313
+        const googlPosition = result.positions.find((p) => p.ticker === 'GOOGL');
+        expect(googlPosition).toBeDefined();
+        expect(googlPosition?.quantity).toBe(20);
+        expect(googlPosition?.avgCostBasis).toBe(207.0);
+        expect(googlPosition?.currentPrice).toBe(313.0);
+        expect(googlPosition?.marketValue).toBeCloseTo(6260.0, 2); // 20 * 313
+
+        // CASH: 1460 @ $1.0
+        const cashPosition = result.positions.find((p) => p.ticker === 'CASH');
+        expect(cashPosition).toBeDefined();
+        expect(cashPosition?.quantity).toBe(1460);
+        expect(cashPosition?.currentPrice).toBe(1.0);
+        expect(cashPosition?.marketValue).toBe(1460.0); // 1460 * 1
+
+        // Portfolio-level calculations
+        // Total cost basis = IREN (100*54) + GOOGL (20*207) + CASH (1460*1)
+        expect(result.totalCostBasis).toBeCloseTo(11000.0, 2); // 5400 + 4140 + 1460
+
+        // Total value = IREN (3777) + GOOGL (6260) + CASH (1460)
+        expect(result.totalValue).toBeCloseTo(11497.0, 2); // 3777 + 6260 + 1460
+
+        // Cash balance
+        expect(result.cashBalance).toBe(1460.0);
+
+        // Unrealized P/L = totalValue - totalCostBasis
+        expect(result.unrealizedPL).toBeCloseTo(497.0, 2); // 11497 - 11000
+
+        // Unrealized P/L % = unrealizedPL / totalCostBasis
+        expect(result.unrealizedPLPercent).toBeCloseTo(0.0452, 4); // 497 / 11000 = 0.0452
       });
     });
   });

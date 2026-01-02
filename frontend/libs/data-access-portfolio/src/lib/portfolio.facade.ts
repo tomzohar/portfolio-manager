@@ -9,6 +9,7 @@ import {
   selectLoading,
   selectError,
   selectSelectedPortfolio,
+  selectCurrentSummary,
 } from './+state/portfolio.selectors';
 import {
   selectTransactionsByPortfolio,
@@ -60,6 +61,9 @@ export class PortfolioFacade {
   
   readonly currentAssets: Signal<DashboardAsset[]> = 
     this.store.selectSignal(selectCurrentAssets);
+  
+  readonly currentSummary = 
+    this.store.selectSignal(selectCurrentSummary);
   
   readonly selectedId: Signal<string | null> = 
     this.store.selectSignal(selectSelectedId);

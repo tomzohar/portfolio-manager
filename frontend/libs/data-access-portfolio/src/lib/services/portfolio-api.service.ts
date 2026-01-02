@@ -17,6 +17,7 @@ export interface PortfolioSummaryDto {
   totalCostBasis: number;
   unrealizedPL: number;
   unrealizedPLPercent: number;
+  cashBalance: number;
   positions: PositionSummaryDto[];
 }
 

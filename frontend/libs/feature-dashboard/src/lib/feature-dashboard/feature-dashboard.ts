@@ -46,6 +46,7 @@ export class FeatureDashboardComponent implements OnInit {
   // Expose facade signals directly to template
   portfolios = this.facade.portfolios;
   currentAssets = this.facade.currentAssets;
+  currentSummary = this.facade.currentSummary;
   selectedPortfolioId = this.facade.selectedId;
   loading = this.facade.loading;
   transactions = this.facade.transactions;

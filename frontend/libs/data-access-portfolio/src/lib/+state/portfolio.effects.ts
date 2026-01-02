@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { of } from 'rxjs';
-import { map, catchError, switchMap } from 'rxjs/operators';
+import { map, catchError, switchMap, mergeMap } from 'rxjs/operators';
 import { PortfolioApiService } from '../services/portfolio-api.service';
 import { PortfolioActions } from './portfolio.actions';
 
@@ -54,12 +54,15 @@ export class PortfolioEffects {
 
   /**
    * Effect: Select Portfolio
-   * When a portfolio is selected, load its assets
+   * When a portfolio is selected, load its assets and summary
    */
   selectPortfolio$ = createEffect(() =>
     this.actions$.pipe(
       ofType(PortfolioActions.selectPortfolio),
-      map(({ id }) => PortfolioActions.loadAssets({ portfolioId: id }))
+      mergeMap(({ id }) => [
+        PortfolioActions.loadAssets({ portfolioId: id }),
+        PortfolioActions.loadSummary({ portfolioId: id })
+      ])
     )
   );
 
@@ -79,6 +82,29 @@ export class PortfolioEffects {
           catchError((error) =>
             of(PortfolioActions.loadAssetsFailure({ 
               error: error?.message || 'Failed to load assets' 
+            }))
+          )
+        )
+      )
+    )
+  );
+
+  /**
+   * Effect: Load Summary
+   * Fetches portfolio summary with aggregated metrics and cash balance.
+   * This is the single source of truth for portfolio-level calculations.
+   */
+  loadSummary$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(PortfolioActions.loadSummary),
+      switchMap(({ portfolioId }) =>
+        this.portfolioApiService.getPortfolioSummary(portfolioId).pipe(
+          map((summary) =>
+            PortfolioActions.loadSummarySuccess({ portfolioId, summary })
+          ),
+          catchError((error) =>
+            of(PortfolioActions.loadSummaryFailure({ 
+              error: error?.message || 'Failed to load summary' 
             }))
           )
         )

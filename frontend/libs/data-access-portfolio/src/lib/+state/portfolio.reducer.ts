@@ -1,6 +1,7 @@
 import { createReducer, on } from '@ngrx/store';
 import { DashboardPortfolio, DashboardAsset } from '@stocks-researcher/types';
 import { PortfolioActions } from './portfolio.actions';
+import { PortfolioSummaryDto } from '../services/portfolio-api.service';
 
 /**
  * Portfolio State Interface
@@ -10,6 +11,7 @@ import { PortfolioActions } from './portfolio.actions';
 export interface PortfolioState {
   portfolios: DashboardPortfolio[];
   assets: Record<string, DashboardAsset[]>;
+  summaries: Record<string, PortfolioSummaryDto>;
   selectedId: string | null;
   loading: boolean;
   error: string | null;
@@ -21,6 +23,7 @@ export interface PortfolioState {
 export const initialState: PortfolioState = {
   portfolios: [],
   assets: {},
+  summaries: {},
   selectedId: null,
   loading: false,
   error: null,
@@ -88,6 +91,27 @@ export const portfolioReducer = createReducer(
   })),
 
   on(PortfolioActions.loadAssetsFailure, (state, { error }) => ({
+    ...state,
+    loading: false,
+    error,
+  })),
+
+  // Load Summary
+  on(PortfolioActions.loadSummary, (state) => ({
+    ...state,
+    loading: true,
+  })),
+
+  on(PortfolioActions.loadSummarySuccess, (state, { portfolioId, summary }) => ({
+    ...state,
+    summaries: {
+      ...state.summaries,
+      [portfolioId]: summary,
+    },
+    loading: false,
+  })),
+
+  on(PortfolioActions.loadSummaryFailure, (state, { error }) => ({
     ...state,
     loading: false,
     error,

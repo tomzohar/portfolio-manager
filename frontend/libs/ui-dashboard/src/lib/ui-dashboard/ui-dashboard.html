@@ -18,15 +18,13 @@
 
     <!-- Portfolio Widgets -->
     @if (!loading() && selectedPortfolioId()) {
-      <div class="portfolio-widgets">
-        <lib-net-account-value-widget
-          [value]="netAccountValue()"
-          [buyingPower]="buyingPower()"
-        />
-        <lib-cash-balance-widget
-          [balance]="cashBalance()"
-        />
-      </div>
+    <div class="portfolio-widgets">
+      <lib-net-account-value-widget
+        [value]="netAccountValue()"
+        [buyingPower]="buyingPower()"
+      />
+      <lib-cash-balance-widget [balance]="cashBalance()" />
+    </div>
     }
 
     <!-- Asset List -->
@@ -47,7 +45,10 @@
     >
       <!-- Header Actions -->
       <div headerActions>
-        <lib-button [config]="viewTransactionsButtonConfig" (clicked)="onViewTransactions()" />
+        <lib-button
+          [config]="viewTransactionsButtonConfig"
+          (clicked)="onViewTransactions()"
+        />
         <lib-button [config]="buyAssetButtonConfig" (clicked)="onBuyAsset()" />
       </div>
 

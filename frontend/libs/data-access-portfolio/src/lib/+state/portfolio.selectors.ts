@@ -63,3 +63,23 @@ export const selectSelectedPortfolio = createSelector(
   }
 );
 
+/**
+ * Selector for all summaries
+ */
+export const selectAllSummaries = createSelector(
+  selectPortfolioState,
+  (state) => state.summaries
+);
+
+/**
+ * Selector for current portfolio's summary based on selectedId
+ */
+export const selectCurrentSummary = createSelector(
+  selectAllSummaries,
+  selectSelectedId,
+  (summaries, selectedId) => {
+    if (!selectedId) return null;
+    return summaries[selectedId] || null;
+  }
+);
+

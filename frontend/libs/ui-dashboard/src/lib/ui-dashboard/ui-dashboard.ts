@@ -18,6 +18,7 @@ import {
 import { DashboardAsset, DashboardPortfolio } from '@stocks-researcher/types';
 import { NetAccountValueWidgetComponent } from '../net-account-value-widget/net-account-value-widget';
 import { CashBalanceWidgetComponent } from '../cash-balance-widget/cash-balance-widget.component';
+import { PortfolioSummaryDto } from '@frontend/data-access-portfolio';
 
 // CASH ticker constant (matches backend)
 const CASH_TICKER = 'CASH';
@@ -42,6 +43,7 @@ const CASH_TICKER = 'CASH';
 export class UiDashboardComponent {
   portfolios = input<DashboardPortfolio[]>([]);
   assets = input<DashboardAsset[]>([]);
+  summary = input<PortfolioSummaryDto | null>(null);
   selectedPortfolioId = input<string | null>(null);
   loading = input<boolean>(true);
   buyingPower = input<number | null>(null);
@@ -100,26 +102,18 @@ export class UiDashboardComponent {
   });
 
   /**
-   * Get CASH balance from assets
+   * Get CASH balance from summary (single source of truth)
    */
   cashBalance = computed<number>(() => {
-    const cashAsset = this.assets().find(asset => asset.ticker === CASH_TICKER);
-    if (!cashAsset) return 0;
-    
-    const price = Number(cashAsset.currentPrice ?? cashAsset.avgPrice ?? 1);
-    return Number(cashAsset.quantity) * price;
+    return this.summary()?.cashBalance ?? 0;
   });
 
   /**
-   * Calculate net account value from assets
-   * Net Account Value = Sum of all (quantity * currentPrice) or (quantity * avgPrice) if currentPrice unavailable
+   * Get net account value from summary (single source of truth)
+   * Backend handles all calculations including fallback to cost basis
    */
   netAccountValue = computed<number>(() => {
-    return this.assets().reduce((total, asset) => {
-      const price = asset.currentPrice ?? asset.avgPrice ?? 0;
-      const value = asset.quantity * price;
-      return total + value;
-    }, 0);
+    return this.summary()?.totalValue ?? 0;
   });
 
   /**
