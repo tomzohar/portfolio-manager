@@ -53,7 +53,7 @@ export class UiDashboardComponent {
   deletePortfolio = output<void>();
   buyAsset = output<void>();
   sellAsset = output<DashboardAsset>();
-  viewTransactions = output<void>();
+  viewTransactions = output<string | undefined>();
 
   /**
    * Get the selected portfolio name for the header
@@ -221,8 +221,8 @@ export class UiDashboardComponent {
     this.sellAsset.emit(asset);
   }
 
-  onViewTransactions() {
-    this.viewTransactions.emit();
+  onViewTransactions(ticker?: string) {
+    this.viewTransactions.emit(ticker);
   }
 
   /**
@@ -234,7 +234,7 @@ export class UiDashboardComponent {
         this.onSellAsset(asset);
         break;
       case 'view-transactions':
-        this.onViewTransactions();
+        this.onViewTransactions(asset.ticker);
         break;
     }
   }

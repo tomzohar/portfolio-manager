@@ -5,6 +5,9 @@ import {
     inject,
     input,
     output,
+    viewChild,
+    TemplateRef,
+    computed,
 } from '@angular/core';
 import { ConfirmationDialogComponent, ConfirmationDialogConfig, DialogService } from '@frontend/util-dialog';
 import {
@@ -67,16 +70,28 @@ export class TransactionHistoryComponent {
   /** Transaction type enum for template */
   readonly TransactionType = TransactionType;
 
+  /** Template reference for the type column with colored badges */
+  readonly typeColumnTemplate = viewChild<TemplateRef<unknown>>('typeColumn');
+
   /** Table columns configuration */
-  readonly tableColumns: ColumnDef[] = [
-    { key: 'transactionDate', header: 'Date', type: 'text' },
-    { key: 'type', header: 'Type', type: 'text' },
-    { key: 'ticker', header: 'Ticker', type: 'text' },
-    { key: 'quantity', header: 'Quantity', type: 'number' },
-    { key: 'price', header: 'Price', type: 'currency' },
-    { key: 'totalValue', header: 'Total Value', type: 'currency' },
-    { key: 'actions', header: 'Actions', type: 'actions' },
-  ];
+  readonly tableColumns = computed((): ColumnDef[] => {
+    const typeTemplate = this.typeColumnTemplate();
+    
+    return [
+      { key: 'transactionDate', header: 'Date', type: 'text' },
+      { 
+        key: 'type', 
+        header: 'Type', 
+        type: typeTemplate ? 'custom' : 'text',
+        customTemplate: typeTemplate 
+      },
+      { key: 'ticker', header: 'Ticker', type: 'text' },
+      { key: 'quantity', header: 'Quantity', type: 'number' },
+      { key: 'price', header: 'Price', type: 'currency' },
+      { key: 'totalValue', header: 'Total Value', type: 'currency' },
+      { key: 'actions', header: 'Actions', type: 'actions' },
+    ];
+  });
 
   /**
    * Get action menu config for a transaction

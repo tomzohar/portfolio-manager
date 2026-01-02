@@ -289,8 +289,9 @@ export class FeatureDashboardComponent implements OnInit {
 
   /**
    * Opens transaction history dialog for the selected portfolio
+   * @param ticker Optional ticker to pre-filter transactions (e.g., when opened from asset row)
    */
-  onViewTransactions(): void {
+  onViewTransactions(ticker?: string): void {
     const portfolioId = this.selectedPortfolioId();
     
     if (!portfolioId) {
@@ -298,10 +299,13 @@ export class FeatureDashboardComponent implements OnInit {
       return;
     }
 
-    // Open transaction history dialog
+    // Open transaction history dialog with optional ticker filter
     this.dialogService.open<TransactionHistoryDialogData, void>({
       component: TransactionHistoryDialogComponent,
-      data: { portfolioId },
+      data: { 
+        portfolioId,
+        selectedTicker: ticker 
+      },
       width: '900px',
       maxHeight: '80vh',
     });

@@ -6,7 +6,9 @@ import { FillAvailableHeightDirective } from '../directives/fill-available-heigh
 export interface ColumnDef {
   key: string;
   header: string;
-  type?: 'text' | 'number' | 'currency' | 'percent' | 'actions';
+  type?: 'text' | 'number' | 'currency' | 'percent' | 'actions' | 'custom';
+  /** Template reference for custom column rendering */
+  customTemplate?: TemplateRef<unknown>;
 }
 
 @Component({
@@ -40,6 +42,11 @@ export interface ColumnDef {
                 @case ('actions') {
                   @if (actionsTemplate()) {
                     <ng-container *ngTemplateOutlet="actionsTemplate()!; context: { $implicit: row }"></ng-container>
+                  }
+                }
+                @case ('custom') {
+                  @if (col.customTemplate) {
+                    <ng-container *ngTemplateOutlet="col.customTemplate; context: { $implicit: row }"></ng-container>
                   }
                 }
                 @default {
