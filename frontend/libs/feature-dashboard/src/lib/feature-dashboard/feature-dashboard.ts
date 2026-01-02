@@ -1,5 +1,5 @@
 import { Component, inject, OnInit, effect } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { PortfolioFacade } from '@frontend/data-access-portfolio';
 import { UiDashboardComponent } from '@frontend/ui-dashboard';
 import { ConfirmationDialogComponent, ConfirmationDialogConfig, DialogService } from '@frontend/util-dialog';
@@ -38,6 +38,7 @@ export class FeatureDashboardComponent implements OnInit {
   private facade = inject(PortfolioFacade);
   private dialogService = inject(DialogService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
   // Convert route query params to signal
   private queryParams = toSignal(this.route.queryParams);
@@ -56,13 +57,37 @@ export class FeatureDashboardComponent implements OnInit {
       const params = this.queryParams();
       const portfolioIdFromUrl = params?.['portfolioId'];
       
-      // If we have portfolios loaded and a portfolioId in URL, select it
+      // If we have portfolios loaded and a portfolioId in URL, validate it exists
       if (portfolioIdFromUrl && this.portfolios().length > 0) {
         const currentSelection = this.selectedPortfolioId();
+        const portfolioExists = this.portfolios().some(p => p.id === portfolioIdFromUrl);
+        
+        // If portfolio doesn't exist, navigate back to portfolios list
+        if (!portfolioExists) {
+          void this.router.navigate(['/portfolios']);
+          return;
+        }
         
         // Only dispatch if it's different from current selection to avoid loops
         if (currentSelection !== portfolioIdFromUrl) {
           this.facade.selectPortfolio(portfolioIdFromUrl);
+        }
+      }
+    });
+
+    // Watch for portfolio deletion - navigate back to portfolios list
+    effect(() => {
+      const params = this.queryParams();
+      const portfolioIdFromUrl = params?.['portfolioId'];
+      const portfolios = this.portfolios();
+      const loading = this.loading();
+      
+      // If we had a selected portfolio but it no longer exists and we're not loading
+      // This indicates a successful deletion
+      if (portfolioIdFromUrl && portfolios.length > 0 && !loading) {
+        const portfolioStillExists = portfolios.some(p => p.id === portfolioIdFromUrl);
+        if (!portfolioStillExists) {
+          void this.router.navigate(['/portfolios']);
         }
       }
     });
@@ -137,6 +162,7 @@ export class FeatureDashboardComponent implements OnInit {
       .subscribe((confirmed: boolean | undefined) => {
         if (confirmed) {
           this.facade.deletePortfolio(portfolioId);
+          // Navigation happens automatically via effect when portfolio disappears from list
         }
       });
   }
