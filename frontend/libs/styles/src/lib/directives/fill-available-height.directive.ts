@@ -3,16 +3,16 @@ import { Directive, ElementRef, inject, afterNextRender, input } from '@angular/
 /**
  * FillAvailableHeightDirective
  * 
- * Calculates and applies the available height to an element based on its Y position.
- * The height is calculated as: window.innerHeight - element.getBoundingClientRect().y
+ * Calculates and applies the available max-height to an element based on its Y position.
+ * The max-height is calculated as: window.innerHeight - element.getBoundingClientRect().y
  * 
- * This is useful for full-page components that need to fill the remaining viewport
- * space after accounting for headers, navbars, or other fixed elements above them.
+ * This is useful for scrollable components that should not exceed the viewport height
+ * but should only take as much space as needed when content is smaller.
  * 
  * @example
  * ```html
  * <div libFillAvailableHeight>
- *   <!-- Content will fill from this point to bottom of viewport -->
+ *   <!-- Content will fill up to viewport bottom, scrolling if needed -->
  * </div>
  * ```
  */
@@ -32,13 +32,13 @@ export class FillAvailableHeightDirective {
   }
 
   /**
-   * Calculate available height and apply it to the element
+   * Calculate available height and apply it as max-height to the element
    */
   private calculateAndApplyHeight(): void {
     const element = this.elementRef.nativeElement as HTMLElement;
     const elementY = element.getBoundingClientRect().y;
     const availableHeight = window.innerHeight - elementY;
 
-    element.style.height = `${availableHeight - this.marginBottom()}px`;
+    element.style.maxHeight = `${availableHeight - this.marginBottom()}px`;
   }
 }

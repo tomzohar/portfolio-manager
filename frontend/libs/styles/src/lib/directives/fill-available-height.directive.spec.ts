@@ -34,30 +34,30 @@ describe('FillAvailableHeightDirective', () => {
     expect(element).toBeTruthy();
   });
 
-  it('should set height style on the element', () => {
+  it('should set max-height style on the element', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const element = compiled.querySelector('.test-element') as HTMLElement;
     
-    // Height should be set after render
-    expect(element.style.height).toBeTruthy();
+    // Max-height should be set after render
+    expect(element.style.maxHeight).toBeTruthy();
   });
 
-  it('should calculate height based on element Y position', () => {
+  it('should calculate max-height based on element Y position', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const element = compiled.querySelector('.test-element') as HTMLElement;
     
-    // Get the calculated height
-    const heightValue = parseInt(element.style.height, 10);
+    // Get the calculated max-height
+    const heightValue = parseInt(element.style.maxHeight, 10);
     
-    // Height should be a positive number
+    // Max-height should be a positive number
     expect(heightValue).toBeGreaterThan(0);
   });
 
-  it('should set height in pixels', () => {
+  it('should set max-height in pixels', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const element = compiled.querySelector('.test-element') as HTMLElement;
     
-    // Height should end with 'px'
-    expect(element.style.height).toMatch(/^\d+px$/);
+    // Max-height should end with 'px'
+    expect(element.style.maxHeight).toMatch(/^\d+px$/);
   });
 });
