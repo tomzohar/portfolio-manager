@@ -118,11 +118,32 @@ backend/src/modules/agents/
 
 ## 7. Phased Roadmap
 
-### Phase 1: Infrastructure & Core Wiring
-- **Install Dependencies**: `langgraph`, `zod`, `technicalindicators`.
-- **State Management**: Implement `StateService` and TypeORM entities for persistence.
-- **Pricing Middleware**: Implement the token usage tracking middleware.
-- **Basic CIO Graph**: Create a "Hello World" graph that can invoke one basic tool.
+### Phase 1: Infrastructure & Core Wiring ✅ **COMPLETE**
+**Status**: Production-Ready (January 3, 2026)
+
+**Completed Deliverables**:
+- ✅ **Dependencies Installed**: `@langchain/langgraph`, `@langchain/core`, `@langchain/google-genai`, `@langchain/langgraph-checkpoint-postgres`
+- ✅ **State Management**: `StateService` wrapping PostgresSaver with thread scoping
+- ✅ **TypeORM Entities**: `TokenUsage` and `ReasoningTrace` with full CRUD
+- ✅ **Token Tracking**: `TokenUsageService` with cost calculation (ready for Phase 2 LLM calls)
+- ✅ **Tool Registry**: `ToolRegistryService` with example tool (get_current_time)
+- ✅ **CIO Graph**: Observer → End node flow with state persistence
+- ✅ **API Layer**: JWT-protected `/agents/run` endpoint with Zod validation
+- ✅ **Module Wiring**: `AgentsModule` integrated into `AppModule`
+- ✅ **Gemini LLM**: `GeminiLlmService` with retry logic and token extraction
+
+**Test Coverage**:
+- ✅ 66 unit tests passing
+- ✅ 7 E2E tests passing
+- ✅ 0 lint errors in new code
+- ✅ Build succeeds
+- ✅ Live production test verified
+
+**Documentation**:
+- ✅ `backend/src/modules/agents/README.md` - Module documentation
+- ✅ `backend/PHASE_1_TEST_RESULTS.md` - Live test results
+
+See: [Phase_1_Infrastructure_Core_Wiring.md](Phase_1_Infrastructure_Core_Wiring.md) for detailed task breakdown.
 
 ### Phase 2: Persona Tool Porting
 - **Technical Persona**: Build the `TechnicalAnalystTool` using `technicalindicators`.
