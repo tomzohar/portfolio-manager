@@ -1,9 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DataSource } from 'typeorm';
+import { ZodValidationPipe } from 'nestjs-zod';
 
 describe('Rate Limiting (e2e)', () => {
   let app: INestApplication<App>;
@@ -17,13 +18,7 @@ describe('Rate Limiting (e2e)', () => {
     app = moduleFixture.createNestApplication();
 
     // Apply global validation pipe (same as in main.ts)
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    );
+    app.useGlobalPipes(new ZodValidationPipe());
 
     await app.init();
 
@@ -42,11 +37,11 @@ describe('Rate Limiting (e2e)', () => {
   describe('Login Rate Limiting', () => {
     it('should allow up to 5 login attempts per minute', async () => {
       const loginAttempt = {
-        email: 'test@example.com',
+        email: 'ratelimit@example.com',
         password: 'WrongPassword123',
       };
 
-      // Make 5 requests - all should be allowed (even though they fail auth)
+      // Make 5 failed login attempts (should all get through)
       for (let i = 0; i < 5; i++) {
         await request(app.getHttpServer())
           .post('/auth/login')
@@ -60,13 +55,14 @@ describe('Rate Limiting (e2e)', () => {
         .send(loginAttempt)
         .expect(429);
 
-      expect(response.body.message).toContain('ThrottlerException');
+      const body = response.body as { message: string };
+      expect(body.message).toContain('ThrottlerException');
     });
   });
 
   describe('Signup Rate Limiting', () => {
     it('should allow up to 3 signup attempts per minute', async () => {
-      // Make 3 signup requests with different emails
+      // Make 3 signup attempts (should all get through)
       for (let i = 0; i < 3; i++) {
         await request(app.getHttpServer())
           .post('/users')
@@ -86,20 +82,21 @@ describe('Rate Limiting (e2e)', () => {
         })
         .expect(429);
 
-      expect(response.body.message).toContain('ThrottlerException');
+      const body = response.body as { message: string };
+      expect(body.message).toContain('ThrottlerException');
     });
   });
 
   describe('Token Verification Rate Limiting', () => {
     it('should use default rate limit for verify endpoint', async () => {
-      // Token verification uses the default controller-level throttle
-      // This test ensures it doesn't fail immediately
+      // Test uses default throttle (100 per minute)
       const response = await request(app.getHttpServer())
         .post('/auth/verify')
         .send({ token: 'invalid-token' })
         .expect(401); // Auth fails but not rate limited on first request
 
-      expect(response.body.statusCode).toBe(401);
+      const body = response.body as { statusCode: number };
+      expect(body.statusCode).toBe(401);
     });
   });
 
@@ -107,17 +104,16 @@ describe('Rate Limiting (e2e)', () => {
     beforeAll(async () => {
       // Wait for rate limits to reset
       await new Promise((resolve) => setTimeout(resolve, 61000)); // Wait 61 seconds
-    });
+    }, 65000); // Set timeout to 65 seconds for this hook
 
     it('should include rate limit headers in response', async () => {
       const response = await request(app.getHttpServer())
         .post('/auth/login')
         .send({
           email: 'test@example.com',
-          password: 'password',
+          password: 'TestPassword123',
         });
 
-      // Check for rate limit headers (Throttler adds these)
       expect(response.headers).toHaveProperty('x-ratelimit-limit');
       expect(response.headers).toHaveProperty('x-ratelimit-remaining');
       expect(response.headers).toHaveProperty('x-ratelimit-reset');

@@ -283,11 +283,11 @@ describe('PortfolioService', () => {
       const result = await service.getAssets(mockPortfolioId, mockUserId);
 
       expect(result).toHaveLength(2);
-      
+
       // AAPL: Has market data
       expect(result[0].currentPrice).toBe(153.75);
       expect(result[0].marketValue).toBe(1537.5); // 153.75 * 10
-      
+
       // GOOGL: Market data failed, falls back to cost basis
       expect(result[1].currentPrice).toBeUndefined();
       expect(result[1].marketValue).toBe(14000); // 2800 * 5 (avgPrice * quantity)
@@ -680,7 +680,7 @@ describe('PortfolioService', () => {
 
         jest.spyOn(service, 'findOne').mockResolvedValue(mockPortfolio);
         assetRepository.find.mockResolvedValue(mockAssets);
-        
+
         jest
           .spyOn(polygonApiService, 'getPreviousClose')
           .mockImplementation((ticker: string) => {
@@ -709,7 +709,9 @@ describe('PortfolioService', () => {
         expect(irenPosition?.marketValue).toBeCloseTo(3777.0, 2); // 100 * 37.77
 
         // GOOGL: 20 shares @ $313
-        const googlPosition = result.positions.find((p) => p.ticker === 'GOOGL');
+        const googlPosition = result.positions.find(
+          (p) => p.ticker === 'GOOGL',
+        );
         expect(googlPosition).toBeDefined();
         expect(googlPosition?.quantity).toBe(20);
         expect(googlPosition?.avgCostBasis).toBe(207.0);

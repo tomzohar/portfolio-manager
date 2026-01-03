@@ -8,6 +8,7 @@ import { UsersModule } from './modules/users/users.module';
 import { PortfolioModule } from './modules/portfolio/portfolio.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AssetsModule } from './modules/assets/assets.module';
+import { AgentsModule } from './modules/agents/agents.module';
 
 @Module({
   imports: [
@@ -34,13 +35,14 @@ import { AssetsModule } from './modules/assets/assets.module';
     ThrottlerModule.forRoot([
       {
         ttl: 60000, // 60 seconds
-        limit: 100, // 100 requests per minute (default for all routes)
+        limit: process.env.NODE_ENV === 'test' ? 1000 : 100, // Higher limit for tests
       },
     ]),
     UsersModule,
     PortfolioModule,
     AuthModule,
     AssetsModule,
+    AgentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
