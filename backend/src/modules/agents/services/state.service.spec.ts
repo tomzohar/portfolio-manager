@@ -40,7 +40,7 @@ describe('StateService', () => {
     it.skip('should return a checkpointer instance', () => {
       // Skip: PostgresSaver requires valid DB connection which isn't available in unit tests
       // This is tested in E2E tests instead
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       const saver = service.getSaver();
       expect(saver).toBeDefined();
       expect(typeof saver).toBe('object');
@@ -49,9 +49,9 @@ describe('StateService', () => {
     it.skip('should reuse the same saver instance (singleton)', () => {
       // Skip: PostgresSaver requires valid DB connection
       // This behavior is verified in E2E tests
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       const saver1 = service.getSaver();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       const saver2 = service.getSaver();
       expect(saver1).toBe(saver2);
     });

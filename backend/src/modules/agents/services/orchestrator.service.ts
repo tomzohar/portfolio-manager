@@ -86,7 +86,7 @@ export class OrchestratorService {
       const initialState: CIOState = {
         userId,
         messages: [new HumanMessage(input.message)],
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
         portfolio: input.portfolio,
         errors: [],
         iteration: 0,

@@ -3,7 +3,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { of } from 'rxjs';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { PolygonApiService } from '../assets/services/polygon-api.service';
 import { UsersService } from '../users/users.service';
 import { EnrichedAssetDto } from './dto/asset-response.dto';
@@ -516,7 +516,7 @@ describe('PortfolioService', () => {
         const mockSnapshot = {
           ticker: {
             ticker: 'AAPL',
-            day: { c: 170.0 } as any,
+            day: { c: 170.0 },
           },
         };
 
@@ -761,14 +761,14 @@ describe('PortfolioService', () => {
           save: jest.fn(),
           update: jest.fn(),
           delete: jest.fn(),
-        },
-      };
+        } as unknown as EntityManager,
+      } as unknown as QueryRunner;
 
       dataSource.createQueryRunner.mockReturnValue(mockQueryRunner);
     });
 
     it('should handle empty portfolio (no transactions)', async () => {
-      mockQueryRunner.manager.find
+      (mockQueryRunner.manager as unknown as { find: jest.Mock }).find
         .mockResolvedValueOnce([]) // transactions
         .mockResolvedValueOnce([]); // current assets
 
@@ -792,7 +792,7 @@ describe('PortfolioService', () => {
         transactionDate: new Date('2024-01-01'),
       } as Transaction;
 
-      mockQueryRunner.manager.find
+      (mockQueryRunner.manager as unknown as { find: jest.Mock }).find
         .mockResolvedValueOnce([mockTransaction]) // transactions
         .mockResolvedValueOnce([]); // current assets (empty)
 
@@ -803,7 +803,9 @@ describe('PortfolioService', () => {
         portfolio: { id: mockPortfolioId },
       };
 
-      mockQueryRunner.manager.create.mockReturnValue(mockNewAsset);
+      (
+        mockQueryRunner.manager as unknown as { create: jest.Mock }
+      ).create.mockReturnValue(mockNewAsset);
 
       await service.recalculatePositions(mockPortfolioId);
 
@@ -842,11 +844,13 @@ describe('PortfolioService', () => {
 
       // Expected: quantity=150, avgPrice=(15000+8000)/150=153.33
 
-      mockQueryRunner.manager.find
+      (mockQueryRunner.manager as unknown as { find: jest.Mock }).find
         .mockResolvedValueOnce(mockTransactions) // transactions
         .mockResolvedValueOnce([]); // current assets
 
-      mockQueryRunner.manager.create.mockImplementation((entity, data) => data);
+      (
+        mockQueryRunner.manager as unknown as { create: jest.Mock }
+      ).create.mockImplementation((entity, data) => data as unknown as Asset);
 
       await service.recalculatePositions(mockPortfolioId);
 
@@ -855,6 +859,7 @@ describe('PortfolioService', () => {
         expect.objectContaining({
           ticker: 'AAPL',
           quantity: 150,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           avgPrice: expect.closeTo(153.33, 2),
         }),
       );
@@ -883,11 +888,13 @@ describe('PortfolioService', () => {
 
       // Expected: quantity=60, avgPrice=2800 (sells don't change avg cost)
 
-      mockQueryRunner.manager.find
+      (mockQueryRunner.manager as unknown as { find: jest.Mock }).find
         .mockResolvedValueOnce(mockTransactions) // transactions
         .mockResolvedValueOnce([]); // current assets
 
-      mockQueryRunner.manager.create.mockImplementation((entity, data) => data);
+      (
+        mockQueryRunner.manager as unknown as { create: jest.Mock }
+      ).create.mockImplementation((entity, data) => data as unknown as Asset);
 
       await service.recalculatePositions(mockPortfolioId);
 
@@ -928,7 +935,7 @@ describe('PortfolioService', () => {
         avgPrice: 200.0,
       } as Asset;
 
-      mockQueryRunner.manager.find
+      (mockQueryRunner.manager as unknown as { find: jest.Mock }).find
         .mockResolvedValueOnce(mockTransactions) // transactions
         .mockResolvedValueOnce([existingAsset]); // current assets
 
@@ -969,11 +976,13 @@ describe('PortfolioService', () => {
         },
       ] as Transaction[];
 
-      mockQueryRunner.manager.find
+      (mockQueryRunner.manager as unknown as { find: jest.Mock }).find
         .mockResolvedValueOnce(mockTransactions) // transactions
         .mockResolvedValueOnce([]); // current assets
 
-      mockQueryRunner.manager.create.mockImplementation((entity, data) => data);
+      (
+        mockQueryRunner.manager as unknown as { create: jest.Mock }
+      ).create.mockImplementation((entity, data) => data as unknown as Asset);
 
       await service.recalculatePositions(mockPortfolioId);
 
@@ -1020,7 +1029,7 @@ describe('PortfolioService', () => {
         avgPrice: 150.0, // Old value
       } as Asset;
 
-      mockQueryRunner.manager.find
+      (mockQueryRunner.manager as unknown as { find: jest.Mock }).find
         .mockResolvedValueOnce(mockTransactions) // transactions
         .mockResolvedValueOnce([existingAsset]); // current assets
 
@@ -1032,6 +1041,7 @@ describe('PortfolioService', () => {
         { id: 'asset-1' },
         {
           quantity: 150,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           avgPrice: expect.closeTo(153.33, 2),
         },
       );
@@ -1040,7 +1050,9 @@ describe('PortfolioService', () => {
 
     it('should rollback on error', async () => {
       const mockError = new Error('Database error');
-      mockQueryRunner.manager.find.mockRejectedValue(mockError);
+      (
+        mockQueryRunner.manager as unknown as { find: jest.Mock }
+      ).find.mockRejectedValue(mockError);
 
       await expect(
         service.recalculatePositions(mockPortfolioId),
@@ -1063,11 +1075,13 @@ describe('PortfolioService', () => {
         },
       ] as Transaction[];
 
-      mockQueryRunner.manager.find
+      (mockQueryRunner.manager as unknown as { find: jest.Mock }).find
         .mockResolvedValueOnce(mockTransactions) // transactions
         .mockResolvedValueOnce([]); // current assets
 
-      mockQueryRunner.manager.create.mockImplementation((entity, data) => data);
+      (
+        mockQueryRunner.manager as unknown as { create: jest.Mock }
+      ).create.mockImplementation((entity, data) => data as unknown as Asset);
 
       await service.recalculatePositions(mockPortfolioId);
 

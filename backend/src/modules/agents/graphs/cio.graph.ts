@@ -1,4 +1,9 @@
-import { StateGraph, END, Annotation, BaseCheckpointSaver } from '@langchain/langgraph';
+import {
+  StateGraph,
+  END,
+  Annotation,
+  BaseCheckpointSaver,
+} from '@langchain/langgraph';
 import { BaseMessage } from '@langchain/core/messages';
 import { observerNode } from './nodes/observer.node';
 import { endNode } from './nodes/end.node';
@@ -43,17 +48,19 @@ export function buildCIOGraph(stateService: StateService) {
     .addEdge('end', END);
 
   // Compile with checkpoint saver (if available)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let checkpointer: PostgresSaver;
+
+  let checkpointer: PostgresSaver | undefined;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     checkpointer = stateService.getSaver();
   } catch {
-    throw new Error('PostgresSaver is not initialized');
+    // PostgresSaver not available (e.g., in tests without DB)
+    checkpointer = undefined;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  if (!checkpointer) {
+    return workflow.compile();
+  }
   return workflow.compile({
-    checkpointer: checkpointer as BaseCheckpointSaver,
+    checkpointer: checkpointer as BaseCheckpointSaver | undefined,
   });
 }

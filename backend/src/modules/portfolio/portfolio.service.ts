@@ -19,10 +19,7 @@ import {
 } from './dto/portfolio-summary.dto';
 import { UsersService } from '../users/users.service';
 import { PolygonApiService } from '../assets/services/polygon-api.service';
-import type {
-  PolygonSnapshotResponse,
-  PolygonPreviousCloseResponse,
-} from '../assets/types/polygon-api.types';
+import type { PolygonPreviousCloseResponse } from '../assets/types/polygon-api.types';
 import { EnrichedAssetDto } from './dto/asset-response.dto';
 import { lastValueFrom } from 'rxjs';
 

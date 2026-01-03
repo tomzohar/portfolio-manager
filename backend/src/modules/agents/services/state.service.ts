@@ -20,7 +20,6 @@ export class StateService {
   constructor(private readonly configService: ConfigService) {
     try {
       const connectionString = this.buildConnectionString();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       this.saver = PostgresSaver.fromConnString(connectionString);
       this.logger.log('PostgresSaver initialized successfully');
     } catch (error) {
@@ -119,7 +118,6 @@ export class StateService {
 
     this.logger.debug('Setting up PostgresSaver tables...');
     // Call setup method (exists on PostgresSaver but not in BaseCheckpointSaver interface)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (this.saver as { setup: () => Promise<void> }).setup();
     this.logger.log('PostgresSaver tables created successfully');
   }
