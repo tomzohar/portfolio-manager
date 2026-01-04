@@ -436,11 +436,19 @@ export class PortfolioService {
         position.quantity += qty;
         position.totalCost += qty * price;
       } else if (transaction.type === TransactionType.SELL) {
-        // Reduce position proportionally
+        // Reduce position
+        // NOTE: For CASH, SELL can happen before BUY due to double-entry bookkeeping
+        // In this case, quantity goes negative temporarily, which is valid for CASH
         if (position.quantity > 0) {
+          // Normal case: selling from existing position
           const avgCost = position.totalCost / position.quantity;
           position.quantity -= qty;
           position.totalCost = position.quantity * avgCost;
+        } else {
+          // Edge case: SELL before BUY (happens with CASH due to transaction ordering)
+          // Subtract quantity and cost (will go negative, then corrected by subsequent BUY)
+          position.quantity -= qty;
+          position.totalCost -= qty * price;
         }
       }
 

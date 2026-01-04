@@ -4,6 +4,7 @@ import { buildCIOGraph } from '../graphs/cio.graph';
 import { StateService } from './state.service';
 import { ToolRegistryService } from './tool-registry.service';
 import { CIOState, PortfolioData } from '../graphs/types';
+import { PerformanceService } from '../../performance/performance.service';
 
 export interface GraphInput {
   message: string;
@@ -36,6 +37,7 @@ export class OrchestratorService {
   constructor(
     private readonly stateService: StateService,
     private readonly toolRegistry: ToolRegistryService,
+    private readonly performanceService: PerformanceService,
   ) {}
 
   /**
@@ -109,6 +111,7 @@ export class OrchestratorService {
       const config = {
         configurable: {
           thread_id: scopedThreadId,
+          performanceService: this.performanceService,
         },
         recursionLimit: 25,
       };

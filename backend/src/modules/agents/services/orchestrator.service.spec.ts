@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { OrchestratorService } from './orchestrator.service';
 import { StateService } from './state.service';
 import { ToolRegistryService } from './tool-registry.service';
+import { PerformanceService } from '../../performance/performance.service';
 import { HumanMessage } from '@langchain/core/messages';
 
 describe('OrchestratorService', () => {
@@ -27,6 +28,11 @@ describe('OrchestratorService', () => {
     clearTools: jest.fn(),
   };
 
+  const mockPerformanceService = {
+    calculateInternalReturn: jest.fn(),
+    getBenchmarkComparison: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -40,6 +46,10 @@ describe('OrchestratorService', () => {
         {
           provide: ToolRegistryService,
           useValue: mockToolRegistry,
+        },
+        {
+          provide: PerformanceService,
+          useValue: mockPerformanceService,
         },
       ],
     }).compile();

@@ -1,4 +1,5 @@
 import { BaseMessage } from '@langchain/core/messages';
+import { Timeframe } from '../../performance/types/timeframe.types';
 
 export enum PortfolioRiskProfile {
   CONSERVATIVE = 'conservative',
@@ -29,6 +30,17 @@ export interface PortfolioData {
 }
 
 /**
+ * Performance analysis data stored in state
+ */
+export interface PerformanceAnalysis {
+  timeframe?: Timeframe;
+  portfolioReturn?: number;
+  benchmarkReturn?: number;
+  alpha?: number;
+  needsTimeframeInput?: boolean;
+}
+
+/**
  * CIO Graph State Interface
  * Represents the state that flows through the graph nodes
  */
@@ -41,6 +53,7 @@ export interface CIOState {
   errors: string[];
   iteration: number;
   maxIterations: number;
+  performanceAnalysis?: PerformanceAnalysis;
 }
 
 /**

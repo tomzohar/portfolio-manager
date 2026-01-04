@@ -18,6 +18,7 @@ import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { AssetsModule } from '../assets/assets.module';
 import { PortfolioModule } from '../portfolio/portfolio.module';
+import { PerformanceModule } from '../performance/performance.module';
 import { PolygonApiService } from '../assets/services/polygon-api.service';
 import { FredService } from '../assets/services/fred.service';
 import { NewsService } from '../assets/services/news.service';
@@ -33,6 +34,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
     forwardRef(() => UsersModule), // Import UsersModule for UsersService (needed by JwtAuthGuard)
     forwardRef(() => AssetsModule), // Import AssetsModule for PolygonApiService
     forwardRef(() => PortfolioModule), // Import PortfolioModule for PortfolioService
+    forwardRef(() => PerformanceModule), // Import PerformanceModule for PerformanceService
   ],
   controllers: [AgentsController],
   providers: [

@@ -1094,5 +1094,120 @@ describe('PortfolioService', () => {
         }),
       );
     });
+
+    it('should handle SELL before BUY for CASH (double-entry bookkeeping edge case)', async () => {
+      // Regression test for bug where SELL CASH before BUY CASH was ignored
+      // This happens when buying stock creates a SELL CASH transaction,
+      // but the initial CASH deposit has a later transactionDate
+      const mockTransactions = [
+        {
+          id: 'tx-1',
+          type: TransactionType.BUY,
+          ticker: 'AAPL',
+          quantity: 26.67,
+          price: 187.5,
+          transactionDate: new Date('2025-12-05T07:00:00.000Z'),
+        },
+        {
+          id: 'tx-2',
+          type: TransactionType.SELL,
+          ticker: 'CASH',
+          quantity: 5000.625,
+          price: 1.0,
+          transactionDate: new Date('2025-12-05T07:00:00.000Z'),
+        },
+        {
+          id: 'tx-3',
+          type: TransactionType.BUY,
+          ticker: 'CASH',
+          quantity: 10000,
+          price: 1.0,
+          transactionDate: new Date('2026-01-04T08:00:00.000Z'),
+        },
+      ] as Transaction[];
+
+      (mockQueryRunner.manager as unknown as { find: jest.Mock }).find
+        .mockResolvedValueOnce(mockTransactions) // transactions
+        .mockResolvedValueOnce([]); // current assets
+
+      (
+        mockQueryRunner.manager as unknown as { create: jest.Mock }
+      ).create.mockImplementation((entity, data) => data as unknown as Asset);
+
+      await service.recalculatePositions(mockPortfolioId);
+
+      // Verify AAPL position is correct
+      expect(mockQueryRunner.manager.create).toHaveBeenCalledWith(
+        Asset,
+        expect.objectContaining({
+          ticker: 'AAPL',
+          quantity: 26.67,
+          avgPrice: 187.5,
+        }),
+      );
+
+      // Verify CASH position is correct (NOT 10000, but 10000 - 5000.625 = 4999.375)
+      expect(mockQueryRunner.manager.create).toHaveBeenCalledWith(
+        Asset,
+        expect.objectContaining({
+          ticker: 'CASH',
+          quantity: 4999.375,
+          avgPrice: 1.0,
+        }),
+      );
+
+      // Should create exactly 2 assets (AAPL and CASH)
+      expect(mockQueryRunner.manager.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('should handle multiple SELL before BUY scenarios', async () => {
+      // Test that multiple SELLs before BUY accumulate correctly
+      const mockTransactions = [
+        {
+          id: 'tx-1',
+          type: TransactionType.SELL,
+          ticker: 'CASH',
+          quantity: 1000,
+          price: 1.0,
+          transactionDate: new Date('2024-01-01'),
+        },
+        {
+          id: 'tx-2',
+          type: TransactionType.SELL,
+          ticker: 'CASH',
+          quantity: 2000,
+          price: 1.0,
+          transactionDate: new Date('2024-01-02'),
+        },
+        {
+          id: 'tx-3',
+          type: TransactionType.BUY,
+          ticker: 'CASH',
+          quantity: 10000,
+          price: 1.0,
+          transactionDate: new Date('2024-01-03'),
+        },
+      ] as Transaction[];
+
+      (mockQueryRunner.manager as unknown as { find: jest.Mock }).find
+        .mockResolvedValueOnce(mockTransactions) // transactions
+        .mockResolvedValueOnce([]); // current assets
+
+      (
+        mockQueryRunner.manager as unknown as { create: jest.Mock }
+      ).create.mockImplementation((entity, data) => data as unknown as Asset);
+
+      await service.recalculatePositions(mockPortfolioId);
+
+      // Net CASH should be: 10000 - 1000 - 2000 = 7000
+      expect(mockQueryRunner.manager.create).toHaveBeenCalledWith(
+        Asset,
+        expect.objectContaining({
+          ticker: 'CASH',
+          quantity: 7000,
+          avgPrice: 1.0,
+        }),
+      );
+    });
   });
 });

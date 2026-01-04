@@ -7,8 +7,11 @@ import {
 import { BaseMessage } from '@langchain/core/messages';
 import { observerNode } from './nodes/observer.node';
 import { endNode } from './nodes/end.node';
+import { routerNode } from './nodes/router.node';
+import { performanceAttributionNode } from './nodes/performance-attribution.node';
 import { StateService } from '../services/state.service';
 import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
+import { Timeframe } from '../../performance/types/timeframe.types';
 
 /**
  * Define the graph state schema using LangGraph Annotation
@@ -27,24 +30,36 @@ const CIOStateAnnotation = Annotation.Root({
   }),
   iteration: Annotation<number>,
   maxIterations: Annotation<number>,
+  performanceAnalysis: Annotation<{
+    timeframe?: Timeframe;
+    portfolioReturn?: number;
+    benchmarkReturn?: number;
+    alpha?: number;
+    needsTimeframeInput?: boolean;
+  }>,
 });
 
 /**
  * Build the CIO Graph
  *
- * Phase 1 "Hello World" graph:
- * START -> Observer -> End -> END
+ * Phase 3 "Performance Attribution" graph:
+ * START -> (performance_attribution OR observer) -> End -> END
  *
  * @param stateService - StateService for checkpoint persistence
  * @returns Compiled graph ready for execution
  */
 export function buildCIOGraph(stateService: StateService) {
-  // Create the state graph
+  // Create the state graph with routing logic
   const workflow = new StateGraph(CIOStateAnnotation)
     .addNode('observer', observerNode)
+    .addNode('performance_attribution', performanceAttributionNode)
     .addNode('end', endNode)
-    .addEdge('__start__', 'observer')
+    .addConditionalEdges('__start__', routerNode, {
+      performance_attribution: 'performance_attribution',
+      observer: 'observer',
+    })
     .addEdge('observer', 'end')
+    .addEdge('performance_attribution', 'end')
     .addEdge('end', END);
 
   // Compile with checkpoint saver (if available)
