@@ -4,12 +4,21 @@
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
+import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { DataSource } from 'typeorm';
+import { ZodValidationPipe } from 'nestjs-zod';
 
 describe('Agents Performance (e2e)', () => {
-  let app: INestApplication;
+  let app: INestApplication<App>;
   let authToken: string;
+  let dataSource: DataSource;
+
+  const testUser = {
+    email: 'agents-perf-test@example.com',
+    password: 'TestPassword123',
+  };
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -17,19 +26,31 @@ describe('Agents Performance (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(new ZodValidationPipe());
     await app.init();
 
-    // Login to get auth token
-    const server = app.getHttpServer();
-    const loginResponse = await request(server).post('/auth/login').send({
-      email: 'test@example.com',
-      password: 'password123',
-    });
+    dataSource = moduleFixture.get<DataSource>(DataSource);
 
-    authToken = loginResponse.body.accessToken;
+    // Create test user and get auth token
+    const signupResponse = await request(app.getHttpServer())
+      .post('/users')
+      .send(testUser)
+      .expect(201);
+
+    authToken = signupResponse.body.token;
+
+    if (!authToken) {
+      throw new Error('Failed to get auth token from signup');
+    }
   });
 
   afterAll(async () => {
+    // Clean up test data
+    await dataSource.query('DELETE FROM transactions');
+    await dataSource.query('DELETE FROM holdings');
+    await dataSource.query('DELETE FROM assets');
+    await dataSource.query('DELETE FROM portfolios');
+    await dataSource.query('DELETE FROM users');
     await app.close();
   });
 
