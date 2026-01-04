@@ -20,6 +20,7 @@
   display: flex;
   gap: $spacing-md;
   margin-top: var(--spacing-lg);
+  margin-bottom: $spacing-xl; // Add spacing before performance widget
 }
 
 .asset-actions {

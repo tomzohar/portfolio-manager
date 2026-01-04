@@ -25,6 +25,7 @@ describe('PerformanceAttribution Selectors', () => {
 
   const mockState: { performanceAttribution: PerformanceAttributionState } = {
     performanceAttribution: {
+      currentPortfolioId: 'portfolio-123',
       currentAnalysis: mockAnalysis,
       historicalData: [
         { date: '2023-10-01', portfolioValue: 100, benchmarkValue: 100 },

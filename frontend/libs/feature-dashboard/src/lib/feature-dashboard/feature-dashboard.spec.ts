@@ -3,9 +3,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PortfolioFacade } from '@frontend/data-access-portfolio';
+import { PerformanceAttributionFacade } from '@stocks-researcher/data-access-dashboard';
 import { AuthFacade } from '@frontend/data-access-auth';
 import { DialogService } from '@frontend/util-dialog';
-import { DashboardAsset, DashboardPortfolio, User } from '@stocks-researcher/types';
+import { DashboardAsset, DashboardPortfolio, User, Timeframe } from '@stocks-researcher/types';
 import { FeatureDashboardComponent } from './feature-dashboard';
 import { CreatePortfolioDialogComponent } from '../create-portfolio-dialog/create-portfolio-dialog.component';
 import { of, Subject } from 'rxjs';
@@ -14,6 +15,7 @@ describe('FeatureDashboardComponent', () => {
   let component: FeatureDashboardComponent;
   let fixture: ComponentFixture<FeatureDashboardComponent>;
   let mockFacade: Partial<PortfolioFacade>;
+  let mockPerformanceFacade: Partial<PerformanceAttributionFacade>;
   let mockAuthFacade: Partial<AuthFacade>;
   let mockDialogService: Partial<DialogService>;
   let selectedIdSignal: WritableSignal<string | null>;
@@ -84,6 +86,17 @@ describe('FeatureDashboardComponent', () => {
       error: signal<string | null>(null),
     };
 
+    mockPerformanceFacade = {
+      currentAnalysis: signal(null),
+      historicalData: signal(null),
+      selectedTimeframe: signal(Timeframe.YEAR_TO_DATE),
+      loading: signal(false),
+      error: signal(null),
+      loadPerformance: jest.fn(),
+      changeTimeframe: jest.fn(),
+      clearPerformanceData: jest.fn(),
+    };
+
     mockDialogService = {
       open: jest.fn().mockReturnValue({
         afterClosedObservable: of({ name: 'Test Portfolio' }),
@@ -104,6 +117,7 @@ describe('FeatureDashboardComponent', () => {
         provideZonelessChangeDetection(),
         provideAnimations(),
         { provide: PortfolioFacade, useValue: mockFacade },
+        { provide: PerformanceAttributionFacade, useValue: mockPerformanceFacade },
         { provide: AuthFacade, useValue: mockAuthFacade },
         { provide: DialogService, useValue: mockDialogService },
         { provide: ActivatedRoute, useValue: mockActivatedRoute },
@@ -341,6 +355,47 @@ describe('FeatureDashboardComponent', () => {
         expect(mockFacade.selectPortfolio).toHaveBeenCalledWith('1');
         done();
       }, 100);
+    });
+  });
+
+  describe('Performance Attribution Integration', () => {
+    it('should load performance data when portfolio is selected', (done) => {
+      selectedIdSignal.set('portfolio-123');
+      fixture.detectChanges();
+
+      setTimeout(() => {
+        expect(mockPerformanceFacade.loadPerformance).toHaveBeenCalledWith(
+          'portfolio-123',
+          Timeframe.YEAR_TO_DATE
+        );
+        done();
+      }, 100);
+    });
+
+    it('should handle performance timeframe change', () => {
+      selectedIdSignal.set('portfolio-123');
+      fixture.detectChanges();
+
+      component.onPerformanceTimeframeChanged(Timeframe.THREE_MONTHS);
+
+      expect(mockPerformanceFacade.changeTimeframe).toHaveBeenCalledWith(
+        'portfolio-123',
+        Timeframe.THREE_MONTHS
+      );
+    });
+
+    it('should clear performance data when no portfolio is selected', (done) => {
+      selectedIdSignal.set(null);
+      fixture.detectChanges();
+
+      setTimeout(() => {
+        expect(mockPerformanceFacade.clearPerformanceData).toHaveBeenCalled();
+        done();
+      }, 100);
+    });
+
+    it('should have onPerformanceTimeframeChanged method', () => {
+      expect(component.onPerformanceTimeframeChanged).toBeDefined();
     });
   });
 

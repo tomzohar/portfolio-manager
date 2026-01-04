@@ -1,6 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { PerformanceAttributionActions } from './performance-attribution.actions';
-import { PerformanceAttributionState, initialState } from './performance-attribution.state';
+import { initialState } from './performance-attribution.state';
 
 /**
  * Performance Attribution Reducer
@@ -11,8 +11,9 @@ export const performanceAttributionReducer = createReducer(
   initialState,
 
   // Load Performance Attribution
-  on(PerformanceAttributionActions.loadPerformanceAttribution, (state, { timeframe }) => ({
+  on(PerformanceAttributionActions.loadPerformanceAttribution, (state, { portfolioId, timeframe }) => ({
     ...state,
+    currentPortfolioId: portfolioId,
     loading: true,
     error: null,
     selectedTimeframe: timeframe,

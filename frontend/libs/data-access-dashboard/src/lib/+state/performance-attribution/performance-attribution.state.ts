@@ -7,6 +7,9 @@ import { Timeframe, PerformanceAnalysis, HistoricalDataPoint } from '@stocks-res
  * and UI state (loading, errors, selected timeframe).
  */
 export interface PerformanceAttributionState {
+  // Current portfolio being analyzed
+  currentPortfolioId: string | null;
+
   // Current analysis results
   currentAnalysis: PerformanceAnalysis | null;
 
@@ -27,6 +30,7 @@ export interface PerformanceAttributionState {
  * Initial state
  */
 export const initialState: PerformanceAttributionState = {
+  currentPortfolioId: null,
   currentAnalysis: null,
   historicalData: null,
   selectedTimeframe: Timeframe.YEAR_TO_DATE,  // Default to YTD

@@ -4,11 +4,17 @@
   [summary]="currentSummary()"
   [selectedPortfolioId]="selectedPortfolioId()"
   [loading]="loading()"
+  [performanceAnalysis]="performanceAnalysis()"
+  [performanceHistoricalData]="performanceHistoricalData()"
+  [performanceTimeframe]="performanceTimeframe()"
+  [performanceLoading]="performanceLoading()"
+  [performanceError]="performanceError()"
   (portfolioSelected)="onPortfolioSelected($event)"
   (createPortfolio)="onCreatePortfolio()"
   (deletePortfolio)="onDeletePortfolio()"
   (buyAsset)="onBuyAsset()"
   (sellAsset)="onSellAsset($event)"
   (viewTransactions)="onViewTransactions($event)"
-  (manageCash)="onManageCash()">
+  (manageCash)="onManageCash()"
+  (performanceTimeframeChanged)="onPerformanceTimeframeChanged($event)">
 </lib-ui-dashboard>

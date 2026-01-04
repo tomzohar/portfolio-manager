@@ -237,6 +237,7 @@ describe('PerformanceAttributionReducer', () => {
   describe('clearPerformanceData', () => {
     it('should reset state to initial state', () => {
       const modifiedState: PerformanceAttributionState = {
+        currentPortfolioId: 'portfolio-123',
         currentAnalysis: {
           portfolioReturn: 0.085,
           benchmarkReturn: 0.062,

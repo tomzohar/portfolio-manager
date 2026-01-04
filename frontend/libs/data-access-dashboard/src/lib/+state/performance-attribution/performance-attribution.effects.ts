@@ -38,11 +38,28 @@ export class PerformanceAttributionEffects {
               timeframe 
             })
           ),
-          catchError((error: Error) =>
-            of(PerformanceAttributionActions.loadPerformanceAttributionFailure({ 
-              error: error.message 
-            }))
-          )
+          catchError((error: any) => {
+            // Extract backend error message from HttpErrorResponse
+            const backendMessage = error.error?.message || error.message || 'Failed to load performance analysis';
+            let userMessage = backendMessage;
+            
+            // Provide user-friendly messages for common cases
+            if (error.status === 400) {
+              if (backendMessage.includes('Insufficient data') || backendMessage.includes('Missing price data')) {
+                userMessage = 'Not enough historical data for this timeframe. Try a shorter timeframe (1M or 3M) or add more transactions to your portfolio.';
+              }
+            } else if (error.status === 404) {
+              userMessage = 'Portfolio not found';
+            } else if (error.status === 500) {
+              userMessage = 'Server error. Please try again later.';
+            } else if (error.status === 0) {
+              userMessage = 'Network error. Please check your connection.';
+            }
+
+            return of(PerformanceAttributionActions.loadPerformanceAttributionFailure({ 
+              error: userMessage 
+            }));
+          })
         )
       )
     )
@@ -64,11 +81,28 @@ export class PerformanceAttributionEffects {
               timeframe 
             })
           ),
-          catchError((error: Error) =>
-            of(PerformanceAttributionActions.loadHistoricalDataFailure({ 
-              error: error.message 
-            }))
-          )
+          catchError((error: any) => {
+            // Extract backend error message from HttpErrorResponse
+            const backendMessage = error.error?.message || error.message || 'Failed to load performance data';
+            let userMessage = backendMessage;
+            
+            // Provide user-friendly messages for common cases
+            if (error.status === 400) {
+              if (backendMessage.includes('Insufficient data') || backendMessage.includes('Missing price data')) {
+                userMessage = 'Not enough historical data for this timeframe. Try a shorter timeframe (1M or 3M) or add more transactions to your portfolio.';
+              }
+            } else if (error.status === 404) {
+              userMessage = 'Portfolio not found';
+            } else if (error.status === 500) {
+              userMessage = 'Server error. Please try again later.';
+            } else if (error.status === 0) {
+              userMessage = 'Network error. Please check your connection.';
+            }
+
+            return of(PerformanceAttributionActions.loadHistoricalDataFailure({ 
+              error: userMessage 
+            }));
+          })
         )
       )
     )
@@ -117,29 +151,26 @@ export class PerformanceAttributionEffects {
    * 
    * After successfully loading performance, also load historical data
    * for chart visualization (if not already cached).
-   * 
-   * Note: This effect assumes we'll enhance state to track portfolioId.
-   * For now, it uses a workaround.
    */
   loadHistoricalDataAfterSuccess$ = createEffect(() =>
     this.actions$.pipe(
       ofType(PerformanceAttributionActions.loadPerformanceAttributionSuccess),
-      withLatestFrom(
-        this.actions$.pipe(
-          ofType(PerformanceAttributionActions.loadPerformanceAttributionSuccess),
-          switchMap(({ timeframe }) => this.store.select(selectIsCached(timeframe)))
-        )
-      ),
-      mergeMap(([action, isCached]) => {
+      withLatestFrom(this.store.select(state => (state as any).performanceAttribution)),
+      mergeMap(([action, state]) => {
         const { timeframe } = action;
+        const portfolioId = state.currentPortfolioId;
 
-        // If historical data not cached, load it
-        // Note: We need portfolioId here, which is a limitation.
-        // In a real scenario, we'd store it in state.
+        // If no portfolio ID stored, can't load historical data
+        if (!portfolioId) {
+          return of({ type: '[Performance Attribution] No Portfolio ID' });
+        }
+
+        // If historical data not cached for this timeframe, load it
+        const isCached = !!state.cachedHistoricalData[timeframe];
+        
         if (!isCached) {
-          // Using a placeholder - this should be improved
           return of(PerformanceAttributionActions.loadHistoricalData({ 
-            portfolioId: action.analysis.benchmarkTicker, // Workaround
+            portfolioId, 
             timeframe 
           }));
         }

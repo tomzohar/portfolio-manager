@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, effect } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PortfolioFacade } from '@frontend/data-access-portfolio';
+import { PerformanceAttributionFacade } from '@stocks-researcher/data-access-dashboard';
 import { UiDashboardComponent } from '@frontend/ui-dashboard';
 import { ConfirmationDialogComponent, ConfirmationDialogConfig, DialogService } from '@frontend/util-dialog';
 import {
@@ -8,6 +9,7 @@ import {
   AssetSearchResult,
   DashboardAsset,
   TransactionType,
+  Timeframe,
 } from '@stocks-researcher/types';
 import { AssetSearchDialogComponent } from '@stocks-researcher/ui-asset-search';
 import { take } from 'rxjs';
@@ -41,6 +43,7 @@ import {
 })
 export class FeatureDashboardComponent implements OnInit {
   private facade = inject(PortfolioFacade);
+  private performanceFacade = inject(PerformanceAttributionFacade);
   private dialogService = inject(DialogService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -57,6 +60,13 @@ export class FeatureDashboardComponent implements OnInit {
   transactions = this.facade.transactions;
   transactionsLoading = this.facade.transactionsLoading;
   transactionsError = this.facade.transactionsError;
+
+  // Performance Attribution signals
+  performanceAnalysis = this.performanceFacade.currentAnalysis;
+  performanceHistoricalData = this.performanceFacade.historicalData;
+  performanceTimeframe = this.performanceFacade.selectedTimeframe;
+  performanceLoading = this.performanceFacade.loading;
+  performanceError = this.performanceFacade.error;
 
   constructor() {
     // Watch for portfolioId query param changes and select the portfolio
@@ -105,6 +115,19 @@ export class FeatureDashboardComponent implements OnInit {
       
       if (error) {
         this.dialogService.showError(error, 'Transaction Failed');
+      }
+    });
+
+    // Load performance data when portfolio is selected
+    effect(() => {
+      const portfolioId = this.selectedPortfolioId();
+      
+      if (portfolioId) {
+        // Load YTD performance by default
+        this.performanceFacade.loadPerformance(portfolioId, Timeframe.YEAR_TO_DATE);
+      } else {
+        // Clear performance data when no portfolio is selected
+        this.performanceFacade.clearPerformanceData();
       }
     });
   }
@@ -379,5 +402,16 @@ export class FeatureDashboardComponent implements OnInit {
           this.facade.createTransaction(result.portfolioId, result.dto);
         }
       });
+  }
+
+  /**
+   * Handle performance timeframe change
+   */
+  onPerformanceTimeframeChanged(timeframe: Timeframe): void {
+    const portfolioId = this.selectedPortfolioId();
+    
+    if (portfolioId) {
+      this.performanceFacade.changeTimeframe(portfolioId, timeframe);
+    }
   }
 }
