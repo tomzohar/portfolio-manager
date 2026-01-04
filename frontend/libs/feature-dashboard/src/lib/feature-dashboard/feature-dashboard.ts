@@ -1,9 +1,20 @@
-import { Component, inject, OnInit, effect } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Component, inject, OnInit, effect, computed } from '@angular/core';
+import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
 import { PortfolioFacade } from '@frontend/data-access-portfolio';
 import { PerformanceAttributionFacade } from '@stocks-researcher/data-access-dashboard';
-import { UiDashboardComponent } from '@frontend/ui-dashboard';
-import { ConfirmationDialogComponent, ConfirmationDialogConfig, DialogService } from '@frontend/util-dialog';
+import { 
+  TabsComponent, 
+  TabsConfig, 
+  PageHeaderComponent, 
+  PageHeaderConfig,
+  ACTION_ICONS,
+  MenuItem 
+} from '@stocks-researcher/styles';
+import {
+  ConfirmationDialogComponent,
+  ConfirmationDialogConfig,
+  DialogService,
+} from '@frontend/util-dialog';
 import {
   AssetSearchConfig,
   AssetSearchResult,
@@ -36,7 +47,11 @@ import {
 
 @Component({
   selector: 'lib-feature-dashboard',
-  imports: [UiDashboardComponent],
+  imports: [
+    PageHeaderComponent,
+    TabsComponent,
+    RouterOutlet,
+  ],
   standalone: true,
   templateUrl: './feature-dashboard.html',
   styleUrl: './feature-dashboard.scss',
@@ -68,23 +83,108 @@ export class FeatureDashboardComponent implements OnInit {
   performanceLoading = this.performanceFacade.loading;
   performanceError = this.performanceFacade.error;
 
+  /**
+   * Get the selected portfolio name for the header
+   */
+  selectedPortfolioName = computed<string>(() => {
+    const selectedId = this.selectedPortfolioId();
+    const portfolio = this.portfolios().find((p) => p.id === selectedId);
+    return portfolio?.name || 'Portfolio';
+  });
+
+  /**
+   * Page header configuration
+   */
+  pageHeaderConfig = computed<PageHeaderConfig>(() => ({
+    title: this.selectedPortfolioName(),
+    backButton: {
+      route: '/portfolios',
+      label: 'All Portfolios',
+    },
+    actionMenu: {
+      button: {
+        label: 'Actions',
+        icon: ACTION_ICONS.MORE,
+        variant: 'icon',
+        color: 'accent',
+        ariaLabel: 'Portfolio actions menu',
+      },
+      menu: {
+        items: [
+          {
+            id: 'manage-cash',
+            label: 'Deposit/Withdraw Cash',
+            icon: 'account_balance_wallet',
+          },
+          {
+            id: 'delete-portfolio',
+            label: 'Delete Portfolio',
+            icon: ACTION_ICONS.DELETE,
+          },
+        ],
+        ariaLabel: 'Portfolio actions',
+      },
+    },
+  }));
+
+  /**
+   * Tabs configuration
+   */
+  tabsConfig = computed<TabsConfig>(() => {
+    const portfolioId = this.selectedPortfolioId();
+    
+    return {
+      tabs: [
+        {
+          id: 'overview',
+          label: 'Overview',
+          route: '/dashboard/overview',
+          icon: 'dashboard',
+        },
+        {
+          id: 'performance',
+          label: 'Performance',
+          route: '/dashboard/performance',
+          icon: 'trending_up',
+          disabled: !portfolioId,
+        },
+      ],
+    };
+  });
+
+  /**
+   * Handle page header menu item click
+   */
+  onHeaderMenuItemClick(item: MenuItem): void {
+    switch (item.id) {
+      case 'manage-cash':
+        this.onManageCash();
+        break;
+      case 'delete-portfolio':
+        this.onDeletePortfolio();
+        break;
+    }
+  }
+
   constructor() {
     // Watch for portfolioId query param changes and select the portfolio
     effect(() => {
       const params = this.queryParams();
       const portfolioIdFromUrl = params?.['portfolioId'];
-      
+
       // If we have portfolios loaded and a portfolioId in URL, validate it exists
       if (portfolioIdFromUrl && this.portfolios().length > 0) {
         const currentSelection = this.selectedPortfolioId();
-        const portfolioExists = this.portfolios().some(p => p.id === portfolioIdFromUrl);
-        
+        const portfolioExists = this.portfolios().some(
+          (p) => p.id === portfolioIdFromUrl
+        );
+
         // If portfolio doesn't exist, navigate back to portfolios list
         if (!portfolioExists) {
           void this.router.navigate(['/portfolios']);
           return;
         }
-        
+
         // Only dispatch if it's different from current selection to avoid loops
         if (currentSelection !== portfolioIdFromUrl) {
           this.facade.selectPortfolio(portfolioIdFromUrl);
@@ -98,11 +198,13 @@ export class FeatureDashboardComponent implements OnInit {
       const portfolioIdFromUrl = params?.['portfolioId'];
       const portfolios = this.portfolios();
       const loading = this.loading();
-      
+
       // If we had a selected portfolio but it no longer exists and we're not loading
       // This indicates a successful deletion
       if (portfolioIdFromUrl && portfolios.length > 0 && !loading) {
-        const portfolioStillExists = portfolios.some(p => p.id === portfolioIdFromUrl);
+        const portfolioStillExists = portfolios.some(
+          (p) => p.id === portfolioIdFromUrl
+        );
         if (!portfolioStillExists) {
           void this.router.navigate(['/portfolios']);
         }
@@ -112,7 +214,7 @@ export class FeatureDashboardComponent implements OnInit {
     // Watch for transaction errors and display them
     effect(() => {
       const error = this.transactionsError();
-      
+
       if (error) {
         this.dialogService.showError(error, 'Transaction Failed');
       }
@@ -121,10 +223,13 @@ export class FeatureDashboardComponent implements OnInit {
     // Load performance data when portfolio is selected
     effect(() => {
       const portfolioId = this.selectedPortfolioId();
-      
+
       if (portfolioId) {
         // Load YTD performance by default
-        this.performanceFacade.loadPerformance(portfolioId, Timeframe.YEAR_TO_DATE);
+        this.performanceFacade.loadPerformance(
+          portfolioId,
+          Timeframe.YEAR_TO_DATE
+        );
       } else {
         // Clear performance data when no portfolio is selected
         this.performanceFacade.clearPerformanceData();
@@ -167,14 +272,14 @@ export class FeatureDashboardComponent implements OnInit {
    */
   onDeletePortfolio(): void {
     const portfolioId = this.selectedPortfolioId();
-    
+
     if (!portfolioId) {
       console.warn('No portfolio selected');
       return;
     }
 
     // Find the portfolio name for the confirmation message
-    const portfolio = this.portfolios().find(p => p.id === portfolioId);
+    const portfolio = this.portfolios().find((p) => p.id === portfolioId);
     const portfolioName = portfolio?.name || 'this portfolio';
 
     const confirmConfig: ConfirmationDialogConfig = {
@@ -212,7 +317,7 @@ export class FeatureDashboardComponent implements OnInit {
    */
   onBuyAsset(): void {
     const portfolioId = this.selectedPortfolioId();
-    
+
     if (!portfolioId) {
       console.warn('No portfolio selected');
       return;
@@ -276,7 +381,7 @@ export class FeatureDashboardComponent implements OnInit {
    */
   onSellAsset(asset: DashboardAsset): void {
     const portfolioId = this.selectedPortfolioId();
-    
+
     if (!portfolioId) {
       console.warn('No portfolio selected');
       return;
@@ -284,11 +389,11 @@ export class FeatureDashboardComponent implements OnInit {
 
     // Open record transaction dialog with SELL pre-selected
     const transactionData: RecordTransactionDialogData = {
-      ticker: { 
-        ticker: asset.ticker, 
-        name: '', 
-        market: '', 
-        type: '' 
+      ticker: {
+        ticker: asset.ticker,
+        name: '',
+        market: '',
+        type: '',
       },
       portfolioId,
       transactionType: TransactionType.SELL,
@@ -321,7 +426,7 @@ export class FeatureDashboardComponent implements OnInit {
    */
   onViewTransactions(ticker?: string): void {
     const portfolioId = this.selectedPortfolioId();
-    
+
     if (!portfolioId) {
       console.warn('No portfolio selected');
       return;
@@ -330,9 +435,9 @@ export class FeatureDashboardComponent implements OnInit {
     // Open transaction history dialog with optional ticker filter
     this.dialogService.open<TransactionHistoryDialogData, void>({
       component: TransactionHistoryDialogComponent,
-      data: { 
+      data: {
         portfolioId,
-        selectedTicker: ticker 
+        selectedTicker: ticker,
       },
       width: '900px',
       maxHeight: '80vh',
@@ -344,7 +449,7 @@ export class FeatureDashboardComponent implements OnInit {
    */
   onDeleteTransaction(transactionId: string): void {
     const portfolioId = this.selectedPortfolioId();
-    
+
     if (!portfolioId) {
       console.warn('No portfolio selected');
       return;
@@ -358,7 +463,7 @@ export class FeatureDashboardComponent implements OnInit {
    */
   onManageCash(): void {
     const portfolioId = this.selectedPortfolioId();
-    
+
     if (!portfolioId) {
       console.warn('No portfolio selected');
       return;
@@ -367,16 +472,19 @@ export class FeatureDashboardComponent implements OnInit {
     // Get cash balance from summary (preferred) or fallback to assets
     const summary = this.currentSummary();
     let currentCashBalance = 0;
-    
+
     if (summary && summary.cashBalance !== undefined) {
       // Use summary as the single source of truth if available
       currentCashBalance = summary.cashBalance;
     } else {
       // Fallback: If summary not loaded, check assets for CASH ticker
-      const cashAsset = this.currentAssets().find(asset => asset.ticker === 'CASH');
+      const cashAsset = this.currentAssets().find(
+        (asset) => asset.ticker === 'CASH'
+      );
       if (cashAsset) {
         // For CASH, marketValue is the actual balance (price is always 1.0)
-        currentCashBalance = cashAsset.marketValue || (cashAsset.quantity * cashAsset.avgPrice);
+        currentCashBalance =
+          cashAsset.marketValue || cashAsset.quantity * cashAsset.avgPrice;
       }
     }
 
@@ -386,7 +494,7 @@ export class FeatureDashboardComponent implements OnInit {
       CashTransactionDialogResult
     >({
       component: CashTransactionDialogComponent,
-      data: { 
+      data: {
         portfolioId,
         currentCashBalance,
       },
@@ -409,7 +517,7 @@ export class FeatureDashboardComponent implements OnInit {
    */
   onPerformanceTimeframeChanged(timeframe: Timeframe): void {
     const portfolioId = this.selectedPortfolioId();
-    
+
     if (portfolioId) {
       this.performanceFacade.changeTimeframe(portfolioId, timeframe);
     }

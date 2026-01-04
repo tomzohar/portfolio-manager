@@ -10,12 +10,6 @@
       (actionClick)="onCreatePortfolio()"
     />
     } @else {
-    <!-- Page Header -->
-    <lib-page-header
-      [config]="pageHeaderConfig()"
-      (menuItemClicked)="onHeaderMenuItemClick($event)"
-    />
-
     <!-- Portfolio Widgets -->
     @if (!loading() && selectedPortfolioId()) {
     <div class="portfolio-widgets">
@@ -25,16 +19,6 @@
       />
       <lib-cash-balance-widget [balance]="cashBalance()" />
     </div>
-
-    <!-- Performance Attribution Widget -->
-    <lib-performance-attribution-widget
-      [analysis]="performanceAnalysis()"
-      [historicalData]="performanceHistoricalData()"
-      [selectedTimeframe]="performanceTimeframe()"
-      [loading]="performanceLoading()"
-      [error]="performanceError()"
-      (timeframeChanged)="onPerformanceTimeframeChanged($event)"
-    />
     }
 
     <!-- Asset List -->

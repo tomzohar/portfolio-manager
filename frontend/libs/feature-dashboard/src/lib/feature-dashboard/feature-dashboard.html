@@ -1,20 +1,15 @@
-<lib-ui-dashboard
-  [portfolios]="portfolios()"
-  [assets]="currentAssets()"
-  [summary]="currentSummary()"
-  [selectedPortfolioId]="selectedPortfolioId()"
-  [loading]="loading()"
-  [performanceAnalysis]="performanceAnalysis()"
-  [performanceHistoricalData]="performanceHistoricalData()"
-  [performanceTimeframe]="performanceTimeframe()"
-  [performanceLoading]="performanceLoading()"
-  [performanceError]="performanceError()"
-  (portfolioSelected)="onPortfolioSelected($event)"
-  (createPortfolio)="onCreatePortfolio()"
-  (deletePortfolio)="onDeletePortfolio()"
-  (buyAsset)="onBuyAsset()"
-  (sellAsset)="onSellAsset($event)"
-  (viewTransactions)="onViewTransactions($event)"
-  (manageCash)="onManageCash()"
-  (performanceTimeframeChanged)="onPerformanceTimeframeChanged($event)">
-</lib-ui-dashboard>
+<div class="dashboard-shell">
+  <!-- Page Header (visible across all tabs) -->
+  <lib-page-header
+    [config]="pageHeaderConfig()"
+    (menuItemClicked)="onHeaderMenuItemClick($event)"
+  />
+
+  <!-- Tabs Navigation -->
+  <div class="tabs-wrapper">
+    <lib-tabs [config]="tabsConfig()" />
+  </div>
+
+  <!-- Child Route Content (Overview or Performance) -->
+  <router-outlet />
+</div>

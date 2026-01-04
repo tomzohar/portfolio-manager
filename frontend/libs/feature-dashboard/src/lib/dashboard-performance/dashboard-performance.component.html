@@ -1,0 +1,11 @@
+<div class="performance-page">
+  <lib-performance-attribution-widget
+    [analysis]="performanceFacade.currentAnalysis()"
+    [historicalData]="performanceFacade.historicalData()"
+    [selectedTimeframe]="performanceFacade.selectedTimeframe()"
+    [loading]="performanceFacade.loading()"
+    [error]="performanceFacade.error()"
+    (timeframeChanged)="onTimeframeChanged($event)"
+  />
+</div>
+

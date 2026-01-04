@@ -1,0 +1,15 @@
+@use 'scss' as *;
+
+.dashboard-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0 $spacing-md;
+}
+
+.tabs-wrapper {
+  border-bottom: 1px solid $color-border-primary;
+  margin-bottom: $spacing-lg;
+  margin-top: $spacing-md;
+}
+

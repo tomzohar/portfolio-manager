@@ -1,27 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Injectable } from '@angular/core';
 import { UiDashboardComponent } from './ui-dashboard';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { DashboardAsset, DashboardPortfolio, Timeframe, PerformanceAnalysis } from '@stocks-researcher/types';
-import { ChartService, ChartInstance } from '@stocks-researcher/ui-charts';
-
-// Mock ChartService for testing
-@Injectable()
-class MockChartService extends ChartService {
-  createChart(): ChartInstance {
-    return { id: 'mock-chart', config: { type: 'line', series: [] } };
-  }
-  updateChart(): void {
-    // Mock implementation
-  }
-  destroyChart(): void {
-    // Mock implementation
-  }
-  resizeChart(): void {
-    // Mock implementation
-  }
-}
+import { DashboardAsset, DashboardPortfolio } from '@stocks-researcher/types';
 
 describe('UiDashboardComponent', () => {
   let component: UiDashboardComponent;
@@ -40,11 +21,7 @@ describe('UiDashboardComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [UiDashboardComponent],
-      providers: [
-        provideZonelessChangeDetection(), 
-        provideAnimations(),
-        { provide: ChartService, useClass: MockChartService },
-      ]
+      providers: [provideZonelessChangeDetection(), provideAnimations()]
     }).compileComponents();
 
     fixture = TestBed.createComponent(UiDashboardComponent);
@@ -85,16 +62,7 @@ describe('UiDashboardComponent', () => {
     expect(loadingPage).toBeTruthy();
   });
 
-  it('should render page header when portfolios exist and not loading', () => {
-    fixture.componentRef.setInput('portfolios', mockPortfolios);
-    fixture.componentRef.setInput('loading', false);
-    fixture.componentRef.setInput('selectedPortfolioId', '1');
-    fixture.detectChanges();
-
-    const compiled = fixture.nativeElement as HTMLElement;
-    const pageHeader = compiled.querySelector('lib-page-header');
-    expect(pageHeader).toBeTruthy();
-  });
+  // Page header test removed - header is now in parent FeatureDashboardComponent
 
   it('should render assets card when portfolio is selected', () => {
     fixture.componentRef.setInput('portfolios', mockPortfolios);
@@ -169,28 +137,22 @@ describe('UiDashboardComponent', () => {
       expect(emptyState).toBeTruthy();
     });
 
-    it('should render page header when portfolios exist', () => {
+    // Page header test removed - header is now in parent FeatureDashboardComponent
+    
+    it('should render widgets when portfolios exist', () => {
       fixture.componentRef.setInput('portfolios', mockPortfolios);
       fixture.componentRef.setInput('selectedPortfolioId', '1');
       fixture.componentRef.setInput('loading', false);
       fixture.detectChanges();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      // Should show page header when portfolios exist
-      const pageHeader = compiled.querySelector('lib-page-header');
+      // Should show widgets when portfolio selected
+      const widgets = compiled.querySelector('.portfolio-widgets');
       
-      expect(pageHeader).toBeTruthy();
+      expect(widgets).toBeTruthy();
     });
 
-    it('should not display page header when portfolios are empty', () => {
-      fixture.componentRef.setInput('portfolios', []);
-      fixture.componentRef.setInput('loading', false);
-      fixture.detectChanges();
-
-      const compiled = fixture.nativeElement as HTMLElement;
-      const pageHeader = compiled.querySelector('lib-page-header');
-      expect(pageHeader).toBeNull();
-    });
+    // Page header test removed - header is now in parent FeatureDashboardComponent
 
     it('should emit createPortfolio event when empty state action is clicked', (done) => {
       fixture.componentRef.setInput('portfolios', []);
@@ -332,50 +294,6 @@ describe('UiDashboardComponent', () => {
       });
 
       component.onViewTransactions();
-    });
-  });
-
-  describe('Performance Attribution Widget', () => {
-    const mockAnalysis: PerformanceAnalysis = {
-      portfolioReturn: 0.085,
-      benchmarkReturn: 0.062,
-      alpha: 0.023,
-      benchmarkTicker: 'SPY',
-      timeframe: Timeframe.YEAR_TO_DATE,
-    };
-
-    it('should display performance widget when analysis is provided and portfolio is selected', () => {
-      fixture.componentRef.setInput('portfolios', mockPortfolios);
-      fixture.componentRef.setInput('selectedPortfolioId', '1');
-      fixture.componentRef.setInput('performanceAnalysis', mockAnalysis);
-      fixture.componentRef.setInput('loading', false);
-      fixture.detectChanges();
-
-      const widget = fixture.nativeElement.querySelector('lib-performance-attribution-widget');
-      expect(widget).toBeTruthy();
-    });
-
-    it('should not display performance widget when no portfolio is selected', () => {
-      fixture.componentRef.setInput('selectedPortfolioId', null);
-      fixture.componentRef.setInput('performanceAnalysis', mockAnalysis);
-      fixture.componentRef.setInput('loading', false);
-      fixture.detectChanges();
-
-      const widget = fixture.nativeElement.querySelector('lib-performance-attribution-widget');
-      expect(widget).toBeFalsy();
-    });
-
-    it('should emit performanceTimeframeChanged when timeframe changes', (done) => {
-      component.performanceTimeframeChanged.subscribe((timeframe) => {
-        expect(timeframe).toBe(Timeframe.THREE_MONTHS);
-        done();
-      });
-
-      component.onPerformanceTimeframeChanged(Timeframe.THREE_MONTHS);
-    });
-
-    it('should have onPerformanceTimeframeChanged method', () => {
-      expect(component.onPerformanceTimeframeChanged).toBeDefined();
     });
   });
 });

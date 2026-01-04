@@ -40,6 +40,27 @@ export const appRoutes: Route[] = [
       import('@frontend/feature-dashboard').then(
         (m) => m.FeatureDashboardComponent
       ),
+    children: [
+      {
+        path: '',
+        redirectTo: 'overview',
+        pathMatch: 'full',
+      },
+      {
+        path: 'overview',
+        loadComponent: () =>
+          import('@frontend/feature-dashboard').then(
+            (m) => m.DashboardOverviewComponent
+          ),
+      },
+      {
+        path: 'performance',
+        loadComponent: () =>
+          import('@frontend/feature-dashboard').then(
+            (m) => m.DashboardPerformanceComponent
+          ),
+      },
+    ],
   },
   ...authRoutes,
   {

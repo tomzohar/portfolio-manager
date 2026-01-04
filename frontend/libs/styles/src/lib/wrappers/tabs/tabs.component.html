@@ -1,0 +1,20 @@
+<nav class="tabs-container" role="tablist" aria-label="Navigation tabs">
+  @for (tab of tabs(); track tab.id) {
+    <a
+      class="tab"
+      [routerLink]="tab.route"
+      routerLinkActive="active"
+      [class.disabled]="tab.disabled"
+      [attr.role]="'tab'"
+      [attr.aria-selected]="false"
+      [attr.aria-disabled]="tab.disabled"
+      [queryParamsHandling]="'preserve'"
+    >
+      @if (tab.icon) {
+        <span class="material-icons tab-icon">{{ tab.icon }}</span>
+      }
+      <span class="tab-label">{{ tab.label }}</span>
+    </a>
+  }
+</nav>
+

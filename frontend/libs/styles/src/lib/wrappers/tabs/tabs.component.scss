@@ -1,0 +1,65 @@
+@use 'scss' as *;
+
+.tabs-container {
+  display: inline-flex;
+  gap: $spacing-xxs;
+  border-bottom: none;
+  background-color: transparent;
+  padding: 0;
+  margin: 0;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-md;
+  border: none;
+  background: none;
+  color: $color-text-subtle;
+  cursor: pointer;
+  text-decoration: none;
+  position: relative;
+  transition: all $transition-fast;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  font-family: $font-family-primary;
+  border-bottom: 2px solid transparent;
+  border-radius: $radius-sm $radius-sm 0 0;
+
+  &:hover:not(.disabled) {
+    background-color: rgba($color-bg-tertiary, 0.5);
+    color: $color-text-secondary;
+  }
+
+  &.active {
+    color: $color-text-primary;
+    border-bottom-color: $color-ai-primary;
+    background-color: rgba($color-bg-tertiary, 0.3);
+  }
+
+  &.disabled {
+    color: $color-text-disabled;
+    cursor: not-allowed;
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color-ai-primary;
+    outline-offset: -2px;
+  }
+}
+
+.tab-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.tab-label {
+  white-space: nowrap;
+  font-size: $font-size-xs;
+  line-height: 1.2;
+}
+

@@ -10,21 +10,12 @@ import {
   EmptyStateComponent,
   LoadingPageComponent,
   MenuItem,
-  PageHeaderComponent,
-  PageHeaderConfig,
   SelectOption,
   TableComponent,
 } from '@stocks-researcher/styles';
-import { 
-  DashboardAsset, 
-  DashboardPortfolio, 
-  PerformanceAnalysis, 
-  HistoricalDataPoint, 
-  Timeframe 
-} from '@stocks-researcher/types';
+import { DashboardAsset, DashboardPortfolio } from '@stocks-researcher/types';
 import { NetAccountValueWidgetComponent } from '../net-account-value-widget/net-account-value-widget';
 import { CashBalanceWidgetComponent } from '../cash-balance-widget/cash-balance-widget.component';
-import { PerformanceAttributionWidgetComponent } from '../performance-attribution-widget/performance-attribution-widget.component';
 import { PortfolioSummaryDto } from '@frontend/data-access-portfolio';
 
 // CASH ticker constant (matches backend)
@@ -42,8 +33,6 @@ const CASH_TICKER = 'CASH';
     LoadingPageComponent,
     NetAccountValueWidgetComponent,
     CashBalanceWidgetComponent,
-    PageHeaderComponent,
-    PerformanceAttributionWidgetComponent,
   ],
   templateUrl: './ui-dashboard.html',
   styleUrl: './ui-dashboard.scss',
@@ -56,13 +45,6 @@ export class UiDashboardComponent {
   loading = input<boolean>(true);
   buyingPower = input<number | null>(null);
 
-  // Performance Attribution inputs
-  performanceAnalysis = input<PerformanceAnalysis | null>(null);
-  performanceHistoricalData = input<HistoricalDataPoint[] | null>(null);
-  performanceTimeframe = input<Timeframe>(Timeframe.YEAR_TO_DATE);
-  performanceLoading = input<boolean>(false);
-  performanceError = input<string | null>(null);
-
   portfolioSelected = output<string>();
   createPortfolio = output<void>();
   deletePortfolio = output<void>();
@@ -70,53 +52,6 @@ export class UiDashboardComponent {
   sellAsset = output<DashboardAsset>();
   viewTransactions = output<string | undefined>();
   manageCash = output<void>();
-  
-  // Performance Attribution output
-  performanceTimeframeChanged = output<Timeframe>();
-
-  /**
-   * Get the selected portfolio name for the header
-   */
-  selectedPortfolioName = computed<string>(() => {
-    const selectedId = this.selectedPortfolioId();
-    const portfolio = this.portfolios().find((p) => p.id === selectedId);
-    return portfolio?.name || 'Portfolio';
-  });
-
-  /**
-   * Page header configuration
-   */
-  pageHeaderConfig = computed<PageHeaderConfig>(() => ({
-    title: this.selectedPortfolioName(),
-    backButton: {
-      route: '/portfolios',
-      label: 'All Portfolios',
-    },
-    actionMenu: {
-      button: {
-        label: 'Actions',
-        icon: ACTION_ICONS.MORE,
-        variant: 'icon',
-        color: 'accent',
-        ariaLabel: 'Portfolio actions menu',
-      },
-      menu: {
-        items: [
-          {
-            id: 'manage-cash',
-            label: 'Deposit/Withdraw Cash',
-            icon: 'account_balance_wallet',
-          },
-          {
-            id: 'delete-portfolio',
-            label: 'Delete Portfolio',
-            icon: ACTION_ICONS.DELETE,
-          },
-        ],
-        ariaLabel: 'Portfolio actions',
-      },
-    },
-  }));
 
   /**
    * Filter out CASH from assets for display
@@ -277,29 +212,8 @@ export class UiDashboardComponent {
     }
   }
 
-  /**
-   * Handle page header menu item click
-   */
-  onHeaderMenuItemClick(item: MenuItem): void {
-    switch (item.id) {
-      case 'manage-cash':
-        this.onManageCash();
-        break;
-      default:
-        this.onActionMenuItemSelected(item);
-        break;
-    }
-  }
-
   onManageCash() {
     this.manageCash.emit();
-  }
-
-  /**
-   * Handle performance timeframe change
-   */
-  onPerformanceTimeframeChanged(timeframe: Timeframe): void {
-    this.performanceTimeframeChanged.emit(timeframe);
   }
 
   getAssetActionsMenuConfig(asset: DashboardAsset): ActionMenuConfig {

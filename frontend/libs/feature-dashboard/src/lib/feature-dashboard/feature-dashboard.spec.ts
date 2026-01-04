@@ -1,13 +1,16 @@
 import { provideZonelessChangeDetection, signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { ActivatedRoute, Router } from '@angular/router';
+import { provideRouter } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { PortfolioFacade } from '@frontend/data-access-portfolio';
 import { PerformanceAttributionFacade } from '@stocks-researcher/data-access-dashboard';
 import { AuthFacade } from '@frontend/data-access-auth';
 import { DialogService } from '@frontend/util-dialog';
 import { DashboardAsset, DashboardPortfolio, User, Timeframe } from '@stocks-researcher/types';
 import { FeatureDashboardComponent } from './feature-dashboard';
+import { DashboardOverviewComponent } from '../dashboard-overview/dashboard-overview.component';
+import { DashboardPerformanceComponent } from '../dashboard-performance/dashboard-performance.component';
 import { CreatePortfolioDialogComponent } from '../create-portfolio-dialog/create-portfolio-dialog.component';
 import { of, Subject } from 'rxjs';
 
@@ -21,7 +24,6 @@ describe('FeatureDashboardComponent', () => {
   let selectedIdSignal: WritableSignal<string | null>;
   let portfoliosSignal: WritableSignal<DashboardPortfolio[]>;
   let loadingSignal: WritableSignal<boolean>;
-  let mockRouter: { navigate: jest.Mock };
   let queryParamsSubject: Subject<Record<string, string>>;
 
   const mockUser: User = {
@@ -107,21 +109,20 @@ describe('FeatureDashboardComponent', () => {
       queryParams: queryParamsSubject.asObservable(),
     };
 
-    mockRouter = {
-      navigate: jest.fn(),
-    };
-
     await TestBed.configureTestingModule({
       imports: [FeatureDashboardComponent],
       providers: [
         provideZonelessChangeDetection(),
         provideAnimations(),
+        provideRouter([
+          { path: 'dashboard/overview', component: DashboardOverviewComponent },
+          { path: 'dashboard/performance', component: DashboardPerformanceComponent },
+        ]),
         { provide: PortfolioFacade, useValue: mockFacade },
         { provide: PerformanceAttributionFacade, useValue: mockPerformanceFacade },
         { provide: AuthFacade, useValue: mockAuthFacade },
         { provide: DialogService, useValue: mockDialogService },
         { provide: ActivatedRoute, useValue: mockActivatedRoute },
-        { provide: Router, useValue: mockRouter },
       ],
     }).compileComponents();
 
@@ -161,12 +162,20 @@ describe('FeatureDashboardComponent', () => {
     expect(mockFacade.selectPortfolio).toHaveBeenCalledWith('2');
   });
 
-  it('should render ui-dashboard component', () => {
+  it('should render tabs component', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const uiDashboard = compiled.querySelector('lib-ui-dashboard');
-    expect(uiDashboard).toBeTruthy();
+    const tabs = compiled.querySelector('lib-tabs');
+    expect(tabs).toBeTruthy();
+  });
+
+  it('should render router-outlet for child routes', () => {
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const routerOutlet = compiled.querySelector('router-outlet');
+    expect(routerOutlet).toBeTruthy();
   });
 
   it('should have onCreatePortfolio method', () => {
@@ -300,63 +309,7 @@ describe('FeatureDashboardComponent', () => {
     });
   });
 
-  describe('Navigation behaviors', () => {
-    it('should navigate to /portfolios when portfolio in URL does not exist', (done) => {
-      // Emit query param with non-existent portfolio ID
-      queryParamsSubject.next({ portfolioId: 'non-existent-id' });
-      
-      // Use setTimeout to allow effect to run
-      setTimeout(() => {
-        expect(mockRouter.navigate).toHaveBeenCalledWith(['/portfolios']);
-        done();
-      }, 100);
-    });
-
-    it('should navigate to /portfolios after portfolio is deleted', (done) => {
-      // Set up initial state with portfolio selected
-      queryParamsSubject.next({ portfolioId: '1' });
-      selectedIdSignal.set('1');
-      
-      setTimeout(() => {
-        jest.clearAllMocks();
-        
-        // Simulate portfolio deletion by removing it from the list
-        portfoliosSignal.set([
-          { id: '2', name: 'Tech Growth Speculation' },
-          { id: '3', name: 'Dividend Income' },
-        ]);
-        loadingSignal.set(false);
-        
-        setTimeout(() => {
-          expect(mockRouter.navigate).toHaveBeenCalledWith(['/portfolios']);
-          done();
-        }, 100);
-      }, 100);
-    });
-
-    it('should select portfolio when valid portfolioId is in URL', (done) => {
-      // Emit query param with valid portfolio ID
-      queryParamsSubject.next({ portfolioId: '2' });
-      
-      setTimeout(() => {
-        expect(mockFacade.selectPortfolio).toHaveBeenCalledWith('2');
-        done();
-      }, 100);
-    });
-
-    it('should not navigate when portfolio exists in list', (done) => {
-      jest.clearAllMocks();
-      
-      // Emit query param with valid portfolio ID
-      queryParamsSubject.next({ portfolioId: '1' });
-      
-      setTimeout(() => {
-        expect(mockRouter.navigate).not.toHaveBeenCalled();
-        expect(mockFacade.selectPortfolio).toHaveBeenCalledWith('1');
-        done();
-      }, 100);
-    });
-  });
+  // Navigation behaviors tests removed - routing now handled by child routes
 
   describe('Performance Attribution Integration', () => {
     it('should load performance data when portfolio is selected', (done) => {
@@ -396,6 +349,35 @@ describe('FeatureDashboardComponent', () => {
 
     it('should have onPerformanceTimeframeChanged method', () => {
       expect(component.onPerformanceTimeframeChanged).toBeDefined();
+    });
+  });
+
+  describe('Tabs Configuration', () => {
+    it('should have tabs configuration', () => {
+      expect(component.tabsConfig).toBeDefined();
+    });
+
+    it('should have Overview and Performance tabs', () => {
+      const config = component.tabsConfig();
+      expect(config.tabs.length).toBe(2);
+      expect(config.tabs[0].id).toBe('overview');
+      expect(config.tabs[1].id).toBe('performance');
+    });
+
+    it('should disable Performance tab when no portfolio is selected', () => {
+      selectedIdSignal.set(null);
+      fixture.detectChanges();
+
+      const config = component.tabsConfig();
+      expect(config.tabs[1].disabled).toBe(true);
+    });
+
+    it('should enable Performance tab when portfolio is selected', () => {
+      selectedIdSignal.set('portfolio-123');
+      fixture.detectChanges();
+
+      const config = component.tabsConfig();
+      expect(config.tabs[1].disabled).toBe(false);
     });
   });
 
