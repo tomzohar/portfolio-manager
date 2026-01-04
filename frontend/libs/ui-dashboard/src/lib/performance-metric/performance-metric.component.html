@@ -1,0 +1,13 @@
+<div class="performance-metric">
+  <span class="metric-label">{{ label() }}</span>
+  <span 
+    class="metric-value"
+    [class.large]="large()"
+    [class.success]="color() === 'success'"
+    [class.error]="color() === 'error'"
+    [class.neutral]="color() === 'neutral'"
+  >
+    {{ value() }}
+  </span>
+</div>
+
