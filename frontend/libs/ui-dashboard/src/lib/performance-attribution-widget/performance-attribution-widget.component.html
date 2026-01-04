@@ -1,0 +1,88 @@
+<lib-card class="performance-widget">
+  <!-- Header with Timeframe Selector -->
+  <div class="widget-header">
+    <h3 class="widget-title">Portfolio Performance</h3>
+    <lib-timeframe-selector
+      [selectedTimeframe]="selectedTimeframe()"
+      (timeframeChanged)="onTimeframeChange($event)"
+    />
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="skeleton-loader"></div>
+      <p class="loading-text">Calculating performance...</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @else if (error()) {
+    <div class="error-state">
+      <p class="error-message">{{ error() }}</p>
+      <button class="retry-button" (click)="onTimeframeChange(selectedTimeframe())">
+        Retry
+      </button>
+    </div>
+  }
+
+  <!-- Success State -->
+  @else if (analysis()) {
+    <!-- Metrics Row -->
+    <div class="metrics-row">
+      <!-- Portfolio Return -->
+      <lib-performance-metric
+        label="Your Portfolio"
+        [value]="portfolioReturnPercent()"
+        [color]="analysis()!.portfolioReturn > 0 ? 'success' : 'error'"
+        [large]="true"
+      />
+
+      <!-- Benchmark Return -->
+      <lib-performance-metric
+        label="S&P 500 Benchmark"
+        [value]="benchmarkReturnPercent()"
+        color="neutral"
+      />
+
+      <!-- Alpha -->
+      <div class="alpha-metric">
+        <lib-performance-metric
+          label="Alpha (Excess Return)"
+          [value]="alphaPercent()"
+          [color]="alphaColor()"
+        />
+        <lib-alpha-badge
+          [alpha]="analysis()!.alpha"
+          [isOutperforming]="isOutperforming()"
+        />
+      </div>
+    </div>
+
+    <!-- Chart -->
+    @if (historicalData()) {
+      <lib-performance-chart
+        [data]="historicalData()!"
+        portfolioColor="#a684ff"
+        benchmarkColor="#71717b"
+      />
+    }
+
+    <!-- Educational Tooltip -->
+    <div class="info-tooltip">
+      <lib-icon name="info" [size]="16" />
+      <span class="tooltip-text">
+        Alpha measures your excess return compared to the S&P 500. 
+        Positive alpha means you beat the market!
+      </span>
+    </div>
+  }
+
+  <!-- Empty State -->
+  @else {
+    <div class="empty-state">
+      <p>No performance data available</p>
+    </div>
+  }
+</lib-card>
+

@@ -1,0 +1,24 @@
+@use 'scss' as *;
+
+.alpha-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $badge-padding-y $badge-padding-x;
+  border-radius: $radius-sm;
+  font-size: $badge-font-size;
+  font-weight: $font-weight-semibold;
+
+  &.outperform {
+    @include badge-buy;
+  }
+
+  &.underperform {
+    @include badge-sell;
+  }
+}
+
+.badge-text {
+  white-space: nowrap;
+}
+
