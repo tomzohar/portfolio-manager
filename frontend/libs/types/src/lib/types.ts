@@ -145,3 +145,52 @@ export interface AssetSearchConfig {
 }
 
 export type AssetSearchResult = TickerResult[];
+
+// Performance Attribution Types
+
+/**
+ * Timeframe enum for performance calculations
+ * Matches backend Timeframe enum
+ */
+export enum Timeframe {
+  ONE_MONTH = '1M',
+  THREE_MONTHS = '3M',
+  SIX_MONTHS = '6M',
+  ONE_YEAR = '1Y',
+  YEAR_TO_DATE = 'YTD',
+  ALL_TIME = 'ALL_TIME',
+}
+
+/**
+ * Performance analysis data (portfolio vs benchmark)
+ * Matches backend BenchmarkComparisonDto
+ */
+export interface PerformanceAnalysis {
+  portfolioReturn: number;      // Decimal (0.085 = 8.5%)
+  benchmarkReturn: number;       // Decimal
+  alpha: number;                 // Excess return (portfolio - benchmark)
+  benchmarkTicker: string;       // e.g., "SPY"
+  timeframe: Timeframe;
+}
+
+/**
+ * Historical data point for chart visualization
+ * Matches backend HistoricalDataPointDto
+ */
+export interface HistoricalDataPoint {
+  date: string;                 // ISO date (YYYY-MM-DD)
+  portfolioValue: number;       // Normalized (starts at 100)
+  benchmarkValue: number;       // Normalized (starts at 100)
+}
+
+/**
+ * Historical data response from API
+ * Matches backend HistoricalDataResponseDto
+ */
+export interface HistoricalDataResponse {
+  portfolioId: string;
+  timeframe: Timeframe;
+  data: HistoricalDataPoint[];
+  startDate: Date | string;
+  endDate: Date | string;
+}

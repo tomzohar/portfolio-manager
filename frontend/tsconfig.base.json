@@ -43,6 +43,9 @@
       ],
       "@frontend/portfolios-page-data-access": [
         "libs/portfolios-page/data-access/src/index.ts"
+      ],
+      "@stocks-researcher/data-access-dashboard": [
+        "libs/data-access-dashboard/src/index.ts"
       ]
     }
   },
