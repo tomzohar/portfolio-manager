@@ -1,0 +1,14 @@
+<div class="timeframe-selector" role="group" aria-label="Select timeframe">
+  @for (tf of timeframes(); track tf.value) {
+    <button
+      class="timeframe-button"
+      [class.selected]="isSelected(tf.value)"
+      [attr.aria-pressed]="isSelected(tf.value)"
+      [attr.aria-label]="'Select ' + tf.label + ' timeframe'"
+      (click)="onTimeframeClick(tf.value)"
+    >
+      {{ tf.label }}
+    </button>
+  }
+</div>
+
