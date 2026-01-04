@@ -46,7 +46,9 @@
       ],
       "@stocks-researcher/data-access-dashboard": [
         "libs/data-access-dashboard/src/index.ts"
-      ]
+      ],
+      "@stocks-researcher/ui-charts": ["libs/ui-charts/src/index.ts"],
+      "@frontend/ui-charts": ["libs/ui-charts/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
