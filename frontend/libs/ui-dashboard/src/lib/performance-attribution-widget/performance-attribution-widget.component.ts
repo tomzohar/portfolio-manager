@@ -1,21 +1,35 @@
-import { Component, ChangeDetectionStrategy, input, output, computed } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  input,
+  output,
+  computed,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Timeframe, PerformanceAnalysis, HistoricalDataPoint } from '@stocks-researcher/types';
+import {
+  Timeframe,
+  PerformanceAnalysis,
+  HistoricalDataPoint,
+} from '@stocks-researcher/types';
 import { TimeframeSelectorComponent } from '../timeframe-selector/timeframe-selector.component';
-import { PerformanceMetricComponent } from '../performance-metric/performance-metric.component';
 import { AlphaBadgeComponent } from '../alpha-badge/alpha-badge.component';
 import { PerformanceChartComponent } from '../performance-chart/performance-chart.component';
-import { CardComponent, IconComponent } from '@stocks-researcher/styles';
+import {
+  ButtonComponent,
+  ButtonConfig,
+  LoaderComponent,
+  LoaderConfig,
+} from '@stocks-researcher/styles';
 
 /**
  * Performance Attribution Widget Component
- * 
+ *
  * Displays portfolio performance vs benchmark with:
  * - Timeframe selector
  * - Performance metrics (portfolio, benchmark, alpha)
  * - Line chart visualization
  * - Educational tooltips
- * 
+ *
  * This is a DUMB component - receives all data via inputs,
  * emits events via outputs. No business logic.
  */
@@ -24,12 +38,11 @@ import { CardComponent, IconComponent } from '@stocks-researcher/styles';
   standalone: true,
   imports: [
     CommonModule,
-    CardComponent,
-    IconComponent,
     TimeframeSelectorComponent,
-    PerformanceMetricComponent,
     AlphaBadgeComponent,
     PerformanceChartComponent,
+    ButtonComponent,
+    LoaderComponent,
   ],
   templateUrl: './performance-attribution-widget.component.html',
   styleUrl: './performance-attribution-widget.component.scss',
@@ -119,6 +132,10 @@ export class PerformanceAttributionWidgetComponent {
     const analysis = this.analysis();
     return analysis ? analysis.alpha > 0 : false;
   });
+  
+  readonly loaderConfig: LoaderConfig = {
+    size: 'lg',
+  };
 
   // ========== Event Handlers ==========
 
@@ -135,5 +152,14 @@ export class PerformanceAttributionWidgetComponent {
   onQuerySubmit(query: string): void {
     this.querySubmitted.emit(query);
   }
-}
 
+  /**
+   * Retry button configuration
+   */
+  readonly retryButtonConfig: ButtonConfig = {
+    label: 'Retry',
+    variant: 'raised',
+    color: 'primary',
+    ariaLabel: 'Retry loading performance data',
+  };
+}

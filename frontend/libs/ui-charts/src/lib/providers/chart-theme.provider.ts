@@ -18,25 +18,25 @@ export class ChartThemeProvider {
       xAxis: {
         labels: {
           style: {
-            colors: '#71717b', // $color-text-subtle
+            colors: '#9e9e9e', // Lighter for better readability
             fontSize: '11px',
           },
         },
         grid: {
           show: true,
-          color: '#27272a', // $color-border-primary
+          color: '#2a2a2a', // Subtler grid lines
         },
       },
       yAxis: {
         labels: {
           style: {
-            colors: '#71717b',
+            colors: '#9e9e9e',
             fontSize: '11px',
           },
         },
         grid: {
           show: true,
-          color: '#27272a',
+          color: '#2a2a2a', // Subtler grid lines
         },
       },
       legend: {

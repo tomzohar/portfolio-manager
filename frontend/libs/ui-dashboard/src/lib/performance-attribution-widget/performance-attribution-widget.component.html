@@ -1,7 +1,6 @@
-<lib-card class="performance-widget">
-  <!-- Header with Timeframe Selector -->
-  <div class="widget-header">
-    <h3 class="widget-title">Portfolio Performance</h3>
+<div class="performance-page-layout">
+  <!-- Timeframe Selector (right-aligned) -->
+  <div class="page-header">
     <lib-timeframe-selector
       [selectedTimeframe]="selectedTimeframe()"
       (timeframeChanged)="onTimeframeChange($event)"
@@ -11,8 +10,7 @@
   <!-- Loading State -->
   @if (loading()) {
     <div class="loading-state">
-      <div class="skeleton-loader"></div>
-      <p class="loading-text">Calculating performance...</p>
+      <lib-loader [config]="loaderConfig" />
     </div>
   }
 
@@ -20,38 +18,39 @@
   @else if (error()) {
     <div class="error-state">
       <p class="error-message">{{ error() }}</p>
-      <button class="retry-button" (click)="onTimeframeChange(selectedTimeframe())">
-        Retry
-      </button>
+      <lib-button
+        [config]="retryButtonConfig"
+        (clicked)="onTimeframeChange(selectedTimeframe())"
+      />
     </div>
   }
 
   <!-- Success State -->
   @else if (analysis()) {
-    <!-- Metrics Row -->
-    <div class="metrics-row">
+    <!-- Metrics Grid -->
+    <div class="metrics-grid">
       <!-- Portfolio Return -->
-      <lib-performance-metric
-        label="Your Portfolio"
-        [value]="portfolioReturnPercent()"
-        [color]="analysis()!.portfolioReturn > 0 ? 'success' : 'error'"
-        [large]="true"
-      />
+      <div class="metric-card">
+        <span class="metric-label">YOUR PORTFOLIO</span>
+        <div class="metric-value large" [class.success]="analysis()!.portfolioReturn > 0" [class.error]="analysis()!.portfolioReturn < 0">
+          {{ portfolioReturnPercent() }}
+        </div>
+      </div>
 
       <!-- Benchmark Return -->
-      <lib-performance-metric
-        label="S&P 500 Benchmark"
-        [value]="benchmarkReturnPercent()"
-        color="neutral"
-      />
+      <div class="metric-card">
+        <span class="metric-label">S&P 500 BENCHMARK</span>
+        <div class="metric-value neutral">
+          {{ benchmarkReturnPercent() }}
+        </div>
+      </div>
 
       <!-- Alpha -->
-      <div class="alpha-metric">
-        <lib-performance-metric
-          label="Alpha (Excess Return)"
-          [value]="alphaPercent()"
-          [color]="alphaColor()"
-        />
+      <div class="metric-card">
+        <span class="metric-label">ALPHA (EXCESS RETURN)</span>
+        <div class="metric-value" [class.success]="isOutperforming()" [class.error]="!isOutperforming()">
+          {{ alphaPercent() }}
+        </div>
         <lib-alpha-badge
           [alpha]="analysis()!.alpha"
           [isOutperforming]="isOutperforming()"
@@ -59,23 +58,21 @@
       </div>
     </div>
 
-    <!-- Chart -->
+    <!-- Chart Section -->
     @if (historicalData()) {
-      <lib-performance-chart
-        [data]="historicalData()!"
-        portfolioColor="#a684ff"
-        benchmarkColor="#71717b"
-      />
+      <div class="chart-section">
+        <lib-performance-chart
+          [data]="historicalData()!"
+          portfolioColor="#9575cd"
+          benchmarkColor="#9e9e9e"
+        />
+      </div>
     }
 
-    <!-- Educational Tooltip -->
-    <div class="info-tooltip">
-      <lib-icon name="info" [size]="16" />
-      <span class="tooltip-text">
-        Alpha measures your excess return compared to the S&P 500. 
-        Positive alpha means you beat the market!
-      </span>
-    </div>
+    <!-- Help Text (subtle) -->
+    <p class="help-text">
+      ℹ Alpha measures your excess return compared to the S&P 500 benchmark.
+    </p>
   }
 
   <!-- Empty State -->
@@ -84,5 +81,5 @@
       <p>No performance data available</p>
     </div>
   }
-</lib-card>
+</div>
 

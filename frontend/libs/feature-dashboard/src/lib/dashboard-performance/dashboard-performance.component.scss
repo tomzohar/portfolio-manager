@@ -1,7 +1,6 @@
 @use 'scss' as *;
 
 .performance-page {
-  padding: $spacing-xl;
   max-width: $max-width-wide; // Wider for charts
   margin: 0 auto;
 }
