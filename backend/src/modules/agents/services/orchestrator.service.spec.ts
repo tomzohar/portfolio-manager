@@ -128,5 +128,30 @@ describe('OrchestratorService', () => {
 
       expect(result.finalState.userId).toBe(userId);
     });
+
+    describe('User-Scoped Validation', () => {
+      it('should reject execution without userId', async () => {
+        const input = { message: 'Test' };
+
+        // TypeScript would prevent this, but test runtime validation
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        await expect(service.runGraph('' as any, input)).rejects.toThrow();
+      });
+
+      it('should reject execution with null userId', async () => {
+        const input = { message: 'Test' };
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        await expect(service.runGraph(null as any, input)).rejects.toThrow();
+      });
+
+      it('should reject execution with undefined userId', async () => {
+        const input = { message: 'Test' };
+
+        await expect(
+          service.runGraph(undefined as any, input),
+        ).rejects.toThrow();
+      });
+    });
   });
 });

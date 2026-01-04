@@ -66,6 +66,13 @@ export class OrchestratorService {
     input: GraphInput,
     threadId?: string,
   ): Promise<GraphResult> {
+    // SECURITY: Validate userId is present (Task 5.2 - User-Scoped Validation)
+    if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+      throw new Error(
+        'userId is required for all graph executions (security requirement)',
+      );
+    }
+
     this.logger.log(`Running graph for user ${userId}`);
 
     try {
@@ -137,6 +144,13 @@ export class OrchestratorService {
     input: GraphInput,
     threadId?: string,
   ): AsyncGenerator<any, void, unknown> {
+    // SECURITY: Validate userId is present (Task 5.2 - User-Scoped Validation)
+    if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+      throw new Error(
+        'userId is required for all graph executions (security requirement)',
+      );
+    }
+
     this.logger.warn('Streaming not yet implemented (Phase 2)');
     // For Phase 1, just yield the final result
     const result = await this.runGraph(userId, input, threadId);

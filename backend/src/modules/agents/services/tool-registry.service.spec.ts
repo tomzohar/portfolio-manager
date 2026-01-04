@@ -187,4 +187,60 @@ describe('ToolRegistryService', () => {
       expect(service.getToolCount()).toBe(2);
     });
   });
+
+  describe('Persona Tools Registration', () => {
+    it('should register all three persona tools: technical_analyst, macro_analyst, risk_manager', () => {
+      // Simulate the three persona tools
+      const technicalAnalystTool = new DynamicStructuredTool({
+        name: 'technical_analyst',
+        description:
+          'Calculates technical indicators (RSI, MACD, etc.) for a ticker',
+        schema: z.object({
+          ticker: z.string(),
+        }),
+        func: () => Promise.resolve('{}'),
+      });
+
+      const macroAnalystTool = new DynamicStructuredTool({
+        name: 'macro_analyst',
+        description: 'Analyzes macroeconomic indicators and market regime',
+        schema: z.object({
+          query: z.string().optional(),
+        }),
+        func: () => Promise.resolve('{}'),
+      });
+
+      const riskManagerTool = new DynamicStructuredTool({
+        name: 'risk_manager',
+        description: 'Calculates portfolio-level risk metrics (VaR, Beta)',
+        schema: z.object({
+          userId: z.string(),
+        }),
+        func: () => Promise.resolve('{}'),
+      });
+
+      // Register all three
+      service.registerTool(technicalAnalystTool);
+      service.registerTool(macroAnalystTool);
+      service.registerTool(riskManagerTool);
+
+      // Verify all three are available
+      const tools = service.getTools();
+      expect(tools).toHaveLength(3);
+
+      const toolNames = tools.map((t) => t.name);
+      expect(toolNames).toContain('technical_analyst');
+      expect(toolNames).toContain('macro_analyst');
+      expect(toolNames).toContain('risk_manager');
+
+      // Verify each can be retrieved by name
+      expect(service.hasTool('technical_analyst')).toBe(true);
+      expect(service.hasTool('macro_analyst')).toBe(true);
+      expect(service.hasTool('risk_manager')).toBe(true);
+
+      expect(service.getTool('technical_analyst')).toBe(technicalAnalystTool);
+      expect(service.getTool('macro_analyst')).toBe(macroAnalystTool);
+      expect(service.getTool('risk_manager')).toBe(riskManagerTool);
+    });
+  });
 });

@@ -13,11 +13,14 @@ import { OrchestratorService } from './services/orchestrator.service';
 import { getCurrentTimeTool } from './tools/time.tool';
 import { createTechnicalAnalystTool } from './tools/technical-analyst.tool';
 import { createRiskManagerTool } from './tools/risk-manager.tool';
+import { createMacroAnalystTool } from './tools/macro-analyst.tool';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { AssetsModule } from '../assets/assets.module';
 import { PortfolioModule } from '../portfolio/portfolio.module';
 import { PolygonApiService } from '../assets/services/polygon-api.service';
+import { FredService } from '../assets/services/fred.service';
+import { NewsService } from '../assets/services/news.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -49,6 +52,9 @@ export class AgentsModule {
     private readonly toolRegistry: ToolRegistryService,
     private readonly stateService: StateService,
     private readonly polygonService: PolygonApiService,
+    private readonly fredService: FredService,
+    private readonly newsService: NewsService,
+    private readonly geminiService: GeminiLlmService,
     private readonly portfolioService: PortfolioService,
   ) {
     this.registerDefaultTools();
@@ -74,6 +80,14 @@ export class AgentsModule {
       createTechnicalAnalystTool(this.polygonService),
     );
     this.logger.log('Registered technical_analyst tool');
+    this.toolRegistry.registerTool(
+      createMacroAnalystTool(
+        this.fredService,
+        this.newsService,
+        this.geminiService,
+      ),
+    );
+    this.logger.log('Registered macro_analyst tool');
     this.toolRegistry.registerTool(
       createRiskManagerTool(this.portfolioService, this.polygonService),
     );
