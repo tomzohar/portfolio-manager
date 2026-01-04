@@ -52,7 +52,9 @@ describe('AssetsController', () => {
       .overrideGuard(JwtAuthGuard)
       .useValue({
         canActivate: (context: ExecutionContext) => {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           const request = context.switchToHttp().getRequest();
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           request.user = mockUser;
           return true;
         },
@@ -140,7 +142,7 @@ describe('AssetsController', () => {
       assetsService.searchTickers.mockReturnValue(throwError(() => error));
 
       controller.search(searchDto).subscribe({
-        next: () => done.fail('Should have thrown an error'),
+        next: () => done.fail('Should have thrown an error') as never,
         error: (err) => {
           expect(err).toEqual(error);
           expect(assetsService.searchTickers).toHaveBeenCalledWith('AAPL');

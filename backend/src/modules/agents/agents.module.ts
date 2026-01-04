@@ -11,8 +11,11 @@ import { StateService } from './services/state.service';
 import { ToolRegistryService } from './services/tool-registry.service';
 import { OrchestratorService } from './services/orchestrator.service';
 import { getCurrentTimeTool } from './tools/time.tool';
+import { createTechnicalAnalystTool } from './tools/technical-analyst.tool';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
+import { AssetsModule } from '../assets/assets.module';
+import { PolygonApiService } from '../assets/services/polygon-api.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Module({
@@ -22,6 +25,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
     JwtModule, // Import JwtModule for JwtService (set to global in AuthModule)
     forwardRef(() => AuthModule), // Import AuthModule for JwtAuthGuard
     forwardRef(() => UsersModule), // Import UsersModule for UsersService (needed by JwtAuthGuard)
+    forwardRef(() => AssetsModule), // Import AssetsModule for PolygonApiService
   ],
   controllers: [AgentsController],
   providers: [
@@ -40,6 +44,7 @@ export class AgentsModule {
   constructor(
     private readonly toolRegistry: ToolRegistryService,
     private readonly stateService: StateService,
+    private readonly polygonService: PolygonApiService,
   ) {
     this.registerDefaultTools();
   }
@@ -60,5 +65,9 @@ export class AgentsModule {
 
   private registerDefaultTools() {
     this.toolRegistry.registerTool(getCurrentTimeTool);
+    this.toolRegistry.registerTool(
+      createTechnicalAnalystTool(this.polygonService),
+    );
+    this.logger.log('Registered technical_analyst tool');
   }
 }

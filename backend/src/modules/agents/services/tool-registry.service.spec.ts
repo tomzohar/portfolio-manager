@@ -143,4 +143,48 @@ describe('ToolRegistryService', () => {
       expect(service.getTools()).toHaveLength(0);
     });
   });
+
+  describe('hasTool', () => {
+    it('should return true for registered tool', () => {
+      const tool = new DynamicStructuredTool({
+        name: 'existing_tool',
+        description: 'Test',
+        schema: z.object({}),
+        func: () => Promise.resolve('result'),
+      });
+
+      service.registerTool(tool);
+      expect(service.hasTool('existing_tool')).toBe(true);
+    });
+
+    it('should return false for non-existent tool', () => {
+      expect(service.hasTool('non_existent')).toBe(false);
+    });
+  });
+
+  describe('getToolCount', () => {
+    it('should return correct tool count', () => {
+      expect(service.getToolCount()).toBe(0);
+
+      const tool1 = new DynamicStructuredTool({
+        name: 'tool_1',
+        description: 'Test 1',
+        schema: z.object({}),
+        func: () => Promise.resolve('result'),
+      });
+
+      const tool2 = new DynamicStructuredTool({
+        name: 'tool_2',
+        description: 'Test 2',
+        schema: z.object({}),
+        func: () => Promise.resolve('result'),
+      });
+
+      service.registerTool(tool1);
+      expect(service.getToolCount()).toBe(1);
+
+      service.registerTool(tool2);
+      expect(service.getToolCount()).toBe(2);
+    });
+  });
 });
