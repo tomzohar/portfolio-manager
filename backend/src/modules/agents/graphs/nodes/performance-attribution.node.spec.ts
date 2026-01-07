@@ -1,21 +1,42 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { HumanMessage } from '@langchain/core/messages';
 import { RunnableConfig } from '@langchain/core/runnables';
-import { performanceAttributionNode } from './performance-attribution.node';
-import { CIOState } from '../types';
-import { Timeframe } from '../../../performance/types/timeframe.types';
-import { PerformanceService } from '../../../performance/performance.service';
+import { BenchmarkComparisonDto } from '../../../performance/dto/benchmark-comparison.dto';
 import { MissingDataException } from '../../../performance/exceptions/missing-data.exception';
+import { Timeframe } from '../../../performance/types/timeframe.types';
+import { CIOState } from '../types';
+import { performanceAttributionNode } from './performance-attribution.node';
+
+// Type for internal return calculation result
+interface InternalReturnResult {
+  portfolioId: string;
+  timeframe: Timeframe;
+  returnPercentage: number;
+}
+
+// Type for the mock performance service
+interface MockedPerformanceService {
+  calculateInternalReturn: jest.MockedFunction<
+    () => Promise<InternalReturnResult>
+  >;
+  getBenchmarkComparison: jest.MockedFunction<
+    (
+      portfolioId: string,
+      userId: string,
+      benchmarkTicker: string,
+      timeframe: Timeframe,
+    ) => Promise<BenchmarkComparisonDto>
+  >;
+}
 
 describe('performanceAttributionNode', () => {
-  let mockPerformanceService: jest.Mocked<PerformanceService>;
+  let mockPerformanceService: MockedPerformanceService;
   let config: RunnableConfig;
 
   beforeEach(() => {
     mockPerformanceService = {
       calculateInternalReturn: jest.fn(),
       getBenchmarkComparison: jest.fn(),
-    } as unknown as jest.Mocked<PerformanceService>;
+    };
 
     config = {
       configurable: {
@@ -41,6 +62,9 @@ describe('performanceAttributionNode', () => {
       alpha: 0.05,
       benchmarkTicker: 'SPY',
       timeframe: Timeframe.ONE_MONTH,
+      portfolioPeriodReturn: 0.1,
+      benchmarkPeriodReturn: 0.05,
+      periodDays: 30,
     });
 
     // Act
@@ -63,12 +87,17 @@ describe('performanceAttributionNode', () => {
       portfolioId: 'portfolio-123',
       timeframe: Timeframe.YEAR_TO_DATE,
       returnPercentage: 0.15,
-    } as any);
+    });
     mockPerformanceService.getBenchmarkComparison.mockResolvedValue({
       portfolioReturn: 0.15,
       benchmarkReturn: 0.1,
       alpha: 0.05,
-    } as any);
+      benchmarkTicker: 'SPY',
+      timeframe: Timeframe.YEAR_TO_DATE,
+      portfolioPeriodReturn: 0.15,
+      benchmarkPeriodReturn: 0.1,
+      periodDays: 365,
+    });
 
     // Act
     await performanceAttributionNode(state, config);
@@ -86,14 +115,19 @@ describe('performanceAttributionNode', () => {
     // Arrange
     const state = createState('Did I beat the market over the last 6 months?');
     mockPerformanceService.calculateInternalReturn.mockResolvedValue({
+      portfolioId: 'portfolio-123',
+      timeframe: Timeframe.SIX_MONTHS,
       returnPercentage: 0.2,
-    } as any);
+    });
     mockPerformanceService.getBenchmarkComparison.mockResolvedValue({
       portfolioReturn: 0.2,
       benchmarkReturn: 0.15,
       alpha: 0.05,
       benchmarkTicker: 'SPY',
       timeframe: Timeframe.SIX_MONTHS,
+      portfolioPeriodReturn: 0.2,
+      benchmarkPeriodReturn: 0.15,
+      periodDays: 180,
     });
 
     // Act
@@ -112,14 +146,19 @@ describe('performanceAttributionNode', () => {
     // Arrange
     const state = createState('Show me my 1 year performance');
     mockPerformanceService.calculateInternalReturn.mockResolvedValue({
+      portfolioId: 'portfolio-123',
+      timeframe: Timeframe.ONE_YEAR,
       returnPercentage: 0.25,
-    } as any);
+    });
     mockPerformanceService.getBenchmarkComparison.mockResolvedValue({
       portfolioReturn: 0.25,
       benchmarkReturn: 0.18,
       alpha: 0.07,
       benchmarkTicker: 'SPY',
       timeframe: Timeframe.ONE_YEAR,
+      portfolioPeriodReturn: 0.25,
+      benchmarkPeriodReturn: 0.18,
+      periodDays: 365,
     });
 
     // Act
@@ -149,8 +188,10 @@ describe('performanceAttributionNode', () => {
     // Arrange
     const state = createState('Show me my last month performance');
     mockPerformanceService.calculateInternalReturn.mockResolvedValue({
+      portfolioId: 'portfolio-123',
+      timeframe: Timeframe.ONE_MONTH,
       returnPercentage: 0.1,
-    } as any);
+    });
     mockPerformanceService.getBenchmarkComparison.mockRejectedValue(
       new MissingDataException('SPY', 'API timeout'),
     );
@@ -175,7 +216,10 @@ describe('performanceAttributionNode', () => {
       alpha: 0.2,
       benchmarkTicker: 'SPY',
       timeframe: Timeframe.ALL_TIME,
-    } as any);
+      portfolioPeriodReturn: 0.5,
+      benchmarkPeriodReturn: 0.3,
+      periodDays: 730,
+    });
 
     // Act
     await performanceAttributionNode(state, config);
@@ -193,14 +237,19 @@ describe('performanceAttributionNode', () => {
     // Arrange
     const state = createState('How did I do last quarter?');
     mockPerformanceService.calculateInternalReturn.mockResolvedValue({
+      portfolioId: 'portfolio-123',
+      timeframe: Timeframe.THREE_MONTHS,
       returnPercentage: 0.15,
-    } as any);
+    });
     mockPerformanceService.getBenchmarkComparison.mockResolvedValue({
       portfolioReturn: 0.15,
       benchmarkReturn: 0.1,
       alpha: 0.05,
       benchmarkTicker: 'SPY',
       timeframe: Timeframe.THREE_MONTHS,
+      portfolioPeriodReturn: 0.15,
+      benchmarkPeriodReturn: 0.1,
+      periodDays: 90,
     });
 
     // Act
@@ -215,14 +264,19 @@ describe('performanceAttributionNode', () => {
     // Arrange
     const state = createState('How did I do last month?');
     mockPerformanceService.calculateInternalReturn.mockResolvedValue({
+      portfolioId: 'portfolio-123',
+      timeframe: Timeframe.ONE_MONTH,
       returnPercentage: 0.05,
-    } as any);
+    });
     mockPerformanceService.getBenchmarkComparison.mockResolvedValue({
       portfolioReturn: 0.05,
       benchmarkReturn: 0.1,
       alpha: -0.05,
       benchmarkTicker: 'SPY',
       timeframe: Timeframe.ONE_MONTH,
+      portfolioPeriodReturn: 0.05,
+      benchmarkPeriodReturn: 0.1,
+      periodDays: 30,
     });
 
     // Act

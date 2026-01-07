@@ -15,6 +15,7 @@ import { DailySnapshotCalculationService } from './services/daily-snapshot-calcu
 import { BenchmarkDataService } from './services/benchmark-data.service';
 import { PerformanceCalculationService } from './services/performance-calculation.service';
 import { PortfolioMarketDataBackfillService } from './services/portfolio-market-data-backfill.service';
+import { PortfolioSnapshotBackfillService } from './services/portfolio-snapshot-backfill.service';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { PortfolioMarketDataBackfillService } from './services/portfolio-market-
     BenchmarkDataService,
     PerformanceCalculationService,
     PortfolioMarketDataBackfillService,
+    PortfolioSnapshotBackfillService,
   ],
   exports: [
     PerformanceService,
@@ -45,6 +47,7 @@ import { PortfolioMarketDataBackfillService } from './services/portfolio-market-
     BenchmarkDataService,
     PerformanceCalculationService,
     PortfolioMarketDataBackfillService,
+    PortfolioSnapshotBackfillService,
   ],
 })
 export class PerformanceModule {}

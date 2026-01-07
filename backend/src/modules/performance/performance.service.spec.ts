@@ -3,7 +3,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PolygonApiService } from '../assets/services/polygon-api.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { TransactionsService } from '../portfolio/transactions.service';
 import { MarketDataDaily } from './entities/market-data-daily.entity';
@@ -45,13 +44,6 @@ describe('PerformanceService', () => {
           },
         },
         {
-          provide: PolygonApiService,
-          useValue: {
-            getAggregates: jest.fn(),
-            getPreviousClose: jest.fn(),
-          },
-        },
-        {
           provide: getRepositoryToken(PortfolioDailyPerformance),
           useValue: {
             find: jest.fn(),
@@ -80,7 +72,6 @@ describe('PerformanceService', () => {
     service = module.get<PerformanceService>(PerformanceService);
     portfolioService = module.get(PortfolioService);
     transactionsService = module.get(TransactionsService);
-    polygonApiService = module.get(PolygonApiService);
     portfolioDailyPerfRepo = module.get(
       getRepositoryToken(PortfolioDailyPerformance),
     );

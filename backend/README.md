@@ -93,6 +93,68 @@ Backend server for the Stocks Researcher application. This NestJS application pr
 - Automatically recalculates positions
 - **Frontend automatically reloads both assets and summary** for UI consistency
 
+### Portfolio Performance Snapshots
+
+The application uses a daily snapshot system with Time-Weighted Return (TWR) methodology for fast, consistent performance metrics.
+
+#### POST `/api/performance/:portfolioId/admin/backfill`
+
+Recalculates daily performance snapshots for the entire portfolio history. Use after creating a portfolio or editing historical transactions.
+
+**Query Parameters:**
+- `startDate` (optional) - ISO datetime to start backfill from (defaults to earliest transaction)
+- `force` (optional) - Set to `true` to overwrite existing snapshots (default: `false`)
+
+**Response:** `BackfillResponseDto`
+```json
+{
+  "message": "Portfolio snapshots backfilled successfully",
+  "daysCalculated": 724,
+  "startDate": "2024-01-15",
+  "endDate": "2026-01-07"
+}
+```
+
+**Examples:**
+
+Auto-detect start date:
+```bash
+curl -X POST "http://localhost:3001/api/performance/{portfolioId}/admin/backfill" \
+  -H "Authorization: Bearer {token}"
+```
+
+Explicit start date:
+```bash
+curl -X POST "http://localhost:3001/api/performance/{portfolioId}/admin/backfill?startDate=2024-01-01T00:00:00Z" \
+  -H "Authorization: Bearer {token}"
+```
+
+Force recalculation:
+```bash
+curl -X POST "http://localhost:3001/api/performance/{portfolioId}/admin/backfill?force=true" \
+  -H "Authorization: Bearer {token}"
+```
+
+#### GET `/api/performance/:portfolioId/benchmark-comparison`
+
+Returns portfolio performance compared to a benchmark index (e.g., SPY).
+
+**Query Parameters:**
+- `timeframe` (required) - Time period: `1M`, `3M`, `6M`, `1Y`, `YTD`, `ALL`
+- `benchmarkTicker` (optional) - Benchmark symbol (default: `SPY`)
+
+**Response:** `BenchmarkComparisonDto`
+
+#### GET `/api/performance/:portfolioId/history`
+
+Returns time-series data normalized to 100 at start date for chart visualization.
+
+**Query Parameters:**
+- `timeframe` (required) - Time period: `1M`, `3M`, `6M`, `1Y`, `YTD`, `ALL`
+- `benchmarkTicker` (optional) - Benchmark symbol (default: `SPY`)
+
+**Response:** `HistoricalDataResponseDto`
+
 ## Data Architecture
 
 ### Transaction-Based System

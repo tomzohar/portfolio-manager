@@ -201,4 +201,4 @@ Note: You must wait for user confirmation before applying the patch to your perm
  - run unit tests
  - run lint
  - make sure no dead code or missing types
- - update documentation
+ - **IMPORTANT** update documentation for progress tracking

@@ -35,6 +35,16 @@ describe('DailySnapshotCalculationService', () => {
         findOne: jest.fn(),
         create: jest.fn(),
         save: jest.fn(),
+        createQueryBuilder: jest.fn(() => ({
+          select: jest.fn().mockReturnThis(),
+          from: jest.fn().mockReturnThis(),
+          where: jest.fn().mockReturnThis(),
+          andWhere: jest.fn().mockReturnThis(),
+          orderBy: jest.fn().mockReturnThis(),
+          limit: jest.fn().mockReturnThis(),
+          getOne: jest.fn().mockResolvedValue(null),
+          getMany: jest.fn().mockResolvedValue([]),
+        })),
       } as any,
     };
 
@@ -48,6 +58,14 @@ describe('DailySnapshotCalculationService', () => {
             save: jest.fn(),
             findOne: jest.fn(),
             find: jest.fn(),
+            createQueryBuilder: jest.fn(() => ({
+              where: jest.fn().mockReturnThis(),
+              andWhere: jest.fn().mockReturnThis(),
+              orderBy: jest.fn().mockReturnThis(),
+              limit: jest.fn().mockReturnThis(),
+              getOne: jest.fn().mockResolvedValue(null),
+              getMany: jest.fn().mockResolvedValue([]),
+            })),
           },
         },
         {
@@ -210,7 +228,7 @@ describe('DailySnapshotCalculationService', () => {
             quantity: 10000,
             price: 1,
             transactionDate: testDate,
-            portfolio: { id: mockPortfolioId } as any,
+            portfolio: { id: mockPortfolioId } as Portfolio,
           },
         ] as Transaction[];
 
@@ -282,7 +300,7 @@ describe('DailySnapshotCalculationService', () => {
             quantity: 10000,
             price: 1,
             transactionDate: new Date('2024-01-01'),
-            portfolio: { id: mockPortfolioId } as any,
+            portfolio: { id: mockPortfolioId } as Portfolio,
           },
           {
             id: 'tx-2',
@@ -291,7 +309,7 @@ describe('DailySnapshotCalculationService', () => {
             quantity: 100,
             price: 100,
             transactionDate: new Date('2024-01-01'),
-            portfolio: { id: mockPortfolioId } as any,
+            portfolio: { id: mockPortfolioId } as Portfolio,
           },
           {
             id: 'tx-3',
@@ -300,7 +318,7 @@ describe('DailySnapshotCalculationService', () => {
             quantity: 10000,
             price: 1,
             transactionDate: new Date('2024-01-01'),
-            portfolio: { id: mockPortfolioId } as any,
+            portfolio: { id: mockPortfolioId } as Portfolio,
           },
           // NEW: Deposit on testDate
           {
@@ -310,7 +328,7 @@ describe('DailySnapshotCalculationService', () => {
             quantity: 5000,
             price: 1,
             transactionDate: testDate,
-            portfolio: { id: mockPortfolioId } as any,
+            portfolio: { id: mockPortfolioId } as Portfolio,
           },
         ] as Transaction[];
 
@@ -395,7 +413,7 @@ describe('DailySnapshotCalculationService', () => {
             quantity: 100,
             price: 100,
             transactionDate: new Date('2024-01-01'),
-            portfolio: { id: mockPortfolioId } as any,
+            portfolio: { id: mockPortfolioId } as Portfolio,
           },
           {
             id: 'tx-2',
@@ -404,7 +422,7 @@ describe('DailySnapshotCalculationService', () => {
             quantity: 5000,
             price: 1,
             transactionDate: new Date('2024-01-02'),
-            portfolio: { id: mockPortfolioId } as any,
+            portfolio: { id: mockPortfolioId } as Portfolio,
           },
           // Withdrawal on testDate
           {
@@ -414,7 +432,7 @@ describe('DailySnapshotCalculationService', () => {
             quantity: 3000,
             price: 1,
             transactionDate: testDate,
-            portfolio: { id: mockPortfolioId } as any,
+            portfolio: { id: mockPortfolioId } as Portfolio,
           },
         ] as Transaction[];
 
@@ -499,7 +517,7 @@ describe('DailySnapshotCalculationService', () => {
             quantity: 100,
             price: 100,
             transactionDate: new Date('2024-01-01'),
-            portfolio: { id: mockPortfolioId } as any,
+            portfolio: { id: mockPortfolioId } as Portfolio,
           },
         ] as Transaction[];
 
@@ -545,7 +563,7 @@ describe('DailySnapshotCalculationService', () => {
             quantity: 100,
             price: 100,
             transactionDate: new Date('2024-01-01'),
-            portfolio: { id: mockPortfolioId } as any,
+            portfolio: { id: mockPortfolioId } as Portfolio,
           },
           {
             id: 'tx-2',
@@ -554,7 +572,7 @@ describe('DailySnapshotCalculationService', () => {
             quantity: 50,
             price: 180,
             transactionDate: new Date('2024-01-01'),
-            portfolio: { id: mockPortfolioId } as any,
+            portfolio: { id: mockPortfolioId } as Portfolio,
           },
           {
             id: 'tx-3',
@@ -563,7 +581,7 @@ describe('DailySnapshotCalculationService', () => {
             quantity: 1000,
             price: 1,
             transactionDate: new Date('2024-01-01'),
-            portfolio: { id: mockPortfolioId } as any,
+            portfolio: { id: mockPortfolioId } as Portfolio,
           },
         ] as Transaction[];
 
@@ -652,7 +670,7 @@ describe('DailySnapshotCalculationService', () => {
             quantity: 5000,
             price: 1,
             transactionDate: new Date('2024-01-01'),
-            portfolio: { id: mockPortfolioId } as any,
+            portfolio: { id: mockPortfolioId } as Portfolio,
           },
         ] as Transaction[];
 
@@ -691,9 +709,8 @@ describe('DailySnapshotCalculationService', () => {
         // Verify CASH-only handling
         expect(result.totalEquity).toBe(5000);
         expect(result.cashBalance).toBe(5000);
-        expect(marketDataSpy).toHaveBeenCalledWith({
-          where: { ticker: { _type: 'in', _value: [] }, date: testDate },
-        });
+        // Market data should NOT be fetched for CASH-only portfolios (optimization)
+        expect(marketDataSpy).not.toHaveBeenCalled();
       });
     });
   });
@@ -747,6 +764,7 @@ describe('DailySnapshotCalculationService', () => {
         mockQueryRunner.manager!.findOne = jest.fn().mockResolvedValue(null);
         mockQueryRunner.manager!.create = jest
           .fn()
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
           .mockImplementation((entity, data) => data);
         mockQueryRunner.manager!.save = jest.fn().mockResolvedValue({});
 

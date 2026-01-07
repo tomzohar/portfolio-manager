@@ -1,57 +1,23 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/unbound-method */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+
 import { Test, TestingModule } from '@nestjs/testing';
-import { ExecutionContext } from '@nestjs/common';
 import { PerformanceController } from './performance.controller';
 import { PerformanceService } from './performance.service';
-import { Timeframe } from './types/timeframe.types';
-import { HistoricalDataResponseDto } from './dto/historical-data.dto';
-import { BenchmarkComparisonDto } from './dto/benchmark-comparison.dto';
-import { User } from '../users/entities/user.entity';
+import { PortfolioMarketDataBackfillService } from './services/portfolio-market-data-backfill.service';
+import { PortfolioSnapshotBackfillService } from './services/portfolio-snapshot-backfill.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { User } from '../users/entities/user.entity';
+import { BackfillRequestDto } from './dto/backfill-request.dto';
+import { BackfillResponseDto } from './dto/backfill-response.dto';
 
 describe('PerformanceController', () => {
   let controller: PerformanceController;
-  let service: jest.Mocked<PerformanceService>;
+  let portfolioSnapshotBackfillService: jest.Mocked<PortfolioSnapshotBackfillService>;
 
   const mockUser: User = {
-    id: 'user-uuid-123',
+    id: 'user-123',
     email: 'test@example.com',
-    passwordHash: 'hashed',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    portfolios: [],
-    hashPassword: jest.fn(),
-    validatePassword: jest.fn(),
-  };
-
-  const mockHistoricalDataResponse: HistoricalDataResponseDto = {
-    portfolioId: 'portfolio-uuid-123',
-    timeframe: Timeframe.THREE_MONTHS,
-    data: [
-      {
-        date: '2023-10-01',
-        portfolioValue: 100,
-        benchmarkValue: 100,
-      },
-      {
-        date: '2023-10-02',
-        portfolioValue: 101,
-        benchmarkValue: 100.5,
-      },
-    ],
-    startDate: new Date('2023-10-01'),
-    endDate: new Date('2024-01-01'),
-  };
-
-  const mockBenchmarkComparison: BenchmarkComparisonDto = {
-    portfolioReturn: 0.15,
-    benchmarkReturn: 0.12,
-    alpha: 0.03,
-    benchmarkTicker: 'SPY',
-    timeframe: Timeframe.THREE_MONTHS,
-  };
+  } as User;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -64,131 +30,137 @@ describe('PerformanceController', () => {
             getBenchmarkComparison: jest.fn(),
           },
         },
+        {
+          provide: PortfolioMarketDataBackfillService,
+          useValue: {
+            backfillPortfolioAssets: jest.fn(),
+          },
+        },
+        {
+          provide: PortfolioSnapshotBackfillService,
+          useValue: {
+            backfillPortfolioSnapshots: jest.fn(),
+          },
+        },
       ],
     })
       .overrideGuard(JwtAuthGuard)
-      .useValue({
-        canActivate: (context: ExecutionContext) => {
-          const request = context.switchToHttp().getRequest();
-          request.user = mockUser;
-          return true;
-        },
-      })
+      .useValue({ canActivate: () => true })
       .compile();
 
     controller = module.get<PerformanceController>(PerformanceController);
-    service = module.get(PerformanceService);
+    portfolioSnapshotBackfillService = module.get<
+      jest.Mocked<PortfolioSnapshotBackfillService>
+    >(PortfolioSnapshotBackfillService);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('getHistoricalData', () => {
-    it('should return historical data for valid request', async () => {
-      service.getHistoricalData.mockResolvedValue(mockHistoricalDataResponse);
+  describe('backfillPortfolioSnapshots', () => {
+    it('should delegate to portfolioSnapshotBackfillService with correct parameters', async () => {
+      // Arrange
+      const query: BackfillRequestDto = { force: false };
+      const mockResponse: BackfillResponseDto = {
+        message: 'Portfolio snapshots backfilled successfully',
+        daysCalculated: 724,
+        startDate: '2024-01-15',
+        endDate: '2026-01-07',
+      };
 
-      const result = await controller.getHistoricalData(
-        'portfolio-uuid-123',
+      portfolioSnapshotBackfillService.backfillPortfolioSnapshots.mockResolvedValue(
+        mockResponse,
+      );
+
+      // Act
+      const result = await controller.backfillPortfolioSnapshots(
+        'portfolio-123',
         mockUser,
-        {
-          timeframe: Timeframe.THREE_MONTHS,
-          benchmarkTicker: 'SPY',
-        },
+        query,
       );
 
-      expect(result).toEqual(mockHistoricalDataResponse);
-      expect(service.getHistoricalData).toHaveBeenCalledWith(
-        'portfolio-uuid-123',
-        mockUser.id,
-        'SPY',
-        Timeframe.THREE_MONTHS,
-      );
+      // Assert
+      expect(
+        portfolioSnapshotBackfillService.backfillPortfolioSnapshots,
+      ).toHaveBeenCalledWith('portfolio-123', 'user-123', query);
+      expect(result).toEqual(mockResponse);
     });
 
-    it('should use default benchmark ticker when not provided', async () => {
-      service.getHistoricalData.mockResolvedValue(mockHistoricalDataResponse);
+    it('should pass through explicit start date to service', async () => {
+      // Arrange
+      const query: BackfillRequestDto = {
+        startDate: '2024-06-01T00:00:00Z',
+        force: false,
+      };
+      const mockResponse: BackfillResponseDto = {
+        message: 'Portfolio snapshots backfilled successfully',
+        daysCalculated: 220,
+        startDate: '2024-06-01',
+        endDate: '2026-01-07',
+      };
 
-      await controller.getHistoricalData('portfolio-uuid-123', mockUser, {
-        timeframe: Timeframe.THREE_MONTHS,
-      });
-
-      expect(service.getHistoricalData).toHaveBeenCalledWith(
-        'portfolio-uuid-123',
-        mockUser.id,
-        'SPY',
-        Timeframe.THREE_MONTHS,
+      portfolioSnapshotBackfillService.backfillPortfolioSnapshots.mockResolvedValue(
+        mockResponse,
       );
-    });
 
-    it('should handle custom benchmark ticker', async () => {
-      service.getHistoricalData.mockResolvedValue(mockHistoricalDataResponse);
-
-      await controller.getHistoricalData('portfolio-uuid-123', mockUser, {
-        timeframe: Timeframe.ONE_YEAR,
-        benchmarkTicker: 'QQQ',
-      });
-
-      expect(service.getHistoricalData).toHaveBeenCalledWith(
-        'portfolio-uuid-123',
-        mockUser.id,
-        'QQQ',
-        Timeframe.ONE_YEAR,
-      );
-    });
-  });
-
-  describe('getBenchmarkComparison', () => {
-    it('should return benchmark comparison for valid request', async () => {
-      service.getBenchmarkComparison.mockResolvedValue(mockBenchmarkComparison);
-
-      const result = await controller.getBenchmarkComparison(
-        'portfolio-uuid-123',
+      // Act
+      const result = await controller.backfillPortfolioSnapshots(
+        'portfolio-123',
         mockUser,
-        {
-          timeframe: Timeframe.THREE_MONTHS,
-          benchmarkTicker: 'SPY',
-        },
+        query,
       );
 
-      expect(result).toEqual(mockBenchmarkComparison);
-      expect(service.getBenchmarkComparison).toHaveBeenCalledWith(
-        'portfolio-uuid-123',
-        mockUser.id,
-        'SPY',
-        Timeframe.THREE_MONTHS,
-      );
+      // Assert
+      expect(
+        portfolioSnapshotBackfillService.backfillPortfolioSnapshots,
+      ).toHaveBeenCalledWith('portfolio-123', 'user-123', query);
+      expect(result.startDate).toBe('2024-06-01');
     });
 
-    it('should use default benchmark ticker when not provided', async () => {
-      service.getBenchmarkComparison.mockResolvedValue(mockBenchmarkComparison);
+    it('should pass through force=true to service', async () => {
+      // Arrange
+      const query: BackfillRequestDto = { force: true };
+      const mockResponse: BackfillResponseDto = {
+        message: 'Portfolio snapshots backfilled successfully',
+        daysCalculated: 724,
+        startDate: '2024-01-15',
+        endDate: '2026-01-07',
+      };
 
-      await controller.getBenchmarkComparison('portfolio-uuid-123', mockUser, {
-        timeframe: Timeframe.YEAR_TO_DATE,
-      });
-
-      expect(service.getBenchmarkComparison).toHaveBeenCalledWith(
-        'portfolio-uuid-123',
-        mockUser.id,
-        'SPY',
-        Timeframe.YEAR_TO_DATE,
+      portfolioSnapshotBackfillService.backfillPortfolioSnapshots.mockResolvedValue(
+        mockResponse,
       );
+
+      // Act
+      await controller.backfillPortfolioSnapshots(
+        'portfolio-123',
+        mockUser,
+        query,
+      );
+
+      // Assert
+      expect(
+        portfolioSnapshotBackfillService.backfillPortfolioSnapshots,
+      ).toHaveBeenCalledWith('portfolio-123', 'user-123', { force: true });
     });
 
-    it('should handle custom benchmark ticker', async () => {
-      service.getBenchmarkComparison.mockResolvedValue(mockBenchmarkComparison);
+    it('should pass through service errors unchanged', async () => {
+      // Arrange
+      const query: BackfillRequestDto = { force: false };
+      const error = new Error('Service error');
 
-      await controller.getBenchmarkComparison('portfolio-uuid-123', mockUser, {
-        timeframe: Timeframe.SIX_MONTHS,
-        benchmarkTicker: 'DIA',
-      });
-
-      expect(service.getBenchmarkComparison).toHaveBeenCalledWith(
-        'portfolio-uuid-123',
-        mockUser.id,
-        'DIA',
-        Timeframe.SIX_MONTHS,
+      portfolioSnapshotBackfillService.backfillPortfolioSnapshots.mockRejectedValue(
+        error,
       );
+
+      // Act & Assert
+      await expect(
+        controller.backfillPortfolioSnapshots('portfolio-123', mockUser, query),
+      ).rejects.toThrow('Service error');
+      expect(
+        portfolioSnapshotBackfillService.backfillPortfolioSnapshots,
+      ).toHaveBeenCalledWith('portfolio-123', 'user-123', query);
     });
   });
 });
