@@ -135,6 +135,48 @@ curl -X POST "http://localhost:3001/api/performance/{portfolioId}/admin/backfill
   -H "Authorization: Bearer {token}"
 ```
 
+### Scheduled Market Data Job
+
+The application automatically fetches benchmark prices daily for performance comparison.
+
+**Schedule:** Daily at 6 PM EST (Monday-Friday)  
+**Target:** Previous business day's closing prices (market data available next day)
+
+**Configuration:**
+
+Set the `BENCHMARK_TICKERS` environment variable to specify which benchmark tickers to fetch (comma-separated):
+
+```bash
+# .env
+BENCHMARK_TICKERS=SPY,QQQ,IWM,AGG,GLD
+```
+
+If not configured, the job uses these defaults: `SPY`, `QQQ`, `IWM`
+
+**Behavior:**
+- Runs automatically via NestJS cron scheduler (`@Cron` decorator)
+- Fetches market data from Polygon API
+- Stores prices in `market_data_daily` table
+- Individual ticker failures don't stop other tickers from being fetched
+- Success/failure counts logged for monitoring
+
+**Manual Trigger:**
+
+The scheduled job service also provides a manual trigger method for testing or backfilling:
+
+```typescript
+// Via dependency injection in another service/controller
+constructor(
+  private readonly scheduledMarketDataJobService: ScheduledMarketDataJobService
+) {}
+
+// Trigger with default date (yesterday)
+await this.scheduledMarketDataJobService.triggerManualFetch();
+
+// Trigger with specific date
+await this.scheduledMarketDataJobService.triggerManualFetch(new Date('2024-01-15'));
+```
+
 #### GET `/api/performance/:portfolioId/benchmark-comparison`
 
 Returns portfolio performance compared to a benchmark index (e.g., SPY).

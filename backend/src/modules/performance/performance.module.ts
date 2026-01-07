@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { PerformanceService } from './performance.service';
 import { PerformanceController } from './performance.controller';
 import { PortfolioModule } from '../portfolio/portfolio.module';
@@ -16,6 +17,7 @@ import { BenchmarkDataService } from './services/benchmark-data.service';
 import { PerformanceCalculationService } from './services/performance-calculation.service';
 import { PortfolioMarketDataBackfillService } from './services/portfolio-market-data-backfill.service';
 import { PortfolioSnapshotBackfillService } from './services/portfolio-snapshot-backfill.service';
+import { ScheduledMarketDataJobService } from './services/scheduled-market-data-job.service';
 
 @Module({
   imports: [
@@ -24,6 +26,7 @@ import { PortfolioSnapshotBackfillService } from './services/portfolio-snapshot-
       PortfolioDailyPerformance,
       Transaction,
     ]),
+    ScheduleModule.forRoot(),
     PortfolioModule,
     AssetsModule,
     AuthModule,
@@ -39,6 +42,7 @@ import { PortfolioSnapshotBackfillService } from './services/portfolio-snapshot-
     PerformanceCalculationService,
     PortfolioMarketDataBackfillService,
     PortfolioSnapshotBackfillService,
+    ScheduledMarketDataJobService,
   ],
   exports: [
     PerformanceService,
@@ -48,6 +52,7 @@ import { PortfolioSnapshotBackfillService } from './services/portfolio-snapshot-
     PerformanceCalculationService,
     PortfolioMarketDataBackfillService,
     PortfolioSnapshotBackfillService,
+    ScheduledMarketDataJobService,
   ],
 })
 export class PerformanceModule {}
