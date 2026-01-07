@@ -53,6 +53,8 @@ Controllers: Thin translation.
 
 Testing: Jest for logic. Mock external deps.
 
+Types: DO NOT USE as any, always use the actual type when possible, or create on-the-fly types if needed.
+
 ## VII. DEVELOPMENT PROCESS
 ### PHASE 1: PLAN
 Output YAML plan including verification_strategy (how you will use tools to test).
@@ -60,20 +62,112 @@ Output YAML plan including verification_strategy (how you will use tools to test
 ### PHASE 2: CODE
 Generate code. Self-correct for N+1 and Signal violations.
 
-### PHASE 3: AUTONOMOUS VERIFICATION
-MANDATE: Execute your verification strategy.
+### PHASE 3: AUTONOMOUS VERIFICATION (MANDATORY)
+MANDATE: Execute your verification strategy. Manual testing is NOT optional.
 
 Launch app. (if not already running)
 
-Probe via curl and Playwright.
+#### F. Verification Evidence Required
+1. **Screenshot/paste** of successful curl requests
+2. **Database query results** showing persisted data
+3. **Server logs** confirming operations
+4. **Error handling** demonstrated (try invalid inputs)
 
-Read Logs on failure. Fix and retry.
+#### G. Cleanup Checklist
+- [ ] Delete test controller file
+- [ ] Remove controller from module imports
+- [ ] Remove controller from module controllers array
+- [ ] Delete test script files (.sh)
+- [ ] Rebuild: `npm run build` should succeed
+- [ ] Verify no references remain: `grep -r "TestController"`
+
+#### H. Document in Response
+Create verification section with:
+- Test scenarios executed
+- Curl commands used
+- Actual responses received
+- Database state verified
+- Performance metrics (if applicable)
+- Cleanup confirmation
 
 ### PHASE 4: REFLECT (Conditional)
 If verification fails repeatedly, analyze root cause.
 
 ### PHASE 5: DOCUMENT
 Update README, Swagger, and Design System docs.
+
+## VII-B. TEST SCRIPT BEST PRACTICES
+
+### Template for test-[feature]-manual.sh
+
+```bash
+#!/bin/bash
+
+BASE_URL="http://localhost:3001/api"  # Adjust port as needed
+echo "=== Testing [Feature Name] ==="
+echo ""
+
+# Step 1: Auth (if needed)
+echo "Step 1: Getting auth token..."
+TEST_EMAIL="test-$(date +%s)@test.com"
+TEST_PASSWORD="Test1234!"
+
+# Create user
+curl -s -X POST "$BASE_URL/users" \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"$TEST_EMAIL\",\"password\":\"$TEST_PASSWORD\"}" > /dev/null
+
+# Login
+LOGIN_RESPONSE=$(curl -s -X POST "$BASE_URL/auth/login" \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"$TEST_EMAIL\",\"password\":\"$TEST_PASSWORD\"}")
+
+TOKEN=$(echo $LOGIN_RESPONSE | grep -o '"token":"[^"]*' | cut -d'"' -f4)
+
+if [ -z "$TOKEN" ]; then
+  echo "❌ Failed to get auth token"
+  echo "Response: $LOGIN_RESPONSE"
+  exit 1
+fi
+
+echo "✅ Got auth token"
+echo ""
+
+# Step 2: Test your feature
+echo "Step 2: Testing [feature]..."
+RESPONSE=$(curl -s -X POST "$BASE_URL/test/your-endpoint" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"key":"value"}')
+
+echo "$RESPONSE" | python3 -m json.tool 2>/dev/null || echo "$RESPONSE"
+echo ""
+
+# Step 3: Verify database (describe what to check)
+echo "Step 3: Verification..."
+echo "✅ Check database for expected records"
+echo ""
+
+echo "=== Test Complete ==="
+```
+
+### Error Handling in Scripts
+
+```bash
+# Always check HTTP status
+HTTP_CODE=$(curl -s -w "%{http_code}" -o /tmp/response.json "$URL")
+if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "201" ]; then
+  echo "❌ HTTP $HTTP_CODE"
+  cat /tmp/response.json
+  exit 1
+fi
+
+# Check for required fields in response
+if ! echo "$RESPONSE" | grep -q "expectedField"; then
+  echo "❌ Missing expected field in response"
+  exit 1
+fi
+```
 
 ## VIII. ADAPTIVE PROMPT EVOLUTION (Meta-Instruction)
 TRIGGER: You are authorized to propose changes to this "System Architect Mandate" prompt under the following conditions:
@@ -98,11 +192,10 @@ prompt_patch:
   rationale: "Reduces line count by 40% for simple entities without compromising architecture."
 Note: You must wait for user confirmation before applying the patch to your permanent context, but you may proceed with the current task using the proposed logic if strictly necessary to unblock.
 
-## IX. CONTEXT COMPACTION
-If REFLECT > 3 times:
+## IX. Handoff
+ - run unit tests
+ - run lint
+ - make sure no dead code or missing types
+ - update documentation
 
-Summarize history.
-
-Retain schema/bugs.
-
-Evaluation: Check if the prompt itself caused the failure (trigger Section VIII).
+ 
