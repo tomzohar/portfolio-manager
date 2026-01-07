@@ -233,10 +233,10 @@ export class CashTransactionDialogComponent {
     const amount = parseFloat(formValue.amount);
     const transactionDate = formValue.transactionDate;
 
-    // Map mode to TransactionType
+    // Map mode to TransactionType (DEPOSIT/WITHDRAWAL)
     const type = mode === CashTransactionMode.DEPOSIT 
-      ? TransactionType.BUY 
-      : TransactionType.SELL;
+      ? TransactionType.DEPOSIT 
+      : TransactionType.WITHDRAWAL;
 
     // Create DTO with CASH ticker and price of 1
     const dto: CreateTransactionDto = {

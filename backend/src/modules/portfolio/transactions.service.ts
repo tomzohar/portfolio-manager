@@ -43,6 +43,53 @@ export class TransactionsService {
     await this.verifyPortfolioOwnership(portfolioId, userId);
 
     const ticker = createTransactionDto.ticker.toUpperCase();
+
+    // Handle DEPOSIT/WITHDRAWAL (external cash flows)
+    if (
+      createTransactionDto.type === TransactionType.DEPOSIT ||
+      createTransactionDto.type === TransactionType.WITHDRAWAL
+    ) {
+      // Validate CASH ticker (redundant with DTO validation, but defensive)
+      if (ticker !== CASH_TICKER) {
+        throw new BadRequestException(
+          'DEPOSIT and WITHDRAWAL transactions must use CASH ticker',
+        );
+      }
+
+      // For WITHDRAWAL, validate sufficient cash balance
+      if (createTransactionDto.type === TransactionType.WITHDRAWAL) {
+        const cashPosition = await this.calculatePositionForTicker(
+          portfolioId,
+          CASH_TICKER,
+        );
+        if (cashPosition < createTransactionDto.quantity) {
+          throw new BadRequestException(
+            `Insufficient cash balance. Required: $${createTransactionDto.quantity.toFixed(2)}, Available: $${cashPosition.toFixed(2)}`,
+          );
+        }
+      }
+
+      const transactionDate = createTransactionDto.transactionDate
+        ? new Date(createTransactionDto.transactionDate)
+        : new Date();
+
+      // Create single transaction (no offsetting entry)
+      const transaction = this.transactionRepository.create({
+        type: createTransactionDto.type,
+        ticker: CASH_TICKER,
+        quantity: createTransactionDto.quantity,
+        price: 1, // CASH always 1:1
+        transactionDate,
+        portfolio: { id: portfolioId } as Portfolio,
+      });
+
+      const savedTransaction =
+        await this.transactionRepository.save(transaction);
+      await this.portfolioService.recalculatePositions(portfolioId);
+
+      return new TransactionResponseDto(savedTransaction);
+    }
+
     const transactionValue =
       createTransactionDto.quantity * createTransactionDto.price;
 
@@ -260,9 +307,15 @@ export class TransactionsService {
 
     let position = 0;
     for (const transaction of transactions) {
-      if (transaction.type === TransactionType.BUY) {
+      if (
+        transaction.type === TransactionType.BUY ||
+        transaction.type === TransactionType.DEPOSIT
+      ) {
         position += Number(transaction.quantity);
-      } else if (transaction.type === TransactionType.SELL) {
+      } else if (
+        transaction.type === TransactionType.SELL ||
+        transaction.type === TransactionType.WITHDRAWAL
+      ) {
         position -= Number(transaction.quantity);
       }
     }

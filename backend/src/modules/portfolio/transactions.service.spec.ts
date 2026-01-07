@@ -436,6 +436,339 @@ describe('TransactionsService', () => {
     });
   });
 
+  describe('DEPOSIT/WITHDRAWAL transactions', () => {
+    describe('DEPOSIT', () => {
+      it('should create a single DEPOSIT transaction without offsetting entry', async () => {
+        const createDto = {
+          type: TransactionType.DEPOSIT,
+          ticker: CASH_TICKER,
+          quantity: 5000,
+          price: 1,
+          transactionDate: '2024-01-01',
+        };
+
+        const depositTransaction = {
+          ...mockTransaction,
+          type: TransactionType.DEPOSIT,
+          ticker: CASH_TICKER,
+          quantity: 5000,
+          price: 1,
+        };
+
+        portfolioRepository.findOne.mockResolvedValue(mockPortfolio);
+        transactionRepository.create.mockReturnValue(
+          depositTransaction as Transaction,
+        );
+        transactionRepository.save.mockResolvedValue(
+          depositTransaction as Transaction,
+        );
+        portfolioService.recalculatePositions.mockResolvedValue(undefined);
+
+        const result = await service.createTransaction(
+          mockPortfolioId,
+          mockUserId,
+          createDto,
+        );
+
+        expect(result).toBeInstanceOf(TransactionResponseDto);
+        expect(result.type).toBe(TransactionType.DEPOSIT);
+        expect(result.ticker).toBe(CASH_TICKER);
+        expect(result.quantity).toBe(5000);
+        expect(result.price).toBe(1);
+
+        // Should only create ONE transaction (no offsetting entry)
+        expect(transactionRepository.create).toHaveBeenCalledTimes(1);
+        expect(transactionRepository.save).toHaveBeenCalledTimes(1);
+        expect(portfolioService.recalculatePositions).toHaveBeenCalledWith(
+          mockPortfolioId,
+        );
+      });
+
+      it('should throw BadRequestException when DEPOSIT uses non-CASH ticker', async () => {
+        const createDto = {
+          type: TransactionType.DEPOSIT,
+          ticker: 'AAPL',
+          quantity: 5000,
+          price: 1,
+          transactionDate: '2024-01-01',
+        };
+
+        portfolioRepository.findOne.mockResolvedValue(mockPortfolio);
+
+        await expect(
+          service.createTransaction(mockPortfolioId, mockUserId, createDto),
+        ).rejects.toThrow(BadRequestException);
+
+        await expect(
+          service.createTransaction(mockPortfolioId, mockUserId, createDto),
+        ).rejects.toThrow(
+          /DEPOSIT and WITHDRAWAL transactions must use CASH ticker/,
+        );
+      });
+    });
+
+    describe('WITHDRAWAL', () => {
+      it('should create a single WITHDRAWAL transaction without offsetting entry', async () => {
+        const createDto = {
+          type: TransactionType.WITHDRAWAL,
+          ticker: CASH_TICKER,
+          quantity: 2000,
+          price: 1,
+          transactionDate: '2024-01-15',
+        };
+
+        const withdrawalTransaction = {
+          ...mockTransaction,
+          type: TransactionType.WITHDRAWAL,
+          ticker: CASH_TICKER,
+          quantity: 2000,
+          price: 1,
+        };
+
+        // Mock sufficient CASH balance for withdrawal
+        const cashTransactions = [
+          {
+            type: TransactionType.DEPOSIT,
+            ticker: CASH_TICKER,
+            quantity: 5000,
+            price: 1,
+          } as Transaction,
+        ];
+
+        portfolioRepository.findOne.mockResolvedValue(mockPortfolio);
+        transactionRepository.find.mockResolvedValue(cashTransactions);
+        transactionRepository.create.mockReturnValue(
+          withdrawalTransaction as Transaction,
+        );
+        transactionRepository.save.mockResolvedValue(
+          withdrawalTransaction as Transaction,
+        );
+        portfolioService.recalculatePositions.mockResolvedValue(undefined);
+
+        const result = await service.createTransaction(
+          mockPortfolioId,
+          mockUserId,
+          createDto,
+        );
+
+        expect(result).toBeInstanceOf(TransactionResponseDto);
+        expect(result.type).toBe(TransactionType.WITHDRAWAL);
+        expect(result.ticker).toBe(CASH_TICKER);
+        expect(result.quantity).toBe(2000);
+
+        // Should only create ONE transaction (no offsetting entry)
+        expect(transactionRepository.create).toHaveBeenCalledTimes(1);
+        expect(transactionRepository.save).toHaveBeenCalledTimes(1);
+        expect(portfolioService.recalculatePositions).toHaveBeenCalledWith(
+          mockPortfolioId,
+        );
+      });
+
+      it('should throw BadRequestException when WITHDRAWAL uses non-CASH ticker', async () => {
+        const createDto = {
+          type: TransactionType.WITHDRAWAL,
+          ticker: 'AAPL',
+          quantity: 2000,
+          price: 1,
+          transactionDate: '2024-01-15',
+        };
+
+        portfolioRepository.findOne.mockResolvedValue(mockPortfolio);
+
+        await expect(
+          service.createTransaction(mockPortfolioId, mockUserId, createDto),
+        ).rejects.toThrow(BadRequestException);
+
+        await expect(
+          service.createTransaction(mockPortfolioId, mockUserId, createDto),
+        ).rejects.toThrow(
+          /DEPOSIT and WITHDRAWAL transactions must use CASH ticker/,
+        );
+      });
+
+      it('should throw BadRequestException when insufficient cash for WITHDRAWAL', async () => {
+        const createDto = {
+          type: TransactionType.WITHDRAWAL,
+          ticker: CASH_TICKER,
+          quantity: 10000,
+          price: 1,
+          transactionDate: '2024-01-15',
+        };
+
+        // Mock insufficient CASH balance (only 3000, need 10000)
+        const cashTransactions = [
+          {
+            type: TransactionType.DEPOSIT,
+            ticker: CASH_TICKER,
+            quantity: 3000,
+            price: 1,
+          } as Transaction,
+        ];
+
+        portfolioRepository.findOne.mockResolvedValue(mockPortfolio);
+        transactionRepository.find.mockResolvedValue(cashTransactions);
+
+        await expect(
+          service.createTransaction(mockPortfolioId, mockUserId, createDto),
+        ).rejects.toThrow(BadRequestException);
+
+        await expect(
+          service.createTransaction(mockPortfolioId, mockUserId, createDto),
+        ).rejects.toThrow(/Insufficient cash balance/);
+      });
+    });
+
+    describe('position calculations', () => {
+      it('should include DEPOSIT in position calculation', async () => {
+        // Mock transactions: initial deposit + another deposit
+        const transactions = [
+          {
+            type: TransactionType.DEPOSIT,
+            ticker: CASH_TICKER,
+            quantity: 5000,
+            price: 1,
+          } as Transaction,
+          {
+            type: TransactionType.DEPOSIT,
+            ticker: CASH_TICKER,
+            quantity: 3000,
+            price: 1,
+          } as Transaction,
+        ];
+
+        portfolioRepository.findOne.mockResolvedValue(mockPortfolio);
+        transactionRepository.find.mockResolvedValue(transactions);
+
+        // Try to withdraw more than deposited to trigger position calculation
+        const createDto = {
+          type: TransactionType.WITHDRAWAL,
+          ticker: CASH_TICKER,
+          quantity: 9000, // More than 8000 available
+          price: 1,
+        };
+
+        await expect(
+          service.createTransaction(mockPortfolioId, mockUserId, createDto),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('should include WITHDRAWAL in position calculation', async () => {
+        // Mock transactions: deposit followed by withdrawal
+        const transactions = [
+          {
+            type: TransactionType.DEPOSIT,
+            ticker: CASH_TICKER,
+            quantity: 10000,
+            price: 1,
+          } as Transaction,
+          {
+            type: TransactionType.WITHDRAWAL,
+            ticker: CASH_TICKER,
+            quantity: 3000,
+            price: 1,
+          } as Transaction,
+        ];
+
+        portfolioRepository.findOne.mockResolvedValue(mockPortfolio);
+        transactionRepository.find.mockResolvedValue(transactions);
+
+        // Try to buy with more cash than available (10000 - 3000 = 7000)
+        const createDto = {
+          type: TransactionType.BUY,
+          ticker: 'AAPL',
+          quantity: 50,
+          price: 150, // Total: 7500 > 7000 available
+        };
+
+        await expect(
+          service.createTransaction(mockPortfolioId, mockUserId, createDto),
+        ).rejects.toThrow(BadRequestException);
+
+        await expect(
+          service.createTransaction(mockPortfolioId, mockUserId, createDto),
+        ).rejects.toThrow(/Insufficient cash balance/);
+      });
+    });
+
+    describe('delete operations', () => {
+      it('should delete DEPOSIT transaction without attempting to delete offsetting transaction', async () => {
+        const depositTransaction = {
+          id: 'deposit-transaction-1',
+          type: TransactionType.DEPOSIT,
+          ticker: CASH_TICKER,
+          quantity: 5000,
+          price: 1,
+          transactionDate: new Date('2024-01-01'),
+          portfolio: mockPortfolio,
+          createdAt: new Date('2024-01-01'),
+          updatedAt: new Date('2024-01-01'),
+        } as Transaction;
+
+        portfolioRepository.findOne.mockResolvedValue(mockPortfolio);
+        transactionRepository.findOne.mockResolvedValue(depositTransaction);
+        transactionRepository.delete.mockResolvedValue({
+          affected: 1,
+          raw: [],
+        });
+        portfolioService.recalculatePositions.mockResolvedValue(undefined);
+
+        await service.deleteTransaction(
+          'deposit-transaction-1',
+          mockPortfolioId,
+          mockUserId,
+        );
+
+        // Should only delete the DEPOSIT transaction (no offsetting transaction)
+        expect(transactionRepository.delete).toHaveBeenCalledTimes(1);
+        expect(transactionRepository.delete).toHaveBeenCalledWith({
+          id: 'deposit-transaction-1',
+          portfolio: { id: mockPortfolioId },
+        });
+        expect(portfolioService.recalculatePositions).toHaveBeenCalledWith(
+          mockPortfolioId,
+        );
+      });
+
+      it('should delete WITHDRAWAL transaction without attempting to delete offsetting transaction', async () => {
+        const withdrawalTransaction = {
+          id: 'withdrawal-transaction-1',
+          type: TransactionType.WITHDRAWAL,
+          ticker: CASH_TICKER,
+          quantity: 2000,
+          price: 1,
+          transactionDate: new Date('2024-01-15'),
+          portfolio: mockPortfolio,
+          createdAt: new Date('2024-01-15'),
+          updatedAt: new Date('2024-01-15'),
+        } as Transaction;
+
+        portfolioRepository.findOne.mockResolvedValue(mockPortfolio);
+        transactionRepository.findOne.mockResolvedValue(withdrawalTransaction);
+        transactionRepository.delete.mockResolvedValue({
+          affected: 1,
+          raw: [],
+        });
+        portfolioService.recalculatePositions.mockResolvedValue(undefined);
+
+        await service.deleteTransaction(
+          'withdrawal-transaction-1',
+          mockPortfolioId,
+          mockUserId,
+        );
+
+        // Should only delete the WITHDRAWAL transaction (no offsetting transaction)
+        expect(transactionRepository.delete).toHaveBeenCalledTimes(1);
+        expect(transactionRepository.delete).toHaveBeenCalledWith({
+          id: 'withdrawal-transaction-1',
+          portfolio: { id: mockPortfolioId },
+        });
+        expect(portfolioService.recalculatePositions).toHaveBeenCalledWith(
+          mockPortfolioId,
+        );
+      });
+    });
+  });
+
   describe('deleteTransaction', () => {
     it('should delete a stock transaction and its offsetting CASH transaction', async () => {
       const stockTransaction = {

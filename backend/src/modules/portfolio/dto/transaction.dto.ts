@@ -4,16 +4,33 @@ import { z } from 'zod';
 import { TransactionType } from '../entities/transaction.entity';
 
 // Create Transaction DTO (Zod schema)
-export const CreateTransactionSchema = z.object({
-  type: z.nativeEnum(TransactionType),
-  ticker: z
-    .string()
-    .min(1)
-    .transform((val) => val.toUpperCase()),
-  quantity: z.number().positive(),
-  price: z.number().nonnegative(),
-  transactionDate: z.string().datetime().optional(),
-});
+export const CreateTransactionSchema = z
+  .object({
+    type: z.nativeEnum(TransactionType),
+    ticker: z
+      .string()
+      .min(1)
+      .transform((val) => val.toUpperCase()),
+    quantity: z.number().positive(),
+    price: z.number().nonnegative(),
+    transactionDate: z.string().datetime().optional(),
+  })
+  .refine(
+    (data) => {
+      // DEPOSIT/WITHDRAWAL must use CASH ticker
+      if (
+        data.type === TransactionType.DEPOSIT ||
+        data.type === TransactionType.WITHDRAWAL
+      ) {
+        return data.ticker === 'CASH';
+      }
+      return true;
+    },
+    {
+      message: 'DEPOSIT and WITHDRAWAL transactions must use CASH ticker',
+      path: ['ticker'],
+    },
+  );
 
 export class CreateTransactionDto extends createZodDto(
   CreateTransactionSchema,

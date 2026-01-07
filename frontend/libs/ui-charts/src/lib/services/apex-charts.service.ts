@@ -79,10 +79,16 @@ export class ApexChartsService extends ChartService {
       xaxis: {
         labels: {
           style: {
-            colors: options.xAxis?.labels?.style?.colors || '#71717b',
-            fontSize: options.xAxis?.labels?.style?.fontSize || '11px',
+            colors: options.xAxis?.labels?.style?.colors || '#9e9e9e',
+            fontSize: options.xAxis?.labels?.style?.fontSize || '10px',
           },
+          formatter: options.xAxis?.labels?.formatter,
+          rotate: -45, // Angle labels for better readability
+          rotateAlways: false,
+          hideOverlappingLabels: true,
+          trim: true,
         },
+        tickAmount: 8, // Show max 8 ticks on X-axis (reduces crowding)
         axisBorder: {
           show: false,
         },

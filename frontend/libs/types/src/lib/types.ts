@@ -56,7 +56,8 @@ export interface AddAssetDto {
 export enum TransactionType {
   BUY = 'BUY',
   SELL = 'SELL',
-  DEPOSIT = 'DEPOSIT'
+  DEPOSIT = 'DEPOSIT',
+  WITHDRAWAL = 'WITHDRAWAL',
 }
 
 export interface DashboardTransaction {

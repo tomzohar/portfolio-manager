@@ -62,12 +62,36 @@ export class PerformanceChartComponent {
           labels: {
             formatter: (value: number | string) => {
               const numValue = typeof value === 'string' ? parseFloat(value) : value;
-              return numValue.toFixed(1);
+              // Show as percentage change from 100
+              const percentChange = numValue - 100;
+              const sign = percentChange > 0 ? '+' : '';
+              return `${sign}${percentChange.toFixed(1)}%`;
+            },
+          },
+        },
+        xAxis: {
+          labels: {
+            formatter: (value: number | string) => {
+              // Handle null/undefined values
+              if (value === null || value === undefined) return '';
+              
+              // Show only month and day for less crowding
+              const dateStr = value.toString();
+              const date = new Date(dateStr);
+              return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            },
+            style: {
+              fontSize: '10px', // Smaller font for less crowding
             },
           },
         },
         tooltip: {
-          formatter: (value: number) => value.toFixed(2),
+          formatter: (value: number) => {
+            // Tooltip shows percentage change
+            const percentChange = value - 100;
+            const sign = percentChange > 0 ? '+' : '';
+            return `${sign}${percentChange.toFixed(2)}%`;
+          },
         },
         responsive: [
           {
@@ -78,7 +102,7 @@ export class PerformanceChartComponent {
       }),
       metadata: {
         title: 'Portfolio vs Benchmark Performance',
-        description: 'Normalized to 100 at start date',
+        description: 'Shows percentage change from initial value',
         tags: ['performance', 'benchmark'],
         createdBy: 'user',
       },

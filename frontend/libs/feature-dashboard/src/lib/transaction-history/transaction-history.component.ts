@@ -138,9 +138,17 @@ export class TransactionHistoryComponent {
    * Show confirmation dialog before deleting transaction
    */
   confirmDelete(transaction: DisplayTransaction): void {
+    // Format message based on transaction type
+    let quantityText = '';
+    if (transaction.type === TransactionType.DEPOSIT || transaction.type === TransactionType.WITHDRAWAL) {
+      quantityText = `$${transaction.quantity.toFixed(2)}`;
+    } else {
+      quantityText = `${transaction.quantity} shares of ${transaction.ticker}`;
+    }
+
     const config: ConfirmationDialogConfig = {
       title: 'Delete Transaction',
-      message: `Are you sure you want to delete this ${transaction.type} transaction for ${transaction.quantity} shares of ${transaction.ticker}? This will recalculate your portfolio positions.`,
+      message: `Are you sure you want to delete this ${transaction.type} transaction for ${quantityText}? This will recalculate your portfolio positions.`,
       confirmText: 'Delete',
       cancelText: 'Cancel',
       confirmColor: 'warn',
@@ -174,6 +182,7 @@ export class TransactionHistoryComponent {
       case TransactionType.DEPOSIT:
         return 'buy';
       case TransactionType.SELL:
+      case TransactionType.WITHDRAWAL:
         return 'sell';
       default:
         return 'hold';

@@ -621,5 +621,65 @@ describe('PerformanceService', () => {
       // The start date should be approximately 1 month ago (but portfolio might be younger)
       expect(result.startDate).toBeDefined();
     });
+
+    it('should correctly handle CASH deposits in performance calculation', async () => {
+      // Arrange - Scenario from the bug report
+      // User deposits $10,000, buys stocks, stocks double in value
+      const depositDate = new Date('2024-01-01');
+      const buyDate = new Date('2024-01-02');
+
+      portfolioService.findOne.mockResolvedValue({
+        id: mockPortfolioId,
+      } as any);
+
+      // Mock transactions:
+      // 1. Deposit $10,000 cash
+      // 2. Buy $10,000 worth of stock (100 shares @ $100)
+      transactionsService.getTransactions.mockResolvedValue([
+        {
+          type: 'BUY',
+          ticker: 'CASH',
+          quantity: 10000,
+          price: 1,
+          transactionDate: depositDate,
+        } as any,
+        {
+          type: 'BUY',
+          ticker: 'AAPL',
+          quantity: 100,
+          price: 100,
+          transactionDate: buyDate,
+        } as any,
+      ]);
+
+      // Portfolio now worth $20,000 (stocks doubled)
+      portfolioService.getPortfolioSummary.mockResolvedValue({
+        totalValue: 20000,
+        unrealizedPL: 10000, // Stocks gained $10,000
+      } as any);
+
+      // Act
+      const result = await service.calculateInternalReturn(
+        mockPortfolioId,
+        mockUserId,
+        Timeframe.ALL_TIME,
+      );
+
+      // Assert
+      // Starting value should be $0 (before deposit)
+      // Cash flows should include:
+      // 1. Deposit: -$10,000 (on Jan 1, 2024)
+      // 2. Final value: +$20,000 (on current date ~2 years later)
+      // Time period: ~2 years
+      // Simple return: 100%, Annualized: ~41% (because it's spread over 2 years)
+
+      expect(result).toBeDefined();
+      expect(result.returnPercentage).toBeGreaterThan(0); // Should be positive (this was the bug!)
+      expect(result.returnPercentage).toBeGreaterThan(0.3); // At least 30% annualized
+      expect(result.returnPercentage).toBeLessThan(0.5); // Less than 50% annualized
+      expect(result.cashFlows.length).toBe(2); // Deposit + final value (no stock transactions!)
+      expect(result.cashFlows[0].amount).toBeCloseTo(-10000, 0); // Deposit
+      expect(result.cashFlows[1].amount).toBeCloseTo(20000, 0); // Final value
+    });
   });
 });

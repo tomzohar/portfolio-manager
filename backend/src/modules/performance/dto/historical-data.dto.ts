@@ -63,6 +63,15 @@ export class HistoricalDataResponseDto {
   })
   endDate: Date;
 
+  @ApiProperty({
+    description:
+      'Warning message if cash deposits detected during period. Indicates the chart shows investment performance adjusted for cash flows.',
+    example:
+      'Portfolio returns are adjusted for cash deposits during this period. The chart shows investment performance, not total value growth.',
+    required: false,
+  })
+  warning?: string;
+
   constructor(partial: Partial<HistoricalDataResponseDto>) {
     Object.assign(this, partial);
   }

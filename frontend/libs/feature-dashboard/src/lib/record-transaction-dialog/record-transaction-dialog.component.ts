@@ -148,10 +148,35 @@ export class RecordTransactionDialogComponent {
     initialValue: this.form.value,
   });
 
+  /** Computed: Check if user is attempting invalid CASH transaction */
+  readonly isInvalidCashTransaction = computed(() => {
+    const formValue = this.formChanges();
+    const type = formValue?.type || this.typeControl.value;
+    const ticker = (formValue?.ticker || this.tickerControl.value || '').toUpperCase();
+    
+    // BUY/SELL transactions with CASH ticker are invalid
+    // Users should use DEPOSIT/WITHDRAWAL for cash management
+    return (type === TransactionType.BUY || type === TransactionType.SELL) 
+           && ticker === 'CASH';
+  });
+
+  /** Computed: Warning message for invalid CASH transaction */
+  readonly cashTransactionWarning = computed(() => {
+    if (this.isInvalidCashTransaction()) {
+      return 'Cannot BUY or SELL CASH. Please use the "Manage Cash" button to deposit or withdraw funds.';
+    }
+    return null;
+  });
+
   /** Computed: Whether the form is valid */
   readonly isFormValid = computed(() => {
     // Trigger reactivity by reading formChanges
     const formValue = this.formChanges();
+    
+    // Validate no BUY/SELL CASH transactions
+    if (this.isInvalidCashTransaction()) {
+      return false;
+    }
     
     // Additional validation for SELL transactions
     const type = formValue?.type || this.typeControl.value;

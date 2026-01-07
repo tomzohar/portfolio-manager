@@ -162,6 +162,8 @@ SQL Check: Ensure no N+1 loops in Service logic.
 
 PHASE 3: TEST
 Generate spec.ts files. Mock the Repository.
+read the swagger api from localhost:3001/api to see the available endpoints.
+use it to interact with the application and perform manual testing to your development.
 
 PHASE 4: REFLECT (Conditional)
 If execution fails or mandates are violated (e.g., "QueryFailedError" or "Circular Dependency detected"), assume the persona of a Critical Backend Auditor.

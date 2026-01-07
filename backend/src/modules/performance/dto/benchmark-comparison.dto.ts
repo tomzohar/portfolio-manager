@@ -20,6 +20,37 @@ export class BenchmarkComparisonDto {
   @ApiProperty({ description: 'Timeframe of analysis', enum: Timeframe })
   timeframe: Timeframe;
 
+  @ApiProperty({
+    description:
+      'Portfolio period return (actual gain for the period, as decimal)',
+    example: 0.025,
+    required: false,
+  })
+  portfolioPeriodReturn?: number;
+
+  @ApiProperty({
+    description:
+      'Benchmark period return (actual gain for the period, as decimal)',
+    example: 0.015,
+    required: false,
+  })
+  benchmarkPeriodReturn?: number;
+
+  @ApiProperty({
+    description: 'Number of days in the analysis period',
+    example: 30,
+    required: false,
+  })
+  periodDays?: number;
+
+  @ApiProperty({
+    description: 'Warning message for short timeframes',
+    example:
+      'Returns for periods less than 90 days are annualized and may not reflect sustained performance.',
+    required: false,
+  })
+  warning?: string;
+
   constructor(partial: Partial<BenchmarkComparisonDto>) {
     Object.assign(this, partial);
   }

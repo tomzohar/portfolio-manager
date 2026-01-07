@@ -67,7 +67,7 @@ export class PortfolioService {
     if (initialInvestment && initialInvestment > 0) {
       await this.transactionRepository.save(
         this.transactionRepository.create({
-          type: TransactionType.BUY,
+          type: TransactionType.DEPOSIT,
           ticker: CASH_TICKER,
           quantity: initialInvestment,
           price: 1, // Cash is always 1:1
@@ -431,11 +431,17 @@ export class PortfolioService {
 
       const position = positionMap.get(ticker) || { quantity: 0, totalCost: 0 };
 
-      if (transaction.type === TransactionType.BUY) {
+      if (
+        transaction.type === TransactionType.BUY ||
+        transaction.type === TransactionType.DEPOSIT
+      ) {
         // Add to position and update total cost
         position.quantity += qty;
         position.totalCost += qty * price;
-      } else if (transaction.type === TransactionType.SELL) {
+      } else if (
+        transaction.type === TransactionType.SELL ||
+        transaction.type === TransactionType.WITHDRAWAL
+      ) {
         // Reduce position
         // NOTE: For CASH, SELL can happen before BUY due to double-entry bookkeeping
         // In this case, quantity goes negative temporarily, which is valid for CASH
