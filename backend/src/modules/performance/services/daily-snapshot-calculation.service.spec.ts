@@ -511,9 +511,7 @@ describe('DailySnapshotCalculationService', () => {
         // Should throw exception
         await expect(
           service.calculateDailySnapshot(mockPortfolioId, testDate),
-        ).rejects.toThrow(
-          'No market data found for AAPL on 2024-01-02',
-        );
+        ).rejects.toThrow('No market data found for AAPL on 2024-01-02');
       });
     });
 
@@ -841,6 +839,7 @@ describe('DailySnapshotCalculationService', () => {
         mockQueryRunner.manager!.findOne = jest.fn().mockResolvedValue(null);
         mockQueryRunner.manager!.create = jest
           .fn()
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
           .mockImplementation((entity, data) => data);
         mockQueryRunner.manager!.save = jest.fn().mockResolvedValue({});
 
@@ -849,7 +848,9 @@ describe('DailySnapshotCalculationService', () => {
         // Verify market data was fetched ONCE (batch fetch)
         expect(marketDataSpy).toHaveBeenCalledTimes(1);
         expect(marketDataSpy).toHaveBeenCalledWith({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           where: expect.objectContaining({
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             ticker: expect.objectContaining({
               _type: 'in',
               _value: ['AAPL', 'MSFT'],
@@ -861,4 +862,3 @@ describe('DailySnapshotCalculationService', () => {
     });
   });
 });
-

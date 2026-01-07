@@ -12,6 +12,9 @@ import { PortfolioDailyPerformance } from './entities/portfolio-daily-performanc
 import { Transaction } from '../portfolio/entities/transaction.entity';
 import { MarketDataIngestionService } from './services/market-data-ingestion.service';
 import { DailySnapshotCalculationService } from './services/daily-snapshot-calculation.service';
+import { BenchmarkDataService } from './services/benchmark-data.service';
+import { PerformanceCalculationService } from './services/performance-calculation.service';
+import { PortfolioMarketDataBackfillService } from './services/portfolio-market-data-backfill.service';
 
 @Module({
   imports: [
@@ -31,11 +34,17 @@ import { DailySnapshotCalculationService } from './services/daily-snapshot-calcu
     PerformanceService,
     MarketDataIngestionService,
     DailySnapshotCalculationService,
+    BenchmarkDataService,
+    PerformanceCalculationService,
+    PortfolioMarketDataBackfillService,
   ],
   exports: [
     PerformanceService,
     MarketDataIngestionService,
     DailySnapshotCalculationService,
+    BenchmarkDataService,
+    PerformanceCalculationService,
+    PortfolioMarketDataBackfillService,
   ],
 })
 export class PerformanceModule {}

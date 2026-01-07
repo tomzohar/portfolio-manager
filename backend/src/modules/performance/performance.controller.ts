@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Param,
   Query,
   UseGuards,
@@ -21,6 +22,7 @@ import { GetHistoricalDataQueryDto } from './dto/get-historical-data-query.dto';
 import { GetBenchmarkComparisonQueryDto } from './dto/get-benchmark-comparison-query.dto';
 import { HistoricalDataResponseDto } from './dto/historical-data.dto';
 import { BenchmarkComparisonDto } from './dto/benchmark-comparison.dto';
+import { PortfolioMarketDataBackfillService } from './services/portfolio-market-data-backfill.service';
 
 /**
  * PerformanceController
@@ -35,7 +37,10 @@ import { BenchmarkComparisonDto } from './dto/benchmark-comparison.dto';
 export class PerformanceController {
   private readonly logger = new Logger(PerformanceController.name);
 
-  constructor(private readonly performanceService: PerformanceService) {}
+  constructor(
+    private readonly performanceService: PerformanceService,
+    private readonly portfolioMarketDataBackfillService: PortfolioMarketDataBackfillService,
+  ) {}
 
   /**
    * Get historical performance data for chart visualization
@@ -153,5 +158,60 @@ export class PerformanceController {
       benchmarkTicker,
       query.timeframe,
     );
+  }
+
+  /**
+   * Backfill market data for all assets in a portfolio (TEST ENDPOINT)
+   *
+   * @param portfolioId - Portfolio UUID
+   * @param user - Authenticated user
+   * @returns Backfill results summary
+   */
+  @Post(':portfolioId/admin/backfill-market-data')
+  @ApiOperation({
+    summary: '[TEST] Backfill market data for portfolio assets',
+    description:
+      'Fetches historical market data for all assets in the portfolio. ' +
+      'This is a convenience endpoint for testing. ' +
+      'In production, market data should be populated via scheduled jobs.',
+  })
+  @ApiParam({
+    name: 'portfolioId',
+    description: 'Portfolio UUID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Market data backfill completed',
+  })
+  async backfillPortfolioMarketData(
+    @Param('portfolioId') portfolioId: string,
+    @CurrentUser() user: User,
+    @Query('benchmarks') benchmarks?: string,
+  ): Promise<{
+    message: string;
+    assetsProcessed: number;
+    benchmarksProcessed: number;
+    totalInserted: number;
+    totalFailed: number;
+  }> {
+    this.logger.log(
+      `Backfilling market data for portfolio ${portfolioId} (user: ${user.id})`,
+    );
+
+    const benchmarkTickers = benchmarks
+      ? benchmarks.split(',').map((t) => t.trim())
+      : ['SPY'];
+
+    const result =
+      await this.portfolioMarketDataBackfillService.backfillPortfolioAssets(
+        portfolioId,
+        benchmarkTickers,
+      );
+
+    return {
+      message: 'Market data backfill completed',
+      ...result,
+    };
   }
 }

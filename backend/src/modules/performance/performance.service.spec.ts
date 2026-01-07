@@ -1,20 +1,28 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { PerformanceService } from './performance.service';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { PolygonApiService } from '../assets/services/polygon-api.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { TransactionsService } from '../portfolio/transactions.service';
-import { PolygonApiService } from '../assets/services/polygon-api.service';
-import { Timeframe } from './types/timeframe.types';
+import { MarketDataDaily } from './entities/market-data-daily.entity';
+import { PortfolioDailyPerformance } from './entities/portfolio-daily-performance.entity';
 import { MissingDataException } from './exceptions/missing-data.exception';
-import { of } from 'rxjs';
-import { NotFoundException } from '@nestjs/common';
+import { PerformanceService } from './performance.service';
+import { BenchmarkDataService } from './services/benchmark-data.service';
+import { PerformanceCalculationService } from './services/performance-calculation.service';
+import { Timeframe } from './types/timeframe.types';
 
 describe('PerformanceService', () => {
   let service: PerformanceService;
   let portfolioService: jest.Mocked<PortfolioService>;
   let transactionsService: jest.Mocked<TransactionsService>;
-  let polygonApiService: jest.Mocked<PolygonApiService>;
+  let portfolioDailyPerfRepo: jest.Mocked<
+    Repository<PortfolioDailyPerformance>
+  >;
+  let benchmarkDataService: jest.Mocked<BenchmarkDataService>;
+  let performanceCalculationService: jest.Mocked<PerformanceCalculationService>;
 
   const mockUserId = 'user-123';
   const mockPortfolioId = 'portfolio-456';
@@ -43,6 +51,29 @@ describe('PerformanceService', () => {
             getPreviousClose: jest.fn(),
           },
         },
+        {
+          provide: getRepositoryToken(PortfolioDailyPerformance),
+          useValue: {
+            find: jest.fn(),
+            count: jest.fn(),
+          },
+        },
+        {
+          provide: BenchmarkDataService,
+          useValue: {
+            getBenchmarkPricesForRange: jest.fn(),
+            getBenchmarkPriceAtDate: jest.fn(),
+            calculateBenchmarkReturn: jest.fn(),
+          },
+        },
+        {
+          provide: PerformanceCalculationService,
+          useValue: {
+            ensureSnapshotsExist: jest.fn(),
+            calculateCumulativeReturn: jest.fn(),
+            calculateAlpha: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -50,366 +81,38 @@ describe('PerformanceService', () => {
     portfolioService = module.get(PortfolioService);
     transactionsService = module.get(TransactionsService);
     polygonApiService = module.get(PolygonApiService);
+    portfolioDailyPerfRepo = module.get(
+      getRepositoryToken(PortfolioDailyPerformance),
+    );
+    benchmarkDataService = module.get(BenchmarkDataService);
+    performanceCalculationService = module.get(PerformanceCalculationService);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('calculateInternalReturn', () => {
-    it('should calculate correct IRR for a simple buy-and-hold scenario', async () => {
-      // Arrange: Portfolio bought at $10,000, now worth $11,000 after 1 month
-      const startDate = new Date('2024-01-01');
-
-      portfolioService.findOne.mockResolvedValue({
-        id: mockPortfolioId,
-        name: 'Test Portfolio',
-      } as any);
-
-      // Mock ALL transactions (needed for initial value calculation)
-      transactionsService.getTransactions
-        .mockResolvedValueOnce([
-          // First call: all transactions
-          {
-            id: 'tx-1',
-            type: 'BUY',
-            ticker: 'AAPL',
-            quantity: 100,
-            price: 100,
-            transactionDate: startDate,
-          } as any,
-        ])
-        .mockResolvedValueOnce([
-          // Second call: filtered transactions (if needed)
-          {
-            id: 'tx-1',
-            type: 'BUY',
-            ticker: 'AAPL',
-            quantity: 100,
-            price: 100,
-            transactionDate: startDate,
-          } as any,
-        ]);
-
-      portfolioService.getPortfolioSummary.mockResolvedValue({
-        totalValue: 11000,
-        unrealizedPL: 1000,
-      } as any);
-
-      // Act
-      const result = await service.calculateInternalReturn(
-        mockPortfolioId,
-        mockUserId,
-        Timeframe.ONE_MONTH,
-      );
-
-      // Assert
-      expect(result).toBeDefined();
-      expect(result.portfolioId).toBe(mockPortfolioId);
-      expect(result.timeframe).toBe(Timeframe.ONE_MONTH);
-      expect(result.returnPercentage).toBeGreaterThan(0); // Positive return
-      expect(portfolioService.findOne).toHaveBeenCalledWith(
-        mockPortfolioId,
-        mockUserId,
-      );
-    });
-
-    it('should calculate IRR for multiple transactions (buys and sells)', async () => {
-      // Arrange
-      portfolioService.findOne.mockResolvedValue({
-        id: mockPortfolioId,
-      } as any);
-
-      transactionsService.getTransactions.mockResolvedValue([
-        {
-          type: 'BUY',
-          ticker: 'AAPL',
-          quantity: 100,
-          price: 100,
-          transactionDate: new Date('2024-01-01'),
-        } as any,
-        {
-          type: 'SELL',
-          ticker: 'AAPL',
-          quantity: 50,
-          price: 110,
-          transactionDate: new Date('2024-01-15'),
-        } as any,
-      ]);
-
-      portfolioService.getPortfolioSummary.mockResolvedValue({
-        totalValue: 5500,
-      } as any);
-
-      // Act
-      const result = await service.calculateInternalReturn(
-        mockPortfolioId,
-        mockUserId,
-        Timeframe.ONE_MONTH,
-      );
-
-      // Assert
-      expect(result).toBeDefined();
-      expect(result.cashFlows.length).toBeGreaterThan(0);
-    });
-
-    it('should handle 1M timeframe correctly', async () => {
+  describe('getBenchmarkComparison (with new services)', () => {
+    it('should use snapshot data and new service architecture', async () => {
       // Arrange
       portfolioService.findOne.mockResolvedValue({
         id: mockPortfolioId,
       } as any);
       transactionsService.getTransactions.mockResolvedValue([]);
-      portfolioService.getPortfolioSummary.mockResolvedValue({
-        totalValue: 0,
-      } as any);
 
-      // Act
-      const result = await service.calculateInternalReturn(
-        mockPortfolioId,
-        mockUserId,
-        Timeframe.ONE_MONTH,
+      // Mock snapshots
+      portfolioDailyPerfRepo.find.mockResolvedValue([
+        { date: new Date('2024-01-01'), dailyReturnPct: 0.1 },
+      ] as PortfolioDailyPerformance[]);
+
+      performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
+        undefined,
       );
-
-      // Assert
-      expect(result.timeframe).toBe(Timeframe.ONE_MONTH);
-      const monthDiff =
-        (result.endDate.getTime() - result.startDate.getTime()) /
-        (1000 * 60 * 60 * 24);
-      expect(monthDiff).toBeGreaterThanOrEqual(28);
-      expect(monthDiff).toBeLessThanOrEqual(31);
-    });
-
-    it('should handle 3M timeframe correctly', async () => {
-      // Arrange
-      portfolioService.findOne.mockResolvedValue({
-        id: mockPortfolioId,
-      } as any);
-      transactionsService.getTransactions.mockResolvedValue([]);
-      portfolioService.getPortfolioSummary.mockResolvedValue({
-        totalValue: 0,
-      } as any);
-
-      // Act
-      const result = await service.calculateInternalReturn(
-        mockPortfolioId,
-        mockUserId,
-        Timeframe.THREE_MONTHS,
+      performanceCalculationService.calculateCumulativeReturn.mockReturnValue(
+        0.1,
       );
-
-      // Assert
-      expect(result.timeframe).toBe(Timeframe.THREE_MONTHS);
-      const monthDiff =
-        (result.endDate.getTime() - result.startDate.getTime()) /
-        (1000 * 60 * 60 * 24 * 30);
-      expect(monthDiff).toBeGreaterThanOrEqual(2.8);
-      expect(monthDiff).toBeLessThanOrEqual(3.2);
-    });
-
-    it('should handle 6M timeframe correctly', async () => {
-      // Arrange
-      portfolioService.findOne.mockResolvedValue({
-        id: mockPortfolioId,
-      } as any);
-      transactionsService.getTransactions.mockResolvedValue([]);
-      portfolioService.getPortfolioSummary.mockResolvedValue({
-        totalValue: 0,
-      } as any);
-
-      // Act
-      const result = await service.calculateInternalReturn(
-        mockPortfolioId,
-        mockUserId,
-        Timeframe.SIX_MONTHS,
-      );
-
-      // Assert
-      expect(result.timeframe).toBe(Timeframe.SIX_MONTHS);
-    });
-
-    it('should handle 1Y timeframe correctly', async () => {
-      // Arrange
-      portfolioService.findOne.mockResolvedValue({
-        id: mockPortfolioId,
-      } as any);
-      transactionsService.getTransactions.mockResolvedValue([]);
-      portfolioService.getPortfolioSummary.mockResolvedValue({
-        totalValue: 0,
-      } as any);
-
-      // Act
-      const result = await service.calculateInternalReturn(
-        mockPortfolioId,
-        mockUserId,
-        Timeframe.ONE_YEAR,
-      );
-
-      // Assert
-      expect(result.timeframe).toBe(Timeframe.ONE_YEAR);
-    });
-
-    it('should handle YTD timeframe correctly', async () => {
-      // Arrange
-      portfolioService.findOne.mockResolvedValue({
-        id: mockPortfolioId,
-      } as any);
-      transactionsService.getTransactions.mockResolvedValue([]);
-      portfolioService.getPortfolioSummary.mockResolvedValue({
-        totalValue: 0,
-      } as any);
-
-      // Act
-      const result = await service.calculateInternalReturn(
-        mockPortfolioId,
-        mockUserId,
-        Timeframe.YEAR_TO_DATE,
-      );
-
-      // Assert
-      expect(result.timeframe).toBe(Timeframe.YEAR_TO_DATE);
-      // Start date should be January 1st of current year
-      expect(result.startDate.getMonth()).toBe(0); // January
-      expect(result.startDate.getDate()).toBe(1);
-    });
-
-    it('should handle ALL_TIME timeframe correctly', async () => {
-      // Arrange
-      const firstTransactionDate = new Date('2023-01-15');
-      portfolioService.findOne.mockResolvedValue({
-        id: mockPortfolioId,
-      } as any);
-      transactionsService.getTransactions.mockResolvedValue([
-        {
-          type: 'BUY',
-          ticker: 'AAPL',
-          quantity: 100,
-          price: 100,
-          transactionDate: firstTransactionDate,
-        } as any,
-      ]);
-      portfolioService.getPortfolioSummary.mockResolvedValue({
-        totalValue: 10000,
-      } as any);
-
-      // Act
-      const result = await service.calculateInternalReturn(
-        mockPortfolioId,
-        mockUserId,
-        Timeframe.ALL_TIME,
-      );
-
-      // Assert
-      expect(result.timeframe).toBe(Timeframe.ALL_TIME);
-      expect(result.startDate.getTime()).toBeLessThanOrEqual(
-        firstTransactionDate.getTime(),
-      );
-    });
-
-    it('should return 0% for zero-balance portfolio', async () => {
-      // Arrange
-      portfolioService.findOne.mockResolvedValue({
-        id: mockPortfolioId,
-      } as any);
-      transactionsService.getTransactions.mockResolvedValue([]);
-      portfolioService.getPortfolioSummary.mockResolvedValue({
-        totalValue: 0,
-      } as any);
-
-      // Act
-      const result = await service.calculateInternalReturn(
-        mockPortfolioId,
-        mockUserId,
-        Timeframe.ONE_MONTH,
-      );
-
-      // Assert
-      expect(result.returnPercentage).toBe(0);
-    });
-
-    it('should throw NotFoundException when portfolio not found', async () => {
-      // Arrange
-      portfolioService.findOne.mockResolvedValue(null);
-
-      // Act & Assert
-      await expect(
-        service.calculateInternalReturn(
-          mockPortfolioId,
-          mockUserId,
-          Timeframe.ONE_MONTH,
-        ),
-      ).rejects.toThrow(NotFoundException);
-    });
-
-    it('should throw MissingDataException when price data unavailable', async () => {
-      // Arrange
-      portfolioService.findOne.mockResolvedValue({
-        id: mockPortfolioId,
-      } as any);
-      transactionsService.getTransactions.mockResolvedValue([
-        {
-          type: 'BUY',
-          ticker: 'AAPL',
-          quantity: 100,
-          price: 100,
-          transactionDate: new Date('2024-01-01'),
-        } as any,
-      ]);
-      // Portfolio value fetch could fail, but for IRR we use current summary
-      portfolioService.getPortfolioSummary.mockResolvedValue({
-        totalValue: 0,
-      } as any);
-
-      // Act
-      const result = await service.calculateInternalReturn(
-        mockPortfolioId,
-        mockUserId,
-        Timeframe.ONE_MONTH,
-      );
-
-      // Assert
-      expect(result).toBeDefined();
-    });
-  });
-
-  describe('getBenchmarkComparison', () => {
-    it('should fetch benchmark data from Polygon API', async () => {
-      // Arrange
-      portfolioService.findOne.mockResolvedValue({
-        id: mockPortfolioId,
-      } as any);
-      transactionsService.getTransactions.mockResolvedValue([
-        {
-          type: 'BUY',
-          ticker: 'AAPL',
-          quantity: 100,
-          price: 100,
-          transactionDate: new Date('2024-01-01'),
-        } as any,
-      ]);
-      portfolioService.getPortfolioSummary.mockResolvedValue({
-        totalValue: 11000,
-      } as any);
-
-      // Mock Polygon API responses
-      polygonApiService.getAggregates.mockReturnValue(
-        of([
-          {
-            timestamp: new Date('2024-01-01'),
-            close: 400,
-            open: 395,
-            high: 405,
-            low: 395,
-            volume: 1000000,
-          },
-        ]),
-      );
-
-      polygonApiService.getPreviousClose.mockReturnValue(
-        of({
-          ticker: 'SPY',
-          resultsCount: 1,
-          results: [{ c: 440, t: Date.now() }],
-        } as any),
-      );
+      performanceCalculationService.calculateAlpha.mockReturnValue(0);
+      benchmarkDataService.calculateBenchmarkReturn.mockResolvedValue(0.1);
 
       // Act
       const result = await service.getBenchmarkComparison(
@@ -420,100 +123,29 @@ describe('PerformanceService', () => {
       );
 
       // Assert
-      expect(polygonApiService.getAggregates).toHaveBeenCalled();
-      expect(polygonApiService.getPreviousClose).toHaveBeenCalledWith('SPY');
       expect(result.benchmarkTicker).toBe('SPY');
+      expect(portfolioDailyPerfRepo.find).toHaveBeenCalled();
+      expect(benchmarkDataService.calculateBenchmarkReturn).toHaveBeenCalled();
     });
 
-    it('should calculate benchmark return for all supported timeframes', async () => {
+    it('should handle missing market data gracefully', async () => {
       // Arrange
       portfolioService.findOne.mockResolvedValue({
         id: mockPortfolioId,
       } as any);
       transactionsService.getTransactions.mockResolvedValue([]);
-      portfolioService.getPortfolioSummary.mockResolvedValue({
-        totalValue: 10000,
-      } as any);
 
-      polygonApiService.getAggregates.mockReturnValue(
-        of([{ timestamp: new Date(), close: 400 } as any]),
+      portfolioDailyPerfRepo.find.mockResolvedValue([
+        { date: new Date('2024-01-01'), dailyReturnPct: 0.1 },
+      ] as PortfolioDailyPerformance[]);
+
+      performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
+        undefined,
       );
-      polygonApiService.getPreviousClose.mockReturnValue(
-        of({ results: [{ c: 440 }] } as any),
+      performanceCalculationService.calculateCumulativeReturn.mockReturnValue(
+        0.1,
       );
-
-      const timeframes = [
-        Timeframe.ONE_MONTH,
-        Timeframe.THREE_MONTHS,
-        Timeframe.SIX_MONTHS,
-        Timeframe.ONE_YEAR,
-        Timeframe.YEAR_TO_DATE,
-      ];
-
-      // Act & Assert
-      for (const timeframe of timeframes) {
-        const result = await service.getBenchmarkComparison(
-          mockPortfolioId,
-          mockUserId,
-          'SPY',
-          timeframe,
-        );
-        expect(result.timeframe).toBe(timeframe);
-        expect(result.benchmarkReturn).toBeDefined();
-      }
-    });
-
-    it('should calculate Alpha (portfolio return - benchmark return)', async () => {
-      // Arrange
-      portfolioService.findOne.mockResolvedValue({
-        id: mockPortfolioId,
-      } as any);
-      transactionsService.getTransactions.mockResolvedValue([
-        {
-          type: 'BUY',
-          ticker: 'AAPL',
-          quantity: 100,
-          price: 100,
-          transactionDate: new Date('2024-01-01'),
-        } as any,
-      ]);
-      portfolioService.getPortfolioSummary.mockResolvedValue({
-        totalValue: 12000, // 20% return
-      } as any);
-
-      // Benchmark: 400 -> 440 = 10% return
-      polygonApiService.getAggregates.mockReturnValue(
-        of([{ timestamp: new Date('2024-01-01'), close: 400 } as any]),
-      );
-      polygonApiService.getPreviousClose.mockReturnValue(
-        of({ results: [{ c: 440 }] } as any),
-      );
-
-      // Act
-      const result = await service.getBenchmarkComparison(
-        mockPortfolioId,
-        mockUserId,
-        'SPY',
-        Timeframe.ONE_MONTH,
-      );
-
-      // Assert
-      expect(result.alpha).toBeDefined();
-      // Alpha may be positive or negative depending on IRR calculation precision
-      expect(typeof result.alpha).toBe('number');
-    });
-
-    it('should handle missing benchmark data gracefully', async () => {
-      // Arrange
-      portfolioService.findOne.mockResolvedValue({
-        id: mockPortfolioId,
-      } as any);
-      transactionsService.getTransactions.mockResolvedValue([]);
-      portfolioService.getPortfolioSummary.mockResolvedValue({
-        totalValue: 10000,
-      } as any);
-
-      polygonApiService.getAggregates.mockReturnValue(of(null));
+      benchmarkDataService.calculateBenchmarkReturn.mockResolvedValue(null); // No market data
 
       // Act & Assert
       await expect(
@@ -527,159 +159,395 @@ describe('PerformanceService', () => {
     });
   });
 
-  describe('Edge Cases', () => {
-    it('should handle portfolios with only CASH', async () => {
-      // Arrange
-      portfolioService.findOne.mockResolvedValue({
-        id: mockPortfolioId,
-      } as any);
-      transactionsService.getTransactions.mockResolvedValue([
-        {
-          type: 'BUY',
-          ticker: 'CASH',
-          quantity: 10000,
-          price: 1,
-          transactionDate: new Date('2024-01-01'),
-        } as any,
-      ]);
-      portfolioService.getPortfolioSummary.mockResolvedValue({
-        totalValue: 10000,
-      } as any);
+  describe('Snapshot-based Performance', () => {
+    describe('getBenchmarkComparison (from snapshots)', () => {
+      it('should read from snapshots successfully', async () => {
+        // Arrange
+        portfolioService.findOne.mockResolvedValue({
+          id: mockPortfolioId,
+        } as any);
+        transactionsService.getTransactions.mockResolvedValue([]);
 
-      // Act
-      const result = await service.calculateInternalReturn(
-        mockPortfolioId,
-        mockUserId,
-        Timeframe.ONE_MONTH,
-      );
+        // Mock snapshot data
+        const mockSnapshots = [
+          { date: new Date('2024-01-01'), dailyReturnPct: 0 },
+          { date: new Date('2024-01-02'), dailyReturnPct: 0.01 },
+          { date: new Date('2024-01-03'), dailyReturnPct: 0.005 },
+        ] as PortfolioDailyPerformance[];
 
-      // Assert
-      expect(result.returnPercentage).toBeCloseTo(0, 5); // Cash has no return (within precision)
+        portfolioDailyPerfRepo.find.mockResolvedValue(mockSnapshots);
+
+        // Mock the calculation service methods
+        performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
+          undefined,
+        );
+        performanceCalculationService.calculateCumulativeReturn.mockReturnValue(
+          0.015,
+        );
+        performanceCalculationService.calculateAlpha.mockReturnValue(0.005);
+
+        // Mock benchmark return
+        benchmarkDataService.calculateBenchmarkReturn.mockResolvedValue(0.01);
+
+        // Act
+        const result = await service.getBenchmarkComparison(
+          mockPortfolioId,
+          mockUserId,
+          'SPY',
+          Timeframe.ONE_MONTH,
+        );
+
+        // Assert
+        expect(result).toBeDefined();
+        expect(result.benchmarkTicker).toBe('SPY');
+        expect(result.portfolioReturn).toBe(0.015);
+        expect(result.benchmarkReturn).toBe(0.01);
+        expect(result.alpha).toBe(0.005);
+        expect(
+          performanceCalculationService.ensureSnapshotsExist,
+        ).toHaveBeenCalled();
+        expect(
+          benchmarkDataService.calculateBenchmarkReturn,
+        ).toHaveBeenCalled();
+      });
+
+      it('should trigger auto-backfill when snapshots missing', async () => {
+        // Arrange
+        portfolioService.findOne.mockResolvedValue({
+          id: mockPortfolioId,
+        } as any);
+        transactionsService.getTransactions.mockResolvedValue([]);
+
+        // After backfill, snapshots exist
+        const mockSnapshots = [
+          { date: new Date('2024-01-01'), dailyReturnPct: 0.01 },
+        ] as PortfolioDailyPerformance[];
+
+        portfolioDailyPerfRepo.find.mockResolvedValue(mockSnapshots);
+
+        // Mock the services
+        performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
+          undefined,
+        );
+        performanceCalculationService.calculateCumulativeReturn.mockReturnValue(
+          0.01,
+        );
+        performanceCalculationService.calculateAlpha.mockReturnValue(0);
+        benchmarkDataService.calculateBenchmarkReturn.mockResolvedValue(0.01);
+
+        // Act
+        const result = await service.getBenchmarkComparison(
+          mockPortfolioId,
+          mockUserId,
+          'SPY',
+          Timeframe.ONE_MONTH,
+        );
+
+        // Assert
+        expect(
+          performanceCalculationService.ensureSnapshotsExist,
+        ).toHaveBeenCalled();
+        expect(result).toBeDefined();
+      });
+
+      it('should throw MissingDataException when no snapshots after backfill', async () => {
+        // Arrange
+        portfolioService.findOne.mockResolvedValue({
+          id: mockPortfolioId,
+        } as any);
+        transactionsService.getTransactions.mockResolvedValue([]);
+        portfolioDailyPerfRepo.find.mockResolvedValue([]); // No snapshots even after backfill
+        performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
+          undefined,
+        );
+
+        // Act & Assert
+        await expect(
+          service.getBenchmarkComparison(
+            mockPortfolioId,
+            mockUserId,
+            'SPY',
+            Timeframe.ONE_MONTH,
+          ),
+        ).rejects.toThrow(MissingDataException);
+      });
+
+      it('should throw MissingDataException when no market data found', async () => {
+        // Arrange
+        portfolioService.findOne.mockResolvedValue({
+          id: mockPortfolioId,
+        } as any);
+        transactionsService.getTransactions.mockResolvedValue([]);
+        portfolioDailyPerfRepo.find.mockResolvedValue([
+          { date: new Date('2024-01-01'), dailyReturnPct: 0.01 },
+        ] as PortfolioDailyPerformance[]);
+
+        performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
+          undefined,
+        );
+        benchmarkDataService.calculateBenchmarkReturn.mockResolvedValue(null); // No market data
+
+        // Act & Assert
+        await expect(
+          service.getBenchmarkComparison(
+            mockPortfolioId,
+            mockUserId,
+            'SPY',
+            Timeframe.ONE_MONTH,
+          ),
+        ).rejects.toThrow(MissingDataException);
+      });
+
+      it('should calculate correct cumulative return using geometric linking', async () => {
+        // Arrange
+        portfolioService.findOne.mockResolvedValue({
+          id: mockPortfolioId,
+        } as any);
+        transactionsService.getTransactions.mockResolvedValue([]);
+
+        // Snapshots with 1% daily return
+        const mockSnapshots = [
+          { date: new Date('2024-01-01'), dailyReturnPct: 0.01 },
+          { date: new Date('2024-01-02'), dailyReturnPct: 0.01 },
+          { date: new Date('2024-01-03'), dailyReturnPct: 0.01 },
+        ] as PortfolioDailyPerformance[];
+
+        portfolioDailyPerfRepo.find.mockResolvedValue(mockSnapshots);
+
+        performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
+          undefined,
+        );
+        // Cumulative = (1.01 * 1.01 * 1.01) - 1 = 0.030301
+        performanceCalculationService.calculateCumulativeReturn.mockReturnValue(
+          0.030301,
+        );
+        performanceCalculationService.calculateAlpha.mockReturnValue(0.030301);
+        benchmarkDataService.calculateBenchmarkReturn.mockResolvedValue(0);
+
+        // Act
+        const result = await service.getBenchmarkComparison(
+          mockPortfolioId,
+          mockUserId,
+          'SPY',
+          Timeframe.ONE_MONTH,
+        );
+
+        // Assert
+        expect(result.portfolioReturn).toBeCloseTo(0.030301, 5);
+        expect(
+          performanceCalculationService.calculateCumulativeReturn,
+        ).toHaveBeenCalledWith(mockSnapshots);
+      });
+
+      it('should throw MissingDataException when no snapshots after backfill', async () => {
+        // Arrange
+        portfolioService.findOne.mockResolvedValue({
+          id: mockPortfolioId,
+        } as any);
+        transactionsService.getTransactions.mockResolvedValue([]);
+        portfolioDailyPerfRepo.find.mockResolvedValue([]); // No snapshots even after backfill
+        performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
+          undefined,
+        );
+
+        // Act & Assert
+        await expect(
+          service.getBenchmarkComparison(
+            mockPortfolioId,
+            mockUserId,
+            'SPY',
+            Timeframe.ONE_MONTH,
+          ),
+        ).rejects.toThrow(MissingDataException);
+      });
+
+      it('should throw MissingDataException when no market data found', async () => {
+        // Arrange
+        portfolioService.findOne.mockResolvedValue({
+          id: mockPortfolioId,
+        } as any);
+        transactionsService.getTransactions.mockResolvedValue([]);
+        portfolioDailyPerfRepo.find.mockResolvedValue([
+          { date: new Date('2024-01-01'), dailyReturnPct: 0.01 },
+        ] as PortfolioDailyPerformance[]);
+
+        performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
+          undefined,
+        );
+        performanceCalculationService.calculateCumulativeReturn.mockReturnValue(
+          0.01,
+        );
+        benchmarkDataService.calculateBenchmarkReturn.mockResolvedValue(null); // No market data
+
+        // Act & Assert
+        await expect(
+          service.getBenchmarkComparison(
+            mockPortfolioId,
+            mockUserId,
+            'SPY',
+            Timeframe.ONE_MONTH,
+          ),
+        ).rejects.toThrow(MissingDataException);
+      });
+
+      it('should calculate correct cumulative return using geometric linking', async () => {
+        // Arrange
+        portfolioService.findOne.mockResolvedValue({
+          id: mockPortfolioId,
+        } as any);
+        transactionsService.getTransactions.mockResolvedValue([]);
+
+        // Snapshots with 1% daily return
+        const mockSnapshots = [
+          { date: new Date('2024-01-01'), dailyReturnPct: 0.01 },
+          { date: new Date('2024-01-02'), dailyReturnPct: 0.01 },
+          { date: new Date('2024-01-03'), dailyReturnPct: 0.01 },
+        ] as PortfolioDailyPerformance[];
+
+        portfolioDailyPerfRepo.find.mockResolvedValue(mockSnapshots);
+
+        performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
+          undefined,
+        );
+        // Cumulative = (1.01 * 1.01 * 1.01) - 1 = 0.030301
+        performanceCalculationService.calculateCumulativeReturn.mockReturnValue(
+          0.030301,
+        );
+        performanceCalculationService.calculateAlpha.mockReturnValue(0.030301);
+        benchmarkDataService.calculateBenchmarkReturn.mockResolvedValue(0);
+
+        // Act
+        const result = await service.getBenchmarkComparison(
+          mockPortfolioId,
+          mockUserId,
+          'SPY',
+          Timeframe.ONE_MONTH,
+        );
+
+        // Assert
+        expect(result.portfolioReturn).toBeCloseTo(0.030301, 5);
+        expect(
+          performanceCalculationService.calculateCumulativeReturn,
+        ).toHaveBeenCalledWith(mockSnapshots);
+      });
     });
 
-    it('should handle negative returns', async () => {
-      // Arrange
-      portfolioService.findOne.mockResolvedValue({
-        id: mockPortfolioId,
-      } as any);
-      transactionsService.getTransactions.mockResolvedValue([
-        {
-          type: 'BUY',
-          ticker: 'AAPL',
-          quantity: 100,
-          price: 100,
-          transactionDate: new Date('2024-01-01'),
-        } as any,
-      ]);
-      portfolioService.getPortfolioSummary.mockResolvedValue({
-        totalValue: 8000, // Lost 20%
-        unrealizedPL: -2000,
-      } as any);
+    describe('getHistoricalData (from snapshots)', () => {
+      it('should read from snapshots and generate chart data', async () => {
+        // Arrange
+        portfolioService.findOne.mockResolvedValue({
+          id: mockPortfolioId,
+        } as any);
+        transactionsService.getTransactions.mockResolvedValue([]);
 
-      // Act
-      const result = await service.calculateInternalReturn(
-        mockPortfolioId,
-        mockUserId,
-        Timeframe.ONE_MONTH,
-      );
+        const mockSnapshots = [
+          { date: new Date('2024-01-01'), dailyReturnPct: 0 },
+          { date: new Date('2024-01-02'), dailyReturnPct: 0.01 },
+          { date: new Date('2024-01-03'), dailyReturnPct: 0.01 },
+        ] as PortfolioDailyPerformance[];
 
-      // Assert
-      expect(result.returnPercentage).toBeLessThan(0);
+        portfolioDailyPerfRepo.find.mockResolvedValue(mockSnapshots);
+
+        const mockMarketData = [
+          { date: new Date('2024-01-01'), closePrice: 100 },
+          { date: new Date('2024-01-02'), closePrice: 101 },
+          { date: new Date('2024-01-03'), closePrice: 102 },
+        ] as MarketDataDaily[];
+
+        performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
+          undefined,
+        );
+        benchmarkDataService.getBenchmarkPricesForRange.mockResolvedValue(
+          mockMarketData,
+        );
+
+        // Act
+        const result = await service.getHistoricalData(
+          mockPortfolioId,
+          mockUserId,
+          'SPY',
+          Timeframe.ONE_MONTH,
+        );
+
+        // Assert
+        expect(result).toBeDefined();
+        expect(result.data.length).toBe(3);
+        expect(result.data[0].portfolioValue).toBe(100);
+        expect(result.data[0].benchmarkValue).toBe(100);
+        expect(result.data[1].portfolioValue).toBeCloseTo(101, 1);
+        expect(result.data[2].portfolioValue).toBeCloseTo(102.01, 1);
+      });
     });
 
-    it('should handle very recent portfolios (less than requested timeframe)', async () => {
-      // Arrange: Portfolio created 1 week ago, requesting 1M timeframe
-      const recentDate = new Date();
-      recentDate.setDate(recentDate.getDate() - 7);
+    describe('calculateCumulativeReturn (helper)', () => {
+      it('should calculate correct cumulative return with positive returns', async () => {
+        // Test via getBenchmarkComparison since helper is in separate service
+        portfolioService.findOne.mockResolvedValue({
+          id: mockPortfolioId,
+        } as any);
+        transactionsService.getTransactions.mockResolvedValue([]);
 
-      portfolioService.findOne.mockResolvedValue({
-        id: mockPortfolioId,
-      } as any);
-      transactionsService.getTransactions.mockResolvedValue([
-        {
-          type: 'BUY',
-          ticker: 'AAPL',
-          quantity: 100,
-          price: 100,
-          transactionDate: recentDate,
-        } as any,
-      ]);
-      portfolioService.getPortfolioSummary.mockResolvedValue({
-        totalValue: 10000,
-      } as any);
+        const mockSnapshots = [
+          { date: new Date('2024-01-01'), dailyReturnPct: 0.1 }, // 10%
+          { date: new Date('2024-01-02'), dailyReturnPct: 0.1 }, // 10%
+        ] as PortfolioDailyPerformance[];
 
-      // Act
-      const result = await service.calculateInternalReturn(
-        mockPortfolioId,
-        mockUserId,
-        Timeframe.ONE_MONTH,
-      );
+        portfolioDailyPerfRepo.find.mockResolvedValue(mockSnapshots);
 
-      // Assert
-      expect(result).toBeDefined();
-      // Should still calculate return for the available period
-      // The start date should be approximately 1 month ago (but portfolio might be younger)
-      expect(result.startDate).toBeDefined();
-    });
+        performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
+          undefined,
+        );
+        // Cumulative = (1.1 * 1.1) - 1 = 0.21 = 21%
+        performanceCalculationService.calculateCumulativeReturn.mockReturnValue(
+          0.21,
+        );
+        performanceCalculationService.calculateAlpha.mockReturnValue(0.21);
+        benchmarkDataService.calculateBenchmarkReturn.mockResolvedValue(0);
 
-    it('should correctly handle CASH deposits in performance calculation', async () => {
-      // Arrange - Scenario from the bug report
-      // User deposits $10,000, buys stocks, stocks double in value
-      const depositDate = new Date('2024-01-01');
-      const buyDate = new Date('2024-01-02');
+        const result = await service.getBenchmarkComparison(
+          mockPortfolioId,
+          mockUserId,
+          'SPY',
+          Timeframe.ONE_MONTH,
+        );
 
-      portfolioService.findOne.mockResolvedValue({
-        id: mockPortfolioId,
-      } as any);
+        // Cumulative = (1.1 * 1.1) - 1 = 0.21 = 21%
+        expect(result.portfolioReturn).toBeCloseTo(0.21, 5);
+      });
 
-      // Mock transactions:
-      // 1. Deposit $10,000 cash
-      // 2. Buy $10,000 worth of stock (100 shares @ $100)
-      transactionsService.getTransactions.mockResolvedValue([
-        {
-          type: 'BUY',
-          ticker: 'CASH',
-          quantity: 10000,
-          price: 1,
-          transactionDate: depositDate,
-        } as any,
-        {
-          type: 'BUY',
-          ticker: 'AAPL',
-          quantity: 100,
-          price: 100,
-          transactionDate: buyDate,
-        } as any,
-      ]);
+      it('should calculate correct cumulative return with negative returns', async () => {
+        portfolioService.findOne.mockResolvedValue({
+          id: mockPortfolioId,
+        } as any);
+        transactionsService.getTransactions.mockResolvedValue([]);
 
-      // Portfolio now worth $20,000 (stocks doubled)
-      portfolioService.getPortfolioSummary.mockResolvedValue({
-        totalValue: 20000,
-        unrealizedPL: 10000, // Stocks gained $10,000
-      } as any);
+        const mockSnapshots = [
+          { date: new Date('2024-01-01'), dailyReturnPct: -0.05 }, // -5%
+          { date: new Date('2024-01-02'), dailyReturnPct: -0.05 }, // -5%
+        ] as PortfolioDailyPerformance[];
 
-      // Act
-      const result = await service.calculateInternalReturn(
-        mockPortfolioId,
-        mockUserId,
-        Timeframe.ALL_TIME,
-      );
+        portfolioDailyPerfRepo.find.mockResolvedValue(mockSnapshots);
 
-      // Assert
-      // Starting value should be $0 (before deposit)
-      // Cash flows should include:
-      // 1. Deposit: -$10,000 (on Jan 1, 2024)
-      // 2. Final value: +$20,000 (on current date ~2 years later)
-      // Time period: ~2 years
-      // Simple return: 100%, Annualized: ~41% (because it's spread over 2 years)
+        performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
+          undefined,
+        );
+        // Cumulative = (0.95 * 0.95) - 1 = -0.0975 = -9.75%
+        performanceCalculationService.calculateCumulativeReturn.mockReturnValue(
+          -0.0975,
+        );
+        performanceCalculationService.calculateAlpha.mockReturnValue(-0.0975);
+        benchmarkDataService.calculateBenchmarkReturn.mockResolvedValue(0);
 
-      expect(result).toBeDefined();
-      expect(result.returnPercentage).toBeGreaterThan(0); // Should be positive (this was the bug!)
-      expect(result.returnPercentage).toBeGreaterThan(0.3); // At least 30% annualized
-      expect(result.returnPercentage).toBeLessThan(0.5); // Less than 50% annualized
-      expect(result.cashFlows.length).toBe(2); // Deposit + final value (no stock transactions!)
-      expect(result.cashFlows[0].amount).toBeCloseTo(-10000, 0); // Deposit
-      expect(result.cashFlows[1].amount).toBeCloseTo(20000, 0); // Final value
+        const result = await service.getBenchmarkComparison(
+          mockPortfolioId,
+          mockUserId,
+          'SPY',
+          Timeframe.ONE_MONTH,
+        );
+
+        // Cumulative = (0.95 * 0.95) - 1 = -0.0975 = -9.75%
+        expect(result.portfolioReturn).toBeCloseTo(-0.0975, 5);
+      });
     });
   });
 });

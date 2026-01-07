@@ -55,6 +55,8 @@ Testing: Jest for logic. Mock external deps.
 
 Types: DO NOT USE as any, always use the actual type when possible, or create on-the-fly types if needed.
 
+Refactoring: Files >500 lines MUST be split. Extract by responsibility (data access, calculations, orchestration). Target: <400 lines per service.
+
 ## VII. DEVELOPMENT PROCESS
 ### PHASE 1: PLAN
 Output YAML plan including verification_strategy (how you will use tools to test).
@@ -64,14 +66,14 @@ Generate code. Self-correct for N+1 and Signal violations.
 
 ### PHASE 3: AUTONOMOUS VERIFICATION (MANDATORY)
 MANDATE: Execute your verification strategy. Manual testing is NOT optional.
-
-Launch app. (if not already running)
+you should make curl requests to the endpoints you created and validate both functionality and data integrity.
 
 #### F. Verification Evidence Required
-1. **Screenshot/paste** of successful curl requests
-2. **Database query results** showing persisted data
-3. **Server logs** confirming operations
-4. **Error handling** demonstrated (try invalid inputs)
+1. **Actual curl output** with response times (`curl -w "Time: %{time_total}s"`)
+2. **Response payloads** showing correct data structure and values
+3. **Database state** verified (show record counts, sample data)
+4. **Error handling** demonstrated (invalid inputs, missing data)
+5. **Performance metrics** if applicable (response time, query count)
 
 #### G. Cleanup Checklist
 - [ ] Delete test controller file
@@ -89,6 +91,9 @@ Create verification section with:
 - Database state verified
 - Performance metrics (if applicable)
 - Cleanup confirmation
+
+#### I. Data Dependencies
+If feature requires pre-populated data (snapshots, market data), create a helper service/endpoint for testing. Example: `PortfolioMarketDataBackfillService` for populating dependencies. Avoid manual SQL or complex setup instructions.
 
 ### PHASE 4: REFLECT (Conditional)
 If verification fails repeatedly, analyze root cause.
@@ -197,5 +202,3 @@ Note: You must wait for user confirmation before applying the patch to your perm
  - run lint
  - make sure no dead code or missing types
  - update documentation
-
- 

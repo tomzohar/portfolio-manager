@@ -172,6 +172,10 @@ export interface PerformanceAnalysis {
   alpha: number;                 // Excess return (portfolio - benchmark)
   benchmarkTicker: string;       // e.g., "SPY"
   timeframe: Timeframe;
+  portfolioPeriodReturn?: number;  // Period return (non-annualized)
+  benchmarkPeriodReturn?: number;  // Benchmark period return
+  periodDays?: number;             // Number of days in period
+  warning?: string;                // Warning message for short timeframes
 }
 
 /**
@@ -194,4 +198,5 @@ export interface HistoricalDataResponse {
   data: HistoricalDataPoint[];
   startDate: Date | string;
   endDate: Date | string;
+  warning?: string;  // Warning message about data adjustments
 }
