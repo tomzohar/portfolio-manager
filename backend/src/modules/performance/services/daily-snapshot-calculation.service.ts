@@ -1,5 +1,6 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { OnEvent } from '@nestjs/event-emitter';
 import {
   Repository,
   DataSource,
@@ -520,5 +521,40 @@ export class DailySnapshotCalculationService {
     });
 
     await queryRunner.manager.save(PortfolioDailyPerformance, snapshot);
+  }
+
+  /**
+   * Event listener for historical transaction creation/deletion
+   * Automatically triggers backfill when historical transactions are modified
+   *
+   * @param payload - Event payload containing portfolioId and transactionDate
+   */
+  @OnEvent('transaction.historical')
+  async handleHistoricalTransaction(payload: {
+    portfolioId: string;
+    transactionDate: Date;
+  }): Promise<void> {
+    this.logger.log(
+      `Auto-triggering snapshot backfill for portfolio ${payload.portfolioId} from ${format(payload.transactionDate, 'yyyy-MM-dd')}`,
+    );
+
+    try {
+      // Recalculate snapshots from the transaction date forward
+      await this.recalculateFromDate(
+        payload.portfolioId,
+        payload.transactionDate,
+      );
+
+      this.logger.log(
+        `Auto-backfill completed successfully for portfolio ${payload.portfolioId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Auto-backfill failed for portfolio ${payload.portfolioId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      // Don't throw - we don't want to fail the transaction creation
+      // Users can manually trigger backfill if needed
+    }
   }
 }

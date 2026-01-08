@@ -2,9 +2,11 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Between, FindOptionsWhere, Repository } from 'typeorm';
 import {
   CreateTransactionDto,
@@ -19,14 +21,25 @@ import {
 } from './entities/transaction.entity';
 import { PortfolioService } from './portfolio.service';
 
+/**
+ * Event payload for historical transaction creation/deletion
+ */
+export interface HistoricalTransactionEvent {
+  portfolioId: string;
+  transactionDate: Date;
+}
+
 @Injectable()
 export class TransactionsService {
+  private readonly logger = new Logger(TransactionsService.name);
+
   constructor(
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
     @InjectRepository(Portfolio)
     private portfolioRepository: Repository<Portfolio>,
     private portfolioService: PortfolioService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -86,6 +99,9 @@ export class TransactionsService {
       const savedTransaction =
         await this.transactionRepository.save(transaction);
       await this.portfolioService.recalculatePositions(portfolioId);
+
+      // Check if this is a historical transaction and emit event for backfill
+      this.checkAndEmitHistoricalEvent(portfolioId, transactionDate);
 
       return new TransactionResponseDto(savedTransaction);
     }
@@ -158,6 +174,9 @@ export class TransactionsService {
 
     // Recalculate positions to keep assets table in sync
     await this.portfolioService.recalculatePositions(portfolioId);
+
+    // Check if this is a historical transaction and emit event for backfill
+    this.checkAndEmitHistoricalEvent(portfolioId, transactionDate);
 
     return new TransactionResponseDto(savedTransaction);
   }
@@ -264,6 +283,9 @@ export class TransactionsService {
 
     // Recalculate positions to keep assets table in sync
     await this.portfolioService.recalculatePositions(portfolioId);
+
+    // Check if deleted transaction was historical and emit event for backfill
+    this.checkAndEmitHistoricalEvent(portfolioId, transaction.transactionDate);
   }
 
   /**
@@ -321,5 +343,31 @@ export class TransactionsService {
     }
 
     return position;
+  }
+
+  /**
+   * Emit event for automatic performance snapshot backfill
+   * This triggers the performance snapshot recalculation from the transaction date forward
+   *
+   * Note: ALL transactions trigger backfill to ensure no gaps in snapshot data.
+   * The backfill service is smart enough to only calculate missing snapshots.
+   *
+   * @param portfolioId - Portfolio UUID
+   * @param transactionDate - Transaction date to check
+   */
+  private checkAndEmitHistoricalEvent(
+    portfolioId: string,
+    transactionDate: Date,
+  ): void {
+    this.logger.log(
+      `Transaction detected for portfolio ${portfolioId} on ${transactionDate.toISOString()}. ` +
+        `Auto-triggering performance snapshot backfill from ${transactionDate.toISOString()}.`,
+    );
+
+    // Emit event for automatic backfill (all transactions trigger backfill to avoid gaps)
+    this.eventEmitter.emit('transaction.historical', {
+      portfolioId,
+      transactionDate,
+    } as HistoricalTransactionEvent);
   }
 }

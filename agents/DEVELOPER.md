@@ -34,6 +34,10 @@ Code Quality: TypeScript 5.2+ (Strict), No any, No magic strings, No magic numbe
 
 ## IV. BACKEND MANDATES (NestJS)
 Modularity: Domain-driven modules. Constructor Injection.
+- Use events for cross-module communication
+- Keep business logic decoupled
+- Favor async operations when user doesn't need to wait
+- Design for "change the behavior without changing the code"
 
 Database: TypeORM Data Mapper (Repositories) ONLY. N+1 Prevention is Absolute.
 
@@ -64,6 +68,16 @@ Output YAML plan including verification_strategy (how you will use tools to test
 ### PHASE 2: CODE
 Generate code. Self-correct for N+1 and Signal violations.
 
+- Implement the simplest solution first
+- Add complexity only when proven necessary by real metrics
+- Question any "optimization" that isn't backed by data
+- Encourage questioning during code review
+- Document the "why" not just the "what" in code comments
+- If you can't explain a design decision clearly, reconsider it
+- Create a culture where "I don't know why" is acceptable and leads to investigation
+
+Ask yourself - Are there any battle-tested design patterns you can leverage to create a robust solution? - if so, apply them.
+
 ### PHASE 3: AUTONOMOUS VERIFICATION (MANDATORY)
 MANDATE: Execute your verification strategy. Manual testing is NOT optional.
 you should make curl requests to the endpoints you created and validate both functionality and data integrity.
@@ -74,6 +88,8 @@ you should make curl requests to the endpoints you created and validate both fun
 3. **Database state** verified (show record counts, sample data)
 4. **Error handling** demonstrated (invalid inputs, missing data)
 5. **Performance metrics** if applicable (response time, query count)
+
+**Test the USER JOURNEY, not just the CODE UNITS.**
 
 #### G. Cleanup Checklist
 - [ ] Delete test controller file
@@ -100,6 +116,12 @@ If verification fails repeatedly, analyze root cause.
 
 ### PHASE 5: DOCUMENT
 Update README, Swagger, and Design System docs.
+
+1. Write the README section FIRST (before coding)
+2. If the explanation is confusing, the design is probably wrong
+3. Simplify until the documentation reads naturally
+4. Then implement the simple design
+5. Update documentation with actual implementation details
 
 ## VII-B. TEST SCRIPT BEST PRACTICES
 
@@ -198,7 +220,46 @@ prompt_patch:
 Note: You must wait for user confirmation before applying the patch to your permanent context, but you may proceed with the current task using the proposed logic if strictly necessary to unblock.
 
 ## IX. Handoff
- - run unit tests
- - run lint
- - make sure no dead code or missing types
- - **IMPORTANT** update documentation for progress tracking
+### 0. Code Quality
+- [] run unit tests
+- [] run lint
+- [] make sure no dead code or missing types
+### 1. Unit Tests
+- [ ] All new code has unit tests
+- [ ] Edge cases covered
+- [ ] 90%+ coverage
+
+### 2. Integration Tests
+- [ ] Critical user scenarios tested end-to-end
+- [ ] Database state verified
+- [ ] API responses validated
+
+### 3. Manual Verification
+- [ ] Create test script (`.sh` file)
+- [ ] Run script and document results
+- [ ] Test with FRESH data (new portfolio, not existing)
+
+### 4. Documentation
+- [ ] README updated
+- [ ] API docs updated
+- [ ] Design decisions documented with "why"
+
+### 5. Performance
+- [ ] Response times measured
+- [ ] No N+1 queries (verify with logging)
+- [ ] Async operations don't block
+
+### 6. Error Handling
+- [ ] Graceful degradation tested
+- [ ] Error messages helpful to users
+- [ ] Logging comprehensive for debugging
+ 
+
+After completing create:
+`docs/LESSONS_LEARNED_PHASE_[N].md`
+
+Capture:
+- What worked well
+- What didn't work
+- What we'd do differently
+- What questions revealed issues

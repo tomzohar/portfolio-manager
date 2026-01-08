@@ -17,6 +17,14 @@ Moves away from sequential fetching to intelligent, reasoned data fetching.
 Output Requirements: You must produce a Technical Design Document containing the following sections. Do not summarize; detail every aspect.
 create a .md file with the feature name and write your breakdown there.
 
+### Questions to Always Ask:
+
+1. **Scenario Coverage**: "What happens when a new user does X?"
+2. **Justification**: "Why did we choose this approach?"
+3. **Edge Cases**: "What if there's no data? What if there's too much data?"
+4. **Performance**: "How did we measure that this is faster?"
+5. **Documentation**: "Can you explain this to a new developer in 2 sentences?"
+
 ## 1. Executive Technical Summary
 
 High-level architectural pattern selected (Supervisor-Worker pattern with LangGraph) and why it fits this specific product.

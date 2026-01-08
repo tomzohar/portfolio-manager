@@ -879,4 +879,99 @@ describe('DailySnapshotCalculationService', () => {
       });
     });
   });
+
+  describe('Historical Transaction Event Listener', () => {
+    describe('handleHistoricalTransaction', () => {
+      it('should auto-trigger backfill when historical transaction event is emitted', async () => {
+        const transactionDate = new Date('2023-01-01');
+        const payload = {
+          portfolioId: mockPortfolioId,
+          transactionDate,
+        };
+
+        // Spy on recalculateFromDate
+        const recalculateSpy = jest
+          .spyOn(service, 'recalculateFromDate')
+          .mockResolvedValue(undefined);
+
+        // Call the event handler directly
+        await service.handleHistoricalTransaction(payload);
+
+        // Verify backfill was triggered
+        expect(recalculateSpy).toHaveBeenCalledWith(
+          mockPortfolioId,
+          transactionDate,
+        );
+      });
+
+      it('should not throw error if backfill fails (graceful degradation)', async () => {
+        const transactionDate = new Date('2023-01-01');
+        const payload = {
+          portfolioId: mockPortfolioId,
+          transactionDate,
+        };
+
+        // Spy on recalculateFromDate and make it fail
+        const recalculateSpy = jest
+          .spyOn(service, 'recalculateFromDate')
+          .mockRejectedValue(new Error('Backfill failed'));
+
+        // Call the event handler - should not throw
+        await expect(
+          service.handleHistoricalTransaction(payload),
+        ).resolves.toBeUndefined();
+
+        // Verify backfill was attempted
+        expect(recalculateSpy).toHaveBeenCalledWith(
+          mockPortfolioId,
+          transactionDate,
+        );
+      });
+
+      it('should log success message when backfill completes', async () => {
+        const transactionDate = new Date('2023-01-01');
+        const payload = {
+          portfolioId: mockPortfolioId,
+          transactionDate,
+        };
+
+        // Spy on recalculateFromDate
+        jest.spyOn(service, 'recalculateFromDate').mockResolvedValue(undefined);
+
+        // Spy on logger
+        const logSpy = jest.spyOn(service['logger'], 'log');
+
+        await service.handleHistoricalTransaction(payload);
+
+        // Verify success log was called
+        expect(logSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Auto-backfill completed successfully'),
+        );
+      });
+
+      it('should log error message when backfill fails', async () => {
+        const transactionDate = new Date('2023-01-01');
+        const payload = {
+          portfolioId: mockPortfolioId,
+          transactionDate,
+        };
+
+        // Spy on recalculateFromDate and make it fail
+        jest
+          .spyOn(service, 'recalculateFromDate')
+          .mockRejectedValue(new Error('Database connection lost'));
+
+        // Spy on logger
+        const errorSpy = jest.spyOn(service['logger'], 'error');
+
+        await service.handleHistoricalTransaction(payload);
+
+        // Verify error log was called
+        expect(errorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Auto-backfill failed'),
+          expect.any(String),
+        );
+      });
+    });
+  });
 });

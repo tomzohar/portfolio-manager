@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './modules/users/users.module';
@@ -15,6 +16,16 @@ import { AgentsModule } from './modules/agents/agents.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+    }),
+    EventEmitterModule.forRoot({
+      // Set this to true to use wildcards
+      wildcard: false,
+      // Set this to the max listeners value
+      maxListeners: 10,
+      // Show event name in memory leak warnings
+      verboseMemoryLeak: false,
+      // Disable throwing uncaughtException if an error event is emitted
+      ignoreErrors: false,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

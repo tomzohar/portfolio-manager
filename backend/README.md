@@ -77,11 +77,31 @@ Backend server for the Stocks Researcher application. This NestJS application pr
 ### Transaction Management
 
 #### POST `/api/portfolios/:id/transactions`
-- Records a BUY or SELL transaction
+- Records a BUY, SELL, DEPOSIT, or WITHDRAWAL transaction
 - Automatically recalculates positions (assets table)
+- **Automatic Performance Snapshot Backfill**: ALL transactions automatically trigger performance snapshot recalculation to ensure no gaps in data
 - **Frontend automatically reloads both assets and summary** for UI consistency
 - Request: `CreateTransactionDto { type, ticker, quantity, price, transactionDate? }`
 - Response: `TransactionResponseDto`
+
+**Transaction Types:**
+- `BUY`: Purchase stock (reduces CASH, increases stock position, creates offsetting CASH transaction)
+- `SELL`: Sell stock (increases CASH, reduces stock position, creates offsetting CASH transaction)
+- `DEPOSIT`: Add external cash to portfolio (increases CASH only, no offsetting transaction)
+- `WITHDRAWAL`: Remove cash from portfolio (decreases CASH only, no offsetting transaction)
+
+**Automatic Backfill Trigger:**
+
+Every transaction (regardless of date) automatically triggers a performance snapshot backfill to ensure complete, gap-free performance data. This happens asynchronously via event emitters and does not block the transaction creation/deletion response.
+
+**Why all transactions?** To avoid gaps in snapshot data. Without automatic backfill on every transaction, new portfolios or recent transactions would have no performance data until manually backfilled.
+
+Example log output:
+```
+[TransactionsService] Transaction detected for portfolio abc-123 on 2024-01-15T00:00:00.000Z. Auto-triggering performance snapshot backfill from 2024-01-15T00:00:00.000Z.
+[DailySnapshotCalculationService] Auto-triggering snapshot backfill for portfolio abc-123 from 2024-01-15
+[DailySnapshotCalculationService] Auto-backfill completed successfully for portfolio abc-123
+```
 
 #### GET `/api/portfolios/:id/transactions`
 - Returns transaction history with optional filters
@@ -91,15 +111,24 @@ Backend server for the Stocks Researcher application. This NestJS application pr
 #### DELETE `/api/portfolios/:id/transactions/:transactionId`
 - Deletes a transaction
 - Automatically recalculates positions
+- **Automatic Performance Snapshot Backfill**: Automatically triggers performance snapshot recalculation to keep data current
 - **Frontend automatically reloads both assets and summary** for UI consistency
 
 ### Portfolio Performance Snapshots
 
 The application uses a daily snapshot system with Time-Weighted Return (TWR) methodology for fast, consistent performance metrics.
 
+**Automatic Integration:** When you create, update, or delete ANY transaction, the system automatically triggers a performance snapshot backfill from that date forward. This ensures your performance data always stays accurate without manual intervention and prevents gaps in snapshot data.
+
 #### POST `/api/performance/:portfolioId/admin/backfill`
 
-Recalculates daily performance snapshots for the entire portfolio history. Use after creating a portfolio or editing historical transactions.
+Recalculates daily performance snapshots for the entire portfolio history. 
+
+**When to Use:**
+- Force recalculation if data inconsistencies are detected
+- Bulk historical data import (optional - automatic backfill handles single transactions)
+
+**Note:** All transactions automatically trigger backfill, so manual backfill is rarely needed for day-to-day operations.
 
 **Query Parameters:**
 - `startDate` (optional) - ISO datetime to start backfill from (defaults to earliest transaction)
