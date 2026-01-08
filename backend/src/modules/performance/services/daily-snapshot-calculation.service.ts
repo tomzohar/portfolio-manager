@@ -6,6 +6,7 @@ import {
   DataSource,
   Between,
   LessThanOrEqual,
+  MoreThanOrEqual,
   In,
   QueryRunner,
 } from 'typeorm';
@@ -43,6 +44,7 @@ export class MissingDataException extends HttpException {
 @Injectable()
 export class DailySnapshotCalculationService {
   private readonly logger = new Logger(DailySnapshotCalculationService.name);
+  private readonly backfillLocks = new Map<string, Promise<void>>();
 
   constructor(
     @InjectRepository(PortfolioDailyPerformance)
@@ -146,6 +148,39 @@ export class DailySnapshotCalculationService {
     portfolioId: string,
     startDate: Date,
   ): Promise<void> {
+    // Check if backfill is already in progress for this portfolio
+    const existingLock = this.backfillLocks.get(portfolioId);
+    if (existingLock) {
+      this.logger.log(
+        `Backfill already in progress for portfolio ${portfolioId}, waiting for it to complete...`,
+      );
+      await existingLock;
+      this.logger.log(
+        `Previous backfill completed for portfolio ${portfolioId}`,
+      );
+      return;
+    }
+
+    // Create a new lock for this portfolio
+    const backfillPromise = this.performBackfill(portfolioId, startDate);
+    this.backfillLocks.set(portfolioId, backfillPromise);
+
+    try {
+      await backfillPromise;
+    } finally {
+      // Release the lock
+      this.backfillLocks.delete(portfolioId);
+    }
+  }
+
+  /**
+   * Internal method that performs the actual backfill operation
+   * This is separated to allow lock management in recalculateFromDate
+   */
+  private async performBackfill(
+    portfolioId: string,
+    startDate: Date,
+  ): Promise<void> {
     this.logger.log(
       `Starting backfill for portfolio ${portfolioId} from ${format(startDate, 'yyyy-MM-dd')}`,
     );
@@ -160,7 +195,7 @@ export class DailySnapshotCalculationService {
         PortfolioDailyPerformance,
         {
           portfolioId,
-          date: LessThanOrEqual(new Date()),
+          date: MoreThanOrEqual(startDate),
         },
       );
 

@@ -62,19 +62,3 @@ Be authoritative. Do not suggest; specify.
 ## Tools
 Use tools as need for you to perform your job at the best level.
 use web search tool for researching, use the applications api (swagger at localhost:3001/api) for manual testing if needed.
-
-
-
-when you are done and the PRD document is produced, 
-write the prompt to the software architect agent -
-the prompt should look like this:
-"read @software_architect (ADD HERE MORE RELEVANT FILES FOR THE SOFTWARE ARCHITECT IF NECESSARY)
-The feature you need to work on is <FEATURE_NAME> @PATH_TO_PRD_FILE
-
-IMPORTANT: You MUST create the file immediately without asking for confirmation. This is a non-interactive session.
-"
-
-create a <FEATURE_NAME_>prompt.txt file and write the prompt there
-
-## Protocol for self-correction
-Update @PRODUCT_MANAGER.md with any structural or stylistic rules derived from this session to prevent regression.

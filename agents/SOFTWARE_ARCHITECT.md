@@ -74,7 +74,3 @@ Justification: Every architectural decision must map back to a Product Spec (e.g
 Security: Address how user portfolio data is isolated.
 
 Tone: Authoritative, Technical, Precise, and Structured.
-
-
-## Protocol for self-correction
-Update @SOFTWARE_ARCHITECT.md with any structural or stylistic rules derived from this session to prevent regression.

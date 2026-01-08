@@ -116,7 +116,7 @@ Example log output:
 
 ### Portfolio Performance Snapshots
 
-The application uses a daily snapshot system with Time-Weighted Return (TWR) methodology for fast, consistent performance metrics.
+The application uses a daily snapshot system with Time-Weighted Return (TWR) methodology for fast, consistent performance metrics. For a detailed technical explanation of the architecture, database schema, and algorithms, see [DAILY_SNAPSHOTS.md](./docs/DAILY_SNAPSHOTS.md).
 
 **Automatic Integration:** When you create, update, or delete ANY transaction, the system automatically triggers a performance snapshot backfill from that date forward. This ensures your performance data always stays accurate without manual intervention and prevents gaps in snapshot data.
 
