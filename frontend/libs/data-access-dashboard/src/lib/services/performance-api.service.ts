@@ -22,16 +22,23 @@ export class PerformanceApiService {
    * @param portfolioId - Portfolio UUID
    * @param timeframe - Time period (1M, 3M, 6M, 1Y, YTD, ALL_TIME)
    * @param benchmarkTicker - Benchmark symbol (default: 'SPY')
+   * @param excludeCash - Whether to exclude cash from performance calculations (default: undefined, omit parameter)
    * @returns Observable of performance analysis
    */
   getBenchmarkComparison(
     portfolioId: string,
     timeframe: Timeframe,
-    benchmarkTicker = 'SPY'
+    benchmarkTicker = 'SPY',
+    excludeCash?: boolean
   ): Observable<PerformanceAnalysis> {
-    const params = new HttpParams()
+    let params = new HttpParams()
       .set('timeframe', timeframe)
       .set('benchmarkTicker', benchmarkTicker);
+
+    // Only add excludeCash parameter if explicitly provided
+    if (excludeCash !== undefined) {
+      params = params.set('excludeCash', excludeCash);
+    }
 
     return this.http.get<PerformanceAnalysis>(
       `${this.baseUrl}/${portfolioId}/benchmark-comparison`,
@@ -45,16 +52,23 @@ export class PerformanceApiService {
    * @param portfolioId - Portfolio UUID
    * @param timeframe - Time period
    * @param benchmarkTicker - Benchmark symbol (default: 'SPY')
+   * @param excludeCash - Whether to exclude cash from performance calculations (default: undefined, omit parameter)
    * @returns Observable of historical data response
    */
   getHistoricalData(
     portfolioId: string,
     timeframe: Timeframe,
-    benchmarkTicker = 'SPY'
+    benchmarkTicker = 'SPY',
+    excludeCash?: boolean
   ): Observable<HistoricalDataResponse> {
-    const params = new HttpParams()
+    let params = new HttpParams()
       .set('timeframe', timeframe)
       .set('benchmarkTicker', benchmarkTicker);
+
+    // Only add excludeCash parameter if explicitly provided
+    if (excludeCash !== undefined) {
+      params = params.set('excludeCash', excludeCash);
+    }
 
     return this.http.get<HistoricalDataResponse>(
       `${this.baseUrl}/${portfolioId}/history`,

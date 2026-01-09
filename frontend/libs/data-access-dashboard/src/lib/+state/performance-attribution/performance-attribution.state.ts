@@ -21,6 +21,9 @@ export interface PerformanceAttributionState {
   loading: boolean;
   error: string | null;
 
+  // Cash exclusion toggle (for performance calculations)
+  excludeCash: boolean;
+
   // Cache for quick timeframe switching (avoid redundant API calls)
   cachedAnalyses: Record<string, PerformanceAnalysis>;
   cachedHistoricalData: Record<string, HistoricalDataPoint[]>;
@@ -36,6 +39,7 @@ export const initialState: PerformanceAttributionState = {
   selectedTimeframe: Timeframe.YEAR_TO_DATE,  // Default to YTD
   loading: false,
   error: null,
+  excludeCash: false,  // Default to false for backward compatibility
   cachedAnalyses: {},
   cachedHistoricalData: {},
 };

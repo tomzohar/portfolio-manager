@@ -5,7 +5,10 @@
     [selectedTimeframe]="performanceFacade.selectedTimeframe()"
     [loading]="performanceFacade.loading()"
     [error]="performanceFacade.error()"
+    [excludeCash]="performanceFacade.excludeCash()"
+    [cashAllocationAvg]="performanceFacade.cashAllocationAvg()"
     (timeframeChanged)="onTimeframeChanged($event)"
+    (excludeCashToggled)="onExcludeCashToggled($event)"
   />
 </div>
 

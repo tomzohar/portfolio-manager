@@ -15,6 +15,7 @@ export const PerformanceAttributionActions = createActionGroup({
       portfolioId: string; 
       timeframe: Timeframe;
       benchmarkTicker?: string;  // Optional, defaults to 'SPY'
+      excludeCash?: boolean;     // Optional, defaults to false
     }>(),
     'Load Performance Attribution Success': props<{ 
       analysis: PerformanceAnalysis;
@@ -27,6 +28,7 @@ export const PerformanceAttributionActions = createActionGroup({
       portfolioId: string; 
       timeframe: Timeframe;
       benchmarkTicker?: string;
+      excludeCash?: boolean;     // Optional, defaults to false
     }>(),
     'Load Historical Data Success': props<{ 
       data: HistoricalDataPoint[];
@@ -38,6 +40,13 @@ export const PerformanceAttributionActions = createActionGroup({
     'Change Timeframe': props<{ 
       portfolioId: string;
       timeframe: Timeframe;
+      excludeCash?: boolean;     // Optional, defaults to current state value
+    }>(),
+
+    // Toggle cash exclusion
+    'Toggle Exclude Cash': props<{
+      portfolioId: string;
+      excludeCash: boolean;
     }>(),
 
     // Clear state (on portfolio change)

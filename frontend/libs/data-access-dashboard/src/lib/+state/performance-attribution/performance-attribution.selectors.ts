@@ -54,6 +54,14 @@ export const selectError = createSelector(
 );
 
 /**
+ * Select excludeCash flag
+ */
+export const selectExcludeCash = createSelector(
+  selectPerformanceAttributionState,
+  (state) => state.excludeCash
+);
+
+/**
  * Derived selectors (computed values)
  */
 
@@ -87,6 +95,14 @@ export const selectBenchmarkReturn = createSelector(
 export const selectIsOutperforming = createSelector(
   selectAlpha,
   (alpha) => alpha !== null && alpha > 0
+);
+
+/**
+ * Select cash allocation average from current analysis
+ */
+export const selectCashAllocationAvg = createSelector(
+  selectCurrentAnalysis,
+  (analysis) => analysis?.cashAllocationAvg ?? null
 );
 
 /**

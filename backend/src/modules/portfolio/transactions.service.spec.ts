@@ -16,7 +16,10 @@ import {
 } from './entities/transaction.entity';
 import { TransactionsService } from './transactions.service';
 import { PortfolioService } from './portfolio.service';
-import { TransactionResponseDto } from './dto/transaction.dto';
+import {
+  CreateTransactionDto,
+  TransactionResponseDto,
+} from './dto/transaction.dto';
 import { User } from '../users/entities/user.entity';
 
 describe('TransactionsService', () => {
@@ -364,6 +367,277 @@ describe('TransactionsService', () => {
         await expect(
           service.createTransaction(mockPortfolioId, mockUserId, createDto),
         ).rejects.toThrow(ForbiddenException);
+      });
+    });
+
+    describe('historical transaction validation', () => {
+      describe('BUY transactions', () => {
+        it('should reject BUY transaction dated before initial deposit', async () => {
+          const buyDate = new Date('2024-01-10'); // 5 days before deposit
+
+          const createDto = {
+            type: TransactionType.BUY,
+            ticker: 'GOOGL',
+            quantity: 10,
+            price: 150.0,
+            transactionDate: buyDate.toISOString(),
+          };
+
+          portfolioRepository.findOne.mockResolvedValue(mockPortfolio);
+          // When calculating position for the buy date, only transactions before or on that date
+          transactionRepository.find.mockResolvedValue([]);
+
+          await expect(
+            service.createTransaction(mockPortfolioId, mockUserId, createDto),
+          ).rejects.toThrow(BadRequestException);
+
+          await expect(
+            service.createTransaction(mockPortfolioId, mockUserId, createDto),
+          ).rejects.toThrow(/Insufficient cash balance/);
+        });
+
+        it('should allow historical BUY if sufficient cash existed at that date', async () => {
+          const depositDate = new Date('2024-01-10');
+          const buyDate = new Date('2024-01-15'); // After deposit
+
+          // Mock initial deposit transaction
+          const depositTransaction = {
+            type: TransactionType.DEPOSIT,
+            ticker: CASH_TICKER,
+            quantity: 10000,
+            price: 1,
+            transactionDate: depositDate,
+          } as Transaction;
+
+          const createDto = {
+            type: TransactionType.BUY,
+            ticker: 'GOOGL',
+            quantity: 10,
+            price: 150.0,
+            transactionDate: buyDate.toISOString(),
+          };
+
+          const buyTransaction = {
+            ...mockTransaction,
+            ticker: 'GOOGL',
+            quantity: 10,
+            price: 150.0,
+            transactionDate: buyDate,
+          };
+
+          portfolioRepository.findOne.mockResolvedValue(mockPortfolio);
+          transactionRepository.find.mockResolvedValue([depositTransaction]);
+          transactionRepository.create.mockReturnValue(
+            buyTransaction as Transaction,
+          );
+          transactionRepository.save.mockResolvedValue(
+            buyTransaction as Transaction,
+          );
+          portfolioService.recalculatePositions.mockResolvedValue(undefined);
+
+          const result = await service.createTransaction(
+            mockPortfolioId,
+            mockUserId,
+            createDto,
+          );
+
+          expect(result).toBeInstanceOf(TransactionResponseDto);
+          expect(result.ticker).toBe('GOOGL');
+        });
+
+        it('should validate cash as of transaction date with multiple deposits', async () => {
+          const deposit1Date = new Date('2024-01-01');
+          const buyDate = new Date('2024-01-15'); // Between deposits
+
+          // Mock transactions
+          const deposit1 = {
+            type: TransactionType.DEPOSIT,
+            ticker: CASH_TICKER,
+            quantity: 5000,
+            price: 1,
+            transactionDate: deposit1Date,
+          } as Transaction;
+
+          // Try to buy more than available at buyDate ($7500 > $5000)
+          const createDto = {
+            type: TransactionType.BUY,
+            ticker: 'AAPL',
+            quantity: 50,
+            price: 150.0,
+            transactionDate: buyDate.toISOString(),
+          };
+
+          portfolioRepository.findOne.mockResolvedValue(mockPortfolio);
+          // Mock returns only deposit1 (second deposit would be after buyDate)
+          transactionRepository.find.mockResolvedValue([deposit1]);
+
+          await expect(
+            service.createTransaction(mockPortfolioId, mockUserId, createDto),
+          ).rejects.toThrow(BadRequestException);
+
+          await expect(
+            service.createTransaction(mockPortfolioId, mockUserId, createDto),
+          ).rejects.toThrow(/Insufficient cash balance/);
+        });
+      });
+
+      describe('SELL transactions', () => {
+        it('should reject SELL transaction dated before shares were acquired', async () => {
+          const sellDate = new Date('2024-01-10'); // Before purchase
+
+          const createDto = {
+            type: TransactionType.SELL,
+            ticker: 'AAPL',
+            quantity: 10,
+            price: 150.0,
+            transactionDate: sellDate.toISOString(),
+          };
+
+          portfolioRepository.findOne.mockResolvedValue(mockPortfolio);
+          // No shares at sellDate
+          transactionRepository.find.mockResolvedValue([]);
+
+          await expect(
+            service.createTransaction(mockPortfolioId, mockUserId, createDto),
+          ).rejects.toThrow(BadRequestException);
+
+          await expect(
+            service.createTransaction(mockPortfolioId, mockUserId, createDto),
+          ).rejects.toThrow(/Cannot sell/);
+        });
+
+        it('should allow historical SELL if sufficient shares existed at that date', async () => {
+          const buyDate = new Date('2024-01-10');
+          const sellDate = new Date('2024-01-15'); // After purchase
+
+          // Mock stock purchase
+          const buyTransaction = {
+            type: TransactionType.BUY,
+            ticker: 'AAPL',
+            quantity: 50,
+            price: 150.0,
+            transactionDate: buyDate,
+          } as Transaction;
+
+          const createDto = {
+            type: TransactionType.SELL,
+            ticker: 'AAPL',
+            quantity: 10,
+            price: 155.0,
+            transactionDate: sellDate.toISOString(),
+          };
+
+          const sellTransaction = {
+            ...mockTransaction,
+            type: TransactionType.SELL,
+            ticker: 'AAPL',
+            quantity: 10,
+            price: 155.0,
+            transactionDate: sellDate,
+          };
+
+          portfolioRepository.findOne.mockResolvedValue(mockPortfolio);
+          transactionRepository.find.mockResolvedValue([buyTransaction]);
+          transactionRepository.create.mockReturnValue(
+            sellTransaction as Transaction,
+          );
+          transactionRepository.save.mockResolvedValue(
+            sellTransaction as Transaction,
+          );
+          portfolioService.recalculatePositions.mockResolvedValue(undefined);
+
+          const result = await service.createTransaction(
+            mockPortfolioId,
+            mockUserId,
+            createDto,
+          );
+
+          expect(result).toBeInstanceOf(TransactionResponseDto);
+          expect(result.type).toBe(TransactionType.SELL);
+          expect(result.ticker).toBe('AAPL');
+        });
+      });
+
+      describe('WITHDRAWAL transactions', () => {
+        it('should reject WITHDRAWAL dated before deposit', async () => {
+          const withdrawalDate = new Date('2024-01-10'); // Before deposit
+
+          const createDto = {
+            type: TransactionType.WITHDRAWAL,
+            ticker: CASH_TICKER,
+            quantity: 1000,
+            transactionDate: withdrawalDate.toISOString(),
+          };
+
+          portfolioRepository.findOne.mockResolvedValue(mockPortfolio);
+          // No cash at withdrawalDate
+          transactionRepository.find.mockResolvedValue([]);
+
+          await expect(
+            service.createTransaction(
+              mockPortfolioId,
+              mockUserId,
+              createDto as CreateTransactionDto,
+            ),
+          ).rejects.toThrow(BadRequestException);
+
+          await expect(
+            service.createTransaction(
+              mockPortfolioId,
+              mockUserId,
+              createDto as CreateTransactionDto,
+            ),
+          ).rejects.toThrow(/Insufficient cash balance/);
+        });
+
+        it('should allow historical WITHDRAWAL if sufficient cash existed at that date', async () => {
+          const depositDate = new Date('2024-01-10');
+          const withdrawalDate = new Date('2024-01-15'); // After deposit
+
+          // Mock initial deposit
+          const depositTransaction = {
+            type: TransactionType.DEPOSIT,
+            ticker: CASH_TICKER,
+            quantity: 10000,
+            price: 1,
+            transactionDate: depositDate,
+          } as Transaction;
+
+          const createDto = {
+            type: TransactionType.WITHDRAWAL,
+            ticker: CASH_TICKER,
+            quantity: 1000,
+            transactionDate: withdrawalDate.toISOString(),
+          };
+
+          const withdrawalTransaction = {
+            ...mockTransaction,
+            type: TransactionType.WITHDRAWAL,
+            ticker: CASH_TICKER,
+            quantity: 1000,
+            price: 1,
+            transactionDate: withdrawalDate,
+          };
+
+          portfolioRepository.findOne.mockResolvedValue(mockPortfolio);
+          transactionRepository.find.mockResolvedValue([depositTransaction]);
+          transactionRepository.create.mockReturnValue(
+            withdrawalTransaction as Transaction,
+          );
+          transactionRepository.save.mockResolvedValue(
+            withdrawalTransaction as Transaction,
+          );
+          portfolioService.recalculatePositions.mockResolvedValue(undefined);
+
+          const result = await service.createTransaction(
+            mockPortfolioId,
+            mockUserId,
+            createDto as CreateTransactionDto,
+          );
+
+          expect(result).toBeInstanceOf(TransactionResponseDto);
+          expect(result.type).toBe(TransactionType.WITHDRAWAL);
+        });
       });
     });
   });

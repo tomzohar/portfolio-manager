@@ -11,7 +11,9 @@ import { MissingDataException } from './exceptions/missing-data.exception';
 import { PerformanceService } from './performance.service';
 import { BenchmarkDataService } from './services/benchmark-data.service';
 import { PerformanceCalculationService } from './services/performance-calculation.service';
+import { ChartDataService } from './services/chart-data.service';
 import { Timeframe } from './types/timeframe.types';
+import { HistoricalDataPointDto } from './dto/historical-data.dto';
 
 describe('PerformanceService', () => {
   let service: PerformanceService;
@@ -22,6 +24,7 @@ describe('PerformanceService', () => {
   >;
   let benchmarkDataService: jest.Mocked<BenchmarkDataService>;
   let performanceCalculationService: jest.Mocked<PerformanceCalculationService>;
+  let chartDataService: jest.Mocked<ChartDataService>;
 
   const mockUserId = 'user-123';
   const mockPortfolioId = 'portfolio-456';
@@ -54,6 +57,7 @@ describe('PerformanceService', () => {
           provide: BenchmarkDataService,
           useValue: {
             getBenchmarkPricesForRange: jest.fn(),
+            getBenchmarkPricesForRangeWithAutoBackfill: jest.fn(),
             getBenchmarkPriceAtDate: jest.fn(),
             calculateBenchmarkReturn: jest.fn(),
           },
@@ -64,6 +68,13 @@ describe('PerformanceService', () => {
             ensureSnapshotsExist: jest.fn(),
             calculateCumulativeReturn: jest.fn(),
             calculateAlpha: jest.fn(),
+            calculateAverageCashAllocation: jest.fn(),
+          },
+        },
+        {
+          provide: ChartDataService,
+          useValue: {
+            generateNormalizedChartData: jest.fn(),
           },
         },
       ],
@@ -77,6 +88,7 @@ describe('PerformanceService', () => {
     );
     benchmarkDataService = module.get(BenchmarkDataService);
     performanceCalculationService = module.get(PerformanceCalculationService);
+    chartDataService = module.get(ChartDataService);
   });
 
   afterEach(() => {
@@ -327,7 +339,7 @@ describe('PerformanceService', () => {
         expect(result.portfolioReturn).toBeCloseTo(0.030301, 5);
         expect(
           performanceCalculationService.calculateCumulativeReturn,
-        ).toHaveBeenCalledWith(mockSnapshots);
+        ).toHaveBeenCalledWith(mockSnapshots, false);
       });
 
       it('should throw MissingDataException when no snapshots after backfill', async () => {
@@ -419,7 +431,7 @@ describe('PerformanceService', () => {
         expect(result.portfolioReturn).toBeCloseTo(0.030301, 5);
         expect(
           performanceCalculationService.calculateCumulativeReturn,
-        ).toHaveBeenCalledWith(mockSnapshots);
+        ).toHaveBeenCalledWith(mockSnapshots, false);
       });
     });
 
@@ -445,11 +457,20 @@ describe('PerformanceService', () => {
           { date: new Date('2024-01-03'), closePrice: 102 },
         ] as MarketDataDaily[];
 
+        const mockChartData = [
+          { date: '2024-01-01', portfolioValue: 100, benchmarkValue: 100 },
+          { date: '2024-01-02', portfolioValue: 101, benchmarkValue: 101 },
+          { date: '2024-01-03', portfolioValue: 102.01, benchmarkValue: 102 },
+        ] as HistoricalDataPointDto[];
+
         performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
           undefined,
         );
-        benchmarkDataService.getBenchmarkPricesForRange.mockResolvedValue(
+        benchmarkDataService.getBenchmarkPricesForRangeWithAutoBackfill.mockResolvedValue(
           mockMarketData,
+        );
+        chartDataService.generateNormalizedChartData.mockReturnValue(
+          mockChartData,
         );
 
         // Act
@@ -467,6 +488,9 @@ describe('PerformanceService', () => {
         expect(result.data[0].benchmarkValue).toBe(100);
         expect(result.data[1].portfolioValue).toBeCloseTo(101, 1);
         expect(result.data[2].portfolioValue).toBeCloseTo(102.01, 1);
+        expect(
+          chartDataService.generateNormalizedChartData,
+        ).toHaveBeenCalledWith(mockSnapshots, mockMarketData, false);
       });
     });
 

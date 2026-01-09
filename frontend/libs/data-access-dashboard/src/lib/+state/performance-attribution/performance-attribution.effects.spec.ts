@@ -66,7 +66,8 @@ describe('PerformanceAttributionEffects', () => {
         expect(performanceApiService.getBenchmarkComparison).toHaveBeenCalledWith(
           'test-id',
           Timeframe.THREE_MONTHS,
-          'SPY'
+          'SPY',
+          undefined
         );
         done();
       });
@@ -85,7 +86,8 @@ describe('PerformanceAttributionEffects', () => {
         expect(performanceApiService.getBenchmarkComparison).toHaveBeenCalledWith(
           'test-id',
           Timeframe.THREE_MONTHS,
-          'QQQ'
+          'QQQ',
+          undefined
         );
         done();
       });
@@ -138,7 +140,8 @@ describe('PerformanceAttributionEffects', () => {
         expect(performanceApiService.getHistoricalData).toHaveBeenCalledWith(
           'test-id',
           Timeframe.THREE_MONTHS,
-          'SPY'
+          'SPY',
+          undefined
         );
         done();
       });

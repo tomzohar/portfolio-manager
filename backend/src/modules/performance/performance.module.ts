@@ -15,6 +15,7 @@ import { MarketDataIngestionService } from './services/market-data-ingestion.ser
 import { DailySnapshotCalculationService } from './services/daily-snapshot-calculation.service';
 import { BenchmarkDataService } from './services/benchmark-data.service';
 import { PerformanceCalculationService } from './services/performance-calculation.service';
+import { ChartDataService } from './services/chart-data.service';
 import { PortfolioMarketDataBackfillService } from './services/portfolio-market-data-backfill.service';
 import { PortfolioSnapshotBackfillService } from './services/portfolio-snapshot-backfill.service';
 import { ScheduledMarketDataJobService } from './services/scheduled-market-data-job.service';
@@ -40,6 +41,7 @@ import { ScheduledMarketDataJobService } from './services/scheduled-market-data-
     DailySnapshotCalculationService,
     BenchmarkDataService,
     PerformanceCalculationService,
+    ChartDataService,
     PortfolioMarketDataBackfillService,
     PortfolioSnapshotBackfillService,
     ScheduledMarketDataJobService,
@@ -50,6 +52,7 @@ import { ScheduledMarketDataJobService } from './services/scheduled-market-data-
     DailySnapshotCalculationService,
     BenchmarkDataService,
     PerformanceCalculationService,
+    ChartDataService,
     PortfolioMarketDataBackfillService,
     PortfolioSnapshotBackfillService,
     ScheduledMarketDataJobService,

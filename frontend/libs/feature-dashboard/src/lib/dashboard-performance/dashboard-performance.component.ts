@@ -34,5 +34,16 @@ export class DashboardPerformanceComponent {
       this.performanceFacade.changeTimeframe(portfolioId, timeframe);
     }
   }
+
+  /**
+   * Handle exclude cash toggle
+   */
+  onExcludeCashToggled(excludeCash: boolean): void {
+    const portfolioId = this.portfolioFacade.selectedId();
+    
+    if (portfolioId) {
+      this.performanceFacade.toggleExcludeCash(portfolioId, excludeCash);
+    }
+  }
 }
 

@@ -176,6 +176,8 @@ export interface PerformanceAnalysis {
   benchmarkPeriodReturn?: number;  // Benchmark period return
   periodDays?: number;             // Number of days in period
   warning?: string;                // Warning message for short timeframes
+  viewMode?: 'TOTAL' | 'INVESTED';  // View mode: TOTAL (includes cash) or INVESTED (excludes cash). Optional for backward compatibility.
+  cashAllocationAvg?: number;      // Average cash allocation percentage over the period (as decimal)
 }
 
 /**
@@ -199,4 +201,6 @@ export interface HistoricalDataResponse {
   startDate: Date | string;
   endDate: Date | string;
   warning?: string;  // Warning message about data adjustments
+  viewMode?: 'TOTAL' | 'INVESTED';  // View mode: TOTAL (includes cash) or INVESTED (excludes cash). Optional for backward compatibility.
+  cashAllocationAvg?: number;      // Average cash allocation percentage over the period (as decimal)
 }

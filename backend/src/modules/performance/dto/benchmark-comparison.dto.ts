@@ -51,6 +51,21 @@ export class BenchmarkComparisonDto {
   })
   warning?: string;
 
+  @ApiProperty({
+    description: 'View mode: TOTAL (includes cash) or INVESTED (excludes cash)',
+    enum: ['TOTAL', 'INVESTED'],
+    example: 'TOTAL',
+  })
+  viewMode: 'TOTAL' | 'INVESTED';
+
+  @ApiProperty({
+    description:
+      'Average cash allocation percentage over the period (as decimal)',
+    example: 0.17,
+    required: false,
+  })
+  cashAllocationAvg?: number;
+
   constructor(partial: Partial<BenchmarkComparisonDto>) {
     Object.assign(this, partial);
   }

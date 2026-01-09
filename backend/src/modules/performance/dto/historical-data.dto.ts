@@ -72,6 +72,21 @@ export class HistoricalDataResponseDto {
   })
   warning?: string;
 
+  @ApiProperty({
+    description: 'View mode: TOTAL (includes cash) or INVESTED (excludes cash)',
+    enum: ['TOTAL', 'INVESTED'],
+    example: 'TOTAL',
+  })
+  viewMode: 'TOTAL' | 'INVESTED';
+
+  @ApiProperty({
+    description:
+      'Average cash allocation percentage over the period (as decimal)',
+    example: 0.25,
+    required: false,
+  })
+  cashAllocationAvg?: number;
+
   constructor(partial: Partial<HistoricalDataResponseDto>) {
     Object.assign(this, partial);
   }

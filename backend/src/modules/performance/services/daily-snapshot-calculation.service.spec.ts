@@ -12,11 +12,14 @@ import {
 } from '../../portfolio/entities/transaction.entity';
 import { Portfolio } from 'src/modules/portfolio/entities/portfolio.entity';
 
+import { MarketDataIngestionService } from './market-data-ingestion.service';
+
 describe('DailySnapshotCalculationService', () => {
   let service: DailySnapshotCalculationService;
   let portfolioDailyPerfRepo: Repository<PortfolioDailyPerformance>;
   let transactionRepo: Repository<Transaction>;
   let marketDataRepo: Repository<MarketDataDaily>;
+  let marketDataIngestionService: MarketDataIngestionService;
   let mockQueryRunner: Partial<QueryRunner>;
 
   const mockPortfolioId = 'test-portfolio-id';
@@ -86,6 +89,15 @@ describe('DailySnapshotCalculationService', () => {
             createQueryRunner: jest.fn().mockReturnValue(mockQueryRunner),
           },
         },
+        {
+          provide: MarketDataIngestionService,
+          useValue: {
+            fetchAndStoreMarketData: jest.fn().mockResolvedValue({
+              inserted: 10,
+              failed: 0,
+            }),
+          },
+        },
       ],
     }).compile();
 
@@ -100,6 +112,9 @@ describe('DailySnapshotCalculationService', () => {
     );
     marketDataRepo = module.get<Repository<MarketDataDaily>>(
       getRepositoryToken(MarketDataDaily),
+    );
+    marketDataIngestionService = module.get<MarketDataIngestionService>(
+      MarketDataIngestionService,
     );
   });
 
@@ -972,6 +987,82 @@ describe('DailySnapshotCalculationService', () => {
           expect.any(String),
         );
       });
+    });
+  });
+
+  describe('Auto-ingestion and Last Known Price', () => {
+    it('should carry forward last known price on weekends/holidays', async () => {
+      const startDate = new Date('2024-01-01'); // Monday
+
+      // Mock transactions: AAPL
+      jest
+        .spyOn(transactionRepo, 'find')
+        .mockResolvedValue([{ ticker: 'AAPL' } as any]);
+
+      // Mock market data: Missing for Tuesday (2024-01-02)
+      const mockMarketData = [
+        {
+          ticker: 'AAPL',
+          date: new Date('2024-01-01'),
+          closePrice: 100,
+        },
+        // 2024-01-02 is missing
+        {
+          ticker: 'AAPL',
+          date: new Date('2024-01-03'),
+          closePrice: 110,
+        },
+      ] as any[];
+
+      jest.spyOn(marketDataRepo, 'find').mockResolvedValue(mockMarketData);
+
+      // Spy on save to verify snapshots
+      const saveSpy = jest.spyOn(mockQueryRunner.manager!, 'save');
+
+      await service.recalculateFromDate(mockPortfolioId, startDate);
+
+      // Verify that snapshots were saved for ALL 3 days (Monday, Tuesday, Wednesday)
+      // Tuesday should have carried forward the $100 price from Monday
+      expect(saveSpy).toHaveBeenCalledTimes(3);
+
+      // Verify Tuesday snapshot (index 1) used price 100
+      const tuesdaySnapshot = saveSpy.mock
+        .calls[1][1] as PortfolioDailyPerformance;
+      expect(tuesdaySnapshot.date.toISOString()).toContain('2024-01-02');
+      // Equity calculation: StartEquity(Monday)=0, MondayReturn=0 (1st day)
+      // Tuesday: StartEquity=100 (from Monday), Price=100 (carried forward), EndEquity=100, Return=0
+    });
+
+    it('should trigger auto-ingestion if market data is completely missing', async () => {
+      const startDate = new Date('2024-01-01');
+
+      // Mock transactions
+      jest
+        .spyOn(transactionRepo, 'find')
+        .mockResolvedValue([{ ticker: 'NEW_TICKER' } as any]);
+
+      // Mock market data: initially empty for the ticker
+      const findSpy = jest.spyOn(marketDataRepo, 'find');
+      findSpy
+        .mockResolvedValueOnce([]) // First batch fetch returns empty
+        .mockResolvedValueOnce([
+          // Second batch fetch (after ingest) returns data
+          {
+            ticker: 'NEW_TICKER',
+            date: new Date('2024-01-01'),
+            closePrice: 50,
+          },
+        ] as any);
+
+      await service.recalculateFromDate(mockPortfolioId, startDate);
+
+      // Verify auto-ingestion was triggered
+      expect(
+        marketDataIngestionService.fetchAndStoreMarketData,
+      ).toHaveBeenCalledWith('NEW_TICKER', expect.any(Date), expect.any(Date));
+
+      // Verify market data was refetched
+      expect(findSpy).toHaveBeenCalledTimes(2);
     });
   });
 });

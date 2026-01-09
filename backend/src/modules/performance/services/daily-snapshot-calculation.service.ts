@@ -19,6 +19,8 @@ import {
   CASH_TICKER,
 } from '../../portfolio/entities/transaction.entity';
 
+import { MarketDataIngestionService } from './market-data-ingestion.service';
+
 /**
  * Custom exception for missing market data
  */
@@ -54,6 +56,7 @@ export class DailySnapshotCalculationService {
     @InjectRepository(MarketDataDaily)
     private readonly marketDataRepo: Repository<MarketDataDaily>,
     private readonly dataSource: DataSource,
+    private readonly marketDataIngestionService: MarketDataIngestionService,
   ) {}
 
   /**
@@ -223,19 +226,57 @@ export class DailySnapshotCalculationService {
         new Set(transactions.map((t) => t.ticker)),
       ).filter((ticker) => ticker !== CASH_TICKER);
 
-      const marketDataMap = await this.batchFetchMarketData(
+      let marketDataMap = await this.batchFetchMarketData(
         uniqueTickers,
         startDate,
         new Date(),
       );
 
-      // 4. Calculate snapshot for each day sequentially
+      // 3.5 Auto-backfill market data if missing for any tickers
+      let refetchNeeded = false;
+      for (const ticker of uniqueTickers) {
+        const prices = marketDataMap.get(ticker);
+        if (!prices || prices.size === 0) {
+          this.logger.log(
+            `Market data missing for ${ticker} during snapshot backfill, triggering auto-ingestion...`,
+          );
+          try {
+            await this.marketDataIngestionService.fetchAndStoreMarketData(
+              ticker,
+              startDate,
+              new Date(),
+            );
+            refetchNeeded = true;
+          } catch (e) {
+            this.logger.error(
+              `Failed to auto-ingest market data for ${ticker}: ${e instanceof Error ? e.message : 'Unknown error'}`,
+            );
+          }
+        }
+      }
+
+      if (refetchNeeded) {
+        this.logger.log(
+          `Refetching batched market data after auto-ingestion...`,
+        );
+        marketDataMap = await this.batchFetchMarketData(
+          uniqueTickers,
+          startDate,
+          new Date(),
+        );
+      }
+
+      // 4. Track last known prices for each ticker to handle weekends/holidays
+      const lastKnownPrices = new Map<string, number>();
+
+      // 5. Calculate snapshot for each day sequentially
       for (const date of dateRange) {
         // Use the batched market data instead of fetching per day
         await this.calculateDailySnapshotWithBatchedData(
           portfolioId,
           date,
           marketDataMap,
+          lastKnownPrices,
           queryRunner,
         );
       }
@@ -483,6 +524,7 @@ export class DailySnapshotCalculationService {
     portfolioId: string,
     date: Date,
     marketDataMap: Map<string, Map<string, number>>,
+    lastKnownPrices: Map<string, number>,
     queryRunner: QueryRunner,
   ): Promise<void> {
     const dateStr = format(date, 'yyyy-MM-dd');
@@ -512,24 +554,49 @@ export class DailySnapshotCalculationService {
 
     // 3. Calculate end equity using batched market data
     let stockValue = 0;
+    let missingPricesCount = 0;
+
     for (const [ticker, quantity] of positions.entries()) {
       if (ticker === CASH_TICKER) {
         continue;
       }
 
       const tickerPrices = marketDataMap.get(ticker);
-      const price = tickerPrices?.get(dateStr);
+      let price = tickerPrices?.get(dateStr);
 
       if (price === undefined) {
-        // Log warning but don't fail - this might be a weekend/holiday
-        this.logger.debug(
-          `No market data for ${ticker} on ${dateStr} - likely weekend/holiday`,
-        );
-        // Skip this day - no trading occurred
-        return;
+        // Try to use last known price if current is missing (weekend/holiday)
+        price = lastKnownPrices.get(ticker);
       }
 
+      if (price === undefined) {
+        // Still no price - log warning and increment counter
+        this.logger.debug(
+          `No price data available for ${ticker} on ${dateStr} or previously.`,
+        );
+        missingPricesCount++;
+        continue;
+      }
+
+      // Update last known price
+      lastKnownPrices.set(ticker, price);
       stockValue += quantity * price;
+    }
+
+    // If we are missing prices for ALL non-cash tickers, and we have non-cash tickers,
+    // then we shouldn't save a snapshot for this day as it would be inaccurate.
+    // However, if we only have cash, it's fine.
+    const nonCashTickers = Array.from(positions.keys()).filter(
+      (t) => t !== CASH_TICKER,
+    );
+    if (
+      nonCashTickers.length > 0 &&
+      missingPricesCount === nonCashTickers.length
+    ) {
+      this.logger.debug(
+        `Skipping snapshot for ${dateStr} - no price data for any ticker.`,
+      );
+      return;
     }
 
     const cashBalance = positions.get(CASH_TICKER) ?? 0;

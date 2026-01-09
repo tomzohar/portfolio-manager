@@ -69,11 +69,17 @@ export class TransactionsService {
         );
       }
 
-      // For WITHDRAWAL, validate sufficient cash balance
+      // Parse transaction date early - needed for historical validation
+      const transactionDate = createTransactionDto.transactionDate
+        ? new Date(createTransactionDto.transactionDate)
+        : new Date();
+
+      // For WITHDRAWAL, validate sufficient cash balance as of the transaction date
       if (createTransactionDto.type === TransactionType.WITHDRAWAL) {
         const cashPosition = await this.calculatePositionForTicker(
           portfolioId,
           CASH_TICKER,
+          transactionDate,
         );
         if (cashPosition < createTransactionDto.quantity) {
           throw new BadRequestException(
@@ -81,10 +87,6 @@ export class TransactionsService {
           );
         }
       }
-
-      const transactionDate = createTransactionDto.transactionDate
-        ? new Date(createTransactionDto.transactionDate)
-        : new Date();
 
       // Create single transaction (no offsetting entry)
       const transaction = this.transactionRepository.create({
@@ -109,13 +111,19 @@ export class TransactionsService {
     const transactionValue =
       createTransactionDto.quantity * createTransactionDto.price;
 
+    // Parse transaction date early - needed for historical validation
+    const transactionDate = createTransactionDto.transactionDate
+      ? new Date(createTransactionDto.transactionDate)
+      : new Date();
+
     // For non-CASH transactions, validate CASH balance
     if (ticker !== CASH_TICKER) {
       if (createTransactionDto.type === TransactionType.BUY) {
-        // Validate sufficient CASH for purchase
+        // Validate sufficient CASH for purchase as of the transaction date
         const cashPosition = await this.calculatePositionForTicker(
           portfolioId,
           CASH_TICKER,
+          transactionDate,
         );
         if (cashPosition < transactionValue) {
           throw new BadRequestException(
@@ -124,11 +132,12 @@ export class TransactionsService {
         }
       }
 
-      // For SELL transactions, validate that user has enough shares
+      // For SELL transactions, validate that user has enough shares as of the transaction date
       if (createTransactionDto.type === TransactionType.SELL) {
         const currentPosition = await this.calculatePositionForTicker(
           portfolioId,
           ticker,
+          transactionDate,
         );
 
         if (currentPosition < createTransactionDto.quantity) {
@@ -138,10 +147,6 @@ export class TransactionsService {
         }
       }
     }
-
-    const transactionDate = createTransactionDto.transactionDate
-      ? new Date(createTransactionDto.transactionDate)
-      : new Date();
 
     // Create the main transaction
     const transaction = this.transactionRepository.create({
@@ -312,12 +317,18 @@ export class TransactionsService {
   }
 
   /**
-   * Calculate the current position (net quantity) for a specific ticker in a portfolio
-   * Used for validating SELL transactions
+   * Calculate the position (net quantity) for a specific ticker in a portfolio
+   * Used for validating SELL/BUY/WITHDRAWAL transactions
+   *
+   * @param portfolioId - Portfolio UUID
+   * @param ticker - Ticker symbol
+   * @param asOfDate - Optional date to calculate position as of (inclusive). If not provided, calculates current position.
+   * @returns Net quantity of the ticker
    */
   private async calculatePositionForTicker(
     portfolioId: string,
     ticker: string,
+    asOfDate?: Date,
   ): Promise<number> {
     const transactions = await this.transactionRepository.find({
       where: {
@@ -329,6 +340,11 @@ export class TransactionsService {
 
     let position = 0;
     for (const transaction of transactions) {
+      // If asOfDate is provided, only include transactions up to and including that date
+      if (asOfDate && transaction.transactionDate > asOfDate) {
+        continue;
+      }
+
       if (
         transaction.type === TransactionType.BUY ||
         transaction.type === TransactionType.DEPOSIT

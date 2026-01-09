@@ -34,11 +34,14 @@ describe('DashboardPerformanceComponent', () => {
     selectedTimeframe: signal(Timeframe.YEAR_TO_DATE),
     loading: signal(false),
     error: signal(null),
+    excludeCash: signal(false),
+    cashAllocationAvg: signal(null),
     changeTimeframe: jest.fn(),
+    toggleExcludeCash: jest.fn(),
   };
 
   const mockPortfolioFacade = {
-    selectedId: signal('portfolio-123'),
+    selectedId: signal<string | null>('portfolio-123'),
   };
 
   beforeEach(async () => {
@@ -78,6 +81,32 @@ describe('DashboardPerformanceComponent', () => {
 
   it('should have onTimeframeChanged method', () => {
     expect(component.onTimeframeChanged).toBeDefined();
+  });
+
+  it('should call facade.toggleExcludeCash when exclude cash is toggled', () => {
+    component.onExcludeCashToggled(true);
+
+    expect(mockPerformanceFacade.toggleExcludeCash).toHaveBeenCalledWith(
+      'portfolio-123',
+      true
+    );
+  });
+
+  it('should have onExcludeCashToggled method', () => {
+    expect(component.onExcludeCashToggled).toBeDefined();
+  });
+
+  it('should not call facade methods when portfolio ID is null', () => {
+    // Reset call counts from previous tests
+    jest.clearAllMocks();
+    
+    mockPortfolioFacade.selectedId.set(null);
+
+    component.onTimeframeChanged(Timeframe.THREE_MONTHS);
+    component.onExcludeCashToggled(true);
+
+    expect(mockPerformanceFacade.changeTimeframe).not.toHaveBeenCalled();
+    expect(mockPerformanceFacade.toggleExcludeCash).not.toHaveBeenCalled();
   });
 });
 
