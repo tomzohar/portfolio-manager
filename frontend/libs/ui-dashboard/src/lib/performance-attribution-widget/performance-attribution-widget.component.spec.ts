@@ -38,6 +38,16 @@ describe('PerformanceAttributionWidgetComponent', () => {
     { date: '2024-01-02', portfolioValue: 102, benchmarkValue: 101 },
   ];
 
+  const mockAnalysisFullyCash: PerformanceAnalysis = {
+    portfolioReturn: 0.0,
+    benchmarkReturn: 0.062,
+    alpha: -0.062,
+    benchmarkTicker: 'SPY',
+    timeframe: Timeframe.THREE_MONTHS,
+    viewMode: 'INVESTED',
+    cashAllocationAvg: 1.0, // 100% cash
+  };
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [PerformanceAttributionWidgetComponent],
@@ -105,6 +115,66 @@ describe('PerformanceAttributionWidgetComponent', () => {
     fixture.detectChanges();
 
     expect(component.isOutperforming()).toBe(true);
+  });
+
+  it('should detect fully cash portfolio correctly', () => {
+    fixture.componentRef.setInput('analysis', mockAnalysisFullyCash);
+    fixture.detectChanges();
+
+    expect(component.isFullyCash()).toBe(true);
+  });
+
+  it('should not detect fully cash when cash allocation is below threshold', () => {
+    const partialCashAnalysis: PerformanceAnalysis = {
+      ...mockAnalysisFullyCash,
+      cashAllocationAvg: 0.5, // 50% cash
+    };
+    fixture.componentRef.setInput('analysis', partialCashAnalysis);
+    fixture.detectChanges();
+
+    expect(component.isFullyCash()).toBe(false);
+  });
+
+  it('should detect fully cash portfolio even in TOTAL view mode', () => {
+    const fullyCashTotalView: PerformanceAnalysis = {
+      portfolioReturn: 0.0,
+      benchmarkReturn: 0.062,
+      alpha: -0.062,
+      benchmarkTicker: 'SPY',
+      timeframe: Timeframe.THREE_MONTHS,
+      viewMode: 'TOTAL', // TOTAL view, not INVESTED
+      cashAllocationAvg: 1.0, // 100% cash
+    };
+    fixture.componentRef.setInput('analysis', fullyCashTotalView);
+    fixture.detectChanges();
+
+    expect(component.isFullyCash()).toBe(true);
+  });
+
+  it('should show empty state for cash-only portfolio', () => {
+    fixture.componentRef.setInput('analysis', mockAnalysisFullyCash);
+    fixture.componentRef.setInput('historicalData', mockHistoricalData);
+    fixture.detectChanges();
+
+    const emptyState = fixture.nativeElement.querySelector('lib-empty-state');
+    expect(emptyState).toBeTruthy();
+  });
+
+  it('should emit buyStockClicked when buy stock button is clicked', () => {
+    const emitSpy = jest.spyOn(component.buyStockClicked, 'emit');
+
+    component.onBuyStockClick();
+
+    expect(emitSpy).toHaveBeenCalled();
+  });
+
+  it('should not show chart when portfolio is fully cash', () => {
+    fixture.componentRef.setInput('analysis', mockAnalysisFullyCash);
+    fixture.componentRef.setInput('historicalData', mockHistoricalData);
+    fixture.detectChanges();
+
+    const chartSection = fixture.nativeElement.querySelector('.chart-section');
+    expect(chartSection).toBeFalsy();
   });
 
   // Note: Chart rendering test skipped due to ApexCharts Jest worker issues

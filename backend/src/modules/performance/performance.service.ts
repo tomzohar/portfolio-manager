@@ -96,12 +96,10 @@ export class PerformanceService {
     const warning = this.getWarningForTimeframe(periodDays);
     const viewMode = excludeCash ? 'INVESTED' : 'TOTAL';
 
-    // Calculate cash allocation average only if excluding cash
-    const cashAllocationAvg = excludeCash
-      ? (this.performanceCalculationService.calculateAverageCashAllocation(
-          snapshots,
-        ) as number | undefined)
-      : undefined;
+    const cashAllocationAvg =
+      this.performanceCalculationService.calculateAverageCashAllocation(
+        snapshots,
+      );
 
     return new BenchmarkComparisonDto({
       portfolioReturn,
@@ -177,12 +175,11 @@ export class PerformanceService {
       : undefined;
     const viewMode = excludeCash ? 'INVESTED' : 'TOTAL';
 
-    // Calculate cash allocation average only if excluding cash
-    const cashAllocationAvg = excludeCash
-      ? (this.performanceCalculationService.calculateAverageCashAllocation(
-          snapshots,
-        ) as number | undefined)
-      : undefined;
+    // Always calculate cash allocation average (frontend needs it to detect cash-only portfolios)
+    const cashAllocationAvg =
+      this.performanceCalculationService.calculateAverageCashAllocation(
+        snapshots,
+      );
 
     return new HistoricalDataResponseDto({
       portfolioId,

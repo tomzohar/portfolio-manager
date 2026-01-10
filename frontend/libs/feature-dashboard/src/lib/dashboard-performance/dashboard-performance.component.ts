@@ -1,4 +1,5 @@
 import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { PerformanceAttributionWidgetComponent } from '@frontend/ui-dashboard';
 import { PerformanceAttributionFacade } from '@stocks-researcher/data-access-dashboard';
 import { PortfolioFacade } from '@frontend/data-access-portfolio';
@@ -23,6 +24,7 @@ import { Timeframe } from '@stocks-researcher/types';
 export class DashboardPerformanceComponent {
   protected performanceFacade = inject(PerformanceAttributionFacade);
   private portfolioFacade = inject(PortfolioFacade);
+  private router = inject(Router);
 
   /**
    * Handle timeframe change
@@ -44,6 +46,15 @@ export class DashboardPerformanceComponent {
     if (portfolioId) {
       this.performanceFacade.toggleExcludeCash(portfolioId, excludeCash);
     }
+  }
+
+  /**
+   * Handle buy stock button click from cash-only empty state
+   * Navigates user to Overview tab where they can buy stocks
+   */
+  onBuyStockClick(): void {
+    // Navigate to the Overview tab where users can buy stocks
+    this.router.navigate(['/dashboard/overview']);
   }
 }
 

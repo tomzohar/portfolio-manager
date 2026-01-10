@@ -11,7 +11,7 @@ import {
   PerformanceAnalysis,
   HistoricalDataPoint,
 } from '@stocks-researcher/types';
-import { TimeframeSelectorComponent } from '../timeframe-selector/timeframe-selector.component';
+import { CashExclusionControlsComponent } from '../cash-exclusion-controls/cash-exclusion-controls.component';
 import { AlphaBadgeComponent } from '../alpha-badge/alpha-badge.component';
 import { PerformanceChartComponent } from '../performance-chart/performance-chart.component';
 import {
@@ -19,6 +19,7 @@ import {
   ButtonConfig,
   LoaderComponent,
   LoaderConfig,
+  EmptyStateComponent,
 } from '@stocks-researcher/styles';
 
 /**
@@ -38,11 +39,12 @@ import {
   standalone: true,
   imports: [
     CommonModule,
-    TimeframeSelectorComponent,
+    CashExclusionControlsComponent,
     AlphaBadgeComponent,
     PerformanceChartComponent,
     ButtonComponent,
     LoaderComponent,
+    EmptyStateComponent,
   ],
   templateUrl: './performance-attribution-widget.component.html',
   styleUrl: './performance-attribution-widget.component.scss',
@@ -76,6 +78,16 @@ export class PerformanceAttributionWidgetComponent {
    */
   error = input<string | null>(null);
 
+  /**
+   * Whether to exclude cash from performance calculations
+   */
+  excludeCash = input<boolean>(false);
+
+  /**
+   * Average cash allocation percentage
+   */
+  cashAllocationAvg = input<number | null>(null);
+
   // ========== Outputs ==========
 
   /**
@@ -87,6 +99,16 @@ export class PerformanceAttributionWidgetComponent {
    * Emitted when user submits a natural language query
    */
   querySubmitted = output<string>();
+
+  /**
+   * Emitted when user toggles cash exclusion
+   */
+  excludeCashToggled = output<boolean>();
+
+  /**
+   * Emitted when user clicks the "Buy Stock" button in cash-only empty state
+   */
+  buyStockClicked = output<void>();
 
   // ========== Computed Values ==========
 
@@ -132,7 +154,21 @@ export class PerformanceAttributionWidgetComponent {
     const analysis = this.analysis();
     return analysis ? analysis.alpha > 0 : false;
   });
-  
+
+  /**
+   * Whether the portfolio is nearly 100% cash (no invested positions)
+   * Uses threshold of 0.995 (99.5%) to catch portfolios that are effectively all cash
+   * 
+   * Why: We check regardless of viewMode so users see the empty state immediately
+   * when loading the Performance tab, even before toggling to Invested view
+   */
+  isFullyCash = computed(() => {
+    const analysis = this.analysis();
+    if (!analysis) return false;
+    const cashAlloc = analysis.cashAllocationAvg;
+    return cashAlloc !== null && cashAlloc !== undefined && cashAlloc >= 0.995;
+  });
+
   readonly loaderConfig: LoaderConfig = {
     size: 'lg',
   };
@@ -140,7 +176,7 @@ export class PerformanceAttributionWidgetComponent {
   // ========== Event Handlers ==========
 
   /**
-   * Handle timeframe selection
+   * Handle timeframe selection (forwarded from child component)
    */
   onTimeframeChange(timeframe: Timeframe): void {
     this.timeframeChanged.emit(timeframe);
@@ -154,6 +190,13 @@ export class PerformanceAttributionWidgetComponent {
   }
 
   /**
+   * Handle exclude cash toggle (forwarded from child component)
+   */
+  onExcludeCashToggle(checked: boolean): void {
+    this.excludeCashToggled.emit(checked);
+  }
+
+  /**
    * Retry button configuration
    */
   readonly retryButtonConfig: ButtonConfig = {
@@ -162,4 +205,21 @@ export class PerformanceAttributionWidgetComponent {
     color: 'primary',
     ariaLabel: 'Retry loading performance data',
   };
+
+  /**
+   * Buy stock button configuration for cash-only empty state
+   */
+  readonly buyStockButtonConfig: ButtonConfig = {
+    label: 'Buy Your First Stock',
+    variant: 'raised',
+    color: 'primary',
+    ariaLabel: 'Navigate to buy stocks',
+  };
+
+  /**
+   * Handle buy stock button click
+   */
+  onBuyStockClick(): void {
+    this.buyStockClicked.emit();
+  }
 }

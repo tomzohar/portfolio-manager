@@ -1,11 +1,15 @@
 <div class="performance-page-layout">
-  <!-- Timeframe Selector (right-aligned) -->
-  <div class="page-header">
-    <lib-timeframe-selector
-      [selectedTimeframe]="selectedTimeframe()"
-      (timeframeChanged)="onTimeframeChange($event)"
-    />
-  </div>
+  <!-- Cash Exclusion Controls Component -->
+  <lib-cash-exclusion-controls
+    [excludeCash]="excludeCash()"
+    [selectedTimeframe]="selectedTimeframe()"
+    [loading]="loading()"
+    [error]="error()"
+    [analysis]="analysis()"
+    [cashAllocationAvg]="cashAllocationAvg()"
+    (excludeCashToggled)="onExcludeCashToggle($event)"
+    (timeframeChanged)="onTimeframeChange($event)"
+  />
 
   <!-- Loading State -->
   @if (loading()) {
@@ -58,8 +62,17 @@
       </div>
     </div>
 
-    <!-- Chart Section -->
-    @if (historicalData()) {
+    <!-- Chart Section or Cash-Only Empty State -->
+    @if (isFullyCash()) {
+      <!-- Empty State for Cash-Only Portfolio -->
+      <lib-empty-state
+        [icon]="'account_balance_wallet'"
+        [title]="'Portfolio is 100% Cash'"
+        [message]="'Your portfolio currently holds only cash. Start investing to see performance metrics and track your returns against the market.'"
+        [buttonConfig]="buyStockButtonConfig"
+        (actionClick)="onBuyStockClick()"
+      />
+    } @else if (historicalData()) {
       <div class="chart-section">
         <lib-performance-chart
           [data]="historicalData()!"
@@ -70,9 +83,11 @@
     }
 
     <!-- Help Text (subtle) -->
-    <p class="help-text">
-      ℹ Alpha measures your excess return compared to the S&P 500 benchmark.
-    </p>
+    @if (!isFullyCash()) {
+      <p class="help-text">
+        ℹ Alpha measures your excess return compared to the S&P 500 benchmark.
+      </p>
+    }
   }
 
   <!-- Empty State -->

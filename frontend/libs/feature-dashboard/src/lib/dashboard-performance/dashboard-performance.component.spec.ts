@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Injectable, provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideAnimations } from '@angular/platform-browser/animations';
+import { Router } from '@angular/router';
 import { DashboardPerformanceComponent } from './dashboard-performance.component';
 import { Timeframe } from '@stocks-researcher/types';
 import { ChartService, ChartInstance } from '@stocks-researcher/ui-charts';
@@ -44,6 +45,10 @@ describe('DashboardPerformanceComponent', () => {
     selectedId: signal<string | null>('portfolio-123'),
   };
 
+  const mockRouter = {
+    navigate: jest.fn(),
+  };
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [DashboardPerformanceComponent],
@@ -53,6 +58,7 @@ describe('DashboardPerformanceComponent', () => {
         { provide: ChartService, useClass: MockChartService },
         { provide: PerformanceAttributionFacade, useValue: mockPerformanceFacade },
         { provide: PortfolioFacade, useValue: mockPortfolioFacade },
+        { provide: Router, useValue: mockRouter },
       ],
     }).compileComponents();
 
@@ -107,6 +113,18 @@ describe('DashboardPerformanceComponent', () => {
 
     expect(mockPerformanceFacade.changeTimeframe).not.toHaveBeenCalled();
     expect(mockPerformanceFacade.toggleExcludeCash).not.toHaveBeenCalled();
+  });
+
+  it('should navigate to overview tab when buy stock is clicked', () => {
+    jest.clearAllMocks();
+
+    component.onBuyStockClick();
+
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/dashboard/overview']);
+  });
+
+  it('should have onBuyStockClick method', () => {
+    expect(component.onBuyStockClick).toBeDefined();
   });
 });
 

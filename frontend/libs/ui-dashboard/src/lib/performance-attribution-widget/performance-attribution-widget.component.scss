@@ -6,11 +6,6 @@
   gap: $spacing-lg;
 }
 
-.page-header {
-  display: flex;
-  justify-content: flex-end; // Right-align timeframe selector
-}
-
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

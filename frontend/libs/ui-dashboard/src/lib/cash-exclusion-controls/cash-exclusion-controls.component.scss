@@ -1,0 +1,308 @@
+@use 'scss' as *;
+
+.cash-exclusion-controls {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: $spacing-md;
+}
+
+.toggle-container {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: $radius-lg;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0.04) 100%
+    );
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+}
+
+.toggle-container-content {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  width: 100%;
+}
+
+// Custom Material Toggle Styling - Futuristic Design
+::ng-deep mat-slide-toggle {
+  .mdc-switch {
+    width: 52px;
+    height: 28px;
+
+    .mdc-switch__track {
+      height: 28px;
+      border-radius: 14px;
+      background: linear-gradient(
+        135deg,
+        rgba(100, 100, 100, 0.3) 0%,
+        rgba(80, 80, 80, 0.3) 100%
+      );
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(5px);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      opacity: 1;
+
+      &::before,
+      &::after {
+        display: none;
+      }
+    }
+
+    .mdc-switch__handle-track {
+      height: 28px;
+      width: 52px;
+      left: 4px;
+    }
+
+    // Fix transform for our custom dimensions
+    // Math: (track width 52px - handle width 24px - margins 4px) / track width 52px = 46.15%
+    &.mdc-switch--selected .mdc-switch__handle-track {
+      transform: translateX(calc(100% - calc(var(--mat-slide-toggle-with-icon-handle-size) * 1.4))) !important;
+    }
+
+    .mdc-switch__handle {
+      width: 24px;
+      height: 24px;
+      margin: 2px;
+
+      &::before,
+      &::after {
+        display: none;
+      }
+
+      .mdc-switch__icons {
+        display: none;
+      }
+
+      .mdc-switch__ripple {
+        display: none;
+      }
+
+      .mdc-switch__shadow {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3),
+          0 0 0 1px rgba(255, 255, 255, 0.1);
+      }
+    }
+
+    // Unchecked state
+    &:not(.mdc-switch--selected) {
+      .mdc-switch__handle {
+        background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+
+        .mdc-switch__shadow {
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2),
+            0 0 0 1px rgba(255, 255, 255, 0.3);
+        }
+      }
+    }
+
+    // Checked state - Futuristic glow
+    &.mdc-switch--selected {
+      .mdc-switch__track {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: rgba(102, 126, 234, 0.5);
+        box-shadow: 0 0 20px rgba(102, 126, 234, 0.4),
+          inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      }
+
+      .mdc-switch__handle {
+        background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+
+        .mdc-switch__shadow {
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5),
+            0 0 20px rgba(102, 126, 234, 0.3),
+            0 0 0 1px rgba(255, 255, 255, 0.5);
+        }
+      }
+    }
+
+    // Disabled state
+    &.mdc-switch--disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+
+      .mdc-switch__track {
+        background: linear-gradient(
+          135deg,
+          rgba(150, 150, 150, 0.2) 0%,
+          rgba(130, 130, 130, 0.2) 100%
+        );
+        border-color: rgba(255, 255, 255, 0.05);
+      }
+
+      .mdc-switch__handle {
+        background: linear-gradient(135deg, #cccccc 0%, #b0b0b0 100%);
+      }
+    }
+  }
+
+  // Label styling
+  .mdc-label {
+    font-size: $font-size-sm;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    color: $color-text-primary !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    margin-left: $spacing-xs;
+    transition: color 0.3s ease;
+  }
+
+  &:hover:not(.mdc-switch--disabled) .mdc-label {
+    color: $color-text-primary !important;
+    opacity: 1;
+  }
+
+  // Animation on toggle
+  .mdc-switch__handle {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+// Fix label color for visibility on dark background
+::ng-deep .mat-mdc-slide-toggle {
+  .mat-internal-form-field {
+    color: $color-text-primary !important;
+  }
+}
+
+.toggle-disabled-hint {
+  @include body-small;
+  color: $color-text-subtle;
+  font-size: $font-size-xs;
+  font-style: italic;
+  padding: $spacing-xs $spacing-xs;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: $radius-sm;
+  backdrop-filter: blur(5px);
+  width: fit-content;
+}
+
+.info-icon {
+  opacity: 0.7;
+  transition: all 0.3s ease;
+  color: $color-text-primary;
+
+  &:hover {
+    opacity: 1;
+    color: $color-text-primary;
+    transform: scale(1.1);
+  }
+
+  ::ng-deep mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: $color-text-primary;
+  }
+}
+
+.view-mode-info {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.view-mode-badge {
+  @include label-uppercase;
+  font-size: $font-size-2xs;
+  padding: $spacing-xs $spacing-sm;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: $radius-md;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3),
+    0 0 20px rgba(102, 126, 234, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+
+  // Futuristic shimmer effect
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent
+    );
+    animation: shimmer 3s infinite;
+  }
+}
+
+@keyframes shimmer {
+  0%,
+  100% {
+    left: -100%;
+  }
+  50% {
+    left: 100%;
+  }
+}
+
+.cash-allocation-text {
+  @include body-small;
+  color: $color-text-subtle;
+  font-size: $font-size-xs;
+  font-weight: 400;
+  letter-spacing: 0.2px;
+}
+
+.cash-warning {
+  @include body-small;
+  color: #ffc107;
+  font-size: $font-size-xs;
+  font-weight: 500;
+  padding: $spacing-xs $spacing-xs;
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: $radius-sm;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 0 12px rgba(255, 193, 7, 0.2);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
