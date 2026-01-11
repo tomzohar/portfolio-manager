@@ -44,6 +44,8 @@ export class PerformanceService {
    * @param benchmarkTicker - Benchmark ticker symbol (e.g., 'SPY')
    * @param timeframe - Time period for comparison
    * @param excludeCash - If true, exclude cash positions from performance calculation
+   * @param asOfDate - Optional date for historical analysis (defaults to current date)
+   *                   NOTE: Ignored for YEAR_TO_DATE timeframe (YTD always uses current year)
    * @returns Comparison metrics including Alpha
    */
   async getBenchmarkComparison(
@@ -52,9 +54,10 @@ export class PerformanceService {
     benchmarkTicker: string,
     timeframe: Timeframe,
     excludeCash: boolean = false,
+    asOfDate?: Date,
   ): Promise<BenchmarkComparisonDto> {
     this.logger.log(
-      `Getting benchmark comparison from snapshots: ${portfolioId}, ${timeframe}, excludeCash: ${excludeCash}`,
+      `Getting benchmark comparison from snapshots: ${portfolioId}, ${timeframe}, excludeCash: ${excludeCash}, asOfDate: ${asOfDate?.toISOString() || 'current'}`,
     );
 
     // Verify ownership and get date range
@@ -63,6 +66,7 @@ export class PerformanceService {
       portfolioId,
       userId,
       timeframe,
+      asOfDate,
     );
 
     // Fetch snapshots (with auto-backfill if needed)
@@ -74,7 +78,7 @@ export class PerformanceService {
 
     // Calculate portfolio and benchmark returns
     const portfolioReturn =
-      this.performanceCalculationService.calculateCumulativeReturn(
+      await this.performanceCalculationService.calculateCumulativeReturn(
         snapshots,
         excludeCash,
       );
@@ -162,11 +166,27 @@ export class PerformanceService {
         endDate,
       );
 
+    // Calculate the true cumulative return using cost basis method (for excludeCash=true)
+    // The cost basis method calculates return as: (current_value / cost_basis) - 1
+    // This differs from TWR which treats SELLs as withdrawals
+    let trueCumulativeReturn: number | undefined;
+    if (excludeCash) {
+      trueCumulativeReturn =
+        await this.performanceCalculationService.calculateCumulativeReturn(
+          snapshots,
+          true,
+        );
+      this.logger.log(
+        `Cost-basis cumulative return: ${(trueCumulativeReturn * 100).toFixed(2)}%`,
+      );
+    }
+
     // Generate normalized chart data
     const data = this.chartDataService.generateNormalizedChartData(
       snapshots,
       benchmarkPrices,
       excludeCash,
+      trueCumulativeReturn,
     );
 
     // Build response DTO
@@ -291,13 +311,22 @@ export class PerformanceService {
   /**
    * Get date range based on timeframe
    * For ALL_TIME, uses the first transaction date
+   * For YTD, ALWAYS uses current year (asOfDate is ignored for YTD)
+   *
+   * @param portfolioId - Portfolio UUID
+   * @param userId - User UUID
+   * @param timeframe - Time period to calculate
+   * @param asOfDate - Optional date for historical analysis. When not provided, defaults to current date for real-time analysis.
+   *                   NOTE: This parameter is IGNORED for YEAR_TO_DATE timeframe (YTD always uses current year)
+   * @returns Start and end dates for the calculation period
    */
   private async getDateRange(
     portfolioId: string,
     userId: string,
     timeframe: Timeframe,
+    asOfDate?: Date,
   ): Promise<{ startDate: Date; endDate: Date }> {
-    const endDate = new Date();
+    const endDate = asOfDate || new Date();
     let startDate: Date;
 
     switch (timeframe) {
@@ -313,9 +342,21 @@ export class PerformanceService {
       case Timeframe.ONE_YEAR:
         startDate = subYears(endDate, 1);
         break;
-      case Timeframe.YEAR_TO_DATE:
-        startDate = startOfYear(endDate);
-        break;
+      case Timeframe.YEAR_TO_DATE: {
+        // YTD ALWAYS uses current year, regardless of asOfDate parameter
+        // This aligns with financial industry standards (Bloomberg, Yahoo Finance, etc.)
+        // For historical queries, users should use timeframe=ALL_TIME with asOfDate
+        if (asOfDate) {
+          this.logger.warn(
+            `asOfDate parameter ignored for YTD timeframe (always uses current year). ` +
+              `Use timeframe=ALL_TIME with asOfDate for historical queries.`,
+          );
+        }
+        const now = new Date();
+        startDate = startOfYear(now);
+        // Return early with current date as endDate
+        return { startDate, endDate: now };
+      }
       case Timeframe.ALL_TIME:
         {
           // Get first transaction date

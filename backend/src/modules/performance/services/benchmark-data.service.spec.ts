@@ -242,7 +242,7 @@ describe('BenchmarkDataService', () => {
       expect(
         marketDataIngestionService.fetchAndStoreMarketData,
       ).toHaveBeenCalled();
-      expect(marketDataRepo.find).toHaveBeenCalledTimes(2); // Still retries after error
+      expect(marketDataRepo.find).toHaveBeenCalledTimes(1); // Only called once before API fails
     });
 
     it('should log auto-backfill activity for observability', async () => {

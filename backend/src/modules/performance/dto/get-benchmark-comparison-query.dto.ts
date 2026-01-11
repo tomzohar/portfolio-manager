@@ -22,6 +22,17 @@ export const GetBenchmarkComparisonQuerySchema = z.object({
       }
       return false;
     }),
+  asOfDate: z
+    .string()
+    .datetime()
+    .optional()
+    .describe(
+      'ISO datetime string for historical analysis (e.g., "2024-01-11T00:00:00.000Z"). ' +
+        'When provided, calculations use this date instead of current date. ' +
+        'Useful for backtesting and analyzing historical portfolio performance. ' +
+        'NOTE: This parameter is IGNORED for timeframe=YTD (Year-To-Date always uses current year). ' +
+        'For historical queries, use timeframe=ALL_TIME with asOfDate.',
+    ),
 });
 
 /**

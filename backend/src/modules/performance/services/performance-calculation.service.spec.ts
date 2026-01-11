@@ -13,6 +13,7 @@ describe('PerformanceCalculationService', () => {
   let portfolioDailyPerfRepo: jest.Mocked<
     Repository<PortfolioDailyPerformance>
   >;
+  let transactionRepo: jest.Mocked<Repository<Transaction>>;
   let dailySnapshotService: jest.Mocked<DailySnapshotCalculationService>;
 
   beforeEach(async () => {
@@ -47,6 +48,7 @@ describe('PerformanceCalculationService', () => {
     portfolioDailyPerfRepo = module.get(
       getRepositoryToken(PortfolioDailyPerformance),
     );
+    transactionRepo = module.get(getRepositoryToken(Transaction));
     dailySnapshotService = module.get(DailySnapshotCalculationService);
   });
 
@@ -55,7 +57,7 @@ describe('PerformanceCalculationService', () => {
   });
 
   describe('calculateCumulativeReturn', () => {
-    it('should calculate cumulative return using geometric linking', () => {
+    it('should calculate cumulative return using geometric linking', async () => {
       // Arrange
       const snapshots = [
         { dailyReturnPct: 0.01 }, // 1%
@@ -64,27 +66,27 @@ describe('PerformanceCalculationService', () => {
       ] as PortfolioDailyPerformance[];
 
       // Act
-      const result = service.calculateCumulativeReturn(snapshots);
+      const result = await service.calculateCumulativeReturn(snapshots);
 
       // Assert
       // Cumulative = (1.01 * 1.01 * 1.01) - 1 = 0.030301
       expect(result).toBeCloseTo(0.030301, 5);
     });
 
-    it('should handle single snapshot', () => {
+    it('should handle single snapshot', async () => {
       // Arrange
       const snapshots = [
         { dailyReturnPct: 0.1 },
       ] as PortfolioDailyPerformance[];
 
       // Act
-      const result = service.calculateCumulativeReturn(snapshots);
+      const result = await service.calculateCumulativeReturn(snapshots);
 
       // Assert
       expect(result).toBeCloseTo(0.1, 5);
     });
 
-    it('should handle negative returns correctly', () => {
+    it('should handle negative returns correctly', async () => {
       // Arrange
       const snapshots = [
         { dailyReturnPct: -0.05 }, // -5%
@@ -92,14 +94,14 @@ describe('PerformanceCalculationService', () => {
       ] as PortfolioDailyPerformance[];
 
       // Act
-      const result = service.calculateCumulativeReturn(snapshots);
+      const result = await service.calculateCumulativeReturn(snapshots);
 
       // Assert
       // Cumulative = (0.95 * 0.95) - 1 = -0.0975
       expect(result).toBeCloseTo(-0.0975, 5);
     });
 
-    it('should handle zero returns', () => {
+    it('should handle zero returns', async () => {
       // Arrange
       const snapshots = [
         { dailyReturnPct: 0 },
@@ -108,18 +110,18 @@ describe('PerformanceCalculationService', () => {
       ] as PortfolioDailyPerformance[];
 
       // Act
-      const result = service.calculateCumulativeReturn(snapshots);
+      const result = await service.calculateCumulativeReturn(snapshots);
 
       // Assert
       expect(result).toBe(0);
     });
 
-    it('should handle empty snapshots array', () => {
+    it('should handle empty snapshots array', async () => {
       // Arrange
       const snapshots: PortfolioDailyPerformance[] = [];
 
       // Act
-      const result = service.calculateCumulativeReturn(snapshots);
+      const result = await service.calculateCumulativeReturn(snapshots);
 
       // Assert
       expect(result).toBe(0);
@@ -164,7 +166,7 @@ describe('PerformanceCalculationService', () => {
   });
 
   describe('calculateAlpha', () => {
-    it('should calculate alpha correctly with positive excess return', () => {
+    it('should calculate alpha correctly with positive excess return', async () => {
       // Act
       const result = service.calculateAlpha(0.15, 0.1);
 
@@ -172,7 +174,7 @@ describe('PerformanceCalculationService', () => {
       expect(result).toBeCloseTo(0.05, 5);
     });
 
-    it('should calculate alpha correctly with negative excess return', () => {
+    it('should calculate alpha correctly with negative excess return', async () => {
       // Act
       const result = service.calculateAlpha(0.05, 0.1);
 
@@ -180,7 +182,7 @@ describe('PerformanceCalculationService', () => {
       expect(result).toBeCloseTo(-0.05, 5);
     });
 
-    it('should handle zero returns', () => {
+    it('should handle zero returns', async () => {
       // Act
       const result = service.calculateAlpha(0, 0);
 
@@ -191,7 +193,7 @@ describe('PerformanceCalculationService', () => {
 
   describe('calculateCumulativeReturn with excludeCash flag', () => {
     describe('when excludeCash is false (default behavior)', () => {
-      it('should calculate TWR using total equity (baseline)', () => {
+      it('should calculate TWR using total equity (baseline)', async () => {
         // Arrange: Portfolio with $10k total equity, $2k cash
         // Day 1: $10k equity, Day 2: $11k equity (10% return on total equity)
         const snapshots = [
@@ -210,7 +212,10 @@ describe('PerformanceCalculationService', () => {
         ] as PortfolioDailyPerformance[];
 
         // Act
-        const result = service.calculateCumulativeReturn(snapshots, false);
+        const result = await service.calculateCumulativeReturn(
+          snapshots,
+          false,
+        );
 
         // Assert
         expect(result).toBeCloseTo(0.1, 5); // 10% return on total equity
@@ -218,19 +223,28 @@ describe('PerformanceCalculationService', () => {
     });
 
     describe('when excludeCash is true', () => {
-      it('should calculate TWR using invested equity only (exclude cash)', () => {
+      beforeEach(() => {
+        // Mock empty transaction list by default (no BUY/SELL during period)
+        transactionRepo.find.mockResolvedValue([]);
+      });
+
+      it('should calculate TWR using invested equity only (exclude cash)', async () => {
         // Arrange: Portfolio with $10k total equity, $2k cash
         // Invested equity: Day 1: $8k, Day 2: $9k (12.5% return on invested capital)
         // Total equity gain: $1k
         // But cash stayed same ($2k), so stocks went from $8k to $9k = 12.5% return
         const snapshots = [
           {
+            portfolioId: 'portfolio-123',
+            date: new Date('2024-01-01'),
             totalEquity: 10000,
             cashBalance: 2000,
             netCashFlow: 0,
             dailyReturnPct: 0,
           },
           {
+            portfolioId: 'portfolio-123',
+            date: new Date('2024-01-02'),
             totalEquity: 11000,
             cashBalance: 2000,
             netCashFlow: 0,
@@ -238,30 +252,49 @@ describe('PerformanceCalculationService', () => {
           },
         ] as PortfolioDailyPerformance[];
 
+        // Mock initial investment of 80 shares @ $100
+        transactionRepo.find.mockResolvedValue([
+          {
+            type: 'BUY',
+            ticker: 'AAPL',
+            quantity: 80,
+            price: 100,
+            transactionDate: new Date('2023-12-31'),
+          },
+        ] as Transaction[]);
+
         // Act
-        const result = service.calculateCumulativeReturn(snapshots, true);
+        const result = await service.calculateCumulativeReturn(snapshots, true);
 
         // Assert
-        // Invested equity: $8000 -> $9000 = $1000 gain / $8000 start = 12.5% return
+        // Cost basis: 80 shares @ $100 = $8,000
+        // Current invested equity: $9,000
+        // Return: ($9,000 / $8,000) - 1 = 12.5%
         expect(result).toBeCloseTo(0.125, 5);
       });
 
-      it('should handle multiple days with cash exclusion', () => {
+      it('should handle multiple days with cash exclusion', async () => {
         // Arrange: 3-day scenario with varying cash balances
         const snapshots = [
           {
+            portfolioId: 'portfolio-123',
+            date: new Date('2024-01-01'),
             totalEquity: 10000,
             cashBalance: 2000,
             netCashFlow: 0,
             dailyReturnPct: 0,
           },
           {
+            portfolioId: 'portfolio-123',
+            date: new Date('2024-01-02'),
             totalEquity: 10800,
             cashBalance: 2000, // Cash unchanged, invested went from $8k to $8.8k = 10% gain
             netCashFlow: 0,
             dailyReturnPct: 0.08, // Total equity return
           },
           {
+            portfolioId: 'portfolio-123',
+            date: new Date('2024-01-03'),
             totalEquity: 11664,
             cashBalance: 2000, // Cash unchanged, invested went from $8.8k to $9.664k = 9.82% gain
             netCashFlow: 0,
@@ -269,50 +302,80 @@ describe('PerformanceCalculationService', () => {
           },
         ] as PortfolioDailyPerformance[];
 
+        // Mock initial investment of 80 shares @ $100
+        transactionRepo.find.mockResolvedValue([
+          {
+            type: 'BUY',
+            ticker: 'AAPL',
+            quantity: 80,
+            price: 100,
+            transactionDate: new Date('2023-12-31'),
+          },
+        ] as Transaction[]);
+
         // Act
-        const result = service.calculateCumulativeReturn(snapshots, true);
+        const result = await service.calculateCumulativeReturn(snapshots, true);
 
         // Assert
-        // Day 1->2: $8000 -> $8800 = 10% return
-        // Day 2->3: $8800 -> $9664 = 9.82% return
-        // Cumulative: (1.10 * 1.0982) - 1 = 20.8% return
+        // Cost basis: 80 shares @ $100 = $8,000
+        // Current invested equity: $9,664
+        // Return: ($9,664 / $8,000) - 1 = 20.8%
         expect(result).toBeCloseTo(0.208, 3);
       });
 
-      it('should handle net cash flows correctly with cash exclusion', () => {
-        // Arrange: Portfolio with deposit that significantly impacts calculation
-        // Day 1: Total $10k, Cash $2k, Invested $8k
-        // Day 2: $10k deposited, total $18.8k, Cash $12k, Invested $6.8k
+      it('should handle net cash flows correctly with cash exclusion', async () => {
+        // Arrange: Portfolio with deposit that stays in cash (not invested)
+        // Scenario: Investor has 8 shares @ $1000 each ($8k invested)
+        // Market drops to $850/share ($6.8k value) = -15% loss
+        // Cost basis approach: $6,800 / $8,000 - 1 = -15%
         const snapshots = [
           {
+            portfolioId: 'portfolio-123',
+            date: new Date('2024-01-01'),
             totalEquity: 10000,
             cashBalance: 2000,
             netCashFlow: 0,
             dailyReturnPct: 0,
           },
           {
+            portfolioId: 'portfolio-123',
+            date: new Date('2024-01-02'),
             totalEquity: 18800,
-            cashBalance: 12000, // Cash increased by $10k (the deposit)
+            cashBalance: 12000, // Cash increased by $10k (the deposit stayed in cash)
             netCashFlow: 10000, // External deposit
             dailyReturnPct: 0.08,
           },
         ] as PortfolioDailyPerformance[];
 
+        // Mock transactions: initial buy of 8 shares @ $1000
+        transactionRepo.find.mockResolvedValue([
+          {
+            type: 'DEPOSIT',
+            ticker: 'CASH',
+            quantity: 10000,
+            price: 1,
+            transactionDate: new Date('2023-12-31'),
+          },
+          {
+            type: 'BUY',
+            ticker: 'AAPL',
+            quantity: 8,
+            price: 1000,
+            transactionDate: new Date('2023-12-31'),
+          },
+        ] as Transaction[]);
+
         // Act
-        const result = service.calculateCumulativeReturn(snapshots, true);
+        const result = await service.calculateCumulativeReturn(snapshots, true);
 
         // Assert
-        // TWR formula for invested equity: (EndInvested - StartInvested - NetCashFlow) / (StartInvested + NetCashFlow)
-        // Calculation: (6800 - 8000 - 10000) / (8000 + 10000)
-        //            = -11200 / 18000
-        //            = -0.622 (62.2% loss)
-        //
-        // This makes sense: $10k was deposited (external flow), invested positions decreased from $8k to $6.8k
-        // The TWR formula treats the deposit as if it was invested at the period start
-        expect(result).toBeCloseTo(-0.622, 3);
+        // Cost basis: 8 shares @ $1000 = $8,000
+        // Current value: $6,800 (from snapshot: totalEquity - cashBalance)
+        // Return: ($6,800 / $8,000) - 1 = -15%
+        expect(result).toBeCloseTo(-0.15, 3);
       });
 
-      it('should return 0 for 100% cash portfolio when excludeCash=true', () => {
+      it('should return 0 for 100% cash portfolio when excludeCash=true', async () => {
         // Arrange: Portfolio entirely in cash (edge case)
         const snapshots = [
           {
@@ -330,22 +393,26 @@ describe('PerformanceCalculationService', () => {
         ] as PortfolioDailyPerformance[];
 
         // Act
-        const result = service.calculateCumulativeReturn(snapshots, true);
+        const result = await service.calculateCumulativeReturn(snapshots, true);
 
         // Assert
         expect(result).toBe(0); // No invested capital = no return (avoid NaN)
       });
 
-      it('should handle transition from 100% cash to invested', () => {
+      it('should handle transition from 100% cash to invested', async () => {
         // Arrange: Portfolio starts 100% cash, then invests (internal movement)
         const snapshots = [
           {
+            portfolioId: 'portfolio-123',
+            date: new Date('2024-01-01'),
             totalEquity: 10000,
             cashBalance: 10000, // 100% cash
             netCashFlow: 0,
             dailyReturnPct: 0,
           },
           {
+            portfolioId: 'portfolio-123',
+            date: new Date('2024-01-02'),
             totalEquity: 10800,
             cashBalance: 2000, // Moved $8k from cash to stocks, stocks gained $800
             netCashFlow: 0, // No external flows
@@ -353,35 +420,299 @@ describe('PerformanceCalculationService', () => {
           },
         ] as PortfolioDailyPerformance[];
 
+        // Mock: BUY $8k on day 2
+        transactionRepo.find.mockReset();
+        transactionRepo.find.mockResolvedValue([
+          {
+            transactionDate: new Date('2024-01-02'),
+            type: 'BUY',
+            ticker: 'NVDA',
+            quantity: 80,
+            price: 100,
+          },
+        ] as any);
+
         // Act
-        const result = service.calculateCumulativeReturn(snapshots, true);
+        const result = await service.calculateCumulativeReturn(snapshots, true);
 
         // Assert
-        // Day 1: Invested = $0
-        // Day 2: Invested = $8800
-        // TWR calculation: (8800 - 0 - 0) / (0 + 0) = undefined (division by zero)
-        // We handle this by returning 0 since we started with no invested capital
-        // There's no meaningful way to calculate a percentage return from $0 base
-        expect(result).toBe(0);
+        // Cost basis: 80 shares @ $100 = $8,000
+        // Current value: $8,800 (invested equity from snapshot)
+        // Return: ($8,800 / $8,000) - 1 = 10%
+        expect(result).toBeCloseTo(0.1, 3);
       });
 
-      it('should handle empty snapshots array with excludeCash=true', () => {
+      it('should match excludeCash=false when portfolio is 100% invested (Bug 1 fix)', async () => {
+        // Arrange: Bug 1 scenario - deposit cash, then fully invest it
+        // This verifies the fix for the bug where excludeCash=false and excludeCash=true
+        // showed different values when the portfolio was 100% invested
+        const snapshots = [
+          {
+            portfolioId: 'portfolio-123',
+            date: new Date('2024-01-01'),
+            totalEquity: 2000,
+            cashBalance: 2000, // Day 1: Deposit $2k (100% cash)
+            netCashFlow: 2000,
+            dailyReturnPct: 0,
+          },
+          {
+            portfolioId: 'portfolio-123',
+            date: new Date('2024-01-02'),
+            totalEquity: 2000,
+            cashBalance: 0, // Day 2: Buy stocks with all cash (100% invested, no gains yet)
+            netCashFlow: 0,
+            dailyReturnPct: 0,
+          },
+          {
+            portfolioId: 'portfolio-123',
+            date: new Date('2024-01-03'),
+            totalEquity: 2200,
+            cashBalance: 0, // Day 3: Stocks gain 10%
+            netCashFlow: 0,
+            dailyReturnPct: 0.1,
+          },
+        ] as PortfolioDailyPerformance[];
+
+        // Mock transaction data: BUY $2000 on day 2
+        transactionRepo.find.mockResolvedValue([
+          {
+            transactionDate: new Date('2024-01-02'),
+            type: 'BUY',
+            ticker: 'NVDA',
+            quantity: 20,
+            price: 100,
+          },
+        ] as any);
+
+        // Act - Calculate cumulative returns for each day
+        const resultExcludeCashDay2 = await service.calculateCumulativeReturn(
+          snapshots.slice(0, 2),
+          true,
+        );
+        const resultIncludeCashDay2 = await service.calculateCumulativeReturn(
+          snapshots.slice(0, 2),
+          false,
+        );
+        const resultExcludeCashDay3 = await service.calculateCumulativeReturn(
+          snapshots,
+          true,
+        );
+        const resultIncludeCashDay3 = await service.calculateCumulativeReturn(
+          snapshots,
+          false,
+        );
+
+        // Assert Day 2: Both should show 0% (just moved cash to investments, no gains yet)
+        expect(resultExcludeCashDay2).toBeCloseTo(0, 5);
+        expect(resultIncludeCashDay2).toBeCloseTo(0, 5);
+        expect(resultExcludeCashDay2).toBeCloseTo(resultIncludeCashDay2, 5);
+
+        // Assert Day 3: Both should show 10% cumulative return
+        // When 100% invested (no cash), both calculations should produce the same result
+        expect(resultExcludeCashDay3).toBeCloseTo(0.1, 5);
+        expect(resultIncludeCashDay3).toBeCloseTo(0.1, 5);
+
+        // Most importantly: they should match at every point!
+        expect(resultExcludeCashDay3).toBeCloseTo(resultIncludeCashDay3, 5);
+      });
+
+      it('should handle empty snapshots array with excludeCash=true', async () => {
         // Arrange
         const snapshots: PortfolioDailyPerformance[] = [];
 
         // Act
-        const result = service.calculateCumulativeReturn(snapshots, true);
+        const result = await service.calculateCumulativeReturn(snapshots, true);
 
         // Assert
         expect(result).toBe(0);
       });
 
-      it('should recalculate daily returns correctly for realistic scenario', () => {
-        // Arrange: Realistic portfolio over 5 days
-        // Portfolio has consistent 20% cash allocation
-        // Stocks gain 10% over the period
+      it('should handle withdrawals with cash exclusion', async () => {
+        // Arrange: Portfolio with withdrawal from cash
+        // Day 1: Total $10k, Cash $2k, Invested $8k
+        // Day 2: Withdraw $1k from cash, invested gains 10%
         const snapshots = [
           {
+            portfolioId: 'portfolio-123',
+            date: new Date('2024-01-01'),
+            totalEquity: 10000,
+            cashBalance: 2000,
+            netCashFlow: 0,
+            dailyReturnPct: 0,
+          },
+          {
+            portfolioId: 'portfolio-123',
+            date: new Date('2024-01-02'),
+            totalEquity: 9800, // $8.8k invested + $1k cash = $9.8k total
+            cashBalance: 1000, // Cash decreased by $1k (withdrawal)
+            netCashFlow: -1000, // $1k withdrawal
+            dailyReturnPct: -0.02,
+          },
+        ] as PortfolioDailyPerformance[];
+
+        // Mock: Initial investment of 80 shares @ $100
+        transactionRepo.find.mockResolvedValue([
+          {
+            type: 'DEPOSIT',
+            ticker: 'CASH',
+            quantity: 10000,
+            price: 1,
+            transactionDate: new Date('2023-12-31'),
+          },
+          {
+            type: 'BUY',
+            ticker: 'AAPL',
+            quantity: 80,
+            price: 100,
+            transactionDate: new Date('2023-12-31'),
+          },
+        ] as Transaction[]);
+
+        // Act
+        const result = await service.calculateCumulativeReturn(snapshots, true);
+
+        // Assert
+        // Cost basis: 80 shares @ $100 = $8,000
+        // Current value: $8,800 (invested equity from snapshot: 9800 - 1000)
+        // Return: ($8,800 / $8,000) - 1 = 10%
+        expect(result).toBeCloseTo(0.1, 3);
+      });
+
+      it('should handle complex scenario: deposit, invest, partial sell, withdraw', async () => {
+        // Arrange: Multi-step scenario with cost-basis calculation
+        // Simplified: Start with $4k in AAPL, buy more NVDA, some gains, partial sell
+        const snapshots = [
+          {
+            portfolioId: 'portfolio-123',
+            date: new Date('2024-01-01'),
+            totalEquity: 5000,
+            cashBalance: 1000, // $4k invested
+            netCashFlow: 0,
+            dailyReturnPct: 0,
+          },
+          {
+            portfolioId: 'portfolio-123',
+            date: new Date('2024-01-02'),
+            totalEquity: 10000,
+            cashBalance: 1000, // Deposit $5k and immediately invest it ($9k invested)
+            netCashFlow: 5000,
+            dailyReturnPct: 1.0,
+          },
+          {
+            portfolioId: 'portfolio-123',
+            date: new Date('2024-01-03'),
+            totalEquity: 10800, // Invested positions gain 10% ($9k -> $9.9k)
+            cashBalance: 900, // Sold $100 of stocks for cash
+            netCashFlow: 0,
+            dailyReturnPct: 0.08,
+          },
+          {
+            portfolioId: 'portfolio-123',
+            date: new Date('2024-01-04'),
+            totalEquity: 9800, // Withdraw $1k from cash
+            cashBalance: 0, // Used all remaining cash for withdrawal + $100 from stocks
+            netCashFlow: -1000,
+            dailyReturnPct: -0.093,
+          },
+        ] as PortfolioDailyPerformance[];
+
+        // Mock transactions: Initial AAPL, BUY NVDA, partial SELLs
+        transactionRepo.find.mockResolvedValue([
+          {
+            transactionDate: new Date('2023-12-31'),
+            type: 'BUY',
+            ticker: 'AAPL',
+            quantity: 40,
+            price: 100,
+          },
+          {
+            transactionDate: new Date('2024-01-02'),
+            type: 'BUY',
+            ticker: 'NVDA',
+            quantity: 50,
+            price: 100,
+          },
+          {
+            transactionDate: new Date('2024-01-03'),
+            type: 'SELL',
+            ticker: 'NVDA',
+            quantity: 1,
+            price: 110, // Sold at gain
+          },
+          {
+            transactionDate: new Date('2024-01-04'),
+            type: 'SELL',
+            ticker: 'NVDA',
+            quantity: 1,
+            price: 110, // Sold at gain
+          },
+        ] as any);
+
+        // Act
+        const result = await service.calculateCumulativeReturn(snapshots, true);
+
+        // Assert
+        // Cost basis: 40 AAPL @ $100 = $4,000 + 48 NVDA @ $100 = $4,800 = $8,800 total
+        // Current value: $9,800 (from final snapshot)
+        // Return: ($9,800 / $8,800) - 1 = 11.36%
+        expect(result).toBeGreaterThan(0.10); // Should show net gains > 10%
+        expect(result).toBeLessThan(0.15); // Should be around 11-12%
+      });
+
+      it('should handle portfolio rotation (sell one stock, buy another)', async () => {
+        // Arrange: Sell one position, buy another
+        const snapshots = [
+          {
+            portfolioId: 'portfolio-123',
+            date: new Date('2024-01-01'),
+            totalEquity: 10000,
+            cashBalance: 0, // 100% invested
+            netCashFlow: 0,
+            dailyReturnPct: 0,
+          },
+          {
+            portfolioId: 'portfolio-123',
+            date: new Date('2024-01-02'),
+            totalEquity: 10500, // Sold stocks for $10k, bought others for $10k, gained $500
+            cashBalance: 0, // Still 100% invested
+            netCashFlow: 0,
+            dailyReturnPct: 0.05,
+          },
+        ] as PortfolioDailyPerformance[];
+
+        // Mock transactions: SELL $10k and BUY $10k on same day
+        transactionRepo.find.mockResolvedValue([
+          {
+            transactionDate: new Date('2024-01-02'),
+            type: 'SELL',
+            ticker: 'COIN',
+            quantity: 100,
+            price: 100,
+          },
+          {
+            transactionDate: new Date('2024-01-02'),
+            type: 'BUY',
+            ticker: 'PLTR',
+            quantity: 500,
+            price: 20,
+          },
+        ] as any);
+
+        // Act
+        const result = await service.calculateCumulativeReturn(snapshots, true);
+
+        // Assert
+        // 100% invested throughout, should show 5% gain
+        expect(result).toBeCloseTo(0.05, 3);
+      });
+
+      it('should recalculate daily returns correctly for realistic scenario', async () => {
+        // Arrange: Realistic portfolio over 5 days
+        // Portfolio has consistent 20% cash allocation
+        // Stocks gain ~8.24% over the period
+        const snapshots = [
+          {
+            portfolioId: 'portfolio-123',
             date: new Date('2024-01-01'),
             totalEquity: 100000,
             cashBalance: 20000, // 20% cash, $80k invested
@@ -389,6 +720,7 @@ describe('PerformanceCalculationService', () => {
             dailyReturnPct: 0,
           },
           {
+            portfolioId: 'portfolio-123',
             date: new Date('2024-01-02'),
             totalEquity: 101600, // Stocks gained 2% ($80k * 1.02 = $81.6k)
             cashBalance: 20000,
@@ -396,6 +728,7 @@ describe('PerformanceCalculationService', () => {
             dailyReturnPct: 0.016, // Total equity gained 1.6%
           },
           {
+            portfolioId: 'portfolio-123',
             date: new Date('2024-01-03'),
             totalEquity: 103232, // Stocks gained 2% again ($81.6k * 1.02 = $83.232k)
             cashBalance: 20000,
@@ -403,6 +736,7 @@ describe('PerformanceCalculationService', () => {
             dailyReturnPct: 0.016065, // Total equity gained ~1.606%
           },
           {
+            portfolioId: 'portfolio-123',
             date: new Date('2024-01-04'),
             totalEquity: 104897, // Stocks gained 2% ($83.232k * 1.02 = $84.897k)
             cashBalance: 20000,
@@ -410,6 +744,7 @@ describe('PerformanceCalculationService', () => {
             dailyReturnPct: 0.01612, // Total equity gained ~1.612%
           },
           {
+            portfolioId: 'portfolio-123',
             date: new Date('2024-01-05'),
             totalEquity: 106595, // Stocks gained 2% ($84.897k * 1.02 = $86.595k)
             cashBalance: 20000,
@@ -418,19 +753,37 @@ describe('PerformanceCalculationService', () => {
           },
         ] as PortfolioDailyPerformance[];
 
+        // Mock: Initial investment of $80k in stocks (800 shares @ $100)
+        transactionRepo.find.mockResolvedValue([
+          {
+            transactionDate: new Date('2023-12-31'),
+            type: 'DEPOSIT',
+            ticker: 'CASH',
+            quantity: 100000,
+            price: 1,
+          },
+          {
+            transactionDate: new Date('2023-12-31'),
+            type: 'BUY',
+            ticker: 'AAPL',
+            quantity: 800,
+            price: 100,
+          },
+        ] as any);
+
         // Act
-        const result = service.calculateCumulativeReturn(snapshots, true);
+        const result = await service.calculateCumulativeReturn(snapshots, true);
 
         // Assert
-        // Invested equity: $80k -> $86.595k
-        // Return: ($86595 - $80000) / $80000 = $6595 / $80000 = 8.24%
-        // Using geometric linking: (1.02^4) - 1 = 8.24%
+        // Cost basis: 800 shares @ $100 = $80,000
+        // Current invested equity: $86,595 (final totalEquity - cashBalance)
+        // Return: ($86,595 / $80,000) - 1 = 8.24%
         expect(result).toBeCloseTo(0.0824, 3);
       });
     });
 
     describe('parameter validation', () => {
-      it('should use default excludeCash=false when parameter omitted', () => {
+      it('should use default excludeCash=false when parameter omitted', async () => {
         // Arrange
         const snapshots = [
           {
@@ -442,7 +795,7 @@ describe('PerformanceCalculationService', () => {
         ] as PortfolioDailyPerformance[];
 
         // Act - call without second parameter
-        const result = service.calculateCumulativeReturn(snapshots);
+        const result = await service.calculateCumulativeReturn(snapshots);
 
         // Assert - should use existing dailyReturnPct logic
         expect(result).toBeCloseTo(0.1, 5);

@@ -6,6 +6,7 @@ import {
   Query,
   UseGuards,
   Logger,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -158,12 +159,25 @@ export class PerformanceController {
 
     const benchmarkTicker = query.benchmarkTicker || 'SPY';
 
+    // Parse and validate asOfDate if provided
+    let asOfDate: Date | undefined;
+    if (query.asOfDate) {
+      asOfDate = new Date(query.asOfDate);
+      // Validate the parsed date is valid
+      if (isNaN(asOfDate.getTime())) {
+        throw new BadRequestException(
+          `Invalid asOfDate format. Expected ISO datetime string (e.g., "2024-01-11T00:00:00.000Z")`,
+        );
+      }
+    }
+
     return this.performanceService.getBenchmarkComparison(
       portfolioId,
       user.id,
       benchmarkTicker,
       query.timeframe,
       query.excludeCash ?? false,
+      asOfDate,
     );
   }
 
