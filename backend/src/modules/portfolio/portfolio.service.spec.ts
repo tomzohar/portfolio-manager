@@ -448,7 +448,9 @@ describe('PortfolioService', () => {
         assetRepository.find.mockResolvedValue(mockAssets);
         jest
           .spyOn(polygonApiService, 'getPreviousClose')
-          .mockReturnValue(of(mockPreviousClose as PolygonPreviousCloseResponse));
+          .mockReturnValue(
+            of(mockPreviousClose as PolygonPreviousCloseResponse),
+          );
 
         const result = await service.getPortfolioSummary(
           mockPortfolioId,
