@@ -36,12 +36,6 @@ Backend server for the Stocks Researcher application. This NestJS application pr
 
 ## Backend Type Practices
 
-### Learnings
-
-- Strongly typed fixtures keep tests aligned with runtime behavior and reduce lint noise.
-- Converting dynamic tool outputs to `string` before `JSON.parse` avoids unsafe `any` flows.
-- Typed service mocks (entities/DTOs) make expectations clearer and highlight missing fields early.
-
 ### Rules
 
 - Define reusable types in `src/modules/**/types/*.ts` and export them; keep file-only types local.
