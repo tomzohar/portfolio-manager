@@ -64,22 +64,35 @@ T = TypeVar("T", bound=BaseModel)
 
 def extract_json(response_text: str, model: Type[T]) -> T:
     """Robustly extracts JSON from LLM text."""
-    json_match = re.search(r"```(?:json)?(.*?)```", response_text, re.DOTALL)
+    # Strategy 1: Look for ```json specifically (not just any code block)
+    json_match = re.search(r"```json\s*(.*?)```", response_text, re.DOTALL)
     if json_match:
         json_str = json_match.group(1).strip()
     else:
-        start = response_text.find('{')
-        end = response_text.rfind('}') + 1
-        if start != -1 and end != 0:
-            json_str = response_text[start:end]
-        else:
-            raise ValueError("No JSON found in response")
+        # Strategy 2: Find all code blocks and try each one
+        all_code_blocks = re.findall(r"```(?:json)?\s*(.*?)```", response_text, re.DOTALL)
+        json_str = None
+        for block in reversed(all_code_blocks):  # Start from the end
+            block = block.strip()
+            if block.startswith('{') and block.endswith('}'):
+                json_str = block
+                break
+        
+        # Strategy 3: Fallback to finding { } boundaries
+        if not json_str:
+            start = response_text.find('{')
+            end = response_text.rfind('}') + 1
+            if start != -1 and end != 0:
+                json_str = response_text[start:end]
+            else:
+                raise ValueError("No JSON found in response")
 
     try:
         data = json.loads(json_str)
         return model(**data)
     except Exception as e:
         print(f"⚠️ JSON Parse Error: {e}")
+        print(f"⚠️ Attempted to parse: {json_str[:200]}...")
         raise
 
 # --- AGENT WRAPPER ---

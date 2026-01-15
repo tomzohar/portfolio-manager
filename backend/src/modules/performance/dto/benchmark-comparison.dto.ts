@@ -66,6 +66,37 @@ export class BenchmarkComparisonDto {
   })
   cashAllocationAvg?: number;
 
+  @ApiProperty({
+    description: 'Metadata about date range and data completeness',
+    required: false,
+    example: {
+      startDate: '2025-12-11',
+      endDate: '2026-01-11',
+      dataPoints: 22,
+      isPartialData: true,
+      requestedDays: 90,
+      actualDays: 31,
+      portfolioCreationDate: '2025-12-11T00:00:00.000Z',
+      warningMessage:
+        'Portfolio created Dec 11, 2025. Showing 31 days instead of 3 months.',
+      isNewYearReset: false,
+      isCashOnly: false,
+    },
+  })
+  metadata?: {
+    startDate?: string;
+    endDate?: string;
+    dataPoints?: number;
+    isPartialData?: boolean;
+    isEmpty?: boolean;
+    requestedDays?: number;
+    actualDays?: number;
+    portfolioCreationDate?: string;
+    warningMessage?: string;
+    isNewYearReset?: boolean;
+    isCashOnly?: boolean;
+  };
+
   constructor(partial: Partial<BenchmarkComparisonDto>) {
     Object.assign(this, partial);
   }

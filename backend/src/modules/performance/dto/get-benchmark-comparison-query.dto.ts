@@ -29,9 +29,10 @@ export const GetBenchmarkComparisonQuerySchema = z.object({
     .describe(
       'ISO datetime string for historical analysis (e.g., "2024-01-11T00:00:00.000Z"). ' +
         'When provided, calculations use this date instead of current date. ' +
-        'Useful for backtesting and analyzing historical portfolio performance. ' +
-        'NOTE: This parameter is IGNORED for timeframe=YTD (Year-To-Date always uses current year). ' +
-        'For historical queries, use timeframe=ALL_TIME with asOfDate.',
+        'Useful for backtesting, tax reporting, and analyzing historical portfolio performance. ' +
+        'For YTD: Uses the year of asOfDate (e.g., asOfDate=2025-06-30 returns Jan 1, 2025 to Jun 30, 2025). ' +
+        'For other timeframes: Uses asOfDate as the end date instead of current date. ' +
+        'This enables historical reproducibility for audit compliance and tax reporting (PRD Section 2.2.5).',
     ),
 });
 

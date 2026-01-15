@@ -587,19 +587,57 @@ export class DailySnapshotCalculationService {
     }
 
     // If we are missing prices for ALL non-cash tickers, and we have non-cash tickers,
-    // then we shouldn't save a snapshot for this day as it would be inaccurate.
-    // However, if we only have cash, it's fine.
+    // we need to handle this carefully.
+    // CRITICAL FIX: Use transaction prices as fallback when market data is unavailable
     const nonCashTickers = Array.from(positions.keys()).filter(
       (t) => t !== CASH_TICKER,
     );
+
     if (
       nonCashTickers.length > 0 &&
       missingPricesCount === nonCashTickers.length
     ) {
-      this.logger.debug(
-        `Skipping snapshot for ${dateStr} - no price data for any ticker.`,
+      // Try to use transaction prices as fallback for ALL tickers
+      this.logger.warn(
+        `No market data available for ${dateStr} - using transaction/last-known prices as fallback.`,
       );
-      return;
+
+      stockValue = 0;
+      let fallbackPricesFound = 0;
+
+      for (const [ticker, quantity] of positions.entries()) {
+        if (ticker === CASH_TICKER) continue;
+
+        // First try last known price from previous days
+        let price: number | null | undefined = lastKnownPrices.get(ticker);
+
+        // If no last known price, try to get transaction price
+        if (price === undefined) {
+          price = await this.getLastTransactionPrice(
+            portfolioId,
+            ticker,
+            date,
+            queryRunner,
+          );
+          if (price) {
+            lastKnownPrices.set(ticker, price);
+          }
+        }
+
+        if (price !== undefined) {
+          stockValue += quantity * (price ?? 0);
+          fallbackPricesFound++;
+        }
+      }
+
+      // If we found fallback prices for all tickers, proceed with snapshot
+      // Otherwise skip this day
+      if (fallbackPricesFound < nonCashTickers.length) {
+        this.logger.debug(
+          `Skipping snapshot for ${dateStr} - no price data available even after fallback attempt.`,
+        );
+        return;
+      }
     }
 
     const cashBalance = positions.get(CASH_TICKER) ?? 0;
@@ -661,5 +699,34 @@ export class DailySnapshotCalculationService {
       // Don't throw - we don't want to fail the transaction creation
       // Users can manually trigger backfill if needed
     }
+  }
+
+  /**
+   * Get the last transaction price for a ticker up to a given date
+   * Used as fallback when market data is unavailable
+   *
+   * @param portfolioId - Portfolio UUID
+   * @param ticker - Stock ticker symbol
+   * @param date - Date to look back from
+   * @param queryRunner - Query runner for transaction
+   * @returns Last known transaction price or null
+   */
+  private async getLastTransactionPrice(
+    portfolioId: string,
+    ticker: string,
+    date: Date,
+    queryRunner: QueryRunner,
+  ): Promise<number | null> {
+    const transaction = await queryRunner.manager
+      .getRepository(Transaction)
+      .createQueryBuilder('tx')
+      .where('tx.portfolio.id = :portfolioId', { portfolioId })
+      .andWhere('tx.ticker = :ticker', { ticker })
+      .andWhere('tx.transactionDate <= :date', { date })
+      .andWhere('tx.type IN (:...types)', { types: ['BUY', 'SELL'] })
+      .orderBy('tx.transactionDate', 'DESC')
+      .getOne();
+
+    return transaction ? Number(transaction.price) : null;
   }
 }

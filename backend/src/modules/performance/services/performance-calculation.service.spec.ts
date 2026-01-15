@@ -169,6 +169,7 @@ describe('PerformanceCalculationService', () => {
     it('should calculate alpha correctly with positive excess return', async () => {
       // Act
       const result = service.calculateAlpha(0.15, 0.1);
+      await Promise.resolve();
 
       // Assert
       expect(result).toBeCloseTo(0.05, 5);
@@ -178,6 +179,7 @@ describe('PerformanceCalculationService', () => {
       // Act
       const result = service.calculateAlpha(0.05, 0.1);
 
+      await Promise.resolve();
       // Assert
       expect(result).toBeCloseTo(-0.05, 5);
     });
@@ -186,6 +188,7 @@ describe('PerformanceCalculationService', () => {
       // Act
       const result = service.calculateAlpha(0, 0);
 
+      await Promise.resolve();
       // Assert
       expect(result).toBe(0);
     });
@@ -655,7 +658,7 @@ describe('PerformanceCalculationService', () => {
         // Cost basis: 40 AAPL @ $100 = $4,000 + 48 NVDA @ $100 = $4,800 = $8,800 total
         // Current value: $9,800 (from final snapshot)
         // Return: ($9,800 / $8,800) - 1 = 11.36%
-        expect(result).toBeGreaterThan(0.10); // Should show net gains > 10%
+        expect(result).toBeGreaterThan(0.1); // Should show net gains > 10%
         expect(result).toBeLessThan(0.15); // Should be around 11-12%
       });
 

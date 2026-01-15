@@ -331,14 +331,29 @@ export class PerformanceCalculationService {
       },
     });
 
-    // If missing snapshots in the range, trigger backfill from range start
+    // CRITICAL FIX FOR BUG-001: If missing snapshots in the range,
+    // backfill from FIRST TRANSACTION, not from requested startDate
+    // This ensures we capture all portfolio history, not just the requested window
     if (rangeSnapshotCount === 0) {
       this.logger.log(
-        `No snapshots found for portfolio ${portfolioId} in range ${format(startDate, 'yyyy-MM-dd')} to ${format(endDate, 'yyyy-MM-dd')}. Triggering backfill.`,
+        `No snapshots found for portfolio ${portfolioId} in range ${format(startDate, 'yyyy-MM-dd')} to ${format(endDate, 'yyyy-MM-dd')}. Triggering backfill from first transaction.`,
       );
+
+      // Find earliest transaction to ensure complete history
+      const firstTx = await this.transactionRepo.findOne({
+        where: { portfolio: { id: portfolioId } },
+        order: { transactionDate: 'ASC' },
+      });
+
+      const backfillStartDate = firstTx ? firstTx.transactionDate : startDate;
+
+      this.logger.log(
+        `Backfilling from first transaction date: ${format(backfillStartDate, 'yyyy-MM-dd')} to today`,
+      );
+
       await this.dailySnapshotService.recalculateFromDate(
         portfolioId,
-        startDate,
+        backfillStartDate,
       );
     } else {
       this.logger.debug(

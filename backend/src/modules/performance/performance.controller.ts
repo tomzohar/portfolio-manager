@@ -159,17 +159,8 @@ export class PerformanceController {
 
     const benchmarkTicker = query.benchmarkTicker || 'SPY';
 
-    // Parse and validate asOfDate if provided
-    let asOfDate: Date | undefined;
-    if (query.asOfDate) {
-      asOfDate = new Date(query.asOfDate);
-      // Validate the parsed date is valid
-      if (isNaN(asOfDate.getTime())) {
-        throw new BadRequestException(
-          `Invalid asOfDate format. Expected ISO datetime string (e.g., "2024-01-11T00:00:00.000Z")`,
-        );
-      }
-    }
+    // Parse asOfDate if provided (already validated by Zod as valid ISO datetime)
+    const asOfDate = query.asOfDate ? new Date(query.asOfDate) : undefined;
 
     return this.performanceService.getBenchmarkComparison(
       portfolioId,

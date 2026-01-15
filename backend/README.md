@@ -208,13 +208,42 @@ await this.scheduledMarketDataJobService.triggerManualFetch(new Date('2024-01-15
 
 #### GET `/api/performance/:portfolioId/benchmark-comparison`
 
-Returns portfolio performance compared to a benchmark index (e.g., SPY).
+Returns portfolio performance compared to a benchmark index (e.g., SPY) with context-specific user guidance.
 
 **Query Parameters:**
-- `timeframe` (required) - Time period: `1M`, `3M`, `6M`, `1Y`, `YTD`, `ALL`
+- `timeframe` (required) - Time period: `1M`, `3M`, `6M`, `1Y`, `YTD`, `ALL_TIME`
 - `benchmarkTicker` (optional) - Benchmark symbol (default: `SPY`)
+- `excludeCash` (optional) - If `true`, exclude cash from performance calculation (default: `false`)
 
 **Response:** `BenchmarkComparisonDto`
+
+**Context-Specific Warnings:**
+
+The API returns intelligent, context-aware warning messages to guide users:
+
+| Scenario | Warning Message | When Shown |
+|----------|----------------|------------|
+| Empty Portfolio | "No transactions found. Buy your first stock to see performance." | Portfolio has no transactions |
+| Partial Data | "Portfolio created {date}. Showing {actual} days instead of {timeframe}." | Requested timeframe exceeds portfolio age |
+| New Year Reset | "🎊 Happy New Year! YTD reset on Jan 1. Switch to 'ALL' to see last year's data." | YTD checked in January for portfolio created previous year |
+| High Cash Allocation | "Your portfolio is {pct}% cash. Consider buying stocks to see performance." | Portfolio is ≥90% cash |
+| Short Timeframe | "Returns shown are for the selected period. Annualized returns may not reflect sustained performance." | Normal case with <90 days |
+
+**Response Metadata:**
+
+```json
+{
+  "metadata": {
+    "startDate": "2025-12-11",
+    "endDate": "2026-01-11",
+    "dataPoints": 22,
+    "isPartialData": false,
+    "isEmpty": false,
+    "isNewYearReset": false,
+    "isCashOnly": false
+  }
+}
+```
 
 #### GET `/api/performance/:portfolioId/history`
 

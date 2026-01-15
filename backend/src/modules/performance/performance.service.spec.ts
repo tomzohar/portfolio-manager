@@ -111,7 +111,7 @@ describe('PerformanceService', () => {
       performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
         undefined,
       );
-      performanceCalculationService.calculateCumulativeReturn.mockReturnValue(
+      performanceCalculationService.calculateCumulativeReturn.mockResolvedValue(
         0.1,
       );
       performanceCalculationService.calculateAlpha.mockReturnValue(0);
@@ -145,7 +145,7 @@ describe('PerformanceService', () => {
       performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
         undefined,
       );
-      performanceCalculationService.calculateCumulativeReturn.mockReturnValue(
+      performanceCalculationService.calculateCumulativeReturn.mockResolvedValue(
         0.1,
       );
       benchmarkDataService.calculateBenchmarkReturn.mockResolvedValue(null); // No market data
@@ -184,7 +184,7 @@ describe('PerformanceService', () => {
         performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
           undefined,
         );
-        performanceCalculationService.calculateCumulativeReturn.mockReturnValue(
+        performanceCalculationService.calculateCumulativeReturn.mockResolvedValue(
           0.015,
         );
         performanceCalculationService.calculateAlpha.mockReturnValue(0.005);
@@ -232,7 +232,7 @@ describe('PerformanceService', () => {
         performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
           undefined,
         );
-        performanceCalculationService.calculateCumulativeReturn.mockReturnValue(
+        performanceCalculationService.calculateCumulativeReturn.mockResolvedValue(
           0.01,
         );
         performanceCalculationService.calculateAlpha.mockReturnValue(0);
@@ -321,7 +321,7 @@ describe('PerformanceService', () => {
           undefined,
         );
         // Cumulative = (1.01 * 1.01 * 1.01) - 1 = 0.030301
-        performanceCalculationService.calculateCumulativeReturn.mockReturnValue(
+        performanceCalculationService.calculateCumulativeReturn.mockResolvedValue(
           0.030301,
         );
         performanceCalculationService.calculateAlpha.mockReturnValue(0.030301);
@@ -377,7 +377,7 @@ describe('PerformanceService', () => {
         performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
           undefined,
         );
-        performanceCalculationService.calculateCumulativeReturn.mockReturnValue(
+        performanceCalculationService.calculateCumulativeReturn.mockResolvedValue(
           0.01,
         );
         benchmarkDataService.calculateBenchmarkReturn.mockResolvedValue(null); // No market data
@@ -413,7 +413,7 @@ describe('PerformanceService', () => {
           undefined,
         );
         // Cumulative = (1.01 * 1.01 * 1.01) - 1 = 0.030301
-        performanceCalculationService.calculateCumulativeReturn.mockReturnValue(
+        performanceCalculationService.calculateCumulativeReturn.mockResolvedValue(
           0.030301,
         );
         performanceCalculationService.calculateAlpha.mockReturnValue(0.030301);
@@ -490,7 +490,7 @@ describe('PerformanceService', () => {
         expect(result.data[2].portfolioValue).toBeCloseTo(102.01, 1);
         expect(
           chartDataService.generateNormalizedChartData,
-        ).toHaveBeenCalledWith(mockSnapshots, mockMarketData, false);
+        ).toHaveBeenCalledWith(mockSnapshots, mockMarketData, false, undefined);
       });
     });
 
@@ -513,7 +513,7 @@ describe('PerformanceService', () => {
           undefined,
         );
         // Cumulative = (1.1 * 1.1) - 1 = 0.21 = 21%
-        performanceCalculationService.calculateCumulativeReturn.mockReturnValue(
+        performanceCalculationService.calculateCumulativeReturn.mockResolvedValue(
           0.21,
         );
         performanceCalculationService.calculateAlpha.mockReturnValue(0.21);
@@ -547,7 +547,7 @@ describe('PerformanceService', () => {
           undefined,
         );
         // Cumulative = (0.95 * 0.95) - 1 = -0.0975 = -9.75%
-        performanceCalculationService.calculateCumulativeReturn.mockReturnValue(
+        performanceCalculationService.calculateCumulativeReturn.mockResolvedValue(
           -0.0975,
         );
         performanceCalculationService.calculateAlpha.mockReturnValue(-0.0975);
