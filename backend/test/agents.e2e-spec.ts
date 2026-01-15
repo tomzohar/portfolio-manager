@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import request, { type App } from 'supertest';
 import { AppModule } from '../src/app.module';
 import { DataSource } from 'typeorm';
@@ -8,7 +8,7 @@ import { GraphResponseDto } from 'src/modules/agents/dto/graph-response.dto';
 import { Message } from '@langchain/core/messages';
 
 describe('AgentsController (e2e)', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
   let httpServer: App;
   let authToken: string;
   let dataSource: DataSource;
@@ -18,10 +18,10 @@ describe('AgentsController (e2e)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication<NestExpressApplication>();
     app.useGlobalPipes(new ZodValidationPipe());
     await app.init();
-    httpServer = app.getHttpServer() as unknown as App;
+    httpServer = app.getHttpServer();
 
     // Get DataSource for cleanup
     dataSource = moduleFixture.get<DataSource>(DataSource);
