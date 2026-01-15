@@ -8,7 +8,7 @@ import { GraphResponseDto } from 'src/modules/agents/dto/graph-response.dto';
 import { Message } from '@langchain/core/messages';
 
 describe('AgentsController (e2e)', () => {
-  let app: INestApplication<App>;
+  let app: INestApplication;
   let httpServer: App;
   let authToken: string;
   let dataSource: DataSource;
@@ -21,7 +21,7 @@ describe('AgentsController (e2e)', () => {
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ZodValidationPipe());
     await app.init();
-    httpServer = app.getHttpServer();
+    httpServer = app.getHttpServer() as unknown as App;
 
     // Get DataSource for cleanup
     dataSource = moduleFixture.get<DataSource>(DataSource);
