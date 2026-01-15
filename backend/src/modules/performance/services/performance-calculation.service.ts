@@ -392,18 +392,44 @@ export class PerformanceCalculationService {
     snapshots: PortfolioDailyPerformance[],
   ): number | undefined {
     if (snapshots.length === 0) {
+      this.logger.debug(
+        'No snapshots provided for cash allocation calculation',
+      );
       return undefined;
     }
 
     const cashAllocations = snapshots.map((snapshot) => {
       const totalEquity = Number(snapshot.totalEquity);
       const cashBalance = Number(snapshot.cashBalance);
+
+      // Defensive validation
+      if (totalEquity < 0 || cashBalance < 0) {
+        this.logger.warn(
+          `Invalid snapshot data: totalEquity=${totalEquity}, cashBalance=${cashBalance}`,
+        );
+        return 0;
+      }
+
+      if (cashBalance > totalEquity) {
+        this.logger.warn(
+          `Data integrity issue: cashBalance (${cashBalance}) exceeds totalEquity (${totalEquity})`,
+        );
+      }
+
       return totalEquity > 0 ? cashBalance / totalEquity : 0;
     });
 
     const average =
       cashAllocations.reduce((sum, allocation) => sum + allocation, 0) /
       cashAllocations.length;
+
+    // Defensive validation of result
+    if (average < 0 || average > 1) {
+      this.logger.error(
+        `Invalid cash allocation calculated: ${average}. Expected range [0, 1]. Clamping to valid range.`,
+      );
+      return Math.max(0, Math.min(1, average));
+    }
 
     this.logger.debug(
       `Calculated average cash allocation: ${(average * 100).toFixed(2)}% over ${snapshots.length} snapshots`,
