@@ -21,7 +21,7 @@ describe('AgentsController (e2e)', () => {
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ZodValidationPipe());
     await app.init();
-    httpServer = app.getHttpServer() as App;
+    httpServer = app.getHttpServer<App>();
 
     // Get DataSource for cleanup
     dataSource = moduleFixture.get<DataSource>(DataSource);
