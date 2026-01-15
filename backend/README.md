@@ -34,6 +34,21 @@ Backend server for the Stocks Researcher application. This NestJS application pr
 - **Polygon API Integration**: Real-time stock market data
 - **Transaction-Based Portfolio Management**: Immutable audit trail for positions
 
+## Backend Type Practices
+
+### Learnings
+
+- Strongly typed fixtures keep tests aligned with runtime behavior and reduce lint noise.
+- Converting dynamic tool outputs to `string` before `JSON.parse` avoids unsafe `any` flows.
+- Typed service mocks (entities/DTOs) make expectations clearer and highlight missing fields early.
+
+### Rules
+
+- Define reusable types in `src/modules/**/types/*.ts` and export them; keep file-only types local.
+- Use explicit suffixes and entity names for domain types (`PortfolioSummaryDto`, `MarketDataDailyModel`, `RiskSignalType`).
+- Avoid `any`; prefer `unknown` + narrowing or typed fixture factories.
+- When mocking external services, return objects that satisfy real response types (cast only as a last resort).
+
 ## API Endpoints
 
 ### Portfolio Management
