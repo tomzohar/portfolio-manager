@@ -70,7 +70,6 @@ export class PerformanceService {
    * @param userId - User UUID (for ownership verification)
    * @param benchmarkTicker - Benchmark ticker symbol (e.g., 'SPY')
    * @param timeframe - Time period for comparison
-   * @param excludeCash - If true, exclude cash positions from performance calculation
    * @param asOfDate - Optional date for historical analysis (defaults to current date)
    *                   Now fully supported for all timeframes including YTD (per PRD Section 2.2.5)
    * @returns Comparison metrics including Alpha
@@ -80,11 +79,10 @@ export class PerformanceService {
     userId: string,
     benchmarkTicker: string,
     timeframe: Timeframe,
-    excludeCash: boolean = false,
     asOfDate?: Date,
   ): Promise<BenchmarkComparisonDto> {
     this.logger.log(
-      `Getting benchmark comparison from snapshots: ${portfolioId}, ${timeframe}, excludeCash: ${excludeCash}, asOfDate: ${asOfDate?.toISOString() || 'current'}`,
+      `Getting benchmark comparison from snapshots: ${portfolioId}, ${timeframe}, asOfDate: ${asOfDate?.toISOString() || 'current'}`,
     );
 
     // Validate asOfDate if provided
@@ -109,7 +107,6 @@ export class PerformanceService {
     if (dateRangeMetadata?.isEmpty) {
       const periodDays = differenceInDays(endDate, startDate);
       const warning = dateRangeMetadata.warningMessage;
-      const viewMode = excludeCash ? 'INVESTED' : 'TOTAL';
 
       const metadata = {
         startDate: format(startDate, 'yyyy-MM-dd'),
@@ -128,7 +125,6 @@ export class PerformanceService {
         benchmarkPeriodReturn: 0,
         periodDays,
         warning,
-        viewMode,
         cashAllocationAvg: 0,
         metadata,
       });
@@ -145,7 +141,6 @@ export class PerformanceService {
     const portfolioReturn =
       await this.performanceCalculationService.calculateCumulativeReturn(
         snapshots,
-        excludeCash,
       );
 
     const benchmarkReturn = await this.fetchBenchmarkReturn(
@@ -198,7 +193,6 @@ export class PerformanceService {
     const warning =
       dateRangeMetadata?.warningMessage ||
       this.getWarningForTimeframe(periodDays, portfolioState);
-    const viewMode = excludeCash ? 'INVESTED' : 'TOTAL';
 
     // Detect special states for metadata flags
     const isNewYearReset =
@@ -237,7 +231,6 @@ export class PerformanceService {
       benchmarkPeriodReturn: benchmarkReturn,
       periodDays,
       warning,
-      viewMode,
       cashAllocationAvg,
       metadata,
     });
@@ -252,7 +245,6 @@ export class PerformanceService {
    * @param userId - User UUID (for ownership verification)
    * @param benchmarkTicker - Benchmark ticker symbol (e.g., 'SPY')
    * @param timeframe - Time period for analysis
-   * @param excludeCash - If true, exclude cash positions from performance calculation
    * @returns Historical data with normalized values
    */
   async getHistoricalData(
@@ -260,10 +252,9 @@ export class PerformanceService {
     userId: string,
     benchmarkTicker: string,
     timeframe: Timeframe,
-    excludeCash: boolean = false,
   ): Promise<HistoricalDataResponseDto> {
     this.logger.log(
-      `Getting historical data from snapshots: ${portfolioId}, ${timeframe}, excludeCash: ${excludeCash}`,
+      `Getting historical data from snapshots: ${portfolioId}, ${timeframe}`,
     );
 
     // Verify ownership and get date range
@@ -279,7 +270,6 @@ export class PerformanceService {
     // Return early with empty data array to avoid fetching snapshots/benchmark data
     if (dateRangeMetadata?.isEmpty) {
       const warning = dateRangeMetadata.warningMessage;
-      const viewMode = excludeCash ? 'INVESTED' : 'TOTAL';
 
       return new HistoricalDataResponseDto({
         portfolioId,
@@ -287,7 +277,6 @@ export class PerformanceService {
         data: [],
         startDate,
         endDate,
-        viewMode,
         warning,
         cashAllocationAvg: 0,
       });
@@ -308,35 +297,13 @@ export class PerformanceService {
         endDate,
       );
 
-    // Calculate the true cumulative return using cost basis method (for excludeCash=true)
-    // The cost basis method calculates return as: (current_value / cost_basis) - 1
-    // This differs from TWR which treats SELLs as withdrawals
-    let trueCumulativeReturn: number | undefined;
-    if (excludeCash) {
-      trueCumulativeReturn =
-        await this.performanceCalculationService.calculateCumulativeReturn(
-          snapshots,
-          true,
-        );
-      this.logger.log(
-        `Cost-basis cumulative return: ${(trueCumulativeReturn * 100).toFixed(2)}%`,
-      );
-    }
-
     // Generate normalized chart data
     const data = this.chartDataService.generateNormalizedChartData(
       snapshots,
       benchmarkPrices,
-      excludeCash,
-      trueCumulativeReturn,
     );
 
     // Build response DTO
-    const warning = excludeCash
-      ? 'Chart shows performance of invested positions only, excluding cash drag.'
-      : undefined;
-    const viewMode = excludeCash ? 'INVESTED' : 'TOTAL';
-
     // Always calculate cash allocation average (frontend needs it to detect cash-only portfolios)
     const cashAllocationAvg =
       this.performanceCalculationService.calculateAverageCashAllocation(
@@ -349,8 +316,7 @@ export class PerformanceService {
       data,
       startDate,
       endDate,
-      warning,
-      viewMode,
+      warning: dateRangeMetadata?.warningMessage,
       cashAllocationAvg,
     });
   }

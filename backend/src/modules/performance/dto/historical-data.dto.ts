@@ -65,19 +65,12 @@ export class HistoricalDataResponseDto {
 
   @ApiProperty({
     description:
-      'Warning message if cash deposits detected during period. Indicates the chart shows investment performance adjusted for cash flows.',
+      'Warning message about the analysis period or data completeness.',
     example:
-      'Portfolio returns are adjusted for cash deposits during this period. The chart shows investment performance, not total value growth.',
+      'Portfolio created Dec 11, 2025. Showing 31 days instead of 3 months.',
     required: false,
   })
   warning?: string;
-
-  @ApiProperty({
-    description: 'View mode: TOTAL (includes cash) or INVESTED (excludes cash)',
-    enum: ['TOTAL', 'INVESTED'],
-    example: 'TOTAL',
-  })
-  viewMode: 'TOTAL' | 'INVESTED';
 
   @ApiProperty({
     description:
