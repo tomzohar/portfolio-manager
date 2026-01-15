@@ -433,7 +433,7 @@ describe('PerformanceCalculationService', () => {
             quantity: 80,
             price: 100,
           },
-        ] as any);
+        ] as Transaction[]);
 
         // Act
         const result = await service.calculateCumulativeReturn(snapshots, true);
@@ -485,7 +485,7 @@ describe('PerformanceCalculationService', () => {
             quantity: 20,
             price: 100,
           },
-        ] as any);
+        ] as Transaction[]);
 
         // Act - Calculate cumulative returns for each day
         const resultExcludeCashDay2 = await service.calculateCumulativeReturn(
@@ -649,7 +649,7 @@ describe('PerformanceCalculationService', () => {
             quantity: 1,
             price: 110, // Sold at gain
           },
-        ] as any);
+        ] as Transaction[]);
 
         // Act
         const result = await service.calculateCumulativeReturn(snapshots, true);
@@ -699,7 +699,7 @@ describe('PerformanceCalculationService', () => {
             quantity: 500,
             price: 20,
           },
-        ] as any);
+        ] as Transaction[]);
 
         // Act
         const result = await service.calculateCumulativeReturn(snapshots, true);
@@ -772,7 +772,7 @@ describe('PerformanceCalculationService', () => {
             quantity: 800,
             price: 100,
           },
-        ] as any);
+        ] as Transaction[]);
 
         // Act
         const result = await service.calculateCumulativeReturn(snapshots, true);

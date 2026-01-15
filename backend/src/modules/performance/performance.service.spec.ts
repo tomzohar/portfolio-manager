@@ -14,6 +14,8 @@ import { PerformanceCalculationService } from './services/performance-calculatio
 import { ChartDataService } from './services/chart-data.service';
 import { Timeframe } from './types/timeframe.types';
 import { HistoricalDataPointDto } from './dto/historical-data.dto';
+import { Portfolio } from '../portfolio/entities/portfolio.entity';
+import { User } from '../users/entities/user.entity';
 
 describe('PerformanceService', () => {
   let service: PerformanceService;
@@ -28,6 +30,23 @@ describe('PerformanceService', () => {
 
   const mockUserId = 'user-123';
   const mockPortfolioId = 'portfolio-456';
+  const mockUser: User = {
+    id: mockUserId,
+    email: 'performance-test@example.com',
+    passwordHash: 'hashed-password',
+    portfolios: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  const mockPortfolio: Portfolio = {
+    id: mockPortfolioId,
+    name: 'Performance Test Portfolio',
+    user: mockUser,
+    assets: [],
+    transactions: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -98,9 +117,7 @@ describe('PerformanceService', () => {
   describe('getBenchmarkComparison (with new services)', () => {
     it('should use snapshot data and new service architecture', async () => {
       // Arrange
-      portfolioService.findOne.mockResolvedValue({
-        id: mockPortfolioId,
-      } as any);
+      portfolioService.findOne.mockResolvedValue(mockPortfolio);
       transactionsService.getTransactions.mockResolvedValue([]);
 
       // Mock snapshots
@@ -133,9 +150,7 @@ describe('PerformanceService', () => {
 
     it('should handle missing market data gracefully', async () => {
       // Arrange
-      portfolioService.findOne.mockResolvedValue({
-        id: mockPortfolioId,
-      } as any);
+      portfolioService.findOne.mockResolvedValue(mockPortfolio);
       transactionsService.getTransactions.mockResolvedValue([]);
 
       portfolioDailyPerfRepo.find.mockResolvedValue([
@@ -166,9 +181,7 @@ describe('PerformanceService', () => {
     describe('getBenchmarkComparison (from snapshots)', () => {
       it('should read from snapshots successfully', async () => {
         // Arrange
-        portfolioService.findOne.mockResolvedValue({
-          id: mockPortfolioId,
-        } as any);
+        portfolioService.findOne.mockResolvedValue(mockPortfolio);
         transactionsService.getTransactions.mockResolvedValue([]);
 
         // Mock snapshot data
@@ -216,9 +229,7 @@ describe('PerformanceService', () => {
 
       it('should trigger auto-backfill when snapshots missing', async () => {
         // Arrange
-        portfolioService.findOne.mockResolvedValue({
-          id: mockPortfolioId,
-        } as any);
+        portfolioService.findOne.mockResolvedValue(mockPortfolio);
         transactionsService.getTransactions.mockResolvedValue([]);
 
         // After backfill, snapshots exist
@@ -255,9 +266,7 @@ describe('PerformanceService', () => {
 
       it('should throw MissingDataException when no snapshots after backfill', async () => {
         // Arrange
-        portfolioService.findOne.mockResolvedValue({
-          id: mockPortfolioId,
-        } as any);
+        portfolioService.findOne.mockResolvedValue(mockPortfolio);
         transactionsService.getTransactions.mockResolvedValue([]);
         portfolioDailyPerfRepo.find.mockResolvedValue([]); // No snapshots even after backfill
         performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
@@ -277,9 +286,7 @@ describe('PerformanceService', () => {
 
       it('should throw MissingDataException when no market data found', async () => {
         // Arrange
-        portfolioService.findOne.mockResolvedValue({
-          id: mockPortfolioId,
-        } as any);
+        portfolioService.findOne.mockResolvedValue(mockPortfolio);
         transactionsService.getTransactions.mockResolvedValue([]);
         portfolioDailyPerfRepo.find.mockResolvedValue([
           { date: new Date('2024-01-01'), dailyReturnPct: 0.01 },
@@ -303,9 +310,7 @@ describe('PerformanceService', () => {
 
       it('should calculate correct cumulative return using geometric linking', async () => {
         // Arrange
-        portfolioService.findOne.mockResolvedValue({
-          id: mockPortfolioId,
-        } as any);
+        portfolioService.findOne.mockResolvedValue(mockPortfolio);
         transactionsService.getTransactions.mockResolvedValue([]);
 
         // Snapshots with 1% daily return
@@ -344,9 +349,7 @@ describe('PerformanceService', () => {
 
       it('should throw MissingDataException when no snapshots after backfill', async () => {
         // Arrange
-        portfolioService.findOne.mockResolvedValue({
-          id: mockPortfolioId,
-        } as any);
+        portfolioService.findOne.mockResolvedValue(mockPortfolio);
         transactionsService.getTransactions.mockResolvedValue([]);
         portfolioDailyPerfRepo.find.mockResolvedValue([]); // No snapshots even after backfill
         performanceCalculationService.ensureSnapshotsExist.mockResolvedValue(
@@ -366,9 +369,7 @@ describe('PerformanceService', () => {
 
       it('should throw MissingDataException when no market data found', async () => {
         // Arrange
-        portfolioService.findOne.mockResolvedValue({
-          id: mockPortfolioId,
-        } as any);
+        portfolioService.findOne.mockResolvedValue(mockPortfolio);
         transactionsService.getTransactions.mockResolvedValue([]);
         portfolioDailyPerfRepo.find.mockResolvedValue([
           { date: new Date('2024-01-01'), dailyReturnPct: 0.01 },
@@ -395,9 +396,7 @@ describe('PerformanceService', () => {
 
       it('should calculate correct cumulative return using geometric linking', async () => {
         // Arrange
-        portfolioService.findOne.mockResolvedValue({
-          id: mockPortfolioId,
-        } as any);
+        portfolioService.findOne.mockResolvedValue(mockPortfolio);
         transactionsService.getTransactions.mockResolvedValue([]);
 
         // Snapshots with 1% daily return
@@ -438,9 +437,7 @@ describe('PerformanceService', () => {
     describe('getHistoricalData (from snapshots)', () => {
       it('should read from snapshots and generate chart data', async () => {
         // Arrange
-        portfolioService.findOne.mockResolvedValue({
-          id: mockPortfolioId,
-        } as any);
+        portfolioService.findOne.mockResolvedValue(mockPortfolio);
         transactionsService.getTransactions.mockResolvedValue([]);
 
         const mockSnapshots = [
@@ -497,9 +494,7 @@ describe('PerformanceService', () => {
     describe('calculateCumulativeReturn (helper)', () => {
       it('should calculate correct cumulative return with positive returns', async () => {
         // Test via getBenchmarkComparison since helper is in separate service
-        portfolioService.findOne.mockResolvedValue({
-          id: mockPortfolioId,
-        } as any);
+        portfolioService.findOne.mockResolvedValue(mockPortfolio);
         transactionsService.getTransactions.mockResolvedValue([]);
 
         const mockSnapshots = [
@@ -531,9 +526,7 @@ describe('PerformanceService', () => {
       });
 
       it('should calculate correct cumulative return with negative returns', async () => {
-        portfolioService.findOne.mockResolvedValue({
-          id: mockPortfolioId,
-        } as any);
+        portfolioService.findOne.mockResolvedValue(mockPortfolio);
         transactionsService.getTransactions.mockResolvedValue([]);
 
         const mockSnapshots = [

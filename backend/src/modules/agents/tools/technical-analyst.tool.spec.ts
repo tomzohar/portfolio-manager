@@ -33,7 +33,7 @@ describe('TechnicalAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({ ticker: 'AAPL' });
-      const parsedResult = JSON.parse(result) as unknown;
+      const parsedResult = JSON.parse(String(result)) as unknown;
 
       expect(parsedResult).toHaveProperty('indicators');
       const resultWithIndicators = parsedResult as {
@@ -51,7 +51,7 @@ describe('TechnicalAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({ ticker: 'AAPL' });
-      const parsedResult = JSON.parse(result) as unknown;
+      const parsedResult = JSON.parse(String(result)) as unknown;
 
       expect(parsedResult).toHaveProperty('indicators');
       const resultWithIndicators = parsedResult as {
@@ -79,7 +79,7 @@ describe('TechnicalAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({ ticker: 'AAPL' });
-      const parsedResult = JSON.parse(result) as unknown;
+      const parsedResult = JSON.parse(String(result)) as unknown;
 
       expect(parsedResult).toHaveProperty('indicators');
       const resultWithIndicators = parsedResult as {
@@ -104,7 +104,7 @@ describe('TechnicalAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({ ticker: 'AAPL' });
-      const parsedResult = JSON.parse(result) as unknown;
+      const parsedResult = JSON.parse(String(result)) as unknown;
 
       expect(parsedResult).toHaveProperty('indicators');
       const resultWithIndicators = parsedResult as {
@@ -127,7 +127,7 @@ describe('TechnicalAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({ ticker: 'AAPL' });
-      const parsedResult = JSON.parse(result) as unknown;
+      const parsedResult = JSON.parse(String(result)) as unknown;
 
       expect(parsedResult).toHaveProperty('indicators');
       const resultWithIndicators = parsedResult as {
@@ -145,7 +145,7 @@ describe('TechnicalAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({ ticker: 'AAPL' });
-      const parsedResult = JSON.parse(result) as unknown;
+      const parsedResult = JSON.parse(String(result)) as unknown;
 
       expect(parsedResult).toHaveProperty('indicators');
       const resultWithIndicators = parsedResult as {
@@ -161,7 +161,7 @@ describe('TechnicalAnalystTool', () => {
       polygonService.getAggregates.mockReturnValue(of(mockOHLCVData));
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({ ticker: 'AAPL' });
-      const parsedResult = JSON.parse(result) as unknown;
+      const parsedResult = JSON.parse(String(result)) as unknown;
 
       expect(parsedResult).toHaveProperty('indicators');
       const resultWithIndicators = parsedResult as {
@@ -181,7 +181,7 @@ describe('TechnicalAnalystTool', () => {
       polygonService.getAggregates.mockReturnValue(of(mockOHLCVData));
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({ ticker: 'AAPL' });
-      const parsedResult = JSON.parse(result) as unknown;
+      const parsedResult = JSON.parse(String(result)) as unknown;
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(polygonService.getAggregates).toHaveBeenCalled();
@@ -198,7 +198,7 @@ describe('TechnicalAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({ ticker: 'NEWIPO' });
-      const parsedResult = JSON.parse(result) as unknown;
+      const parsedResult = JSON.parse(String(result)) as unknown;
 
       expect(parsedResult).toHaveProperty('error');
       const resultWithError = parsedResult as { error: string };
@@ -210,7 +210,7 @@ describe('TechnicalAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({ ticker: 'INVALID' });
-      const parsedResult = JSON.parse(result) as unknown;
+      const parsedResult = JSON.parse(String(result)) as unknown;
 
       expect(parsedResult).toHaveProperty('error');
       const resultWithError = parsedResult as { error: string };
@@ -224,7 +224,7 @@ describe('TechnicalAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({ ticker: 'AAPL' });
-      const parsedResult = JSON.parse(result) as unknown;
+      const parsedResult = JSON.parse(String(result)) as unknown;
 
       expect(parsedResult).toHaveProperty('error');
     });
@@ -244,7 +244,7 @@ describe('TechnicalAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({ ticker: 'AAPL' });
-      const parsedResult = JSON.parse(result) as unknown;
+      const parsedResult = JSON.parse(String(result)) as unknown;
 
       expect(parsedResult).toHaveProperty('indicators');
       const resultWithIndicators = parsedResult as {
