@@ -65,7 +65,6 @@ describe('performanceAttributionNode', () => {
       portfolioPeriodReturn: 0.1,
       benchmarkPeriodReturn: 0.05,
       periodDays: 30,
-      viewMode: 'TOTAL',
     });
 
     // Act
@@ -98,7 +97,6 @@ describe('performanceAttributionNode', () => {
       portfolioPeriodReturn: 0.15,
       benchmarkPeriodReturn: 0.1,
       periodDays: 365,
-      viewMode: 'TOTAL',
     });
 
     // Act
@@ -130,7 +128,6 @@ describe('performanceAttributionNode', () => {
       portfolioPeriodReturn: 0.2,
       benchmarkPeriodReturn: 0.15,
       periodDays: 180,
-      viewMode: 'TOTAL',
     });
 
     // Act
@@ -162,7 +159,6 @@ describe('performanceAttributionNode', () => {
       portfolioPeriodReturn: 0.25,
       benchmarkPeriodReturn: 0.18,
       periodDays: 365,
-      viewMode: 'TOTAL',
     });
 
     // Act
@@ -223,7 +219,6 @@ describe('performanceAttributionNode', () => {
       portfolioPeriodReturn: 0.5,
       benchmarkPeriodReturn: 0.3,
       periodDays: 730,
-      viewMode: 'TOTAL',
     });
 
     // Act
@@ -255,7 +250,6 @@ describe('performanceAttributionNode', () => {
       portfolioPeriodReturn: 0.15,
       benchmarkPeriodReturn: 0.1,
       periodDays: 90,
-      viewMode: 'TOTAL',
     });
 
     // Act
@@ -283,7 +277,6 @@ describe('performanceAttributionNode', () => {
       portfolioPeriodReturn: 0.05,
       benchmarkPeriodReturn: 0.1,
       periodDays: 30,
-      viewMode: 'TOTAL',
     });
 
     // Act

@@ -35,10 +35,7 @@ describe('DashboardPerformanceComponent', () => {
     selectedTimeframe: signal(Timeframe.YEAR_TO_DATE),
     loading: signal(false),
     error: signal(null),
-    excludeCash: signal(false),
-    cashAllocationAvg: signal(null),
     changeTimeframe: jest.fn(),
-    toggleExcludeCash: jest.fn(),
   };
 
   const mockPortfolioFacade = {
@@ -89,19 +86,6 @@ describe('DashboardPerformanceComponent', () => {
     expect(component.onTimeframeChanged).toBeDefined();
   });
 
-  it('should call facade.toggleExcludeCash when exclude cash is toggled', () => {
-    component.onExcludeCashToggled(true);
-
-    expect(mockPerformanceFacade.toggleExcludeCash).toHaveBeenCalledWith(
-      'portfolio-123',
-      true
-    );
-  });
-
-  it('should have onExcludeCashToggled method', () => {
-    expect(component.onExcludeCashToggled).toBeDefined();
-  });
-
   it('should not call facade methods when portfolio ID is null', () => {
     // Reset call counts from previous tests
     jest.clearAllMocks();
@@ -109,10 +93,8 @@ describe('DashboardPerformanceComponent', () => {
     mockPortfolioFacade.selectedId.set(null);
 
     component.onTimeframeChanged(Timeframe.THREE_MONTHS);
-    component.onExcludeCashToggled(true);
 
     expect(mockPerformanceFacade.changeTimeframe).not.toHaveBeenCalled();
-    expect(mockPerformanceFacade.toggleExcludeCash).not.toHaveBeenCalled();
   });
 
   it('should navigate to overview tab when buy stock is clicked', () => {

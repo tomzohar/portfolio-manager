@@ -249,7 +249,6 @@ describe('PerformanceAttributionReducer', () => {
           { date: '2023-10-01', portfolioValue: 100, benchmarkValue: 100 },
         ],
         selectedTimeframe: Timeframe.THREE_MONTHS,
-        excludeCash: false,
         loading: false,
         error: null,
         cachedAnalyses: {},

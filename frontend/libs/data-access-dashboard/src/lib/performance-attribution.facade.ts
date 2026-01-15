@@ -12,8 +12,6 @@ import {
   selectPortfolioReturn,
   selectBenchmarkReturn,
   selectIsOutperforming,
-  selectExcludeCash,
-  selectCashAllocationAvg,
 } from './+state/performance-attribution/performance-attribution.selectors';
 
 /**
@@ -78,12 +76,6 @@ export class PerformanceAttributionFacade {
   readonly error: Signal<string | null> = 
     this.store.selectSignal(selectError);
 
-  /**
-   * Whether to exclude cash from performance calculations
-   */
-  readonly excludeCash: Signal<boolean> = 
-    this.store.selectSignal(selectExcludeCash);
-
   // ========== Computed Signals (Derived State) ==========
 
   /**
@@ -109,12 +101,6 @@ export class PerformanceAttributionFacade {
    */
   readonly isOutperforming: Signal<boolean> = 
     this.store.selectSignal(selectIsOutperforming);
-
-  /**
-   * Average cash allocation from current analysis
-   */
-  readonly cashAllocationAvg: Signal<number | null> =
-    this.store.selectSignal(selectCashAllocationAvg);
 
   /**
    * Portfolio return as percentage string (e.g., "8.50%")
@@ -151,14 +137,6 @@ export class PerformanceAttributionFacade {
     return a > 0 ? 'success' : 'error';
   });
 
-  /**
-   * Cash allocation as percentage string (e.g., "18.50%")
-   */
-  readonly cashAllocationPercent = computed(() => {
-    const allocation = this.cashAllocationAvg();
-    return allocation !== null ? `${(allocation * 100).toFixed(2)}%` : '--';
-  });
-
   // ========== Action Dispatchers ==========
 
   /**
@@ -168,20 +146,17 @@ export class PerformanceAttributionFacade {
    * @param portfolioId - Portfolio UUID
    * @param timeframe - Time period to analyze
    * @param benchmarkTicker - Optional benchmark (default: 'SPY')
-   * @param excludeCash - Optional flag to exclude cash from calculations
    */
   loadPerformance(
     portfolioId: string,
     timeframe: Timeframe,
-    benchmarkTicker?: string,
-    excludeCash?: boolean
+    benchmarkTicker?: string
   ): void {
     this.store.dispatch(
       PerformanceAttributionActions.loadPerformanceAttribution({ 
         portfolioId, 
         timeframe, 
         benchmarkTicker,
-        excludeCash
       })
     );
   }
@@ -192,23 +167,10 @@ export class PerformanceAttributionFacade {
    * 
    * @param portfolioId - Portfolio UUID
    * @param timeframe - New timeframe to display
-   * @param excludeCash - Optional flag to exclude cash from calculations
    */
-  changeTimeframe(portfolioId: string, timeframe: Timeframe, excludeCash?: boolean): void {
+  changeTimeframe(portfolioId: string, timeframe: Timeframe): void {
     this.store.dispatch(
-      PerformanceAttributionActions.changeTimeframe({ portfolioId, timeframe, excludeCash })
-    );
-  }
-
-  /**
-   * Toggle the excludeCash flag and trigger data reload.
-   * 
-   * @param portfolioId - Portfolio UUID
-   * @param excludeCash - New value for excludeCash flag
-   */
-  toggleExcludeCash(portfolioId: string, excludeCash: boolean): void {
-    this.store.dispatch(
-      PerformanceAttributionActions.toggleExcludeCash({ portfolioId, excludeCash })
+      PerformanceAttributionActions.changeTimeframe({ portfolioId, timeframe })
     );
   }
 

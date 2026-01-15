@@ -30,8 +30,8 @@ export class PerformanceAttributionEffects {
   loadPerformanceAttribution$ = createEffect(() =>
     this.actions$.pipe(
       ofType(PerformanceAttributionActions.loadPerformanceAttribution),
-      switchMap(({ portfolioId, timeframe, benchmarkTicker = 'SPY', excludeCash }) =>
-        this.performanceApi.getBenchmarkComparison(portfolioId, timeframe, benchmarkTicker, excludeCash).pipe(
+      switchMap(({ portfolioId, timeframe, benchmarkTicker = 'SPY' }) =>
+        this.performanceApi.getBenchmarkComparison(portfolioId, timeframe, benchmarkTicker).pipe(
           map((analysis) =>
             PerformanceAttributionActions.loadPerformanceAttributionSuccess({ 
               analysis, 
@@ -73,8 +73,8 @@ export class PerformanceAttributionEffects {
   loadHistoricalData$ = createEffect(() =>
     this.actions$.pipe(
       ofType(PerformanceAttributionActions.loadHistoricalData),
-      switchMap(({ portfolioId, timeframe, benchmarkTicker = 'SPY', excludeCash }) =>
-        this.performanceApi.getHistoricalData(portfolioId, timeframe, benchmarkTicker, excludeCash).pipe(
+      switchMap(({ portfolioId, timeframe, benchmarkTicker = 'SPY' }) =>
+        this.performanceApi.getHistoricalData(portfolioId, timeframe, benchmarkTicker).pipe(
           map((response) =>
             PerformanceAttributionActions.loadHistoricalDataSuccess({ 
               data: response.data, 
@@ -121,12 +121,10 @@ export class PerformanceAttributionEffects {
         this.actions$.pipe(
           ofType(PerformanceAttributionActions.changeTimeframe),
           switchMap(({ timeframe }) => this.store.select(selectIsCached(timeframe)))
-        ),
-        this.store.select(state => (state as any).performanceAttribution)
+        )
       ),
-      mergeMap(([action, isCached, state]) => {
-        const { portfolioId, timeframe, excludeCash } = action;
-        const currentExcludeCash = excludeCash !== undefined ? excludeCash : state.excludeCash;
+      mergeMap(([action, isCached]) => {
+        const { portfolioId, timeframe } = action;
 
         // If cached, do nothing (reducer already updated state)
         if (isCached) {
@@ -138,43 +136,10 @@ export class PerformanceAttributionEffects {
           PerformanceAttributionActions.loadPerformanceAttribution({ 
             portfolioId, 
             timeframe,
-            excludeCash: currentExcludeCash
           }),
           PerformanceAttributionActions.loadHistoricalData({ 
             portfolioId, 
             timeframe,
-            excludeCash: currentExcludeCash
-          })
-        ]);
-      })
-    )
-  );
-
-  /**
-   * Toggle Exclude Cash Effect
-   * 
-   * When excludeCash toggle changes, reload both performance attribution
-   * and historical data with the new excludeCash value.
-   */
-  toggleExcludeCash$ = createEffect(() =>
-    this.actions$.pipe(
-      ofType(PerformanceAttributionActions.toggleExcludeCash),
-      withLatestFrom(this.store.select(state => (state as any).performanceAttribution)),
-      mergeMap(([action, state]) => {
-        const { portfolioId, excludeCash } = action;
-        const timeframe = state.selectedTimeframe;
-
-        // Reload both analysis and historical data with new excludeCash value
-        return from([
-          PerformanceAttributionActions.loadPerformanceAttribution({ 
-            portfolioId, 
-            timeframe,
-            excludeCash
-          }),
-          PerformanceAttributionActions.loadHistoricalData({ 
-            portfolioId, 
-            timeframe,
-            excludeCash
           })
         ]);
       })
@@ -207,7 +172,6 @@ export class PerformanceAttributionEffects {
           return of(PerformanceAttributionActions.loadHistoricalData({ 
             portfolioId, 
             timeframe,
-            excludeCash: state.excludeCash
           }));
         }
 

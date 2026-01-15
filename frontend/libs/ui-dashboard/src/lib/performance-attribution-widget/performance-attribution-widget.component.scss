@@ -6,6 +6,11 @@
   gap: $spacing-lg;
 }
 
+.controls-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

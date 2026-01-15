@@ -4,8 +4,7 @@ import { Repository, Between } from 'typeorm';
 import { PortfolioDailyPerformance } from '../entities/portfolio-daily-performance.entity';
 import { DailySnapshotCalculationService } from './daily-snapshot-calculation.service';
 import { Transaction } from '../../portfolio/entities/transaction.entity';
-import { TransactionType } from '../../portfolio/entities/transaction.entity';
-import { format, startOfDay, endOfDay } from 'date-fns';
+import { format } from 'date-fns';
 
 /**
  * PerformanceCalculationService
@@ -17,16 +16,6 @@ import { format, startOfDay, endOfDay } from 'date-fns';
 export class PerformanceCalculationService {
   private readonly logger = new Logger(PerformanceCalculationService.name);
 
-  // Constants for numerical stability and extreme return detection
-  // EPSILON: Threshold for near-zero values (0.0001 = $0.01 cents for dollar-denominated portfolios)
-  // Rationale: This value works for portfolios ranging from $100 to $100M:
-  // - For $100 portfolio: 0.0001 * 100 = $0.01 (acceptable precision)
-  // - For $100M portfolio: 0.0001 * 100M = $10k (still very small relative to size)
-  // For portfolios outside this range, consider using proportional thresholds
-  private readonly EPSILON = 0.0001;
-  private readonly EXTREME_RETURN_UPPER_THRESHOLD = 5.0; // 500% daily return
-  private readonly EXTREME_RETURN_LOWER_THRESHOLD = -0.99; // -99% daily return
-
   constructor(
     @InjectRepository(PortfolioDailyPerformance)
     private readonly portfolioDailyPerfRepo: Repository<PortfolioDailyPerformance>,
@@ -36,230 +25,32 @@ export class PerformanceCalculationService {
   ) {}
 
   /**
-   * Calculate positions from transactions using weighted average cost basis
-   * This is a simplified version of the logic in PortfolioService
-   */
-  private calculatePositionsFromTransactions(
-    transactions: Transaction[],
-  ): Array<{ ticker: string; quantity: number; avgCostBasis: number }> {
-    const positionMap = new Map<
-      string,
-      { quantity: number; totalCost: number }
-    >();
-
-    // Process transactions chronologically
-    for (const transaction of transactions) {
-      const ticker = transaction.ticker;
-      const qty = Number(transaction.quantity);
-      const price = Number(transaction.price);
-
-      const position = positionMap.get(ticker) || { quantity: 0, totalCost: 0 };
-
-      if (
-        transaction.type === TransactionType.BUY ||
-        transaction.type === TransactionType.DEPOSIT
-      ) {
-        // Add to position and update total cost
-        position.quantity += qty;
-        position.totalCost += qty * price;
-      } else if (
-        transaction.type === TransactionType.SELL ||
-        transaction.type === TransactionType.WITHDRAWAL
-      ) {
-        // Reduce position proportionally
-        if (position.quantity > this.EPSILON) {
-          // Calculate average cost before sell
-          const avgCost = position.totalCost / position.quantity;
-          // Reduce quantity
-          position.quantity -= qty;
-          // Update total cost (remaining shares at same avg cost)
-          // Ensure we don't go below zero due to floating point errors
-          position.totalCost = Math.max(0, position.quantity * avgCost);
-        } else {
-          // Edge case: SELL/WITHDRAWAL when position is zero or negative
-          // This can happen with CASH where withdrawals can make it negative temporarily
-          // For CASH, allow negative balance; for other tickers, this is an error condition
-          if (ticker === 'CASH') {
-            position.quantity -= qty;
-            position.totalCost -= qty * price;
-          } else {
-            // Log warning but continue - the position will be filtered out later
-            this.logger.warn(
-              `Attempting to SELL/WITHDRAW ${qty} units of ${ticker} but position has ${position.quantity} units. ` +
-                `This may indicate transaction ordering issues or data quality problems.`,
-            );
-            // Set to zero to prevent negative positions for non-CASH tickers
-            position.quantity = 0;
-            position.totalCost = 0;
-          }
-        }
-      }
-
-      positionMap.set(ticker, position);
-    }
-
-    // Convert to array, excluding zero/negative positions
-    const positions: Array<{
-      ticker: string;
-      quantity: number;
-      avgCostBasis: number;
-    }> = [];
-
-    for (const [ticker, position] of positionMap.entries()) {
-      if (position.quantity > 0) {
-        positions.push({
-          ticker,
-          quantity: position.quantity,
-          avgCostBasis: position.totalCost / position.quantity,
-        });
-      }
-    }
-
-    return positions;
-  }
-
-  /**
    * Calculate cumulative return from daily snapshots using geometric linking
    *
    * Formula: Cumulative_t = (1 + Cumulative_{t-1}) × (1 + r_t) - 1
    *
-   * IMPORTANT: For excludeCash=true, this method calculates return based on the cost basis
-   * of current holdings vs their current market value. This provides the most intuitive
-   * answer to: "How are my investments performing?"
-   *
-   * The key insight is that when you sell part of a position, the cost basis of the
-   * remaining shares stays proportional. If you bought 100 shares for $10,000 and sell
-   * 50 shares, the remaining 50 shares have a cost basis of $5,000.
-   *
-   * Method:
-   * 1. Find the first day with invested capital (cost basis start)
-   * 2. Track cost basis changes through the period using TWR for capital flows
-   * 3. Compare final invested value to cost basis: (value / cost_basis) - 1
-   *
-   * Example: Buy TSLA @ $300 for $10k, sell half @ $150 for $2.5k, remaining worth $2.5k
-   * - Cost basis of remaining shares: $5k (half of original $10k)
-   * - Current value: $2.5k
-   * - Return: ($2.5k / $5k) - 1 = -50%
-   *
-   * This is different from pure TWR which would give -66.67% by treating the SELL
-   * as a withdrawal. The business requirement is to show performance of holdings, not
-   * performance including withdrawal timing.
-   *
    * @param snapshots - Array of daily performance snapshots (must be chronological)
-   * @param excludeCash - If true, calculate using invested equity only (excludes CASH positions)
    * @returns Cumulative return as decimal (e.g., 0.15 = 15%)
    */
   async calculateCumulativeReturn(
     snapshots: PortfolioDailyPerformance[],
-    excludeCash: boolean = false,
   ): Promise<number> {
     if (snapshots.length === 0) {
       return 0;
     }
 
-    if (!excludeCash) {
-      // Existing logic: Use pre-calculated dailyReturnPct from snapshots
-      let cumulative = 0;
+    let cumulative = 0;
 
-      for (const snapshot of snapshots) {
-        const dailyReturn = this.safeNumber(snapshot.dailyReturnPct, 0);
-        cumulative = (1 + cumulative) * (1 + dailyReturn) - 1;
-      }
-
-      this.logger.debug(
-        `Calculated cumulative return: ${(cumulative * 100).toFixed(2)}% from ${snapshots.length} snapshots`,
-      );
-
-      return cumulative;
-    }
-
-    // Calculate invested-only returns by comparing current holdings to their cost basis
-    // This gives users the answer to: "How are my current investments performing?"
-    // rather than TWR which includes timing of withdrawals
-
-    this.logger.debug(
-      'Calculating invested-only return using cost basis method',
-    );
-
-    const portfolioId = snapshots[0]?.portfolioId;
-    if (!portfolioId) {
-      this.logger.debug('No portfolioId found in snapshots');
-      return 0;
+    for (const snapshot of snapshots) {
+      const dailyReturn = this.safeNumber(snapshot.dailyReturnPct, 0);
+      cumulative = (1 + cumulative) * (1 + dailyReturn) - 1;
     }
 
     this.logger.debug(
-      `Processing portfolio ${portfolioId} for invested-only return`,
+      `Calculated cumulative return: ${(cumulative * 100).toFixed(2)}% from ${snapshots.length} snapshots`,
     );
 
-    const lastSnapshot = snapshots[snapshots.length - 1];
-    const finalInvestedValue =
-      this.safeNumber(lastSnapshot.totalEquity, 0) -
-      this.safeNumber(lastSnapshot.cashBalance, 0);
-
-    this.logger.debug(`Final invested value: ${finalInvestedValue.toFixed(2)}`);
-
-    // If no invested capital at end, return 0
-    if (Math.abs(finalInvestedValue) < this.EPSILON) {
-      this.logger.debug('No invested capital at end of period');
-      return 0;
-    }
-
-    // Get all transactions up to the last snapshot date to calculate current positions
-    // Filter to only BUY/SELL transactions, excluding CASH ticker to improve efficiency
-    const transactions = await this.transactionRepo.find({
-      where: {
-        portfolio: { id: portfolioId },
-        transactionDate: Between(
-          startOfDay(snapshots[0].date),
-          endOfDay(lastSnapshot.date),
-        ),
-      },
-      order: { transactionDate: 'ASC' },
-    });
-
-    this.logger.debug(
-      `Found ${transactions.length} transactions for cost basis calculation`,
-    );
-
-    // Calculate current positions with their cost basis
-    const positions = this.calculatePositionsFromTransactions(transactions);
-
-    this.logger.debug(
-      `Calculated ${positions.length} positions (including CASH if present)`,
-    );
-
-    // Sum up cost basis of invested positions (exclude CASH)
-    let totalCostBasis = 0;
-    for (const position of positions) {
-      if (position.ticker !== 'CASH') {
-        const positionCost = position.avgCostBasis * position.quantity;
-        this.logger.debug(
-          `Position ${position.ticker}: ${position.quantity.toFixed(3)} shares @ ` +
-            `$${position.avgCostBasis.toFixed(2)} = $${positionCost.toFixed(2)} cost basis`,
-        );
-        totalCostBasis += positionCost;
-      }
-    }
-
-    this.logger.debug(
-      `Total cost basis of invested positions: ${totalCostBasis.toFixed(2)}`,
-    );
-
-    // Handle edge case: no cost basis means no investments were made
-    if (Math.abs(totalCostBasis) < this.EPSILON) {
-      this.logger.debug('No cost basis found for invested positions');
-      return 0;
-    }
-
-    // Calculate simple return: (current value / cost basis) - 1
-    const returnPct = finalInvestedValue / totalCostBasis - 1;
-
-    this.logger.debug(
-      `Calculated invested-only return (cost basis method): ${(returnPct * 100).toFixed(2)}% ` +
-        `(final value: ${finalInvestedValue.toFixed(2)}, cost basis: ${totalCostBasis.toFixed(2)})`,
-    );
-
-    return returnPct;
+    return cumulative;
   }
 
   /**

@@ -213,7 +213,6 @@ Returns portfolio performance compared to a benchmark index (e.g., SPY) with con
 **Query Parameters:**
 - `timeframe` (required) - Time period: `1M`, `3M`, `6M`, `1Y`, `YTD`, `ALL_TIME`
 - `benchmarkTicker` (optional) - Benchmark symbol (default: `SPY`)
-- `excludeCash` (optional) - If `true`, exclude cash from performance calculation (default: `false`)
 
 **Response:** `BenchmarkComparisonDto`
 

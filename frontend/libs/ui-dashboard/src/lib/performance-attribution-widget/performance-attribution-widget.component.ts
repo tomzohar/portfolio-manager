@@ -11,7 +11,7 @@ import {
   PerformanceAnalysis,
   HistoricalDataPoint,
 } from '@stocks-researcher/types';
-import { CashExclusionControlsComponent } from '../cash-exclusion-controls/cash-exclusion-controls.component';
+import { TimeframeSelectorComponent } from '../timeframe-selector/timeframe-selector.component';
 import { AlphaBadgeComponent } from '../alpha-badge/alpha-badge.component';
 import { PerformanceChartComponent } from '../performance-chart/performance-chart.component';
 import {
@@ -39,7 +39,7 @@ import {
   standalone: true,
   imports: [
     CommonModule,
-    CashExclusionControlsComponent,
+    TimeframeSelectorComponent,
     AlphaBadgeComponent,
     PerformanceChartComponent,
     ButtonComponent,
@@ -78,16 +78,6 @@ export class PerformanceAttributionWidgetComponent {
    */
   error = input<string | null>(null);
 
-  /**
-   * Whether to exclude cash from performance calculations
-   */
-  excludeCash = input<boolean>(false);
-
-  /**
-   * Average cash allocation percentage
-   */
-  cashAllocationAvg = input<number | null>(null);
-
   // ========== Outputs ==========
 
   /**
@@ -99,11 +89,6 @@ export class PerformanceAttributionWidgetComponent {
    * Emitted when user submits a natural language query
    */
   querySubmitted = output<string>();
-
-  /**
-   * Emitted when user toggles cash exclusion
-   */
-  excludeCashToggled = output<boolean>();
 
   /**
    * Emitted when user clicks the "Buy Stock" button in cash-only empty state
@@ -158,9 +143,6 @@ export class PerformanceAttributionWidgetComponent {
   /**
    * Whether the portfolio is nearly 100% cash (no invested positions)
    * Uses threshold of 0.995 (99.5%) to catch portfolios that are effectively all cash
-   * 
-   * Why: We check regardless of viewMode so users see the empty state immediately
-   * when loading the Performance tab, even before toggling to Invested view
    */
   isFullyCash = computed(() => {
     const analysis = this.analysis();
@@ -187,13 +169,6 @@ export class PerformanceAttributionWidgetComponent {
    */
   onQuerySubmit(query: string): void {
     this.querySubmitted.emit(query);
-  }
-
-  /**
-   * Handle exclude cash toggle (forwarded from child component)
-   */
-  onExcludeCashToggle(checked: boolean): void {
-    this.excludeCashToggled.emit(checked);
   }
 
   /**

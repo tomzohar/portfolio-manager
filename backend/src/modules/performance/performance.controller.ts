@@ -93,7 +93,7 @@ export class PerformanceController {
     @Query() query: GetHistoricalDataQueryDto,
   ): Promise<HistoricalDataResponseDto> {
     this.logger.log(
-      `Getting historical data for portfolio ${portfolioId}, timeframe: ${query.timeframe}, excludeCash: ${query.excludeCash}`,
+      `Getting historical data for portfolio ${portfolioId}, timeframe: ${query.timeframe}`,
     );
 
     const benchmarkTicker = query.benchmarkTicker || 'SPY';
@@ -103,7 +103,6 @@ export class PerformanceController {
       user.id,
       benchmarkTicker,
       query.timeframe,
-      query.excludeCash ?? false,
     );
   }
 
@@ -153,7 +152,7 @@ export class PerformanceController {
     @Query() query: GetBenchmarkComparisonQueryDto,
   ): Promise<BenchmarkComparisonDto> {
     this.logger.log(
-      `Getting benchmark comparison for portfolio ${portfolioId}, timeframe: ${query.timeframe}, benchmark: ${query.benchmarkTicker || 'SPY'}, excludeCash: ${query.excludeCash}`,
+      `Getting benchmark comparison for portfolio ${portfolioId}, timeframe: ${query.timeframe}, benchmark: ${query.benchmarkTicker || 'SPY'}`,
     );
 
     const benchmarkTicker = query.benchmarkTicker || 'SPY';
@@ -166,7 +165,6 @@ export class PerformanceController {
       user.id,
       benchmarkTicker,
       query.timeframe,
-      query.excludeCash ?? false,
       asOfDate,
     );
   }
