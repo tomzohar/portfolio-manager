@@ -997,22 +997,26 @@ describe('DailySnapshotCalculationService', () => {
       // Mock transactions: AAPL
       jest
         .spyOn(transactionRepo, 'find')
-        .mockResolvedValue([{ ticker: 'AAPL' } as any]);
+        .mockResolvedValue([{ ticker: 'AAPL' } as Transaction]);
 
       // Mock market data: Missing for Tuesday (2024-01-02)
-      const mockMarketData = [
+      const mockMarketData: MarketDataDaily[] = [
         {
+          id: 'market-data-1',
           ticker: 'AAPL',
           date: new Date('2024-01-01'),
           closePrice: 100,
+          createdAt: new Date('2024-01-01'),
         },
         // 2024-01-02 is missing
         {
+          id: 'market-data-2',
           ticker: 'AAPL',
           date: new Date('2024-01-03'),
           closePrice: 110,
+          createdAt: new Date('2024-01-03'),
         },
-      ] as any[];
+      ];
 
       jest.spyOn(marketDataRepo, 'find').mockResolvedValue(mockMarketData);
 
@@ -1040,7 +1044,7 @@ describe('DailySnapshotCalculationService', () => {
       // Mock transactions
       jest
         .spyOn(transactionRepo, 'find')
-        .mockResolvedValue([{ ticker: 'NEW_TICKER' } as any]);
+        .mockResolvedValue([{ ticker: 'NEW_TICKER' } as Transaction]);
 
       // Mock market data: initially empty for the ticker
       const findSpy = jest.spyOn(marketDataRepo, 'find');
@@ -1049,11 +1053,13 @@ describe('DailySnapshotCalculationService', () => {
         .mockResolvedValueOnce([
           // Second batch fetch (after ingest) returns data
           {
+            id: 'market-data-3',
             ticker: 'NEW_TICKER',
             date: new Date('2024-01-01'),
             closePrice: 50,
+            createdAt: new Date('2024-01-01'),
           },
-        ] as any);
+        ]);
 
       await service.recalculateFromDate(mockPortfolioId, startDate);
 

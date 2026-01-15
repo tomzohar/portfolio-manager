@@ -409,7 +409,9 @@ describe('Performance Snapshots E2E (Phase 9)', () => {
         [editPortfolioId],
       );
 
-      expect(parseInt(snapshotsBefore[0].count)).toBeGreaterThan(0);
+      expect(
+        Number.parseInt(String(snapshotsBefore[0]?.count ?? '0'), 10),
+      ).toBeGreaterThan(0);
     });
 
     it('should automatically recalculate snapshots after transaction edit', async () => {
@@ -423,7 +425,10 @@ describe('Performance Snapshots E2E (Phase 9)', () => {
         [editPortfolioId],
       );
 
-      const countBefore = parseInt(snapshotsBefore[0].count);
+      const countBefore = Number.parseInt(
+        String(snapshotsBefore[0]?.count ?? '0'),
+        10,
+      );
 
       // Delete the transaction (which should trigger automatic backfill via event)
       await request(app.getHttpServer())
@@ -460,7 +465,10 @@ describe('Performance Snapshots E2E (Phase 9)', () => {
         [editPortfolioId],
       );
 
-      const countAfter = parseInt(snapshotsAfter[0].count);
+      const countAfter = Number.parseInt(
+        String(snapshotsAfter[0]?.count ?? '0'),
+        10,
+      );
 
       // Count should be different because transaction date changed
       // (2 months ago vs 1 month ago = more snapshots)
@@ -526,7 +534,9 @@ describe('Performance Snapshots E2E (Phase 9)', () => {
         );
 
         expect(snapshots.length).toBe(1);
-        expect(parseFloat(snapshots[0].dailyReturnPct)).toBe(0);
+        expect(
+          Number.parseFloat(String(snapshots[0]?.dailyReturnPct ?? '0')),
+        ).toBe(0);
       });
     });
 
@@ -653,7 +663,9 @@ describe('Performance Snapshots E2E (Phase 9)', () => {
       let cumulative = 0;
       for (const snapshot of snapshots) {
         cumulative =
-          (1 + cumulative) * (1 + parseFloat(snapshot.dailyReturnPct)) - 1;
+          (1 + cumulative) *
+            (1 + Number.parseFloat(String(snapshot.dailyReturnPct))) -
+          1;
       }
 
       // Get API cumulative return

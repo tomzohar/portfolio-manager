@@ -112,10 +112,9 @@ describe('OrchestratorService', () => {
       const userId = '123e4567-e89b-12d3-a456-426614174000';
 
       // Force an error by providing invalid input
-      const input = null;
+      const input = null as unknown as { message: string };
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      await expect(service.runGraph(userId, input as any)).rejects.toThrow();
+      await expect(service.runGraph(userId, input)).rejects.toThrow();
     });
 
     it('should return final report in result', async () => {
@@ -144,22 +143,22 @@ describe('OrchestratorService', () => {
         const input = { message: 'Test' };
 
         // TypeScript would prevent this, but test runtime validation
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-        await expect(service.runGraph('' as any, input)).rejects.toThrow();
+        await expect(service.runGraph('', input)).rejects.toThrow();
       });
 
       it('should reject execution with null userId', async () => {
         const input = { message: 'Test' };
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-        await expect(service.runGraph(null as any, input)).rejects.toThrow();
+        await expect(
+          service.runGraph(null as unknown as string, input),
+        ).rejects.toThrow();
       });
 
       it('should reject execution with undefined userId', async () => {
         const input = { message: 'Test' };
 
         await expect(
-          service.runGraph(undefined as any, input),
+          service.runGraph(undefined as unknown as string, input),
         ).rejects.toThrow();
       });
     });

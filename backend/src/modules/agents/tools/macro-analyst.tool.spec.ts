@@ -117,7 +117,7 @@ describe('MacroAnalystTool', () => {
     it('should return valid market regime classification', async () => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({});
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         regime: {
           status: string;
           signal: string;
@@ -155,7 +155,7 @@ describe('MacroAnalystTool', () => {
     it('should include calculated indicators in result', async () => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({});
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         indicators: {
           cpi_yoy: number;
           gdp_growth: number;
@@ -178,7 +178,7 @@ describe('MacroAnalystTool', () => {
     it('should include news count in result', async () => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({});
-      const parsedResult = JSON.parse(result) as { news_count: number };
+      const parsedResult = JSON.parse(String(result)) as { news_count: number };
 
       expect(parsedResult.news_count).toBe(3);
     });
@@ -235,7 +235,7 @@ describe('MacroAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({});
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         regime: { status: string; signal: string };
       };
 
@@ -256,7 +256,7 @@ describe('MacroAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({});
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         regime: { status: string; signal: string };
       };
 
@@ -277,7 +277,7 @@ describe('MacroAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({});
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         regime: { status: string; signal: string };
       };
 
@@ -320,7 +320,7 @@ describe('MacroAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({});
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         regime: { signal: string };
       };
 
@@ -358,7 +358,7 @@ describe('MacroAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({});
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         regime: { signal: string };
       };
 
@@ -399,7 +399,7 @@ describe('MacroAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({});
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         indicators: { cpi_yoy: number | null };
       };
 
@@ -442,7 +442,7 @@ describe('MacroAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({});
-      const parsedResult = JSON.parse(result) as { regime: unknown };
+      const parsedResult = JSON.parse(String(result)) as { regime: unknown };
 
       expect(parsedResult.regime).toBeDefined();
     });
@@ -453,7 +453,7 @@ describe('MacroAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({});
-      const parsedResult = JSON.parse(result) as { error: string };
+      const parsedResult = JSON.parse(String(result)) as { error: string };
 
       expect(parsedResult.error).toBeDefined();
       expect(parsedResult.error).toContain('Insufficient economic data');
@@ -523,7 +523,7 @@ describe('MacroAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({});
-      const parsedResult = JSON.parse(result) as { news_count: number };
+      const parsedResult = JSON.parse(String(result)) as { news_count: number };
 
       expect(parsedResult.news_count).toBe(0);
       // Should still have regime classification
@@ -567,7 +567,7 @@ describe('MacroAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({});
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         regime: { status: string };
       };
 
@@ -582,7 +582,7 @@ describe('MacroAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({});
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         regime: { status: string; signal: string; confidence: number };
       };
 
@@ -604,7 +604,7 @@ describe('MacroAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({});
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         regime: { key_driver: string; confidence: number };
       };
 
@@ -625,7 +625,7 @@ describe('MacroAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({});
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         regime: { status: string };
       };
 
@@ -646,7 +646,7 @@ describe('MacroAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({});
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         regime: { signal: string };
       };
 
@@ -664,7 +664,7 @@ describe('MacroAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({});
-      const parsedResult = JSON.parse(result) as { error: string };
+      const parsedResult = JSON.parse(String(result)) as { error: string };
 
       expect(parsedResult.error).toBeDefined();
       expect(parsedResult.error).toContain('Insufficient economic data');
@@ -694,7 +694,7 @@ describe('MacroAnalystTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await tool.func({});
-      const parsedResult = JSON.parse(result) as { error: string };
+      const parsedResult = JSON.parse(String(result)) as { error: string };
 
       expect(parsedResult.error).toBeDefined();
       expect(parsedResult.error).toContain(

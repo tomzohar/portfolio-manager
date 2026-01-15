@@ -174,7 +174,7 @@ describe('RiskManagerTool', () => {
         portfolioId: mockPortfolioId,
         userId: mockUserId,
       });
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         metrics: { var_95: number };
       };
 
@@ -190,7 +190,9 @@ describe('RiskManagerTool', () => {
         portfolioId: mockPortfolioId,
         userId: mockUserId,
       });
-      const parsedResult = JSON.parse(result) as { metrics: { beta: number } };
+      const parsedResult = JSON.parse(String(result)) as {
+        metrics: { beta: number };
+      };
 
       expect(parsedResult.metrics.beta).toBeDefined();
       // Beta can be negative (inverse correlation with market)
@@ -204,7 +206,7 @@ describe('RiskManagerTool', () => {
         portfolioId: mockPortfolioId,
         userId: mockUserId,
       });
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         metrics: { volatility: number };
       };
 
@@ -219,7 +221,7 @@ describe('RiskManagerTool', () => {
         portfolioId: mockPortfolioId,
         userId: mockUserId,
       });
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         metrics: {
           concentration: {
             top_holdings: Array<{ ticker: string; weight: number }>;
@@ -251,7 +253,7 @@ describe('RiskManagerTool', () => {
         portfolioId: mockPortfolioId,
         userId: mockUserId,
       });
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         metrics: {
           concentration: {
             top_holdings: Array<{ ticker: string; weight: number }>;
@@ -270,7 +272,7 @@ describe('RiskManagerTool', () => {
         portfolioId: mockPortfolioId,
         userId: mockUserId,
       });
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         metrics: { data_points: number };
       };
 
@@ -284,7 +286,7 @@ describe('RiskManagerTool', () => {
         portfolioId: mockPortfolioId,
         userId: mockUserId,
       });
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         portfolioId: string;
         metrics: Record<string, unknown>;
       };
@@ -322,7 +324,7 @@ describe('RiskManagerTool', () => {
         portfolioId: mockPortfolioId,
         userId: mockUserId,
       });
-      const parsedResult = JSON.parse(result) as { error: string };
+      const parsedResult = JSON.parse(String(result)) as { error: string };
 
       expect(parsedResult.error).toBeDefined();
       expect(parsedResult.error).toContain('Insufficient data');
@@ -345,7 +347,7 @@ describe('RiskManagerTool', () => {
         portfolioId: mockPortfolioId,
         userId: mockUserId,
       });
-      const parsedResult = JSON.parse(result) as { error: string };
+      const parsedResult = JSON.parse(String(result)) as { error: string };
 
       expect(parsedResult.error).toBeDefined();
       expect(parsedResult.error).toContain('No positions');
@@ -378,7 +380,7 @@ describe('RiskManagerTool', () => {
         portfolioId: mockPortfolioId,
         userId: mockUserId,
       });
-      const parsedResult = JSON.parse(result) as { error: string };
+      const parsedResult = JSON.parse(String(result)) as { error: string };
 
       expect(parsedResult.error).toBeDefined();
       expect(parsedResult.error).toContain('No positions');
@@ -398,7 +400,7 @@ describe('RiskManagerTool', () => {
         portfolioId: mockPortfolioId,
         userId: mockUserId,
       });
-      const parsedResult = JSON.parse(result) as { error: string };
+      const parsedResult = JSON.parse(String(result)) as { error: string };
 
       expect(parsedResult.error).toBeDefined();
       // Error could be about missing data or failed calculations
@@ -424,7 +426,7 @@ describe('RiskManagerTool', () => {
         portfolioId: mockPortfolioId,
         userId: mockUserId,
       });
-      const parsedResult = JSON.parse(result) as { error: string };
+      const parsedResult = JSON.parse(String(result)) as { error: string };
 
       expect(parsedResult.error).toBeDefined();
     });
@@ -446,7 +448,9 @@ describe('RiskManagerTool', () => {
         portfolioId: mockPortfolioId,
         userId: mockUserId,
       });
-      const parsedResult = JSON.parse(result) as { metrics: { beta: number } };
+      const parsedResult = JSON.parse(String(result)) as {
+        metrics: { beta: number };
+      };
 
       // Should still calculate metrics with default beta
       expect(parsedResult.metrics).toBeDefined();
@@ -473,7 +477,7 @@ describe('RiskManagerTool', () => {
         portfolioId: mockPortfolioId,
         userId: mockUserId,
       });
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         metrics?: { beta: number };
         error?: string;
       };
@@ -503,7 +507,7 @@ describe('RiskManagerTool', () => {
         portfolioId: mockPortfolioId,
         userId: mockUserId,
       });
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         metrics: { concentration: { herfindahl_index: number } };
       };
 
@@ -533,7 +537,7 @@ describe('RiskManagerTool', () => {
         portfolioId: mockPortfolioId,
         userId: mockUserId,
       });
-      const parsedResult = JSON.parse(result) as {
+      const parsedResult = JSON.parse(String(result)) as {
         metrics: {
           concentration: { top_holdings: Array<{ ticker: string }> };
         };
