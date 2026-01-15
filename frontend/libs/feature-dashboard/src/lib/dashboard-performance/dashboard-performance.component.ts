@@ -38,17 +38,6 @@ export class DashboardPerformanceComponent {
   }
 
   /**
-   * Handle exclude cash toggle
-   */
-  onExcludeCashToggled(excludeCash: boolean): void {
-    const portfolioId = this.portfolioFacade.selectedId();
-    
-    if (portfolioId) {
-      this.performanceFacade.toggleExcludeCash(portfolioId, excludeCash);
-    }
-  }
-
-  /**
    * Handle buy stock button click from cash-only empty state
    * Navigates user to Overview tab where they can buy stocks
    */

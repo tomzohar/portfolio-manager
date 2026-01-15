@@ -32,7 +32,6 @@ describe('PerformanceAttribution Selectors', () => {
         { date: '2023-10-02', portfolioValue: 100.5, benchmarkValue: 100.3 },
       ],
       selectedTimeframe: Timeframe.THREE_MONTHS,
-      excludeCash: false,
       loading: false,
       error: null,
       cachedAnalyses: {
