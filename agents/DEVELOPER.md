@@ -43,7 +43,7 @@ Database: TypeORM Data Mapper (Repositories) ONLY. N+1 Prevention is Absolute.
 
 API: Zod validation. Swagger decorators on everything. Standard HttpException.
 
-### Backend Type Learnings
+### Backend Types
 - Strongly typed fixtures keep tests aligned with runtime behavior and reduce lint noise.
 - Converting dynamic tool outputs to `string` before `JSON.parse` avoids unsafe `any` flows.
 - Typed service mocks (entities/DTOs) make expectations clearer and highlight missing fields early.
