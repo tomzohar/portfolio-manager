@@ -5,6 +5,10 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { of } from 'rxjs';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { PolygonApiService } from '../assets/services/polygon-api.service';
+import type {
+  PolygonPreviousCloseResponse,
+  PolygonSnapshotResponse,
+} from '../assets/types/polygon-api.types';
 import { UsersService } from '../users/users.service';
 import { EnrichedAssetDto } from './dto/asset-response.dto';
 import { Asset } from './entities/asset.entity';
@@ -223,8 +227,8 @@ describe('PortfolioService', () => {
       portfolioRepository.findOne.mockResolvedValue(portfolioWithAssets);
       jest
         .spyOn(polygonApiService, 'getPreviousClose')
-        .mockReturnValueOnce(of(null as any)) // Simulate API failure for AAPL
-        .mockReturnValueOnce(of(null as any)); // Simulate API failure for GOOGL
+        .mockReturnValueOnce(of<PolygonPreviousCloseResponse | null>(null)) // Simulate API failure for AAPL
+        .mockReturnValueOnce(of<PolygonPreviousCloseResponse | null>(null)); // Simulate API failure for GOOGL
 
       const result = await service.getAssets(mockPortfolioId, mockUserId);
 
@@ -278,7 +282,7 @@ describe('PortfolioService', () => {
       jest
         .spyOn(polygonApiService, 'getPreviousClose')
         .mockReturnValueOnce(of(mockPreviousClose1)) // Success for AAPL
-        .mockReturnValueOnce(of(null as any)); // Failure for GOOGL
+        .mockReturnValueOnce(of<PolygonPreviousCloseResponse | null>(null)); // Failure for GOOGL
 
       const result = await service.getAssets(mockPortfolioId, mockUserId);
 
@@ -375,7 +379,7 @@ describe('PortfolioService', () => {
       portfolioRepository.findOne.mockResolvedValue(portfolioWithAssets);
       jest
         .spyOn(polygonApiService, 'getTickerSnapshot')
-        .mockReturnValue(of(mockSnapshotMissingDay as any));
+        .mockReturnValue(of(mockSnapshotMissingDay as PolygonSnapshotResponse));
 
       const result = await service.getAssets(mockPortfolioId, mockUserId);
 
@@ -444,7 +448,9 @@ describe('PortfolioService', () => {
         assetRepository.find.mockResolvedValue(mockAssets);
         jest
           .spyOn(polygonApiService, 'getPreviousClose')
-          .mockReturnValue(of(mockPreviousClose as any));
+          .mockReturnValue(
+            of(mockPreviousClose as PolygonPreviousCloseResponse),
+          );
 
         const result = await service.getPortfolioSummary(
           mockPortfolioId,
@@ -487,7 +493,7 @@ describe('PortfolioService', () => {
         assetRepository.find.mockResolvedValue(mockAssets);
         jest
           .spyOn(polygonApiService, 'getTickerSnapshot')
-          .mockReturnValue(of(mockSnapshot as any));
+          .mockReturnValue(of(mockSnapshot as PolygonSnapshotResponse));
 
         const result = await service.getPortfolioSummary(
           mockPortfolioId,
@@ -524,7 +530,7 @@ describe('PortfolioService', () => {
         assetRepository.find.mockResolvedValue(mockAssets);
         jest
           .spyOn(polygonApiService, 'getTickerSnapshot')
-          .mockReturnValue(of(mockSnapshot as any));
+          .mockReturnValue(of(mockSnapshot as PolygonSnapshotResponse));
 
         const result = await service.getPortfolioSummary(
           mockPortfolioId,
@@ -578,7 +584,7 @@ describe('PortfolioService', () => {
           .spyOn(polygonApiService, 'getPreviousClose')
           .mockImplementation((ticker: string) => {
             if (ticker === 'AAPL') {
-              return of(applePreviousClose as any);
+              return of(applePreviousClose as PolygonPreviousCloseResponse);
             }
             // GOOGL fails - throw error to simulate API failure
             throw new Error('Market data unavailable');
@@ -685,9 +691,9 @@ describe('PortfolioService', () => {
           .spyOn(polygonApiService, 'getPreviousClose')
           .mockImplementation((ticker: string) => {
             if (ticker === 'IREN') {
-              return of(irenPreviousClose as any);
+              return of(irenPreviousClose as PolygonPreviousCloseResponse);
             } else if (ticker === 'GOOGL') {
-              return of(googlPreviousClose as any);
+              return of(googlPreviousClose as PolygonPreviousCloseResponse);
             }
             throw new Error(`Unexpected ticker: ${ticker}`);
           });
