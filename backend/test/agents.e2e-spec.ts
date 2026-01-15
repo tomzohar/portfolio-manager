@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import request, { type App } from 'supertest';
+import type { Server } from 'http';
+import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { DataSource } from 'typeorm';
 import { ZodValidationPipe } from 'nestjs-zod';
@@ -9,7 +10,7 @@ import { Message } from '@langchain/core/messages';
 
 describe('AgentsController (e2e)', () => {
   let app: NestExpressApplication;
-  let httpServer: App;
+  let httpServer: Server;
   let authToken: string;
   let dataSource: DataSource;
 
