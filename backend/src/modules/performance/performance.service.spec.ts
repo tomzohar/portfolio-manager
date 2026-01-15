@@ -344,7 +344,7 @@ describe('PerformanceService', () => {
         expect(result.portfolioReturn).toBeCloseTo(0.030301, 5);
         expect(
           performanceCalculationService.calculateCumulativeReturn,
-        ).toHaveBeenCalledWith(mockSnapshots, false);
+        ).toHaveBeenCalledWith(mockSnapshots);
       });
 
       it('should throw MissingDataException when no snapshots after backfill', async () => {
@@ -430,7 +430,7 @@ describe('PerformanceService', () => {
         expect(result.portfolioReturn).toBeCloseTo(0.030301, 5);
         expect(
           performanceCalculationService.calculateCumulativeReturn,
-        ).toHaveBeenCalledWith(mockSnapshots, false);
+        ).toHaveBeenCalledWith(mockSnapshots);
       });
     });
 
@@ -487,7 +487,7 @@ describe('PerformanceService', () => {
         expect(result.data[2].portfolioValue).toBeCloseTo(102.01, 1);
         expect(
           chartDataService.generateNormalizedChartData,
-        ).toHaveBeenCalledWith(mockSnapshots, mockMarketData, false, undefined);
+        ).toHaveBeenCalledWith(mockSnapshots, mockMarketData);
       });
     });
 
