@@ -1,15 +1,10 @@
 <div class="performance-page-layout">
-  <!-- Cash Exclusion Controls Component -->
-  <lib-cash-exclusion-controls
-    [excludeCash]="excludeCash()"
-    [selectedTimeframe]="selectedTimeframe()"
-    [loading]="loading()"
-    [error]="error()"
-    [analysis]="analysis()"
-    [cashAllocationAvg]="cashAllocationAvg()"
-    (excludeCashToggled)="onExcludeCashToggle($event)"
-    (timeframeChanged)="onTimeframeChange($event)"
-  />
+  <div class="controls-row">
+    <lib-timeframe-selector
+      [selectedTimeframe]="selectedTimeframe()"
+      (timeframeChanged)="onTimeframeChange($event)"
+    />
+  </div>
 
   <!-- Loading State -->
   @if (loading()) {

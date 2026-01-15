@@ -44,7 +44,6 @@ describe('PerformanceAttributionWidgetComponent', () => {
     alpha: -0.062,
     benchmarkTicker: 'SPY',
     timeframe: Timeframe.THREE_MONTHS,
-    viewMode: 'INVESTED',
     cashAllocationAvg: 1.0, // 100% cash
   };
 
@@ -135,14 +134,13 @@ describe('PerformanceAttributionWidgetComponent', () => {
     expect(component.isFullyCash()).toBe(false);
   });
 
-  it('should detect fully cash portfolio even in TOTAL view mode', () => {
+  it('should detect fully cash portfolio when analysis is provided', () => {
     const fullyCashTotalView: PerformanceAnalysis = {
       portfolioReturn: 0.0,
       benchmarkReturn: 0.062,
       alpha: -0.062,
       benchmarkTicker: 'SPY',
       timeframe: Timeframe.THREE_MONTHS,
-      viewMode: 'TOTAL', // TOTAL view, not INVESTED
       cashAllocationAvg: 1.0, // 100% cash
     };
     fixture.componentRef.setInput('analysis', fullyCashTotalView);

@@ -11,13 +11,12 @@ export const performanceAttributionReducer = createReducer(
   initialState,
 
   // Load Performance Attribution
-  on(PerformanceAttributionActions.loadPerformanceAttribution, (state, { portfolioId, timeframe, excludeCash }) => ({
+  on(PerformanceAttributionActions.loadPerformanceAttribution, (state, { portfolioId, timeframe }) => ({
     ...state,
     currentPortfolioId: portfolioId,
     loading: true,
     error: null,
     selectedTimeframe: timeframe,
-    excludeCash: excludeCash !== undefined ? excludeCash : state.excludeCash,
   })),
 
   on(PerformanceAttributionActions.loadPerformanceAttributionSuccess, (state, { analysis, timeframe }) => ({
@@ -38,11 +37,10 @@ export const performanceAttributionReducer = createReducer(
   })),
 
   // Load Historical Data
-  on(PerformanceAttributionActions.loadHistoricalData, (state, { excludeCash }) => ({
+  on(PerformanceAttributionActions.loadHistoricalData, (state) => ({
     ...state,
     loading: true,
     error: null,
-    excludeCash: excludeCash !== undefined ? excludeCash : state.excludeCash,
   })),
 
   on(PerformanceAttributionActions.loadHistoricalDataSuccess, (state, { data, timeframe }) => ({
@@ -63,7 +61,7 @@ export const performanceAttributionReducer = createReducer(
   })),
 
   // Change Timeframe (check cache first)
-  on(PerformanceAttributionActions.changeTimeframe, (state, { timeframe, excludeCash }) => {
+  on(PerformanceAttributionActions.changeTimeframe, (state, { timeframe }) => {
     const cachedAnalysis = state.cachedAnalyses[timeframe];
     const cachedHistorical = state.cachedHistoricalData[timeframe];
 
@@ -75,7 +73,6 @@ export const performanceAttributionReducer = createReducer(
         currentAnalysis: cachedAnalysis,
         historicalData: cachedHistorical,
         loading: false,
-        excludeCash: excludeCash !== undefined ? excludeCash : state.excludeCash,
       };
     }
 
@@ -84,19 +81,8 @@ export const performanceAttributionReducer = createReducer(
       ...state,
       selectedTimeframe: timeframe,
       loading: true,
-      excludeCash: excludeCash !== undefined ? excludeCash : state.excludeCash,
     };
   }),
-
-  // Toggle Exclude Cash - clear cache and mark for reload
-  on(PerformanceAttributionActions.toggleExcludeCash, (state, { excludeCash }) => ({
-    ...state,
-    excludeCash,
-    loading: true, // Mark as loading since we'll trigger a reload
-    // Clear caches because they're no longer valid with different excludeCash value
-    cachedAnalyses: {},
-    cachedHistoricalData: {},
-  })),
 
   // Clear Performance Data
   on(PerformanceAttributionActions.clearPerformanceData, () => initialState)
