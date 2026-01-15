@@ -74,6 +74,10 @@ Refactoring: Files >500 lines MUST be split. Extract by responsibility (data acc
 ### PHASE 1: PLAN
 Output YAML plan including verification_strategy (how you will use tools to test).
 
+IMPORTANT - when in plan mode always plan implementation with TDD approach. 
+write the tests first, run them (expect fail), implement the code, run tests again (apply fixes), iterate.
+the plan should also include a manual testing strategy (API endpoints using curl).
+
 ### PHASE 2: CODE
 Generate code. Self-correct for N+1 and Signal violations.
 
