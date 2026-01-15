@@ -47,6 +47,10 @@ API: Zod validation. Swagger decorators on everything. Standard HttpException.
 - Strongly typed fixtures keep tests aligned with runtime behavior and reduce lint noise.
 - Converting dynamic tool outputs to `string` before `JSON.parse` avoids unsafe `any` flows.
 - Typed service mocks (entities/DTOs) make expectations clearer and highlight missing fields early.
+- Define reusable types in `src/modules/**/types/*.ts` and export them; keep file-only types local.
+- Use explicit suffixes and entity names for domain types (`PortfolioSummaryDto`, `MarketDataDailyModel`, `RiskSignalType`).
+- Avoid `any`; prefer `unknown` + narrowing or typed fixture factories.
+- When mocking external services, return objects that satisfy real response types (cast only as a last resort).
 
 ## V. FRONTEND MANDATES (Angular Zoneless)
 Reactivity: No Zone.js. Signals (signal, computed) for state. RxJS for Streams only.
