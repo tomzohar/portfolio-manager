@@ -98,22 +98,22 @@ Following project standards, we will prioritize **Integration Testing** over pur
 
 ## 8. Implementation Phases
 
-### Phase 1: Core Port (The "Lift & Shift")
+### Phase 1: Core Port (The "Lift & Shift") [DONE]
 - Setup `AgentsModule` in NestJS.
 - Port `AgentState` and `AgentDecision` logic to LangGraph.js.
 - Implement basic `Portfolio` and `MarketData` tools.
 
-### Phase 2: Memory & Persistence
+### Phase 2: Memory & Persistence [DONE]
 - Integrate PostgreSQL state saver for LangGraph.
 - Implement `MemoryService` for cross-session context.
 - Add "Reasoning Trace" storage.
 
-### Phase 3: Advanced Analysis (The "Next Gen")
+### Phase 3: Advanced Analysis (The "Next Gen") [IN PROGRESS]
 - Implement `TransactionAnalyzer` node.
 - Implement `PerformanceService` and benchmarking tools.
 - Add Suggestion Engine with Human-in-the-Loop confirmations.
 
-### Phase 4: Frontend Integration
+### Phase 4: Frontend Integration [READY]
 - Build the "Reasoning Console" in Angular.
 - Enable interactive chat with the agent in the dashboard.
 

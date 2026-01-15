@@ -118,7 +118,7 @@ backend/src/modules/agents/
 
 ## 7. Phased Roadmap
 
-### Phase 1: Infrastructure & Core Wiring ✅ **COMPLETE**
+### Phase 1: Infrastructure & Core Wiring [DONE]
 **Status**: Production-Ready (January 3, 2026)
 
 **Completed Deliverables**:
@@ -145,18 +145,18 @@ backend/src/modules/agents/
 
 See: [Phase_1_Infrastructure_Core_Wiring.md](Phase_1_Infrastructure_Core_Wiring.md) for detailed task breakdown.
 
-### Phase 2: Persona Tool Porting
+### Phase 2: Persona Tool Porting [DONE]
 - **Technical Persona**: Build the `TechnicalAnalystTool` using `technicalindicators`.
 - **Macro Persona**: Build the `MacroAnalystTool` (FRED/News wrappers).
 - **Risk Persona**: Build the `RiskManagerTool` for portfolio metrics.
 - **Validation**: Ensure all tools are "user-aware" (receiving `userId`).
 
-### Phase 3: Advanced Flows & HITL
+### Phase 3: Advanced Flows & HITL [IN PROGRESS]
 - **The Alpha Auditor Flow**: Implement transaction-ledger analysis logic.
 - **Human-in-the-Loop**: Implement the `Interrupt` logic in LangGraph.js and persistence for suspended states.
 - **Reasoning Traces**: Implement the persistence layer for capturing LLM "thoughts."
 
-### Phase 4: Frontend & Streaming
+### Phase 4: Frontend & Streaming [READY]
 - **API Expansion**: Create endpoints for the "Reasoning Console."
 - **WebSocket Integration**: (Optional) Stream live updates from the graph to the UI.
 - **End-to-End Testing**: Execute "The Sector Switcher" flow from the UI.

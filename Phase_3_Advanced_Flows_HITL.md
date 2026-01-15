@@ -1,6 +1,8 @@
-# Phase 3: Advanced Flows & HITL - Technical Design & TDD Roadmap
+# Phase 3: Advanced Flows & HITL - Technical Design & TDD Roadmap [IN PROGRESS]
 
 This document breaks down Phase 3 of the Digital CIO refactor into small, testable tasks following Test-Driven Development (TDD) principles. Phase 3 introduces complex multi-node reasoning, human-in-the-loop (HITL) mechanics, and the "Alpha Auditor" performance attribution flow.
+
+**Status**: 🏗️ **IN PROGRESS**
 
 ---
 
