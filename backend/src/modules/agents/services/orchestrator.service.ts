@@ -94,8 +94,8 @@ export class OrchestratorService {
       // Build initial state
       const initialState: CIOState = {
         userId,
+        threadId: scopedThreadId,
         messages: [new HumanMessage(input.message)],
-
         portfolio: input.portfolio,
         errors: [],
         iteration: 0,

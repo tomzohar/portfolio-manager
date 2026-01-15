@@ -56,8 +56,12 @@ describe('TokenUsageService', () => {
         createdAt: new Date(),
       };
 
-      mockRepository.create.mockReturnValue(mockTokenUsage as TokenUsage);
-      mockRepository.save.mockResolvedValue(mockTokenUsage as TokenUsage);
+      mockRepository.create.mockReturnValue(
+        mockTokenUsage as unknown as TokenUsage,
+      );
+      mockRepository.save.mockResolvedValue(
+        mockTokenUsage as unknown as TokenUsage,
+      );
 
       const result = await service.recordUsage(userId, usageData);
 
@@ -92,8 +96,12 @@ describe('TokenUsageService', () => {
         createdAt: new Date(),
       };
 
-      mockRepository.create.mockReturnValue(mockTokenUsage as TokenUsage);
-      mockRepository.save.mockResolvedValue(mockTokenUsage as TokenUsage);
+      mockRepository.create.mockReturnValue(
+        mockTokenUsage as unknown as TokenUsage,
+      );
+      mockRepository.save.mockResolvedValue(
+        mockTokenUsage as unknown as TokenUsage,
+      );
 
       const result = await service.recordUsage(userId, usageData);
 
@@ -118,8 +126,12 @@ describe('TokenUsageService', () => {
         createdAt: new Date(),
       };
 
-      mockRepository.create.mockReturnValue(mockTokenUsage as TokenUsage);
-      mockRepository.save.mockResolvedValue(mockTokenUsage as TokenUsage);
+      mockRepository.create.mockReturnValue(
+        mockTokenUsage as unknown as TokenUsage,
+      );
+      mockRepository.save.mockResolvedValue(
+        mockTokenUsage as unknown as TokenUsage,
+      );
 
       const result = await service.recordUsage(userId, usageData);
 
@@ -147,8 +159,12 @@ describe('TokenUsageService', () => {
         createdAt: new Date(),
       };
 
-      mockRepository.create.mockReturnValue(mockTokenUsage as TokenUsage);
-      mockRepository.save.mockResolvedValue(mockTokenUsage as TokenUsage);
+      mockRepository.create.mockReturnValue(
+        mockTokenUsage as unknown as TokenUsage,
+      );
+      mockRepository.save.mockResolvedValue(
+        mockTokenUsage as unknown as TokenUsage,
+      );
 
       const result = await service.recordUsage(userId, usageData);
 

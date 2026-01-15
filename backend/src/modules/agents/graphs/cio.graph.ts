@@ -19,6 +19,7 @@ import { Timeframe } from '../../performance/types/timeframe.types';
  */
 const CIOStateAnnotation = Annotation.Root({
   userId: Annotation<string>,
+  threadId: Annotation<string>,
   messages: Annotation<BaseMessage[]>({
     reducer: (left, right) => left.concat(right),
   }),

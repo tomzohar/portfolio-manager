@@ -7,6 +7,7 @@ import { TokenUsage } from './entities/token-usage.entity';
 import { ReasoningTrace } from './entities/reasoning-trace.entity';
 import { GeminiLlmService } from './services/gemini-llm.service';
 import { TokenUsageService } from './services/token-usage.service';
+import { TracingService } from './services/tracing.service';
 import { StateService } from './services/state.service';
 import { ToolRegistryService } from './services/tool-registry.service';
 import { OrchestratorService } from './services/orchestrator.service';
@@ -40,12 +41,18 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
   providers: [
     GeminiLlmService,
     TokenUsageService,
+    TracingService,
     StateService,
     ToolRegistryService,
     OrchestratorService,
     JwtAuthGuard, // Provide JwtAuthGuard locally
   ],
-  exports: [OrchestratorService, GeminiLlmService, TokenUsageService],
+  exports: [
+    OrchestratorService,
+    GeminiLlmService,
+    TokenUsageService,
+    TracingService,
+  ],
 })
 export class AgentsModule {
   private readonly logger = new Logger(AgentsModule.name);

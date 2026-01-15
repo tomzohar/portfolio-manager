@@ -1,78 +1,148 @@
 # Phase 3: Advanced Flows & HITL - Technical Design & TDD Roadmap [IN PROGRESS]
 
-This document breaks down Phase 3 of the Digital CIO refactor into small, testable tasks following Test-Driven Development (TDD) principles. Phase 3 introduces complex multi-node reasoning, human-in-the-loop (HITL) mechanics, and the "Alpha Auditor" performance attribution flow.
+This document breaks down Phase 3 of the Digital CIO refactor into small, testable tasks following Test-Driven Development (TDD) principles. Phase 3 introduces complex multi-node reasoning, human-in-the-loop (HITL) mechanics, and reasoning trace capture for transparency.
 
-**Status**: 🏗️ **IN PROGRESS**
+**Status**: 🏗️ **IN PROGRESS** (Tasks 3.1.1-3.1.2 Complete)
 
----
+**Progress Tracker:**
+- ✅ Task 3.1.1: TracingService Implementation (Completed: Jan 15, 2026)
+- ✅ Task 3.1.2: Automatic Tracing Middleware (Completed: Jan 15, 2026)
+- 🔄 Task 3.1.3: SSE Streaming Endpoint (Next)
 
-## 1. Performance Attribution Engine (The Alpha Auditor)
-
-To support "The Alpha Auditor" flow, we need to extend our business logic services to calculate portfolio returns and compare them against benchmarks.
-
-### Task 1.1: `PerformanceService` Expansion
-**Objective**: Implement calculation logic for internal returns and benchmark comparisons.
-
-- **TDD Step (RED)**: 
-    - Create `backend/src/modules/portfolio/services/performance.service.spec.ts`.
-    - Assert that `calculateInternalReturn(userId, timeframe)` correctly computes returns based on transaction history and current prices.
-    - Assert that `getBenchmarkComparison(benchmarkTicker, timeframe)` returns the relative performance (Alpha).
-- **TDD Step (GREEN)**: 
-    - Implement the methods in `PerformanceService`.
-    - Use `TransactionsService` for historical flows and `AssetsService` for historical/current price data.
-- **Acceptance Criteria**: 
-    - Calculation matches a "ground truth" spreadsheet for a sample portfolio.
-    - Handles edge cases like zero-balance portfolios or missing price data.
-
-### Task 1.2: `AlphaAuditorGraph` Implementation
-**Objective**: Create a specialized LangGraph for performance attribution and "Alpha" discovery.
-
-- **TDD Step (RED)**: 
-    - Create `backend/src/modules/agents/graphs/alpha-auditor.graph.spec.ts`.
-    - Mock `PerformanceService` and `AssetsService`.
-    - Assert that when asked "Why did I underperform?", the graph:
-        1. Calls `calculateInternalReturn`.
-        2. Calls `getBenchmarkComparison`.
-        3. Invokes a "Synthesis" node to explain the delta.
-- **TDD Step (GREEN)**: 
-    - Define the `AlphaAuditorGraph` in `backend/src/modules/agents/graphs/alpha-auditor.graph.ts`.
-    - Register the graph in `OrchestratorService`.
-- **Acceptance Criteria**: 
-    - Integration test confirms the graph provides a detailed breakdown of performance attribution (e.g., "sector drag" or "specific ticker failure").
+**Detailed Task Breakdown:** See `phase-3-todos.json` for complete task specifications.
 
 ---
 
-## 2. Human-In-The-Loop (HITL) Mechanics
+## Milestone 1: Tracing Foundation ✅ (2/5 Complete)
 
-HITL allows the agent to pause execution when it reaches a high-stakes decision (e.g., suggesting a trade) and wait for user approval.
+### Task 3.1.1: TracingService (TDD) ✅ COMPLETED
 
-### Task 2.1: Interrupt & Suspend Logic
-**Objective**: Implement LangGraph.js `interrupt` to pause the graph and save a "SUSPENDED" state.
+**Objective**: Implement service to capture and persist agent reasoning traces to database.
 
-- **TDD Step (RED)**: 
-    - Create `backend/src/modules/agents/services/orchestrator.service.hitl.spec.ts`.
-    - Define a dummy graph with an `interrupt`.
-    - Assert that calling `orchestrator.run()` on this graph returns a status indicating it is paused.
-    - Assert that the `AgentState` entity in the DB is marked as `status: SUSPENDED`.
-- **TDD Step (GREEN)**: 
-    - Use `interrupt()` in the graph definition.
-    - Update `OrchestratorService` to handle the `NodeInterrupt` exception and update the `AgentState` status.
-- **Acceptance Criteria**: 
-    - The graph execution stops exactly at the interrupt point, and the state is persisted.
+**Status**: ✅ **COMPLETED** (January 15, 2026)
 
-### Task 2.2: Resume Execution via API
-**Objective**: Provide an endpoint to resume a suspended graph with user feedback.
+**Implementation Details:**
+- **Files Created:**
+  - `backend/src/modules/agents/services/tracing.service.ts` (103 LOC)
+  - `backend/src/modules/agents/services/tracing.service.spec.ts` (434 LOC)
+- **Files Modified:**
+  - `backend/src/modules/agents/agents.module.ts`
 
-- **TDD Step (RED)**: 
-    - Create a test in `backend/test/agents-hitl.e2e-spec.ts`.
-    - Trigger a graph that interrupts.
-    - Send a `POST /agents/resume` with the `threadId` and user input (e.g., "Approve").
-    - Assert that the graph completes and the state becomes `COMPLETED`.
-- **TDD Step (GREEN)**: 
-    - Add a `resumeGraph(threadId, input)` method to `OrchestratorService`.
-    - Implement the controller endpoint.
-- **Acceptance Criteria**: 
-    - The agent successfully ingests the user's decision and continues execution from where it left off.
+**Test Results:**
+- ✅ 14 unit tests passing
+- ✅ 100% coverage of public methods
+- ✅ Zero lint errors
+- ✅ All acceptance criteria met
+
+**Service Methods:**
+```typescript
+// Record a reasoning trace
+await tracingService.recordTrace(threadId, userId, nodeName, input, output, reasoning);
+
+// Get traces by thread (chronological order)
+const traces = await tracingService.getTracesByThread(threadId, userId);
+
+// Get recent traces by user (with limit)
+const recentTraces = await tracingService.getTracesByUser(userId, limit?);
+```
+
+**Key Features:**
+- Security: userId validation enforced
+- Performance: Optimized database indexes
+- Flexibility: JSONB columns for input/output
+- Documentation: Comprehensive JSDoc comments
+
+**Lessons Learned:** See `backend/docs/LESSONS_LEARNED_TASK_3.1.1.md`
+
+---
+
+### Task 3.1.2: Automatic Tracing Middleware ✅ COMPLETED
+
+**Objective**: Build reusable tracing infrastructure that auto-traces all nodes without manual integration.
+
+**Status**: ✅ **COMPLETED** (January 15, 2026)
+
+**Implementation Details:**
+- **Files Created:**
+  - `backend/src/modules/agents/callbacks/tracing-callback.handler.ts` (174 LOC)
+  - `backend/src/modules/agents/callbacks/tracing-callback.handler.spec.ts` (569 LOC)
+  - `backend/src/modules/agents/graphs/middleware/with-tracing.ts` (79 LOC)
+  - `backend/src/modules/agents/graphs/middleware/with-tracing.spec.ts` (437 LOC)
+- **Files Modified:**
+  - `backend/src/modules/agents/graphs/types.ts` (added threadId to CIOState)
+
+**Test Results:**
+- ✅ 31 unit tests passing (18 callback handler + 13 middleware)
+- ✅ 100% coverage of all methods
+- ✅ Zero lint errors
+- ✅ Code review passed (all MINOR issues resolved)
+- ✅ All acceptance criteria met
+
+**Architecture Components:**
+
+1. **TracingCallbackHandler** (Automatic Tracing)
+   - Extends LangChain's `BaseCallbackHandler`
+   - Automatic tracing for ALL nodes (no code changes needed)
+   - Real-time token streaming (ChatGPT-style UX)
+   - Event-driven architecture via EventEmitter2
+
+```typescript
+// LLM Streaming Hooks (Level 3 UX - Token-by-Token)
+handleLLMStart()     → emit 'llm.start'
+handleLLMNewToken()  → emit 'llm.token' (character-by-character)
+handleLLMEnd()       → emit 'llm.complete' + save to DB
+
+// Node Execution Hooks (Complete Traces)
+handleChainStart()   → Track node input
+handleChainEnd()     → Save complete trace + emit 'node.complete'
+```
+
+2. **withTracing() HOF** (Optional Custom Reasoning)
+   - Higher-order function for explicit tracing
+   - Use ONLY when customizing reasoning messages
+   - Graceful degradation (tracing failures don't break nodes)
+
+```typescript
+export const performanceNode = withTracing('performance_attribution', async (state) => {
+  return {
+    alpha: -0.06,
+    reasoning: 'Portfolio underperformed due to tech overweight'
+  };
+});
+```
+
+**Event Schema:**
+```typescript
+// Real-time events for frontend consumption
+'llm.start'      → { threadId, userId, timestamp }
+'llm.token'      → { threadId, userId, token, timestamp }
+'llm.complete'   → { threadId, userId, reasoning, timestamp }
+'node.complete'  → { threadId, userId, nodeName, timestamp }
+```
+
+**Key Features:**
+- ✅ Fully automatic tracing (new nodes get tracing automatically)
+- ✅ True real-time streaming (token-by-token like ChatGPT)
+- ✅ Database persistence for historical queries
+- ✅ Event-driven for concurrent users
+- ✅ Security-aware (userId filtering)
+- ✅ Production-ready error handling
+- ✅ NestJS Logger integration
+- ✅ Type-safe with proper error guards
+
+**Architectural Decision:**
+Hybrid approach combining:
+- **LangGraph Callbacks** (BEST) - Fully automatic, scales perfectly
+- **withTracing() HOF** (GOOD) - Explicit opt-in for custom reasoning
+
+This eliminates manual tracing boilerplate and ensures all future nodes get tracing automatically.
+
+**Next Steps:** 
+- Task 3.1.3: Create SSE endpoint to stream events to frontend
+- Task 3.1.4: Create REST endpoint for historical traces
+- Integration: Wire up TracingCallbackHandler in orchestrator.service.ts
+
+**Report:** See `task-312-report.md` for detailed implementation report
 
 ---
 

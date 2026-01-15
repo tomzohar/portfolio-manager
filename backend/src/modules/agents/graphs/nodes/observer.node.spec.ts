@@ -6,6 +6,7 @@ describe('observerNode', () => {
   it('should initialize state and return next action', () => {
     const state: CIOState = {
       userId: '123e4567-e89b-12d3-a456-426614174000',
+      threadId: 'thread-123',
       messages: [new HumanMessage('Analyze my portfolio')],
       errors: [],
       iteration: 0,
@@ -22,6 +23,7 @@ describe('observerNode', () => {
   it('should increment iteration count', () => {
     const state: CIOState = {
       userId: '123e4567-e89b-12d3-a456-426614174000',
+      threadId: 'thread-123',
       messages: [],
       errors: [],
       iteration: 2,
@@ -36,6 +38,7 @@ describe('observerNode', () => {
   it('should handle empty messages array', () => {
     const state: CIOState = {
       userId: '123e4567-e89b-12d3-a456-426614174000',
+      threadId: 'thread-123',
       messages: [],
       errors: [],
       iteration: 0,

@@ -32,9 +32,7 @@ export class PerformanceCalculationService {
    * @param snapshots - Array of daily performance snapshots (must be chronological)
    * @returns Cumulative return as decimal (e.g., 0.15 = 15%)
    */
-  async calculateCumulativeReturn(
-    snapshots: PortfolioDailyPerformance[],
-  ): Promise<number> {
+  calculateCumulativeReturn(snapshots: PortfolioDailyPerformance[]): number {
     if (snapshots.length === 0) {
       return 0;
     }

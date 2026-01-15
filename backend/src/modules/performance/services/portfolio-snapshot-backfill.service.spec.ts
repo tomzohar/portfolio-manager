@@ -26,11 +26,11 @@ describe('PortfolioSnapshotBackfillService', () => {
     name: 'Test Portfolio',
   };
 
-  const mockTransaction: Partial<Transaction> = {
+  const mockTransaction = {
     id: 'tx-123',
     transactionDate: new Date('2024-01-15T00:00:00Z'),
     portfolio: { id: 'portfolio-123' } as Portfolio,
-  };
+  } as unknown as Transaction;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({

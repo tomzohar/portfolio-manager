@@ -139,9 +139,7 @@ export class PerformanceService {
 
     // Calculate portfolio and benchmark returns
     const portfolioReturn =
-      await this.performanceCalculationService.calculateCumulativeReturn(
-        snapshots,
-      );
+      this.performanceCalculationService.calculateCumulativeReturn(snapshots);
 
     const benchmarkReturn = await this.fetchBenchmarkReturn(
       benchmarkTicker,

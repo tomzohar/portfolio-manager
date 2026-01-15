@@ -47,6 +47,7 @@ describe('performanceAttributionNode', () => {
 
   const createState = (message: string): CIOState => ({
     userId: 'user-123',
+    threadId: 'thread-123',
     messages: [new HumanMessage(message)],
     errors: [],
     iteration: 0,

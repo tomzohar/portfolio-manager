@@ -33,6 +33,7 @@ Backend server for the Stocks Researcher application. This NestJS application pr
 - **Type Safety**: Full TypeScript support
 - **Polygon API Integration**: Real-time stock market data
 - **Transaction-Based Portfolio Management**: Immutable audit trail for positions
+- **AI Agent System**: LangGraph-based intelligent portfolio analysis with reasoning traces
 
 ## API Endpoints
 
@@ -253,6 +254,102 @@ Returns time-series data normalized to 100 at start date for chart visualization
 - `benchmarkTicker` (optional) - Benchmark symbol (default: `SPY`)
 
 **Response:** `HistoricalDataResponseDto`
+
+---
+
+## Agent System (Phase 3)
+
+The backend includes an AI agent system built with LangGraph that provides intelligent portfolio analysis. The system captures detailed reasoning traces for transparency and debugging.
+
+### Automatic Tracing Middleware
+
+The agent system features automatic tracing infrastructure that captures reasoning traces for all nodes without requiring manual integration.
+
+**Architecture:**
+- **TracingCallbackHandler**: Automatic tracing via LangChain callbacks
+- **withTracing() HOF**: Optional custom reasoning for specific nodes
+- **Real-time Streaming**: Token-by-token LLM output (ChatGPT-style UX)
+- **Event-Driven**: EventEmitter2 for real-time frontend updates
+
+**Key Benefits:**
+- ✅ Fully automatic - new nodes get tracing without code changes
+- ✅ Real-time streaming - token-level updates for responsive UX
+- ✅ Database persistence - complete traces for historical analysis
+- ✅ Production-ready - graceful error handling and logging
+
+**Event Types:**
+```typescript
+'llm.start'      → { threadId, userId, timestamp }
+'llm.token'      → { threadId, userId, token, timestamp }
+'llm.complete'   → { threadId, userId, reasoning, timestamp }
+'node.complete'  → { threadId, userId, nodeName, timestamp }
+```
+
+**Usage Example:**
+```typescript
+// Option 1: Automatic tracing (no code needed)
+export async function observerNode(state: CIOState) {
+  return { context: 'Portfolio data retrieved' };
+}
+
+// Option 2: Custom reasoning (use withTracing HOF)
+export const performanceNode = withTracing('performance_attribution', async (state) => {
+  return {
+    alpha: -0.06,
+    reasoning: 'Portfolio underperformed by 6% vs benchmark due to tech overweight'
+  };
+});
+```
+
+**Implementation Details:** See `backend/docs/LESSONS_LEARNED_TASK_3.1.2.md`
+
+### TracingService
+
+The `TracingService` captures and persists agent reasoning traces to provide transparency into the AI decision-making process.
+
+**Key Features:**
+- **Security**: All traces are filtered by `userId` to prevent cross-user data access
+- **Persistence**: Traces stored in PostgreSQL with JSONB columns for flexible data
+- **Chronological Queries**: Retrieve traces by thread (execution) or user
+- **Database Indexes**: Optimized for common query patterns
+
+**Service Methods:**
+
+```typescript
+// Record a trace for a node execution
+await tracingService.recordTrace(
+  threadId: string,
+  userId: string,
+  nodeName: string,
+  input: Record<string, any>,
+  output: Record<string, any>,
+  reasoning: string
+);
+
+// Get all traces for a specific graph execution
+const traces = await tracingService.getTracesByThread(threadId, userId);
+
+// Get recent traces for a user (default limit: 100)
+const recentTraces = await tracingService.getTracesByUser(userId, limit?);
+```
+
+**Database Schema:**
+
+The `reasoning_traces` table includes:
+- `id` (UUID) - Primary key
+- `threadId` (string) - Graph execution identifier
+- `userId` (UUID) - User identifier (security filter)
+- `nodeName` (string) - Name of the executed node
+- `input` (JSONB) - Node input data
+- `output` (JSONB) - Node output data
+- `reasoning` (text) - Human-readable explanation
+- `createdAt` (timestamp) - Trace creation time
+
+**Indexes:**
+- `(threadId, createdAt)` - For retrieving traces by execution
+- `(userId, createdAt)` - For retrieving traces by user
+
+---
 
 ## Data Architecture
 

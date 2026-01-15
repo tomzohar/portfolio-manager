@@ -6,6 +6,7 @@ describe('endNode', () => {
   it('should generate final report', async () => {
     const state: CIOState = {
       userId: '123e4567-e89b-12d3-a456-426614174000',
+      threadId: 'thread-123',
       messages: [
         new HumanMessage('Analyze my portfolio'),
         new AIMessage('Observer executed'),
@@ -25,6 +26,7 @@ describe('endNode', () => {
   it('should include execution summary in report', async () => {
     const state: CIOState = {
       userId: '123e4567-e89b-12d3-a456-426614174000',
+      threadId: 'thread-123',
       messages: [
         new HumanMessage('Test message 1'),
         new AIMessage('Response 1'),
@@ -44,6 +46,7 @@ describe('endNode', () => {
   it('should include errors in report if present', async () => {
     const state: CIOState = {
       userId: '123e4567-e89b-12d3-a456-426614174000',
+      threadId: 'thread-123',
       messages: [],
       errors: ['Error 1', 'Error 2'],
       iteration: 1,
@@ -60,6 +63,7 @@ describe('endNode', () => {
   it('should handle state with no errors', async () => {
     const state: CIOState = {
       userId: '123e4567-e89b-12d3-a456-426614174000',
+      threadId: 'thread-123',
       messages: [new HumanMessage('Test')],
       errors: [],
       iteration: 1,

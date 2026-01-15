@@ -100,10 +100,7 @@ describe('ChartDataService', () => {
         ];
 
         // Act
-        const result = service.generateNormalizedChartData(
-          snapshots,
-          [],
-        );
+        const result = service.generateNormalizedChartData(snapshots, []);
 
         // Assert
         expect(result).toHaveLength(0);

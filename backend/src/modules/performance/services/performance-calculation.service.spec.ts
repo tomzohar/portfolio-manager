@@ -55,7 +55,7 @@ describe('PerformanceCalculationService', () => {
   });
 
   describe('calculateCumulativeReturn', () => {
-    it('should calculate cumulative return using geometric linking', async () => {
+    it('should calculate cumulative return using geometric linking', () => {
       // Arrange
       const snapshots = [
         { dailyReturnPct: 0.01 }, // 1%
@@ -64,27 +64,27 @@ describe('PerformanceCalculationService', () => {
       ] as PortfolioDailyPerformance[];
 
       // Act
-      const result = await service.calculateCumulativeReturn(snapshots);
+      const result = service.calculateCumulativeReturn(snapshots);
 
       // Assert
       // Cumulative = (1.01 * 1.01 * 1.01) - 1 = 0.030301
       expect(result).toBeCloseTo(0.030301, 5);
     });
 
-    it('should handle single snapshot', async () => {
+    it('should handle single snapshot', () => {
       // Arrange
       const snapshots = [
         { dailyReturnPct: 0.1 },
       ] as PortfolioDailyPerformance[];
 
       // Act
-      const result = await service.calculateCumulativeReturn(snapshots);
+      const result = service.calculateCumulativeReturn(snapshots);
 
       // Assert
       expect(result).toBeCloseTo(0.1, 5);
     });
 
-    it('should handle negative returns correctly', async () => {
+    it('should handle negative returns correctly', () => {
       // Arrange
       const snapshots = [
         { dailyReturnPct: -0.05 }, // -5%
@@ -92,14 +92,14 @@ describe('PerformanceCalculationService', () => {
       ] as PortfolioDailyPerformance[];
 
       // Act
-      const result = await service.calculateCumulativeReturn(snapshots);
+      const result = service.calculateCumulativeReturn(snapshots);
 
       // Assert
       // Cumulative = (0.95 * 0.95) - 1 = -0.0975
       expect(result).toBeCloseTo(-0.0975, 5);
     });
 
-    it('should handle zero returns', async () => {
+    it('should handle zero returns', () => {
       // Arrange
       const snapshots = [
         { dailyReturnPct: 0 },
@@ -108,18 +108,18 @@ describe('PerformanceCalculationService', () => {
       ] as PortfolioDailyPerformance[];
 
       // Act
-      const result = await service.calculateCumulativeReturn(snapshots);
+      const result = service.calculateCumulativeReturn(snapshots);
 
       // Assert
       expect(result).toBe(0);
     });
 
-    it('should handle empty snapshots array', async () => {
+    it('should handle empty snapshots array', () => {
       // Arrange
       const snapshots: PortfolioDailyPerformance[] = [];
 
       // Act
-      const result = await service.calculateCumulativeReturn(snapshots);
+      const result = service.calculateCumulativeReturn(snapshots);
 
       // Assert
       expect(result).toBe(0);

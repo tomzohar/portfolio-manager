@@ -46,6 +46,7 @@ export interface PerformanceAnalysis {
  */
 export interface CIOState {
   userId: string;
+  threadId: string;
   messages: BaseMessage[];
   portfolio?: PortfolioData;
   nextAction?: string;

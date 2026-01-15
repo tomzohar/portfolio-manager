@@ -31,6 +31,7 @@ describe('CIO Graph', () => {
 
     const initialState: CIOState = {
       userId: '123e4567-e89b-12d3-a456-426614174000',
+      threadId: 'thread-123',
       messages: [new HumanMessage('Test input')],
       errors: [],
       iteration: 0,
@@ -52,6 +53,7 @@ describe('CIO Graph', () => {
     const userId = '123e4567-e89b-12d3-a456-426614174000';
     const initialState: CIOState = {
       userId,
+      threadId: 'thread-123',
       messages: [],
       errors: [],
       iteration: 0,
@@ -69,6 +71,7 @@ describe('CIO Graph', () => {
 
     const initialState: CIOState = {
       userId: '123e4567-e89b-12d3-a456-426614174000',
+      threadId: 'thread-123',
       messages: [new HumanMessage('Initial message')],
       errors: [],
       iteration: 0,
@@ -87,6 +90,7 @@ describe('CIO Graph', () => {
 
     const initialState: CIOState = {
       userId: '123e4567-e89b-12d3-a456-426614174000',
+      threadId: 'thread-123',
       messages: [],
       errors: ['Test error'],
       iteration: 0,

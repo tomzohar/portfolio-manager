@@ -141,7 +141,8 @@ async def run_agent(
     options = CursorAgentOptions(
         cwd=cwd or os.getcwd(),
         permission_mode="acceptEdits",
-        resume=session_id
+        resume=session_id,
+        model="sonnet-4.5"
     )
 
     full_response = []

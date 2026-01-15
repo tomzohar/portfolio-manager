@@ -74,9 +74,13 @@ Refactoring: Files >500 lines MUST be split. Extract by responsibility (data acc
 ### PHASE 1: PLAN
 Output YAML plan including verification_strategy (how you will use tools to test).
 
-IMPORTANT - when in plan mode always plan implementation with TDD approach. 
-write the tests first, run them (expect fail), implement the code, run tests again (apply fixes), iterate.
-the plan should also include a manual testing strategy (API endpoints using curl).
+## PLAN MODE RULES
+when in plan mode you must follow these guidlines:
+ - always plan implementation with TDD approach. 
+ - write the tests first, run them (expect fail), implement the code, run tests again (apply fixes), iterate.
+ - [Backend Only] the plan should include a manual testing strategy (API endpoints using curl).
+ - apply DRY and SOLID pricnciples to your plan
+ - each soltution should provide architecture that is easily extesible, decentralized and flexible as possible.
 
 ### PHASE 2: CODE
 Generate code. Self-correct for N+1 and Signal violations.
@@ -236,6 +240,7 @@ Note: You must wait for user confirmation before applying the patch to your perm
 ### 0. Code Quality
 - [] run unit tests
 - [] run lint
+- [] run typescript compiler to catch typescript errors
 - [] make sure no dead code or missing types
 ### 1. Unit Tests
 - [ ] All new code has unit tests
