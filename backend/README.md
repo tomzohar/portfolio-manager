@@ -495,17 +495,209 @@ $ npm run pgadmin
 $ npm run start:prod
 ```
 
-## Run tests
+## Testing
+
+### Unit Tests
 
 ```bash
-# unit tests
-$ npm run test
+# Run all unit tests
+npm run test
 
-# e2e tests
-$ npm run test:e2e
+# Run in watch mode
+npm run test:watch
 
-# test coverage
-$ npm run test:cov
+# Generate coverage report
+npm run test:cov
+```
+
+### E2E (End-to-End) Tests
+
+E2E tests validate complete user workflows using a real PostgreSQL database and real HTTP requests. No mocking of database or core services - tests run against the actual application stack.
+
+#### Quick Start
+
+```bash
+# Run all e2e tests
+npm run test:e2e
+
+# Run specific test suite
+npm run test:e2e -- auth.e2e-spec.ts
+
+# Run multiple suites
+npm run test:e2e -- auth.e2e-spec.ts performance.e2e-spec.ts
+```
+
+#### Database Setup
+
+E2E tests use a **separate test database** to avoid affecting your development data.
+
+**One-Time Setup:**
+```bash
+# Create test database
+docker exec <postgres-container-name> psql -U postgres -c "CREATE DATABASE stocks_researcher_test;"
+```
+
+**Automatic Cleanup:**
+- Database is automatically cleaned **before** all tests (global setup)
+- Database is automatically cleaned **after** all tests (global teardown)
+- Each test suite cleans up in `afterAll` hooks
+- No manual cleanup needed between runs ✅
+
+#### Test Configuration
+
+Tests are configured to run **sequentially** (one file at a time) to avoid database connection contention:
+
+```json
+{
+  "maxWorkers": 1,      // Sequential execution
+  "testTimeout": 30000, // 30 second timeout
+  "forceExit": true     // Clean process termination
+}
+```
+
+**Why sequential?** Parallel execution can cause database deadlocks and connection exhaustion when multiple NestJS apps start simultaneously.
+
+#### Environment Variables
+
+Tests automatically use test-specific configuration:
+
+```
+NODE_ENV=test
+DB_DATABASE=stocks_researcher_test
+```
+
+These are set in `test/jest-e2e.setup.ts` and take precedence over `.env` file values.
+
+#### Test Database Patterns
+
+**Business Rules in Tests:**
+
+Tests follow actual user workflows, including business rules:
+
+```typescript
+// ✅ Correct: Deposit cash before buying
+await createTransaction({ ticker: 'CASH', type: 'DEPOSIT', quantity: 10000, price: 1 });
+await createTransaction({ ticker: 'AAPL', type: 'BUY', quantity: 10, price: 150 });
+
+// ❌ Wrong: Buying without cash fails validation
+await createTransaction({ ticker: 'AAPL', type: 'BUY', quantity: 10, price: 150 });
+// Error: Insufficient cash balance
+```
+
+**Data Isolation:**
+
+Each test creates unique data to prevent conflicts:
+
+```typescript
+// Use timestamps for unique identifiers
+const email = `test-${Date.now()}@example.com`;
+```
+
+**Cleanup Strategy:**
+
+```typescript
+beforeAll(async () => {
+  // Setup: Create test app and database manager
+});
+
+afterAll(async () => {
+  // Cleanup: Truncate all tables
+  await dbManager.truncateAll();
+  await app.close();
+});
+```
+
+#### Common Issues & Solutions
+
+**Issue: Tests timeout on first run**
+
+**Cause:** TypeORM is creating database schema (tables, indexes, FK constraints)
+
+**Solution:** Run tests again - first run initializes schema, subsequent runs are fast
+```bash
+npm run test:e2e  # May timeout on initial schema creation
+npm run test:e2e  # Should pass
+```
+
+#### Best Practices
+
+**DO:**
+- ✅ Run full suite before committing: `npm run test:e2e`
+- ✅ Trust the automated database cleanup
+- ✅ Use sequential execution (`maxWorkers: 1`)
+- ✅ Test complete user journeys, not just API endpoints
+- ✅ Use real database and HTTP (no mocking)
+
+**DON'T:**
+- ❌ Manually clean test database (it's automatic)
+- ❌ Run tests in parallel (will cause deadlocks)
+- ❌ Mock database or core services in e2e tests
+- ❌ Share data between test files (use unique IDs)
+
+
+**Verbose output:**
+```bash
+npm run test:e2e -- --verbose
+```
+
+#### CI/CD Integration
+
+**GitHub Actions / GitLab CI:**
+```yaml
+- name: Setup Test Database
+  run: |
+    docker exec postgres-container psql -U postgres -c "CREATE DATABASE stocks_researcher_test;" || true
+
+- name: Run E2E Tests
+  run: |
+    cd backend
+    npm run test:e2e
+  env:
+    NODE_ENV: test
+    DB_DATABASE: stocks_researcher_test
+```
+
+**Expected Exit Code:** 0 (success)
+
+#### Test Infrastructure Files
+
+- `test/jest-e2e.json` - Jest configuration for e2e tests
+- `test/jest-e2e.setup.ts` - Environment variables and setup
+- `test/jest-global-setup.ts` - Clean database before all tests
+- `test/jest-global-teardown.ts` - Clean database after all tests
+- `test/helpers/test-database-manager.ts` - Database cleanup utilities with deadlock prevention
+
+#### What Tests Validate
+
+**Real Integration:**
+- ✅ PostgreSQL database with real queries and transactions
+- ✅ TypeORM entity relationships and constraints
+- ✅ HTTP requests via supertest
+- ✅ JWT authentication and authorization
+- ✅ Business logic validation (cash balance, ownership, etc.)
+- ✅ Performance calculations with real data
+- ✅ AI agent graph execution
+- ✅ Server-sent events (SSE) streaming
+
+**Not Tested in E2E:**
+- External API calls (Polygon, Gemini) - mocked or skipped
+- Email sending - would require test SMTP
+- Scheduled jobs - tested via manual triggers
+
+---
+
+### Quick Reference
+
+```bash
+# Development
+npm run dev                    # Start server + open pgAdmin
+npm run test                   # Run unit tests
+npm run test:e2e              # Run e2e tests
+npm run lint                   # Check code quality
+npm run typescript:build       # Verify types
+
+# Before Commit
+npm run lint && npm run typescript:build && npm run test:e2e
 ```
 
 ## Deployment

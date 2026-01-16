@@ -120,7 +120,6 @@ describe('Agents Performance (e2e)', () => {
       expect(response.body.status).toBe('COMPLETED');
       expect(response.body.threadId).toBeDefined();
       expect(response.body.finalState).toBeDefined();
-
     });
 
     it('should ask for clarification when timeframe not specified', async () => {
