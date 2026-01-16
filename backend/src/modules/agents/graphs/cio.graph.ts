@@ -10,6 +10,7 @@ import { endNode } from './nodes/end.node';
 import { routerNode } from './nodes/router.node';
 import { performanceAttributionNode } from './nodes/performance-attribution.node';
 import { hitlTestNode } from './nodes/hitl-test.node';
+import { guardrailNode } from './nodes/guardrail.node';
 import { StateService } from '../services/state.service';
 import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
 import { Timeframe } from '../../performance/types/timeframe.types';
@@ -44,8 +45,10 @@ const CIOStateAnnotation = Annotation.Root({
 /**
  * Build the CIO Graph
  *
- * Phase 3 graph with HITL test support (guarded by ENABLE_HITL_TEST_NODE):
- * START -> (hitl_test OR performance_attribution OR observer) -> End -> END
+ * Phase 3 graph with HITL test support and guardrails:
+ * START -> guardrail -> (hitl_test OR performance_attribution OR observer) -> End -> END
+ *
+ * The guardrail node enforces iteration limits to prevent infinite loops.
  *
  * @param stateService - StateService for checkpoint persistence
  * @returns Compiled graph ready for execution
@@ -58,6 +61,7 @@ export function buildCIOGraph(stateService: StateService) {
   // while maintaining the complex generic types of StateGraph
   /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
   let workflow = new StateGraph(CIOStateAnnotation)
+    .addNode('guardrail', guardrailNode)
     .addNode('observer', observerNode)
     .addNode('performance_attribution', performanceAttributionNode) as any;
 
@@ -68,7 +72,8 @@ export function buildCIOGraph(stateService: StateService) {
 
   workflow = workflow
     .addNode('end', endNode)
-    .addConditionalEdges('__start__', routerNode, {
+    .addEdge('__start__', 'guardrail')
+    .addConditionalEdges('guardrail', routerNode, {
       performance_attribution: 'performance_attribution',
       observer: 'observer',
       ...(enableHitlTest ? { hitl_test: 'hitl_test' } : {}),

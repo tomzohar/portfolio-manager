@@ -117,4 +117,47 @@ describe('CIO Graph', () => {
       expect(nodeNames).toContain('hitl_test');
     });
   });
+
+  describe('Guardrail Integration', () => {
+    it('should include guardrail node in graph', () => {
+      const graph = buildCIOGraph(mockStateService as any);
+      const nodeNames = Object.keys(graph.nodes);
+      expect(nodeNames).toContain('guardrail');
+    });
+
+    it('should terminate gracefully when iteration limit exceeded', async () => {
+      const graph = buildCIOGraph(mockStateService as any);
+
+      const initialState: CIOState = {
+        userId: '123e4567-e89b-12d3-a456-426614174000',
+        threadId: 'thread-123',
+        messages: [new HumanMessage('Test input')],
+        errors: [],
+        iteration: 10, // Set to limit
+        maxIterations: 10, // Same as iteration to trigger guardrail
+      };
+
+      await expect(graph.invoke(initialState)).rejects.toThrow(
+        'Iteration limit reached (10/10)',
+      );
+    });
+
+    it('should allow execution when below iteration limit', async () => {
+      const graph = buildCIOGraph(mockStateService as any);
+
+      const initialState: CIOState = {
+        userId: '123e4567-e89b-12d3-a456-426614174000',
+        threadId: 'thread-123',
+        messages: [new HumanMessage('Test input')],
+        errors: [],
+        iteration: 5, // Below limit
+        maxIterations: 10,
+      };
+
+      const result = await graph.invoke(initialState);
+
+      expect(result).toBeDefined();
+      expect(result.final_report).toBeDefined();
+    });
+  });
 });

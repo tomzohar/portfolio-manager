@@ -17,6 +17,7 @@ import {
 } from './types/langgraph.types';
 import { GraphExecutorService } from './graph-executor.service';
 import { InterruptHandlerService } from './interrupt-handler.service';
+import { GuardrailException } from '../graphs/nodes/guardrail.node';
 
 // ============================================================================
 // Types & Interfaces
@@ -376,6 +377,21 @@ export class OrchestratorService {
     threadId: string,
     initialState: CIOState,
   ): GraphResult {
+    // Handle GuardrailException - iteration limit exceeded
+    if (error instanceof GuardrailException) {
+      this.logger.warn(
+        `Guardrail triggered for user ${userId}: ${error.message}`,
+      );
+
+      return {
+        threadId,
+        finalState: initialState,
+        success: false,
+        status: 'FAILED',
+        error: error.message,
+      };
+    }
+
     const graphError = error as GraphExecutionError;
 
     // Handle interrupt errors (normal HITL flow)
