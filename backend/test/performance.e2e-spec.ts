@@ -8,12 +8,14 @@ import { AppModule } from '../src/app.module';
 import { DataSource } from 'typeorm';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { Timeframe } from '../src/modules/performance/types/timeframe.types';
+import { TestDatabaseManager } from './helpers/test-database-manager';
 
 describe('Performance API (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
   let authToken: string;
   let portfolioId: string;
+  let dbManager: TestDatabaseManager;
 
   const testUser = {
     email: 'performance-test@example.com',
@@ -30,6 +32,7 @@ describe('Performance API (e2e)', () => {
     await app.init();
 
     dataSource = moduleFixture.get<DataSource>(DataSource);
+    dbManager = new TestDatabaseManager(dataSource);
 
     // Create test user and get auth token
     const signupResponse = await request(app.getHttpServer())
@@ -84,11 +87,7 @@ describe('Performance API (e2e)', () => {
   });
 
   afterAll(async () => {
-    // Clean up test data
-    await dataSource.query('DELETE FROM transactions');
-    await dataSource.query('DELETE FROM holdings');
-    await dataSource.query('DELETE FROM portfolios');
-    await dataSource.query('DELETE FROM users');
+    await dbManager.truncateAll();
     await app.close();
   });
 

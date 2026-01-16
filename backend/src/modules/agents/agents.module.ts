@@ -11,6 +11,8 @@ import { TracingService } from './services/tracing.service';
 import { StateService } from './services/state.service';
 import { ToolRegistryService } from './services/tool-registry.service';
 import { OrchestratorService } from './services/orchestrator.service';
+import { GraphExecutorService } from './services/graph-executor.service';
+import { InterruptHandlerService } from './services/interrupt-handler.service';
 import { getCurrentTimeTool } from './tools/time.tool';
 import { createTechnicalAnalystTool } from './tools/technical-analyst.tool';
 import { createRiskManagerTool } from './tools/risk-manager.tool';
@@ -44,6 +46,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
     TracingService,
     StateService,
     ToolRegistryService,
+    GraphExecutorService,
+    InterruptHandlerService,
     OrchestratorService,
     JwtAuthGuard, // Provide JwtAuthGuard locally
   ],

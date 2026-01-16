@@ -5,6 +5,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { DataSource } from 'typeorm';
 import { ZodValidationPipe } from 'nestjs-zod';
+import { TestDatabaseManager } from './helpers/test-database-manager';
 
 /**
  * E2E Tests for SSE Streaming Endpoint (Task 3.1.3)
@@ -25,6 +26,7 @@ describe('Agents Streaming (e2e)', () => {
   let httpServer: Server;
   let authToken: string;
   let dataSource: DataSource;
+  let dbManager: TestDatabaseManager;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -38,27 +40,7 @@ describe('Agents Streaming (e2e)', () => {
 
     // Get DataSource for cleanup
     dataSource = moduleFixture.get<DataSource>(DataSource);
-
-    // Clean up any existing test data from previous runs
-    try {
-      await dataSource.query(
-        'DELETE FROM token_usage WHERE "userId" IN (SELECT id FROM users WHERE email = \'streaming-test@example.com\')',
-      );
-      await dataSource.query(
-        'DELETE FROM reasoning_traces WHERE "userId" IN (SELECT id FROM users WHERE email = \'streaming-test@example.com\')',
-      );
-      await dataSource.query(
-        'DELETE FROM assets WHERE "portfolioId" IN (SELECT id FROM portfolios WHERE "userId" IN (SELECT id FROM users WHERE email = \'streaming-test@example.com\'))',
-      );
-      await dataSource.query(
-        'DELETE FROM portfolios WHERE "userId" IN (SELECT id FROM users WHERE email = \'streaming-test@example.com\')',
-      );
-      await dataSource.query(
-        "DELETE FROM users WHERE email = 'streaming-test@example.com'",
-      );
-    } catch (error) {
-      console.log('Cleanup warning:', error);
-    }
+    dbManager = new TestDatabaseManager(dataSource);
 
     // Create a user and get auth token
     const signupResponse = await request(httpServer)
@@ -73,16 +55,7 @@ describe('Agents Streaming (e2e)', () => {
   });
 
   afterAll(async () => {
-    // Clean up test data
-    try {
-      await dataSource.query('DELETE FROM token_usage');
-      await dataSource.query('DELETE FROM reasoning_traces');
-      await dataSource.query('DELETE FROM portfolios');
-      await dataSource.query('DELETE FROM users');
-    } catch (error) {
-      console.log('Cleanup error (non-critical):', error);
-    }
-
+    await dbManager.truncateAll();
     await app.close();
 
     // Give time for connections to close

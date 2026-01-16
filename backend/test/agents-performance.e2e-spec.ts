@@ -9,11 +9,13 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DataSource } from 'typeorm';
 import { ZodValidationPipe } from 'nestjs-zod';
+import { TestDatabaseManager } from './helpers/test-database-manager';
 
 describe('Agents Performance (e2e)', () => {
   let app: INestApplication<App>;
   let authToken: string;
   let dataSource: DataSource;
+  let dbManager: TestDatabaseManager;
 
   const testUser = {
     email: 'agents-perf-test@example.com',
@@ -30,6 +32,7 @@ describe('Agents Performance (e2e)', () => {
     await app.init();
 
     dataSource = moduleFixture.get<DataSource>(DataSource);
+    dbManager = new TestDatabaseManager(dataSource);
 
     // Create test user and get auth token
     const signupResponse = await request(app.getHttpServer())
@@ -45,12 +48,7 @@ describe('Agents Performance (e2e)', () => {
   });
 
   afterAll(async () => {
-    // Clean up test data
-    await dataSource.query('DELETE FROM transactions');
-    await dataSource.query('DELETE FROM holdings');
-    await dataSource.query('DELETE FROM assets');
-    await dataSource.query('DELETE FROM portfolios');
-    await dataSource.query('DELETE FROM users');
+    await dbManager.truncateAll();
     await app.close();
   });
 

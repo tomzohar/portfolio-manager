@@ -9,6 +9,7 @@ import { observerNode } from './nodes/observer.node';
 import { endNode } from './nodes/end.node';
 import { routerNode } from './nodes/router.node';
 import { performanceAttributionNode } from './nodes/performance-attribution.node';
+import { hitlTestNode } from './nodes/hitl-test.node';
 import { StateService } from '../services/state.service';
 import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
 import { Timeframe } from '../../performance/types/timeframe.types';
@@ -43,25 +44,44 @@ const CIOStateAnnotation = Annotation.Root({
 /**
  * Build the CIO Graph
  *
- * Phase 3 "Performance Attribution" graph:
- * START -> (performance_attribution OR observer) -> End -> END
+ * Phase 3 graph with HITL test support (guarded by ENABLE_HITL_TEST_NODE):
+ * START -> (hitl_test OR performance_attribution OR observer) -> End -> END
  *
  * @param stateService - StateService for checkpoint persistence
  * @returns Compiled graph ready for execution
  */
 export function buildCIOGraph(stateService: StateService) {
+  const enableHitlTest = process.env.ENABLE_HITL_TEST_NODE === 'true';
+
   // Create the state graph with routing logic
-  const workflow = new StateGraph(CIOStateAnnotation)
+  // Use any for workflow construction to handle conditional nodes/edges
+  // while maintaining the complex generic types of StateGraph
+  /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
+  let workflow = new StateGraph(CIOStateAnnotation)
     .addNode('observer', observerNode)
-    .addNode('performance_attribution', performanceAttributionNode)
+    .addNode('performance_attribution', performanceAttributionNode) as any;
+
+  // Add HITL test node only if enabled
+  if (enableHitlTest) {
+    workflow = workflow.addNode('hitl_test', hitlTestNode);
+  }
+
+  workflow = workflow
     .addNode('end', endNode)
     .addConditionalEdges('__start__', routerNode, {
       performance_attribution: 'performance_attribution',
       observer: 'observer',
+      ...(enableHitlTest ? { hitl_test: 'hitl_test' } : {}),
     })
     .addEdge('observer', 'end')
-    .addEdge('performance_attribution', 'end')
-    .addEdge('end', END);
+    .addEdge('performance_attribution', 'end');
+
+  // Add edge for HITL test node only if enabled
+  if (enableHitlTest) {
+    workflow = workflow.addEdge('hitl_test', 'end');
+  }
+
+  workflow = workflow.addEdge('end', END);
 
   // Compile with checkpoint saver (if available)
 

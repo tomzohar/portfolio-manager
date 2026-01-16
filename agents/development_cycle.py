@@ -389,7 +389,7 @@ async def main():
                 history_context = "\nPREVIOUS REVIEW HISTORY:\n" + "\n".join(review_history)
 
             reviewer_prompt = (
-                f"You are a Senior Software Engineer. You are reviewing a feature implementation.\n"
+                f"read agents/QA.md and act as the QA engineer. You are reviewing a feature implementation.\n"
                 f"Task: '{task_description}'.\n"
                 f"Files modified: {files_list_str}\n"
                 f"Test Status: {'PASS' if impl_success else 'FAIL'} (The builder has verified functionality via tests).\n\n"

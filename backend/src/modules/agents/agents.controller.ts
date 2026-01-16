@@ -7,6 +7,7 @@ import {
   Param,
   MessageEvent,
   Get,
+  HttpCode,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -25,6 +26,7 @@ import { RunGraphDto } from './dto/run-graph.dto';
 import { GraphResponseDto } from './dto/graph-response.dto';
 import { TracesResponseDto } from './dto/traces-response.dto';
 import { TracingService } from './services/tracing.service';
+import { ResumeGraphDto } from './dto/resume-graph.dto';
 
 @ApiTags('agents')
 @Controller('agents')
@@ -67,6 +69,48 @@ export class AgentsController {
         portfolio: dto.portfolio,
       },
       dto.threadId,
+    ) as Promise<GraphResponseDto>;
+  }
+
+  @Post('resume')
+  @ApiOperation({
+    summary: 'Resume suspended graph execution',
+    description:
+      'Continue graph execution after Human-in-the-Loop (HITL) interrupt. ' +
+      'When a graph is interrupted (status: SUSPENDED), this endpoint allows resuming ' +
+      'execution with user-provided input. The user input is made available to the ' +
+      'resumed node and appended to the conversation history.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Graph resumed and completed successfully',
+    type: GraphResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Invalid input or thread not suspended',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing JWT token',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Cannot access other users threads',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Not Found - Thread does not exist',
+  })
+  @HttpCode(200) // Explicitly set 200 for POST resume
+  async resumeGraph(
+    @CurrentUser() user: User,
+    @Body() dto: ResumeGraphDto,
+  ): Promise<GraphResponseDto> {
+    return this.orchestratorService.resumeGraph(
+      user.id,
+      dto.threadId,
+      dto.userInput,
     ) as Promise<GraphResponseDto>;
   }
 

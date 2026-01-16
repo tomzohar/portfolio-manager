@@ -5,6 +5,8 @@ import { OrchestratorService } from './orchestrator.service';
 import { StateService } from './state.service';
 import { ToolRegistryService } from './tool-registry.service';
 import { PerformanceService } from '../../performance/performance.service';
+import { GraphExecutorService } from './graph-executor.service';
+import { InterruptHandlerService } from './interrupt-handler.service';
 import { HumanMessage } from '@langchain/core/messages';
 
 describe('OrchestratorService', () => {
@@ -48,6 +50,8 @@ describe('OrchestratorService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrchestratorService,
+        GraphExecutorService,
+        InterruptHandlerService,
         {
           provide: StateService,
           useValue: mockStateService,
@@ -86,6 +90,7 @@ describe('OrchestratorService', () => {
       expect(result.threadId).toBeDefined();
       expect(result.finalState).toBeDefined();
       expect(result.success).toBe(true);
+      expect(result.status).toBe('COMPLETED');
     });
 
     it('should scope threadId with userId', async () => {

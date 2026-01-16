@@ -66,7 +66,9 @@ Controllers: Thin translation.
 
 Testing: Jest for logic. Mock external deps.
 
-Types: DO NOT USE as any, always use the actual type when possible, or create on-the-fly types if needed.
+Types: DO NOT USE as any! always use the actual type when possible, or create types.
+ - every function has correct types for inputs and outputs - this is a MUST!
+ - if types are not available via libraries, implement your own.
 
 Refactoring: Files >500 lines MUST be split. Extract by responsibility (data access, calculations, orchestration). Target: <400 lines per service.
 

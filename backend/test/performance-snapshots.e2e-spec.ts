@@ -8,6 +8,7 @@ import { AppModule } from '../src/app.module';
 import { DataSource } from 'typeorm';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { Timeframe } from '../src/modules/performance/types/timeframe.types';
+import { TestDatabaseManager } from './helpers/test-database-manager';
 
 /**
  * E2E Test Suite for Phase 9: Daily Performance Snapshots
@@ -34,6 +35,7 @@ describe('Performance Snapshots E2E (Phase 9)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
   let authToken: string;
+  let dbManager: TestDatabaseManager;
 
   const testUser = {
     email: `snapshot-test-${Date.now()}@example.com`,
@@ -50,6 +52,7 @@ describe('Performance Snapshots E2E (Phase 9)', () => {
     await app.init();
 
     dataSource = moduleFixture.get<DataSource>(DataSource);
+    dbManager = new TestDatabaseManager(dataSource);
 
     // Create test user and get auth token
     const signupResponse = await request(app.getHttpServer())
@@ -65,12 +68,7 @@ describe('Performance Snapshots E2E (Phase 9)', () => {
   });
 
   afterAll(async () => {
-    // Clean up test data in correct order (respect foreign key constraints)
-    await dataSource.query('DELETE FROM portfolio_daily_performance');
-    await dataSource.query('DELETE FROM market_data_daily');
-    await dataSource.query('DELETE FROM transactions');
-    await dataSource.query('DELETE FROM portfolios');
-    await dataSource.query('DELETE FROM users');
+    await dbManager.truncateAll();
     await app.close();
   });
 

@@ -22,6 +22,19 @@ export class GraphResponseDto {
   success: boolean;
 
   @ApiProperty({
+    description: 'Execution status of the graph',
+    enum: ['SUSPENDED', 'COMPLETED', 'FAILED'],
+    example: 'COMPLETED',
+  })
+  status: 'SUSPENDED' | 'COMPLETED' | 'FAILED';
+
+  @ApiProperty({
+    description: 'Reason for interrupt if status is SUSPENDED',
+    required: false,
+  })
+  interruptReason?: string;
+
+  @ApiProperty({
     description: 'Error message if execution failed',
     required: false,
   })

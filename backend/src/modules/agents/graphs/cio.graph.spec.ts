@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 import { buildCIOGraph } from './cio.graph';
 import { CIOState } from './types';
 import { HumanMessage } from '@langchain/core/messages';
@@ -20,13 +21,11 @@ describe('CIO Graph', () => {
   });
 
   it('should build and compile graph', () => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const graph = buildCIOGraph(mockStateService as any);
     expect(graph).toBeDefined();
   });
 
   it('should execute from observer to end', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const graph = buildCIOGraph(mockStateService as any);
 
     const initialState: CIOState = {
@@ -47,7 +46,6 @@ describe('CIO Graph', () => {
   });
 
   it('should preserve userId through execution', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const graph = buildCIOGraph(mockStateService as any);
 
     const userId = '123e4567-e89b-12d3-a456-426614174000';
@@ -66,7 +64,6 @@ describe('CIO Graph', () => {
   });
 
   it('should accumulate messages through nodes', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const graph = buildCIOGraph(mockStateService as any);
 
     const initialState: CIOState = {
@@ -85,7 +82,6 @@ describe('CIO Graph', () => {
   });
 
   it('should handle errors gracefully', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const graph = buildCIOGraph(mockStateService as any);
 
     const initialState: CIOState = {
@@ -98,8 +94,27 @@ describe('CIO Graph', () => {
     };
 
     const result = await graph.invoke(initialState);
-
     expect(result.final_report).toContain('Errors encountered');
     expect(result.final_report).toContain('Test error');
+  });
+
+  describe('HITL Node Inclusion', () => {
+    afterEach(() => {
+      delete process.env.ENABLE_HITL_TEST_NODE;
+    });
+
+    it('should NOT include hitl_test node when disabled', () => {
+      process.env.ENABLE_HITL_TEST_NODE = 'false';
+      const graph = buildCIOGraph(mockStateService as any);
+      const nodeNames = Object.keys(graph.nodes);
+      expect(nodeNames).not.toContain('hitl_test');
+    });
+
+    it('should include hitl_test node when enabled', () => {
+      process.env.ENABLE_HITL_TEST_NODE = 'true';
+      const graph = buildCIOGraph(mockStateService as any);
+      const nodeNames = Object.keys(graph.nodes);
+      expect(nodeNames).toContain('hitl_test');
+    });
   });
 });

@@ -5,6 +5,7 @@ import { CIOState } from '../types';
  * based on the user's query content
  *
  * Routes to:
+ * - 'hitl_test' if query contains HITL test keywords (for testing only)
  * - 'performance_attribution' if query is about performance/returns/alpha
  * - 'observer' for all other queries
  */
@@ -25,6 +26,17 @@ export function routerNode(state: CIOState): string {
       ? messageContent
       : JSON.stringify(messageContent)
   ).toLowerCase();
+
+  // Check for HITL test keywords (only if enabled via environment variable)
+  const enableHitlTest = process.env.ENABLE_HITL_TEST_NODE === 'true';
+  if (
+    enableHitlTest &&
+    (content.includes('interrupt') ||
+      content.includes('approval') ||
+      content.includes('hitl'))
+  ) {
+    return 'hitl_test';
+  }
 
   // Check if query is about performance
   if (

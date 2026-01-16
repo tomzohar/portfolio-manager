@@ -7,12 +7,14 @@ import { DataSource } from 'typeorm';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { GraphResponseDto } from 'src/modules/agents/dto/graph-response.dto';
 import { Message } from '@langchain/core/messages';
+import { TestDatabaseManager } from './helpers/test-database-manager';
 
 describe('AgentsController (e2e)', () => {
   let app: NestExpressApplication;
   let httpServer: Server;
   let authToken: string;
   let dataSource: DataSource;
+  let dbManager: TestDatabaseManager;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -26,28 +28,7 @@ describe('AgentsController (e2e)', () => {
 
     // Get DataSource for cleanup
     dataSource = moduleFixture.get<DataSource>(DataSource);
-
-    // Clean up any existing test data from previous runs (respecting foreign key constraints)
-    try {
-      await dataSource.query(
-        'DELETE FROM token_usage WHERE "userId" IN (SELECT id FROM users WHERE email = \'agent-test@example.com\')',
-      );
-      await dataSource.query(
-        'DELETE FROM reasoning_traces WHERE "userId" IN (SELECT id FROM users WHERE email = \'agent-test@example.com\')',
-      );
-      await dataSource.query(
-        'DELETE FROM assets WHERE "portfolioId" IN (SELECT id FROM portfolios WHERE "userId" IN (SELECT id FROM users WHERE email = \'agent-test@example.com\'))',
-      );
-      await dataSource.query(
-        'DELETE FROM portfolios WHERE "userId" IN (SELECT id FROM users WHERE email = \'agent-test@example.com\')',
-      );
-      await dataSource.query(
-        "DELETE FROM users WHERE email = 'agent-test@example.com'",
-      );
-    } catch (error) {
-      // Ignore cleanup errors (tables might not exist yet)
-      console.log('Cleanup warning:', error);
-    }
+    dbManager = new TestDatabaseManager(dataSource);
 
     // Create a user - returns token in response
     const signupResponse = await request(httpServer)
@@ -62,15 +43,7 @@ describe('AgentsController (e2e)', () => {
   });
 
   afterAll(async () => {
-    // Clean up test data
-    try {
-      await dataSource.query('DELETE FROM token_usage');
-      await dataSource.query('DELETE FROM reasoning_traces');
-      await dataSource.query('DELETE FROM portfolios');
-      await dataSource.query('DELETE FROM users');
-    } catch (error) {
-      console.log('Cleanup error (non-critical):', error);
-    }
+    await dbManager.truncateAll();
 
     // Close the application and all connections
     await app.close();

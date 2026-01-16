@@ -5,10 +5,12 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DataSource } from 'typeorm';
 import { ZodValidationPipe } from 'nestjs-zod';
+import { TestDatabaseManager } from './helpers/test-database-manager';
 
 describe('Rate Limiting (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
+  let dbManager: TestDatabaseManager;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -24,13 +26,11 @@ describe('Rate Limiting (e2e)', () => {
 
     // Get DataSource for cleanup
     dataSource = moduleFixture.get<DataSource>(DataSource);
+    dbManager = new TestDatabaseManager(dataSource);
   });
 
   afterAll(async () => {
-    // Clean up test data
-    await dataSource.query('DELETE FROM assets');
-    await dataSource.query('DELETE FROM portfolios');
-    await dataSource.query('DELETE FROM users');
+    await dbManager.truncateAll();
     await app.close();
   });
 
