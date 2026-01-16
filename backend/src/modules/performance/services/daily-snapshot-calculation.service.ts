@@ -572,7 +572,6 @@ export class DailySnapshotCalculationService {
       if (price === undefined) {
         // Critical: Missing market data
         // During backfill, this should rarely happen as data is pre-fetched
-        // Log at ERROR level to ensure visibility
         this.logger.error(
           `Portfolio ${portfolioId}: No market data for ${ticker} on ${dateStr}. ` +
             `Performance calculations may be inaccurate. Verify market data backfill completed successfully.`,

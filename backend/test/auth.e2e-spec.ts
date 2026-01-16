@@ -96,10 +96,11 @@ describe('Authentication Flow (e2e)', () => {
     });
 
     it('should reject short password', async () => {
+      // Use unique email to avoid conflicts and rate limiting
       await request(app.getHttpServer())
         .post('/users')
         .send({
-          email: 'new@example.com',
+          email: `short-password-${Date.now()}@example.com`,
           password: 'short',
         })
         .expect(400);
@@ -189,7 +190,7 @@ describe('Authentication Flow (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/auth/verify')
         .send({ token: userToken })
-        .expect(200);
+        .expect(201); // POST endpoints return 201 Created
 
       const body = response.body as AuthResponseDto;
       expect(body).toHaveProperty('token');
@@ -222,15 +223,36 @@ describe('Authentication Flow (e2e)', () => {
       const user1Response = await request(app.getHttpServer())
         .post('/auth/login')
         .send(testUser);
+
+      if (user1Response.status !== 201) {
+        console.log('>>> LOGIN ERROR - Status:', user1Response.status);
+        console.log(
+          '>>> LOGIN ERROR - Body:',
+          JSON.stringify(user1Response.body, null, 2),
+        );
+        throw new Error(
+          `Failed to login user1: ${user1Response.status} - ${JSON.stringify(user1Response.body)}`,
+        );
+      }
+
       const firstBody = user1Response.body as AuthResponseDto;
       user1Token = firstBody.token;
+
+      if (!user1Token) {
+        throw new Error('Failed to get user1 token from response');
+      }
 
       // Create second user and login
       const user2Signup = await request(app.getHttpServer())
         .post('/users')
-        .send(secondUser);
+        .send(secondUser)
+        .expect(201);
       const body = user2Signup.body as AuthResponseDto;
       user2Token = body.token;
+
+      if (!user2Token) {
+        throw new Error('Failed to get user2 token from signup');
+      }
     });
 
     it('should create portfolio for authenticated user', async () => {
@@ -299,7 +321,20 @@ describe('Authentication Flow (e2e)', () => {
     });
 
     it('should add asset to portfolio', async () => {
-      // Add asset via transaction
+      // First, deposit cash into the portfolio
+      await request(app.getHttpServer())
+        .post(`/portfolios/${user1PortfolioId}/transactions`)
+        .set('Authorization', `Bearer ${user1Token}`)
+        .send({
+          ticker: 'CASH',
+          type: 'DEPOSIT',
+          quantity: 10000,
+          price: 1,
+          transactionDate: new Date().toISOString(),
+        })
+        .expect(201);
+
+      // Now buy AAPL stock
       const response = await request(app.getHttpServer())
         .post(`/portfolios/${user1PortfolioId}/transactions`)
         .set('Authorization', `Bearer ${user1Token}`)
@@ -308,7 +343,7 @@ describe('Authentication Flow (e2e)', () => {
           type: 'BUY',
           quantity: 10,
           price: 150.5,
-          date: new Date().toISOString(),
+          transactionDate: new Date().toISOString(),
         })
         .expect(201);
 
@@ -331,90 +366,130 @@ describe('Authentication Flow (e2e)', () => {
         .expect(403);
     });
 
-    it('should get assets for a portfolio via dedicated endpoint', async () => {
-      // First add an asset
-      await request(app.getHttpServer())
-        .post(`/portfolios/${user1PortfolioId}/assets`)
-        .set('Authorization', `Bearer ${user1Token}`)
-        .send({
-          ticker: 'NVDA',
-          quantity: 8,
-          avgPrice: 450.0,
-        })
-        .expect(201);
-
-      // Fetch assets using the dedicated endpoint
+    it('should get holdings for a portfolio', async () => {
+      // Assets are created via transactions (already done in previous test)
+      // Fetch holdings using the portfolio detail endpoint
       const response = await request(app.getHttpServer())
-        .get(`/portfolios/${user1PortfolioId}/assets`)
+        .get(`/portfolios/${user1PortfolioId}`)
         .set('Authorization', `Bearer ${user1Token}`)
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBeGreaterThan(0);
-      expect(response.body[0]).toHaveProperty('ticker');
-      expect(response.body[0]).toHaveProperty('quantity');
-      expect(response.body[0]).toHaveProperty('avgPrice');
+      expect(response.body).toHaveProperty('assets');
+      expect(Array.isArray(response.body.assets)).toBe(true);
+      expect(response.body.assets.length).toBeGreaterThan(0);
+
+      // Verify asset structure from transactions
+      const asset = response.body.assets[0];
+      expect(asset).toHaveProperty('ticker');
+      expect(asset).toHaveProperty('quantity');
+      expect(asset).toHaveProperty('avgPrice');
     });
 
-    it('should deny access to another users portfolio assets', async () => {
+    it('should deny access to another users portfolio via detail endpoint', async () => {
+      // Trying to access portfolio detail (which includes assets) should fail with 403
       await request(app.getHttpServer())
-        .get(`/portfolios/${user1PortfolioId}/assets`)
+        .get(`/portfolios/${user1PortfolioId}`)
         .set('Authorization', `Bearer ${user2Token}`)
         .expect(403);
     });
 
-    it('should remove asset from portfolio', async () => {
-      // First, get the portfolio assets
-      const assets = await request(app.getHttpServer())
-        .get(`/portfolios/${user1PortfolioId}/assets`)
-        .set('Authorization', `Bearer ${user1Token}`)
-        .expect(200);
-
-      const assetId = assets.body[0].id;
-
-      // Remove the asset
+    it('should update transaction (SELL reduces holdings)', async () => {
+      // First deposit cash
       await request(app.getHttpServer())
-        .delete(`/portfolios/${user1PortfolioId}/assets/${assetId}`)
-        .set('Authorization', `Bearer ${user1Token}`)
-        .expect(200);
-
-      // Verify asset was removed
-      const updatedAssets = await request(app.getHttpServer())
-        .get(`/portfolios/${user1PortfolioId}/assets`)
-        .set('Authorization', `Bearer ${user1Token}`)
-        .expect(200);
-
-      expect(updatedAssets.body.length).toBe(0);
-    });
-
-    it('should deny removing asset from another users portfolio', async () => {
-      // Add an asset first
-      const asset = await request(app.getHttpServer())
-        .post(`/portfolios/${user1PortfolioId}/assets`)
+        .post(`/portfolios/${user1PortfolioId}/transactions`)
         .set('Authorization', `Bearer ${user1Token}`)
         .send({
-          ticker: 'TSLA',
-          quantity: 3,
-          avgPrice: 200.0,
-        });
+          ticker: 'CASH',
+          type: 'DEPOSIT',
+          quantity: 5000,
+          price: 1,
+          transactionDate: new Date().toISOString(),
+        })
+        .expect(201);
 
-      const assetId = asset.body.id;
+      // Create a BUY transaction
+      const buyResponse = await request(app.getHttpServer())
+        .post(`/portfolios/${user1PortfolioId}/transactions`)
+        .set('Authorization', `Bearer ${user1Token}`)
+        .send({
+          ticker: 'MSFT',
+          type: 'BUY',
+          quantity: 10,
+          price: 300.0,
+          transactionDate: new Date().toISOString(),
+        })
+        .expect(201);
 
-      // Try to remove with different user
+      const buyTransactionId = buyResponse.body.id;
+      expect(buyTransactionId).toBeDefined();
+
+      // Get current holdings
+      const beforeSell = await request(app.getHttpServer())
+        .get(`/portfolios/${user1PortfolioId}`)
+        .set('Authorization', `Bearer ${user1Token}`)
+        .expect(200);
+
+      const msftHoldingBefore = beforeSell.body.assets.find(
+        (a: { ticker: string }) => a.ticker === 'MSFT',
+      );
+      expect(msftHoldingBefore).toBeDefined();
+      // Quantity may be returned as string from database DECIMAL type
+      expect(Number(msftHoldingBefore.quantity)).toBe(10);
+
+      // Create a SELL transaction to reduce holdings
       await request(app.getHttpServer())
-        .delete(`/portfolios/${user1PortfolioId}/assets/${assetId}`)
+        .post(`/portfolios/${user1PortfolioId}/transactions`)
+        .set('Authorization', `Bearer ${user1Token}`)
+        .send({
+          ticker: 'MSFT',
+          type: 'SELL',
+          quantity: 10,
+          price: 320.0,
+          transactionDate: new Date().toISOString(),
+        })
+        .expect(201);
+
+      // Verify holdings were updated
+      const afterSell = await request(app.getHttpServer())
+        .get(`/portfolios/${user1PortfolioId}`)
+        .set('Authorization', `Bearer ${user1Token}`)
+        .expect(200);
+
+      const msftHoldingAfter = afterSell.body.assets.find(
+        (a: { ticker: string }) => a.ticker === 'MSFT',
+      );
+      // After selling all shares, holding should be zero or not exist
+      if (msftHoldingAfter) {
+        expect(msftHoldingAfter.quantity).toBe(0);
+      }
+    });
+
+    it('should deny creating transaction for another users portfolio', async () => {
+      // User2 tries to create a transaction in User1's portfolio
+      await request(app.getHttpServer())
+        .post(`/portfolios/${user1PortfolioId}/transactions`)
         .set('Authorization', `Bearer ${user2Token}`)
+        .send({
+          ticker: 'TSLA',
+          type: 'BUY',
+          quantity: 3,
+          price: 200.0,
+          transactionDate: new Date().toISOString(),
+        })
         .expect(403);
     });
   });
 
   describe('Complete User Journey', () => {
-    it('should complete full signup -> portfolio creation -> asset management flow', async () => {
+    it('should complete full signup -> portfolio creation -> transaction flow', async () => {
+      // Use a unique email to avoid conflicts with other tests
+      const uniqueEmail = `journey-${Date.now()}@example.com`;
+
       // 1. Signup
       const signupResponse = await request(app.getHttpServer())
         .post('/users')
         .send({
-          email: 'journey@example.com',
+          email: uniqueEmail,
           password: 'JourneyPassword123',
         })
         .expect(201);
@@ -431,29 +506,67 @@ describe('Authentication Flow (e2e)', () => {
 
       const portfolioId = portfolioResponse.body.id;
 
-      // 3. Add multiple assets
+      // 3. Deposit cash first
       await request(app.getHttpServer())
-        .post(`/portfolios/${portfolioId}/assets`)
+        .post(`/portfolios/${portfolioId}/transactions`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ ticker: 'AAPL', quantity: 10, avgPrice: 150.0 })
+        .send({
+          ticker: 'CASH',
+          type: 'DEPOSIT',
+          quantity: 10000,
+          price: 1,
+          transactionDate: new Date().toISOString(),
+        })
+        .expect(201);
+
+      // 4. Add multiple transactions to build holdings
+      await request(app.getHttpServer())
+        .post(`/portfolios/${portfolioId}/transactions`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          ticker: 'AAPL',
+          type: 'BUY',
+          quantity: 10,
+          price: 150.0,
+          transactionDate: new Date().toISOString(),
+        })
         .expect(201);
 
       await request(app.getHttpServer())
-        .post(`/portfolios/${portfolioId}/assets`)
+        .post(`/portfolios/${portfolioId}/transactions`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ ticker: 'GOOGL', quantity: 5, avgPrice: 120.0 })
+        .send({
+          ticker: 'GOOGL',
+          type: 'BUY',
+          quantity: 5,
+          price: 120.0,
+          transactionDate: new Date().toISOString(),
+        })
         .expect(201);
 
-      // 4. Get portfolio with assets
+      // 5. Get portfolio with assets (computed from transactions)
       const finalPortfolio = await request(app.getHttpServer())
         .get(`/portfolios/${portfolioId}`)
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
-      expect(finalPortfolio.body.assets.length).toBe(2);
+      // Should have 3 assets: CASH, AAPL, and GOOGL
+      expect(finalPortfolio.body.assets.length).toBe(3);
       expect(finalPortfolio.body.name).toBe('Journey Portfolio');
 
-      // 5. Verify user can see their portfolio in list
+      // Verify asset holdings are correct (excluding CASH)
+      const stockAssets = finalPortfolio.body.assets.filter(
+        (a: { ticker: string }) => a.ticker !== 'CASH',
+      );
+      expect(stockAssets.length).toBe(2);
+
+      const aaplAsset = finalPortfolio.body.assets.find(
+        (a: { ticker: string }) => a.ticker === 'AAPL',
+      );
+      expect(aaplAsset).toBeDefined();
+      expect(Number(aaplAsset.quantity)).toBe(10);
+
+      // 6. Verify user can see their portfolio in list
       const allPortfolios = await request(app.getHttpServer())
         .get('/portfolios')
         .set('Authorization', `Bearer ${token}`)

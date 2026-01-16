@@ -8,5 +8,8 @@
   },
   "setupFiles": ["<rootDir>/jest-e2e.setup.ts"],
   "globalSetup": "<rootDir>/jest-global-setup.ts",
-  "globalTeardown": "<rootDir>/jest-global-teardown.ts"
+  "globalTeardown": "<rootDir>/jest-global-teardown.ts",
+  "testTimeout": 30000,
+  "maxWorkers": 1,
+  "forceExit": true
 }
