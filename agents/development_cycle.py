@@ -104,7 +104,8 @@ async def run_agent(
     session_id: str = None, 
     cwd: str = None,
     logger: AgentLogger = None,
-    formatter: RichFormatter = None
+    formatter: RichFormatter = None,
+    structured_traces: bool = False
 ) -> tuple[Optional[T], str]:
     """
     Run an agent with enhanced logging and observability.
@@ -117,6 +118,7 @@ async def run_agent(
         cwd: Working directory
         logger: Logger instance for structured logging
         formatter: Console formatter for rich output
+        structured_traces: Enable structured REASONING/ACTIONS/RESPONSE output
     
     Returns:
         Tuple of (parsed result, session_id)
@@ -151,6 +153,12 @@ async def run_agent(
     # Deduplication: track recent text blocks to avoid showing duplicates
     recent_text_blocks = []
     DEDUP_WINDOW = 5  # Check last 5 blocks for duplicates
+    
+    # Structured traces: buffer for organizing into sections
+    reasoning_buffer = []
+    actions_buffer = []
+    response_buffer = []
+    current_section = "reasoning"  # Start assuming reasoning
 
     try:
         async for msg in query(prompt=prompt, options=options):
@@ -166,9 +174,17 @@ async def run_agent(
                             if len(recent_text_blocks) > DEDUP_WINDOW:
                                 recent_text_blocks.pop(0)
                             
-                            # Always show agent thoughts in verbose mode, condensed in normal mode
-                            if formatter:
-                                formatter.stream_agent_output(agent_name, block.text)
+                            # Buffer for structured traces or stream immediately
+                            if structured_traces:
+                                # Add to current section buffer
+                                if current_section == "reasoning":
+                                    reasoning_buffer.append(block.text)
+                                else:
+                                    response_buffer.append(block.text)
+                            else:
+                                # Show agent thoughts in verbose mode, condensed in normal mode
+                                if formatter:
+                                    formatter.stream_agent_output(agent_name, block.text)
                             
                             # Log to file only (avoid double logging)
                             if logger:
@@ -182,9 +198,20 @@ async def run_agent(
                         if not block.name or not block.name.strip():
                             continue
                         
-                        # Use formatter OR logger, not both (to avoid duplicate output)
-                        if formatter:
-                            formatter.print_tool_call(agent_name, block.name, block.input)
+                        # Switch to actions section when we see first tool
+                        if structured_traces:
+                            current_section = "actions"
+                            
+                            # Collect action info
+                            action_info = {
+                                'tool': block.name,
+                                'params': block.input or {}
+                            }
+                            actions_buffer.append(action_info)
+                        else:
+                            # Use formatter OR logger, not both (to avoid duplicate output)
+                            if formatter:
+                                formatter.print_tool_call(agent_name, block.name, block.input)
                         
                         # Always log to file
                         if logger:
@@ -216,6 +243,20 @@ async def run_agent(
 
     result_text = "".join(full_response)
     
+    # Display structured traces if enabled
+    if structured_traces and formatter:
+        # Show reasoning section
+        if reasoning_buffer:
+            formatter.print_reasoning_block(agent_name, "".join(reasoning_buffer))
+        
+        # Show actions section
+        if actions_buffer:
+            formatter.print_actions_block(actions_buffer)
+        
+        # Show response section
+        if response_buffer:
+            formatter.print_response_block("".join(response_buffer))
+    
     # Calculate duration
     duration_s = int((datetime.now() - start_time).total_seconds())
     
@@ -242,6 +283,98 @@ async def run_agent(
                 logger.log_error(e, {"agent": agent_name}, result_text[-500:])
 
     return parsed_result, final_session_id
+
+# --- CONTINUATION LOOP ---
+
+async def continuation_loop(
+    builder_session: str,
+    cwd: str,
+    logger: AgentLogger,
+    formatter: RichFormatter
+) -> int:
+    """
+    Interactive continuation loop for follow-up prompts after main workflow.
+    
+    Args:
+        builder_session: Session ID from the main BUILDER agent
+        cwd: Working directory
+        logger: Logger instance
+        formatter: Console formatter
+    
+    Returns:
+        Number of continuation prompts processed
+    """
+    continuation_count = 0
+    
+    # Display welcome banner
+    print("\n")
+    print("╔══════════════════════════════════════════════════════════╗")
+    print("║  🎯 Task Complete! You can continue the conversation     ║")
+    print("║                                                          ║")
+    print("║  • Enter a follow-up prompt to refine or extend         ║")
+    print("║  • Type 'quit', 'exit', or 'done' to finish             ║")
+    print("╚══════════════════════════════════════════════════════════╝")
+    print()
+    
+    while True:
+        try:
+            # Get user input
+            user_prompt = input("Continue → ").strip()
+            
+            # Check for quit commands (case insensitive)
+            if user_prompt.lower() in ['quit', 'exit', 'done']:
+                print(f"\n👋 Continuation session ended. Total follow-ups: {continuation_count}")
+                break
+            
+            # Handle empty input
+            if not user_prompt:
+                print("ℹ️  (Empty input - type a prompt to continue or 'quit' to exit)")
+                continue
+            
+            # Process the continuation
+            continuation_count += 1
+            
+            # Log the continuation
+            if logger:
+                logger._log_event("CONTINUATION_START", {
+                    "index": continuation_count,
+                    "prompt": user_prompt
+                })
+            
+            # Run BUILDER with structured traces enabled
+            _, builder_session = await run_agent(
+                "BUILDER",
+                user_prompt,
+                session_id=builder_session,
+                cwd=cwd,
+                logger=logger,
+                formatter=formatter,
+                structured_traces=True  # Always use structured output for continuations
+            )
+            
+            # Log completion
+            if logger:
+                logger._log_event("CONTINUATION_END", {
+                    "index": continuation_count,
+                    "success": True
+                })
+            
+            print()  # Add spacing between continuations
+            
+        except KeyboardInterrupt:
+            print("\n\n⚠️  Interrupted by user (Ctrl+C)")
+            print(f"👋 Continuation session ended. Total follow-ups: {continuation_count}")
+            break
+        
+        except Exception as e:
+            # Log error but don't exit loop
+            print(f"\n❌ Error during continuation: {type(e).__name__}: {e}")
+            if logger:
+                logger.log_error(e, {"continuation_index": continuation_count, "prompt": user_prompt})
+            
+            print("💡 You can try again with a different prompt or type 'quit' to exit.\n")
+    
+    return continuation_count
 
 # --- WORKFLOW FUNCTIONS ---
 
@@ -516,7 +649,21 @@ async def main():
             logger.phase_end("PHASE_4_FINALIZATION", success=True)
             formatter.print_phase_end("PHASE_4_FINALIZATION", success=True,
                                       duration_s=ms_to_seconds(logger.phase_timings["PHASE_4_FINALIZATION"]["duration_ms"]))
-            print("\n🏁 Workflow Complete!")
+            print("\n🏁 Initial Workflow Complete!")
+            
+            # --- CONTINUATION LOOP ---
+            continuation_count = await continuation_loop(
+                builder_session=builder_session,
+                cwd=cwd,
+                logger=logger,
+                formatter=formatter
+            )
+            
+            # Track continuation count in logger
+            if continuation_count > 0:
+                logger._log_event("CONTINUATION_SESSION_END", {
+                    "total_continuations": continuation_count
+                })
         else:
             print("\n⛔ Workflow ended without final approval.")
     

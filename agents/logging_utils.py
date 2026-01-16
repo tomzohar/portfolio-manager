@@ -72,6 +72,7 @@ class AgentLogger:
         self.agent_sessions: Dict[str, str] = {}  # Track session ID per agent
         self.files_modified: set = set()
         self.errors: List[Dict[str, Any]] = []
+        self.continuation_prompts: List[Dict[str, Any]] = []  # Track continuation sessions
         
         self._log_event("SESSION_START", {"session": self.session_name})
     
@@ -283,6 +284,8 @@ class AgentLogger:
                 }
                 for call in self.agent_calls
             ],
+            "continuation_count": len(self.continuation_prompts),
+            "continuation_prompts": self.continuation_prompts,
             "files_modified": sorted(list(self.files_modified)),
             "error_count": len(self.errors),
             "errors": [

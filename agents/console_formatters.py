@@ -267,6 +267,9 @@ class RichFormatter:
         
         self.console.print(f"\n[info]Agent Calls:[/info] {len(summary['agent_calls'])}")
         
+        if summary.get('continuation_count', 0) > 0:
+            self.console.print(f"[info]Continuations:[/info] {summary['continuation_count']}")
+        
         if summary.get('agent_sessions'):
             self.console.print("\n[info]Agent Sessions:[/info]")
             for agent, session_id in summary['agent_sessions'].items():
@@ -321,3 +324,135 @@ class RichFormatter:
             return "reviewer"
         else:
             return "info"
+    
+    def _draw_section_box(self, title: str, content: str, width: int = 60) -> str:
+        """
+        Draw a box with title and content.
+        
+        Args:
+            title: Section title
+            content: Content lines
+            width: Box width
+            
+        Returns:
+            Formatted box string
+        """
+        lines = []
+        
+        # Top border with title
+        title_line = f"─ {title} "
+        padding = "─" * (width - len(title_line) - 1)
+        lines.append(f"┌{title_line}{padding}┐")
+        
+        # Content lines
+        for line in content.split('\n'):
+            if line.strip():
+                # Truncate if too long
+                if len(line) > width - 4:
+                    line = line[:width - 7] + "..."
+                # Pad to width
+                padding = " " * (width - len(line) - 2)
+                lines.append(f"│ {line}{padding}│")
+        
+        # Bottom border
+        lines.append(f"└{'─' * width}┘")
+        
+        return '\n'.join(lines)
+    
+    def print_reasoning_block(self, agent_name: str, text: str):
+        """
+        Print agent reasoning in a structured block.
+        
+        Args:
+            agent_name: Name of the agent
+            text: Reasoning text
+        """
+        if not text.strip():
+            return
+        
+        box = self._draw_section_box("🧠 REASONING", text.strip())
+        self.console.print(f"\n[dim]{box}[/dim]\n")
+    
+    def print_actions_block(self, actions: list):
+        """
+        Print tool actions in a structured block.
+        
+        Args:
+            actions: List of action dictionaries with 'tool', 'params', and optional 'result'
+        """
+        if not actions:
+            return
+        
+        # Map tool names to icons
+        tool_icons = {
+            "Read": "🔧",
+            "StrReplace": "✏️",
+            "Write": "✏️",
+            "Shell": "🧪",
+            "Delete": "🗑️",
+            "Glob": "🔍",
+            "Grep": "🔍",
+            "LS": "📁",
+            "SemanticSearch": "🔎",
+            "EditNotebook": "📓",
+            "TodoWrite": "✓",
+        }
+        
+        content_lines = []
+        for action in actions:
+            tool_name = action.get('tool', 'Unknown')
+            params = action.get('params', {})
+            result = action.get('result', None)
+            
+            # Get icon for tool
+            icon = tool_icons.get(tool_name, "⚙️")
+            
+            # Format the action line
+            if tool_name == "Read":
+                path = params.get('path', '')
+                # Shorten path if too long
+                if len(path) > 40:
+                    parts = path.split('/')
+                    if len(parts) > 2:
+                        path = f"{parts[0]}/.../{parts[-1]}"
+                content_lines.append(f"{icon} Read: {path}")
+            
+            elif tool_name in ["StrReplace", "Write"]:
+                path = params.get('path', '')
+                if len(path) > 40:
+                    parts = path.split('/')
+                    if len(parts) > 2:
+                        path = f"{parts[0]}/.../{parts[-1]}"
+                action_desc = "Edit" if tool_name == "StrReplace" else "Write"
+                content_lines.append(f"{icon} {action_desc}: {path}")
+            
+            elif tool_name == "Shell":
+                command = params.get('command', '')
+                # Truncate long commands
+                if len(command) > 45:
+                    command = command[:42] + "..."
+                content_lines.append(f"{icon} Shell: {command}")
+                if result:
+                    exit_code = result.get('exit_code', 'unknown')
+                    content_lines.append(f"   → exit code: {exit_code}")
+            
+            else:
+                # Generic format
+                content_lines.append(f"{icon} {tool_name}")
+        
+        content = '\n'.join(content_lines)
+        box = self._draw_section_box("⚡ ACTIONS", content)
+        self.console.print(f"[info]{box}[/info]\n")
+    
+    def print_response_block(self, text: str):
+        """
+        Print agent's final response in a structured block.
+        
+        Args:
+            text: Response text
+        """
+        if not text.strip():
+            return
+        
+        box = self._draw_section_box("💬 RESPONSE", text.strip())
+        self.console.print(f"[success]{box}[/success]\n")
