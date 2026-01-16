@@ -22,7 +22,7 @@ except ImportError:
     sys.exit(1)
 
 # Import logging utilities
-from logging_utils import AgentLogger
+from logging_utils import AgentLogger, ms_to_seconds
 from console_formatters import RichFormatter
 
 # --- STRUCTURED DATA MODELS (Pydantic) ---
@@ -217,14 +217,14 @@ async def run_agent(
     result_text = "".join(full_response)
     
     # Calculate duration
-    duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+    duration_s = int((datetime.now() - start_time).total_seconds())
     
     # Log agent completion
     if logger:
         logger.agent_end(agent_name, success=True, output_length=len(result_text))
     
     if formatter:
-        formatter.print_agent_end(agent_name, success=True, duration_ms=duration_ms, output_length=len(result_text))
+        formatter.print_agent_end(agent_name, success=True, duration_s=duration_s, output_length=len(result_text))
     else:
         print(f"✅ [{agent_name}] Done.")
     
@@ -297,7 +297,7 @@ async def main():
         }
         logger.phase_end("PHASE_1_TDD", success=True, summary=phase_summary)
         formatter.print_phase_end("PHASE_1_TDD", success=True, 
-                                  duration_ms=logger.phase_timings["PHASE_1_TDD"]["duration_ms"],
+                                  duration_s=ms_to_seconds(logger.phase_timings["PHASE_1_TDD"]["duration_ms"]),
                                   summary=phase_summary)
 
         # --- PHASE 2: IMPLEMENTATION ---
@@ -351,7 +351,7 @@ async def main():
             print("❌ Failed to implement feature. Aborting.")
             logger.phase_end("PHASE_2_IMPLEMENTATION", success=False)
             formatter.print_phase_end("PHASE_2_IMPLEMENTATION", success=False,
-                                      duration_ms=logger.phase_timings["PHASE_2_IMPLEMENTATION"]["duration_ms"])
+                                      duration_s=ms_to_seconds(logger.phase_timings["PHASE_2_IMPLEMENTATION"]["duration_ms"]))
             return
         
         phase_summary = {
@@ -360,7 +360,7 @@ async def main():
         }
         logger.phase_end("PHASE_2_IMPLEMENTATION", success=True, summary=phase_summary)
         formatter.print_phase_end("PHASE_2_IMPLEMENTATION", success=True,
-                                  duration_ms=logger.phase_timings["PHASE_2_IMPLEMENTATION"]["duration_ms"],
+                                  duration_s=ms_to_seconds(logger.phase_timings["PHASE_2_IMPLEMENTATION"]["duration_ms"]),
                                   summary=phase_summary)
 
         # --- PHASE 3: REVIEW LOOP ---
@@ -498,7 +498,7 @@ async def main():
         }
         logger.phase_end("PHASE_3_REVIEW", success=review_approved, summary=phase_summary)
         formatter.print_phase_end("PHASE_3_REVIEW", success=review_approved,
-                              duration_ms=logger.phase_timings["PHASE_3_REVIEW"]["duration_ms"],
+                              duration_s=ms_to_seconds(logger.phase_timings["PHASE_3_REVIEW"]["duration_ms"]),
                               summary=phase_summary)
 
         # --- FINALIZATION ---
@@ -515,7 +515,7 @@ async def main():
             
             logger.phase_end("PHASE_4_FINALIZATION", success=True)
             formatter.print_phase_end("PHASE_4_FINALIZATION", success=True,
-                                      duration_ms=logger.phase_timings["PHASE_4_FINALIZATION"]["duration_ms"])
+                                      duration_s=ms_to_seconds(logger.phase_timings["PHASE_4_FINALIZATION"]["duration_ms"]))
             print("\n🏁 Workflow Complete!")
         else:
             print("\n⛔ Workflow ended without final approval.")

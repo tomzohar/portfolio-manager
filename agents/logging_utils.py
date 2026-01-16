@@ -22,6 +22,19 @@ class LogLevel(str, Enum):
     ERROR = "ERROR"
 
 
+def ms_to_seconds(ms: int) -> int:
+    """
+    Convert milliseconds to seconds.
+    
+    Args:
+        ms: Duration in milliseconds
+        
+    Returns:
+        Duration in seconds (rounded down)
+    """
+    return ms // 1000
+
+
 class AgentLogger:
     """
     Centralized logger for agent workflow.
@@ -294,7 +307,8 @@ class AgentLogger:
         print("\n" + "="*60)
         print("  SESSION SUMMARY")
         print("="*60)
-        print(f"Duration: {summary['total_duration_ms']}ms")
+        total_duration_s = ms_to_seconds(summary['total_duration_ms'])
+        print(f"Duration: {total_duration_s}s")
         print(f"Files Modified: {len(summary['files_modified'])}")
         
         if summary['files_modified']:

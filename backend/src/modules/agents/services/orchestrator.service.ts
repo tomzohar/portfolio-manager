@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HumanMessage } from '@langchain/core/messages';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { buildCIOGraph } from '../graphs/cio.graph';
 import { StateService } from './state.service';
 import { ToolRegistryService } from './tool-registry.service';
@@ -38,6 +39,7 @@ export class OrchestratorService {
     private readonly stateService: StateService,
     private readonly toolRegistry: ToolRegistryService,
     private readonly performanceService: PerformanceService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -121,6 +123,13 @@ export class OrchestratorService {
       const finalState = await graph.invoke(initialState, config);
 
       this.logger.log('Graph execution completed successfully');
+
+      // Emit graph completion event to close SSE streams
+      this.eventEmitter.emit('graph.complete', {
+        threadId: scopedThreadId,
+        userId,
+        timestamp: new Date(),
+      });
 
       return {
         threadId: scopedThreadId,

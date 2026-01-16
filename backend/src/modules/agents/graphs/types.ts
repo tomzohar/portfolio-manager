@@ -30,6 +30,25 @@ export interface PortfolioData {
 }
 
 /**
+ * Sector breakdown for attribution analysis
+ */
+export interface SectorBreakdown {
+  sector: string;
+  weight: number;
+  return?: number;
+}
+
+/**
+ * Ticker performance for top/bottom performers
+ */
+export interface TickerPerformance {
+  ticker: string;
+  return: number;
+  sector: string;
+  weight?: number;
+}
+
+/**
  * Performance analysis data stored in state
  */
 export interface PerformanceAnalysis {
@@ -38,6 +57,9 @@ export interface PerformanceAnalysis {
   benchmarkReturn?: number;
   alpha?: number;
   needsTimeframeInput?: boolean;
+  sectorBreakdown?: SectorBreakdown[];
+  topPerformers?: TickerPerformance[];
+  bottomPerformers?: TickerPerformance[];
 }
 
 /**

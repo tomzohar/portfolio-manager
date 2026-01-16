@@ -88,12 +88,9 @@ Generate code. Self-correct for N+1 and Signal violations.
 - Implement the simplest solution first
 - Add complexity only when proven necessary by real metrics
 - Question any "optimization" that isn't backed by data
-- Encourage questioning during code review
 - Document the "why" not just the "what" in code comments
-- If you can't explain a design decision clearly, reconsider it
-- Create a culture where "I don't know why" is acceptable and leads to investigation
 
-Ask yourself - Are there any battle-tested design patterns you can leverage to create a robust solution? - if so, apply them.
+Ask yourself - Are there any battle-tested design patterns, SOLID or DRY principles you can leverage to create a robust solution? - if so, apply them.
 
 ### PHASE 3: AUTONOMOUS VERIFICATION (MANDATORY)
 MANDATE: Execute your verification strategy. Manual testing is NOT optional.
@@ -114,6 +111,7 @@ you should make curl requests to the endpoints you created and validate both fun
 - [ ] Remove controller from module controllers array
 - [ ] Delete test script files (.sh)
 - [ ] Rebuild: `npm run build` should succeed
+- [ ] run `npm run lint` and build typescript with tsc 
 - [ ] Verify no references remain: `grep -r "TestController"`
 
 #### H. Document in Response
@@ -133,12 +131,6 @@ If verification fails repeatedly, analyze root cause.
 
 ### PHASE 5: DOCUMENT
 Update README, Swagger, and Design System docs.
-
-1. Write the README section FIRST (before coding)
-2. If the explanation is confusing, the design is probably wrong
-3. Simplify until the documentation reads naturally
-4. Then implement the simple design
-5. Update documentation with actual implementation details
 
 ## VII-B. TEST SCRIPT BEST PRACTICES
 
@@ -274,10 +266,7 @@ Note: You must wait for user confirmation before applying the patch to your perm
  
 
 After completing create:
-`docs/LESSONS_LEARNED_PHASE_[N].md`
+`docs/LESSONS_LEARNED_PHASE_[SESSION_NAME].md`
 
-Capture:
-- What worked well
-- What didn't work
-- What we'd do differently
-- What questions revealed issues
+write concrete suggestions to improve these instructions.
+what could improve our workflow and feedback loop.

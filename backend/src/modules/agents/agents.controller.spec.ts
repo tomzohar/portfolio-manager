@@ -4,14 +4,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AgentsController } from './agents.controller';
 import { OrchestratorService } from './services/orchestrator.service';
+import { TracingService } from './services/tracing.service';
 import { User } from '../users/entities/user.entity';
 import { RunGraphDto } from './dto/run-graph.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ExecutionContext } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('AgentsController', () => {
   let controller: AgentsController;
   let orchestratorService: jest.Mocked<OrchestratorService>;
+  let tracingService: jest.Mocked<TracingService>;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  let eventEmitter: jest.Mocked<EventEmitter2>;
 
   const mockUser: User = {
     id: '123e4567-e89b-12d3-a456-426614174000',
@@ -27,6 +32,18 @@ describe('AgentsController', () => {
     streamGraph: jest.fn(),
   };
 
+  const mockTracingService = {
+    recordTrace: jest.fn(),
+    getTracesByThread: jest.fn(),
+    getTracesByUser: jest.fn(),
+  };
+
+  const mockEventEmitter = {
+    on: jest.fn(),
+    off: jest.fn(),
+    emit: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -36,6 +53,14 @@ describe('AgentsController', () => {
         {
           provide: OrchestratorService,
           useValue: mockOrchestratorService,
+        },
+        {
+          provide: TracingService,
+          useValue: mockTracingService,
+        },
+        {
+          provide: EventEmitter2,
+          useValue: mockEventEmitter,
         },
       ],
     })
@@ -51,6 +76,8 @@ describe('AgentsController', () => {
 
     controller = module.get<AgentsController>(AgentsController);
     orchestratorService = module.get(OrchestratorService);
+    tracingService = module.get(TracingService);
+    eventEmitter = module.get(EventEmitter2);
   });
 
   it('should be defined', () => {
@@ -154,6 +181,85 @@ describe('AgentsController', () => {
 
       await expect(controller.runGraph(mockUser, dto)).rejects.toThrow(
         'Graph execution failed',
+      );
+    });
+  });
+
+  describe('getTraces', () => {
+    const threadId = 'user-123:thread-abc';
+
+    it('should retrieve traces for thread with user filtering', async () => {
+      const mockTraces = [
+        {
+          id: 'trace-1',
+          threadId,
+          userId: mockUser.id,
+          nodeName: 'observer',
+          input: { message: 'Test' },
+          output: { data: 'result' },
+          reasoning: 'Fetching data',
+          createdAt: new Date('2024-01-15T10:00:00Z'),
+        },
+        {
+          id: 'trace-2',
+          threadId,
+          userId: mockUser.id,
+          nodeName: 'end',
+          input: { data: 'result' },
+          output: { final: 'report' },
+          reasoning: 'Generating report',
+          createdAt: new Date('2024-01-15T10:00:05Z'),
+        },
+      ];
+
+      mockTracingService.getTracesByThread.mockResolvedValue(mockTraces as any);
+
+      const result = await controller.getTraces(mockUser, threadId);
+
+      expect(tracingService.getTracesByThread).toHaveBeenCalledWith(
+        threadId,
+        mockUser.id,
+      );
+      expect(result).toEqual({
+        threadId,
+        traces: mockTraces,
+      });
+    });
+
+    it('should return empty array when no traces found', async () => {
+      mockTracingService.getTracesByThread.mockResolvedValue([]);
+
+      const result = await controller.getTraces(mockUser, threadId);
+
+      expect(tracingService.getTracesByThread).toHaveBeenCalledWith(
+        threadId,
+        mockUser.id,
+      );
+      expect(result).toEqual({
+        threadId,
+        traces: [],
+      });
+    });
+
+    it('should pass userId for security filtering', async () => {
+      mockTracingService.getTracesByThread.mockResolvedValue([]);
+
+      await controller.getTraces(mockUser, threadId);
+
+      // Verify userId is always passed to ensure security filtering
+      expect(tracingService.getTracesByThread).toHaveBeenCalledWith(
+        threadId,
+        mockUser.id,
+      );
+    });
+
+    it('should handle service errors', async () => {
+      mockTracingService.getTracesByThread.mockRejectedValue(
+        new Error('Database error'),
+      );
+
+      await expect(controller.getTraces(mockUser, threadId)).rejects.toThrow(
+        'Database error',
       );
     });
   });

@@ -65,14 +65,14 @@ class RichFormatter:
         self.console.print(Panel(content, border_style="green", expand=False))
         self.console.print()
     
-    def print_phase_end(self, phase_name: str, success: bool, duration_ms: int, summary: Optional[dict] = None):
+    def print_phase_end(self, phase_name: str, success: bool, duration_s: int, summary: Optional[dict] = None):
         """
         Print phase completion summary.
         
         Args:
             phase_name: Name of the phase
             success: Whether phase succeeded
-            duration_ms: Duration in milliseconds
+            duration_s: Duration in seconds
             summary: Optional summary data
         """
         status_style = "success" if success else "error"
@@ -81,7 +81,7 @@ class RichFormatter:
         text = Text()
         text.append(f"{status_icon} Phase '", style=status_style)
         text.append(phase_name, style="bold")
-        text.append(f"' completed in {duration_ms}ms", style=status_style)
+        text.append(f"' completed in {duration_s}s", style=status_style)
         
         self.console.print(text)
         
@@ -104,14 +104,14 @@ class RichFormatter:
         
         self.console.print(f"\n🔹 [{agent_style}]{agent_name}[/{agent_style}] Starting...{session_info}")
     
-    def print_agent_end(self, agent_name: str, success: bool, duration_ms: int, output_length: int):
+    def print_agent_end(self, agent_name: str, success: bool, duration_s: int, output_length: int):
         """
         Print agent completion message.
         
         Args:
             agent_name: Name of the agent
             success: Whether agent succeeded
-            duration_ms: Duration in milliseconds
+            duration_s: Duration in seconds
             output_length: Length of output in characters
         """
         agent_style = self._get_agent_style(agent_name)
@@ -119,7 +119,7 @@ class RichFormatter:
         
         self.console.print(
             f"{status_icon} [{agent_style}]{agent_name}[/{agent_style}] "
-            f"Completed in {duration_ms}ms ({output_length:,} chars)"
+            f"Completed in {duration_s}s ({output_length:,} chars)"
         )
     
     def stream_agent_output(self, agent_name: str, text: str):
@@ -254,7 +254,9 @@ class RichFormatter:
         self.console.print()
         self.console.print(Panel("[phase]SESSION SUMMARY[/phase]", border_style="green"))
         
-        self.console.print(f"[info]Duration:[/info] {summary['total_duration_ms']}ms")
+        from logging_utils import ms_to_seconds
+        total_duration_s = ms_to_seconds(summary['total_duration_ms'])
+        self.console.print(f"[info]Duration:[/info] {total_duration_s}s")
         self.console.print(f"[info]Files Modified:[/info] {len(summary['files_modified'])}")
         
         if summary['files_modified']:

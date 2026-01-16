@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrchestratorService } from './orchestrator.service';
 import { StateService } from './state.service';
 import { ToolRegistryService } from './tool-registry.service';
@@ -33,6 +34,14 @@ describe('OrchestratorService', () => {
     getBenchmarkComparison: jest.fn(),
   };
 
+  const mockEventEmitter = {
+    emit: jest.fn(),
+    on: jest.fn(),
+    once: jest.fn(),
+    removeListener: jest.fn(),
+    removeAllListeners: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -50,6 +59,10 @@ describe('OrchestratorService', () => {
         {
           provide: PerformanceService,
           useValue: mockPerformanceService,
+        },
+        {
+          provide: EventEmitter2,
+          useValue: mockEventEmitter,
         },
       ],
     }).compile();

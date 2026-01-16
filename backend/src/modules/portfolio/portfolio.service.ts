@@ -22,6 +22,7 @@ import { PolygonApiService } from '../assets/services/polygon-api.service';
 import type { PolygonPreviousCloseResponse } from '../assets/types/polygon-api.types';
 import { EnrichedAssetDto } from './dto/asset-response.dto';
 import { lastValueFrom } from 'rxjs';
+import { getSectorForTicker } from './constants/sector-mapping';
 
 @Injectable()
 export class PortfolioService {
@@ -479,6 +480,51 @@ export class PortfolioService {
     }
 
     return positions;
+  }
+
+  /**
+   * Get holdings with sector data for performance attribution
+   * Returns enriched holdings with sector classification and portfolio weights
+   *
+   * @param portfolioId - Portfolio UUID
+   * @param userId - User UUID (for ownership verification)
+   * @returns Array of holdings with sector data and weights
+   */
+  async getHoldingsWithSectorData(
+    portfolioId: string,
+    userId: string,
+  ): Promise<
+    Array<{
+      ticker: string;
+      quantity: number;
+      avgCostBasis: number;
+      currentPrice: number;
+      marketValue: number;
+      sector: string;
+      weight: number;
+    }>
+  > {
+    // Verify ownership and get portfolio summary
+    const summary = await this.getPortfolioSummary(portfolioId, userId);
+
+    if (!summary.positions || summary.positions.length === 0) {
+      return [];
+    }
+
+    const totalValue = summary.totalValue || 1; // Avoid division by zero
+
+    // Map positions to holdings with sector data
+    return summary.positions
+      .filter((position) => position.ticker !== CASH_TICKER) // Exclude cash from sector analysis
+      .map((position) => ({
+        ticker: position.ticker,
+        quantity: position.quantity,
+        avgCostBasis: position.avgCostBasis,
+        currentPrice: position.currentPrice ?? position.avgCostBasis,
+        marketValue: position.marketValue ?? 0,
+        sector: getSectorForTicker(position.ticker),
+        weight: (position.marketValue ?? 0) / totalValue,
+      }));
   }
 
   /**
