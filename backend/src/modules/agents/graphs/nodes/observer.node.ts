@@ -9,22 +9,19 @@ import { AIMessage } from '@langchain/core/messages';
  *
  * For Phase 1 "Hello World", this simply:
  * - Logs the current state
- * - Increments iteration
  * - Returns action to proceed to end node
+ *
+ * Note: Iteration counting is now handled by guardrail node
  */
 export function observerNode(state: CIOState): StateUpdate {
-  // Increment iteration count
-  const newIteration = state.iteration + 1;
-
   // For Phase 1, we just acknowledge and move to end
   const responseMessage = new AIMessage(
-    `Observer node executed. This is iteration ${newIteration}. ` +
+    `Observer node executed. This is iteration ${state.iteration}. ` +
       `Proceeding to completion.`,
   );
 
   return {
     messages: [...state.messages, responseMessage],
     nextAction: 'end',
-    iteration: newIteration,
   };
 }

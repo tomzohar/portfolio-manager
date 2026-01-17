@@ -158,13 +158,13 @@ export function approvalGateNode(
 /**
  * Pass through to next node without approval
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function passThrough(state: CIOState): StateUpdate {
   return {
     messages: [
       new AIMessage('Approval gate: No approval required, proceeding...'),
     ],
     nextAction: 'end',
-    iteration: state.iteration + 1,
   };
 }
 

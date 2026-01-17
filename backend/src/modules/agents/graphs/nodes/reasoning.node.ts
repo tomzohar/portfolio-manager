@@ -66,7 +66,6 @@ export async function reasoningNode(
 
     return {
       messages: [new AIMessage(responseText)],
-      iteration: state.iteration + 1,
     };
   } catch (error) {
     const errorMessage =

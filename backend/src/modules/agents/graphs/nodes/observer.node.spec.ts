@@ -17,10 +17,10 @@ describe('observerNode', () => {
 
     expect(result).toBeDefined();
     expect(result.nextAction).toBe('end');
-    expect(result.iteration).toBe(1);
+    // Iteration counting is now handled by guardrail node
   });
 
-  it('should increment iteration count', () => {
+  it('should not increment iteration count (handled by guardrail)', () => {
     const state: CIOState = {
       userId: '123e4567-e89b-12d3-a456-426614174000',
       threadId: 'thread-123',
@@ -32,7 +32,8 @@ describe('observerNode', () => {
 
     const result = observerNode(state);
 
-    expect(result.iteration).toBe(3);
+    // Observer no longer increments iteration - guardrail does this
+    expect(result.iteration).toBeUndefined();
   });
 
   it('should handle empty messages array', () => {

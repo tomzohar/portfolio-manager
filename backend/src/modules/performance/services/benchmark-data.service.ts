@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { MarketDataDaily } from '../entities/market-data-daily.entity';
 import { MarketDataIngestionService } from './market-data-ingestion.service';
-import { format } from 'date-fns';
+import { differenceInDays, format } from 'date-fns';
 
 /**
  * BenchmarkDataService
@@ -77,7 +77,7 @@ export class BenchmarkDataService {
     );
 
     // 2. If empty, trigger auto-backfill
-    if (prices.length === 0) {
+    if (prices.length < differenceInDays(endDate, startDate)) {
       this.logger.log(
         `Auto-backfilling missing market data for ${ticker} from ${format(startDate, 'yyyy-MM-dd')} to ${format(endDate, 'yyyy-MM-dd')}`,
       );

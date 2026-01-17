@@ -19,6 +19,7 @@ import { ChartDataService } from './services/chart-data.service';
 import { PortfolioMarketDataBackfillService } from './services/portfolio-market-data-backfill.service';
 import { PortfolioSnapshotBackfillService } from './services/portfolio-snapshot-backfill.service';
 import { ScheduledMarketDataJobService } from './services/scheduled-market-data-job.service';
+import { SectorAttributionService } from './services/sector-attribution.service';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { ScheduledMarketDataJobService } from './services/scheduled-market-data-
     PortfolioMarketDataBackfillService,
     PortfolioSnapshotBackfillService,
     ScheduledMarketDataJobService,
+    SectorAttributionService,
   ],
   exports: [
     PerformanceService,
@@ -56,6 +58,7 @@ import { ScheduledMarketDataJobService } from './services/scheduled-market-data-
     PortfolioMarketDataBackfillService,
     PortfolioSnapshotBackfillService,
     ScheduledMarketDataJobService,
+    SectorAttributionService,
   ],
 })
 export class PerformanceModule {}

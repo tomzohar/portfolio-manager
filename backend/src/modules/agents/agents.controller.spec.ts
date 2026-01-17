@@ -5,6 +5,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AgentsController } from './agents.controller';
 import { OrchestratorService } from './services/orchestrator.service';
 import { TracingService } from './services/tracing.service';
+import { StateService } from './services/state.service';
 import { User } from '../users/entities/user.entity';
 import { RunGraphDto } from './dto/run-graph.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -15,6 +16,8 @@ describe('AgentsController', () => {
   let controller: AgentsController;
   let orchestratorService: jest.Mocked<OrchestratorService>;
   let tracingService: jest.Mocked<TracingService>;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  let stateService: jest.Mocked<StateService>;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let eventEmitter: jest.Mocked<EventEmitter2>;
 
@@ -38,6 +41,16 @@ describe('AgentsController', () => {
     getTracesByUser: jest.fn(),
   };
 
+  const mockStateService = {
+    getSaver: jest.fn(),
+    scopeThreadId: jest.fn(),
+    extractUserId: jest.fn((threadId: string) => {
+      const parts = threadId.split(':');
+      return parts.length === 2 ? parts[0] : null;
+    }),
+    extractThreadId: jest.fn(),
+  };
+
   const mockEventEmitter = {
     on: jest.fn(),
     off: jest.fn(),
@@ -59,6 +72,10 @@ describe('AgentsController', () => {
           useValue: mockTracingService,
         },
         {
+          provide: StateService,
+          useValue: mockStateService,
+        },
+        {
           provide: EventEmitter2,
           useValue: mockEventEmitter,
         },
@@ -77,6 +94,7 @@ describe('AgentsController', () => {
     controller = module.get<AgentsController>(AgentsController);
     orchestratorService = module.get(OrchestratorService);
     tracingService = module.get(TracingService);
+    stateService = module.get(StateService);
     eventEmitter = module.get(EventEmitter2);
   });
 
@@ -186,7 +204,7 @@ describe('AgentsController', () => {
   });
 
   describe('getTraces', () => {
-    const threadId = 'user-123:thread-abc';
+    const threadId = `${mockUser.id}:thread-abc`;
 
     it('should retrieve traces for thread with user filtering', async () => {
       const mockTraces = [
@@ -261,6 +279,23 @@ describe('AgentsController', () => {
       await expect(controller.getTraces(mockUser, threadId)).rejects.toThrow(
         'Database error',
       );
+    });
+
+    it('should throw ForbiddenException when accessing another users thread', async () => {
+      const otherUserId = 'other-user-456';
+      const otherUserThreadId = `${otherUserId}:thread-xyz`;
+
+      await expect(
+        controller.getTraces(mockUser, otherUserThreadId),
+      ).rejects.toThrow('Cannot access threads belonging to other users');
+    });
+
+    it('should throw ForbiddenException for invalid threadId format', async () => {
+      const invalidThreadId = 'invalid-format-without-colon';
+
+      await expect(
+        controller.getTraces(mockUser, invalidThreadId),
+      ).rejects.toThrow('Cannot access threads belonging to other users');
     });
   });
 });

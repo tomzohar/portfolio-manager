@@ -67,7 +67,7 @@ describe('hitlTestNode', () => {
   });
 
   describe('State Updates', () => {
-    it('should increment iteration when no interrupt', () => {
+    it('should not increment iteration (handled by guardrail)', () => {
       const state = createMockState('Normal message');
       mockInterrupt.mockImplementation(() => {
         // Don't throw
@@ -75,7 +75,8 @@ describe('hitlTestNode', () => {
 
       const result = hitlTestNode(state);
 
-      expect(result.iteration).toBe(1);
+      // HITL test node no longer increments iteration - guardrail does this
+      expect(result.iteration).toBeUndefined();
     });
 
     it('should return AI message when no interrupt', () => {

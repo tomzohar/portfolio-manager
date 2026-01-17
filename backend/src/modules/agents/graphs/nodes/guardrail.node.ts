@@ -24,29 +24,33 @@ export class GuardrailException extends Error {
  * Safety checkpoint that enforces iteration limits to prevent infinite loops.
  *
  * Behavior:
- * - Allows execution when iteration < maxIterations
- * - Throws GuardrailException when iteration >= maxIterations
- * - Does not mutate state (pure validation function)
+ * - Checks if iteration >= maxIterations and throws GuardrailException if true
+ * - Increments iteration counter to track graph executions
+ * - Acts as the first line of defense before LangGraph recursion limit (25)
  *
- * This acts as the first line of defense before the LangGraph recursion limit (25).
- * User-facing limit (maxIterations: 10) provides better UX than hitting system limit.
+ * This provides a user-facing limit (maxIterations: 10) with better error messages
+ * than hitting the system recursionLimit.
  *
  * @param state - Current CIO graph state
- * @returns Empty state update (no modifications needed)
+ * @returns State update with incremented iteration counter
  * @throws GuardrailException when iteration limit is reached
  */
 export function guardrailNode(state: CIOState): StateUpdate {
+  const currentIteration = state.iteration ?? 0;
+  const maxIterations = state.maxIterations ?? 10;
+
   // Check if iteration limit has been reached
-  if (state.iteration >= state.maxIterations) {
+  if (currentIteration >= maxIterations) {
     const message =
-      `Iteration limit reached (${state.iteration}/${state.maxIterations}). ` +
+      `Iteration limit reached (${currentIteration}/${maxIterations}). ` +
       `The agent attempted too many steps. ` +
       `Please simplify your request or contact support.`;
 
     throw new GuardrailException(message);
   }
 
-  // Guardrail passed - no state changes needed
-  // This is purely a checkpoint node
-  return {};
+  // Increment iteration counter for next pass
+  return {
+    iteration: currentIteration + 1,
+  };
 }

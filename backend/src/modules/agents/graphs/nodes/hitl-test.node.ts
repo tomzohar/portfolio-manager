@@ -56,6 +56,5 @@ export function hitlTestNode(state: CIOState): StateUpdate {
   return {
     messages: [responseMessage],
     nextAction: 'end',
-    iteration: state.iteration + 1,
   };
 }

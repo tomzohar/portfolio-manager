@@ -162,7 +162,7 @@ describe('approvalGateNode', () => {
       // Should NOT interrupt because 10 * 150 = $1,500 < $10,000
       expect(mockInterrupt).not.toHaveBeenCalled();
       expect(result.nextAction).toBe('end');
-      expect(result.iteration).toBe(1);
+      // Iteration counting is now handled by guardrail node
     });
 
     it('should handle transactions with dollar signs and commas', () => {
@@ -349,7 +349,7 @@ describe('approvalGateNode', () => {
       expect(result.nextAction).toBe('end');
     });
 
-    it('should increment iteration count', () => {
+    it('should not increment iteration count (handled by guardrail)', () => {
       const state: CIOState = {
         userId: '123e4567-e89b-12d3-a456-426614174000',
         threadId: 'thread-123',
@@ -366,7 +366,8 @@ describe('approvalGateNode', () => {
 
       const result = approvalGateNode(state, config);
 
-      expect(result.iteration).toBe(4);
+      // Approval gate no longer increments iteration - guardrail does this
+      expect(result.iteration).toBeUndefined();
     });
 
     it('should use default config when not provided', () => {

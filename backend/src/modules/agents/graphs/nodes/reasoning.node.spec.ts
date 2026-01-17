@@ -52,13 +52,14 @@ describe('reasoningNode', () => {
     );
   });
 
-  it('should increment iteration count', async () => {
+  it('should not increment iteration count (handled by guardrail)', async () => {
     const state = createState('Market outlook?');
     const config = createConfig();
 
     const result = await reasoningNode(state, config);
 
-    expect(result.iteration).toBe(1);
+    // Reasoning node no longer increments iteration - guardrail does this
+    expect(result.iteration).toBeUndefined();
   });
 
   it('should handle missing API key gracefully', async () => {

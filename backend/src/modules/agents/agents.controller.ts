@@ -8,6 +8,7 @@ import {
   MessageEvent,
   Get,
   HttpCode,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -26,6 +27,7 @@ import { RunGraphDto } from './dto/run-graph.dto';
 import { GraphResponseDto } from './dto/graph-response.dto';
 import { TracesResponseDto } from './dto/traces-response.dto';
 import { TracingService } from './services/tracing.service';
+import { StateService } from './services/state.service';
 import { ResumeGraphDto } from './dto/resume-graph.dto';
 
 @ApiTags('agents')
@@ -37,6 +39,7 @@ export class AgentsController {
     private readonly orchestratorService: OrchestratorService,
     private readonly eventEmitter: EventEmitter2,
     private readonly tracingService: TracingService,
+    private readonly stateService: StateService,
   ) {}
 
   @Post('run')
@@ -137,10 +140,23 @@ export class AgentsController {
     status: 401,
     description: 'Unauthorized - Invalid or missing JWT token',
   })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Cannot access threads belonging to other users',
+  })
   async getTraces(
     @CurrentUser() user: User,
     @Param('threadId') threadId: string,
   ): Promise<TracesResponseDto> {
+    // Security: Validate thread ownership before querying database
+    // This prevents thread ID enumeration attacks
+    const userId = this.stateService.extractUserId(threadId);
+    if (!userId || userId !== user.id) {
+      throw new ForbiddenException(
+        'Cannot access threads belonging to other users',
+      );
+    }
+
     const traces = await this.tracingService.getTracesByThread(
       threadId,
       user.id,

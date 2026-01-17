@@ -22,8 +22,8 @@ describe('guardrailNode', () => {
       const result = guardrailNode(state);
 
       expect(result).toBeDefined();
-      // Guardrail doesn't modify state, just validates
-      expect(result).toEqual({});
+      // Guardrail should increment iteration counter
+      expect(result.iteration).toBe(6);
     });
 
     it('should allow execution when iteration === maxIterations - 1 (last iteration)', () => {
@@ -32,7 +32,7 @@ describe('guardrailNode', () => {
       const result = guardrailNode(state);
 
       expect(result).toBeDefined();
-      expect(result).toEqual({});
+      expect(result.iteration).toBe(10);
     });
 
     it('should allow execution when iteration is 0', () => {
@@ -41,7 +41,7 @@ describe('guardrailNode', () => {
       const result = guardrailNode(state);
 
       expect(result).toBeDefined();
-      expect(result).toEqual({});
+      expect(result.iteration).toBe(1);
     });
   });
 
@@ -88,6 +88,7 @@ describe('guardrailNode', () => {
       const result = guardrailNode(state);
 
       expect(result).toBeDefined();
+      expect(result.iteration).toBe(1);
     });
 
     it('should throw when iteration equals maxIterations of 1', () => {
@@ -102,6 +103,7 @@ describe('guardrailNode', () => {
       const result = guardrailNode(state);
 
       expect(result).toBeDefined();
+      expect(result.iteration).toBe(1000);
     });
   });
 });
