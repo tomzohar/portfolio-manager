@@ -5,6 +5,7 @@ import { OrchestratorService } from './orchestrator.service';
 import { StateService } from './state.service';
 import { ToolRegistryService } from './tool-registry.service';
 import { PerformanceService } from '../../performance/performance.service';
+import { PortfolioService } from '../../portfolio/portfolio.service';
 import { GraphExecutorService } from './graph-executor.service';
 import { InterruptHandlerService } from './interrupt-handler.service';
 import { TracingService } from './tracing.service';
@@ -36,6 +37,12 @@ describe('OrchestratorService', () => {
   const mockPerformanceService = {
     calculateInternalReturn: jest.fn(),
     getBenchmarkComparison: jest.fn(),
+  };
+
+  const mockPortfolioService = {
+    getHoldingsWithSectorData: jest.fn().mockResolvedValue([]),
+    getPortfolioSummary: jest.fn(),
+    findOne: jest.fn(),
   };
 
   const mockEventEmitter = {
@@ -71,6 +78,10 @@ describe('OrchestratorService', () => {
         {
           provide: PerformanceService,
           useValue: mockPerformanceService,
+        },
+        {
+          provide: PortfolioService,
+          useValue: mockPortfolioService,
         },
         {
           provide: EventEmitter2,

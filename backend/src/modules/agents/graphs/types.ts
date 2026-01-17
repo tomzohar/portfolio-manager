@@ -23,6 +23,7 @@ export interface PortfolioPosition {
  * Portfolio data
  */
 export interface PortfolioData {
+  id?: string;
   positions: PortfolioPosition[];
   totalValue?: number;
   name?: string;

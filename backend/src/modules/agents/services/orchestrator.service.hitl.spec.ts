@@ -3,6 +3,7 @@ import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PerformanceService } from '../../performance/performance.service';
+import { PortfolioService } from '../../portfolio/portfolio.service';
 import { GraphExecutorService } from './graph-executor.service';
 import { InterruptHandlerService } from './interrupt-handler.service';
 import { GraphResult, OrchestratorService } from './orchestrator.service';
@@ -68,6 +69,12 @@ describe('OrchestratorService - HITL (Interrupt & Suspend)', () => {
     getBenchmarkComparison: jest.fn(),
   };
 
+  const mockPortfolioService = {
+    getHoldingsWithSectorData: jest.fn().mockResolvedValue([]),
+    getPortfolioSummary: jest.fn(),
+    findOne: jest.fn(),
+  };
+
   const mockEventEmitter = {
     emit: jest.fn(),
     on: jest.fn(),
@@ -114,6 +121,10 @@ describe('OrchestratorService - HITL (Interrupt & Suspend)', () => {
         {
           provide: PerformanceService,
           useValue: mockPerformanceService,
+        },
+        {
+          provide: PortfolioService,
+          useValue: mockPortfolioService,
         },
         {
           provide: EventEmitter2,

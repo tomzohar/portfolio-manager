@@ -27,6 +27,7 @@ export const PortfolioPositionSchema = z.object({
  * Portfolio data schema
  */
 export const PortfolioDataSchema = z.object({
+  id: z.string().optional().describe('Portfolio ID (UUID)'),
   positions: z
     .array(PortfolioPositionSchema)
     .min(1)
@@ -37,7 +38,7 @@ export const PortfolioDataSchema = z.object({
     .nonnegative()
     .optional()
     .describe('Total portfolio value'),
-  name: z.string().optional().describe('Portfolio name or ID'),
+  name: z.string().optional().describe('Portfolio name'),
   riskProfile: z
     .enum(['conservative', 'moderate', 'aggressive'])
     .optional()

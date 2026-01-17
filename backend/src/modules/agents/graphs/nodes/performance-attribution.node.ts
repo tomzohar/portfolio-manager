@@ -79,9 +79,8 @@ export async function performanceAttributionNode(
       };
     }
 
-    // Get portfolio ID from state (assume first portfolio for now)
-    // In a real implementation, this would come from the portfolio context
-    const portfolioId = state.portfolio?.name || 'default-portfolio-id';
+    // Get portfolio ID from state
+    const portfolioId = state.portfolio?.id || 'default-portfolio-id';
 
     // Compare against S&P 500 (SPY) - this internally calculates portfolio performance
     const benchmarkComparison = await performanceService.getBenchmarkComparison(
