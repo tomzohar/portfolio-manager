@@ -11,6 +11,7 @@ import { routerNode } from './nodes/router.node';
 import { performanceAttributionNode } from './nodes/performance-attribution.node';
 import { hitlTestNode } from './nodes/hitl-test.node';
 import { guardrailNode } from './nodes/guardrail.node';
+import { reasoningNode } from './nodes/reasoning.node';
 import { StateService } from '../services/state.service';
 import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
 import { Timeframe } from '../../performance/types/timeframe.types';
@@ -45,10 +46,11 @@ const CIOStateAnnotation = Annotation.Root({
 /**
  * Build the CIO Graph
  *
- * Phase 3 graph with HITL test support and guardrails:
- * START -> guardrail -> (hitl_test OR performance_attribution OR observer) -> End -> END
+ * Phase 3 graph with HITL test support, guardrails, and streaming reasoning:
+ * START -> guardrail -> (hitl_test OR performance_attribution OR reasoning OR observer) -> End -> END
  *
  * The guardrail node enforces iteration limits to prevent infinite loops.
+ * The reasoning node uses streaming LLM for token-level SSE events.
  *
  * @param stateService - StateService for checkpoint persistence
  * @returns Compiled graph ready for execution
@@ -63,6 +65,7 @@ export function buildCIOGraph(stateService: StateService) {
   let workflow = new StateGraph(CIOStateAnnotation)
     .addNode('guardrail', guardrailNode)
     .addNode('observer', observerNode)
+    .addNode('reasoning', reasoningNode)
     .addNode('performance_attribution', performanceAttributionNode) as any;
 
   // Add HITL test node only if enabled
@@ -75,10 +78,12 @@ export function buildCIOGraph(stateService: StateService) {
     .addEdge('__start__', 'guardrail')
     .addConditionalEdges('guardrail', routerNode, {
       performance_attribution: 'performance_attribution',
+      reasoning: 'reasoning',
       observer: 'observer',
       ...(enableHitlTest ? { hitl_test: 'hitl_test' } : {}),
     })
     .addEdge('observer', 'end')
+    .addEdge('reasoning', 'end')
     .addEdge('performance_attribution', 'end');
 
   // Add edge for HITL test node only if enabled

@@ -7,7 +7,8 @@ import { CIOState } from '../types';
  * Routes to:
  * - 'hitl_test' if query contains HITL test keywords (for testing only)
  * - 'performance_attribution' if query is about performance/returns/alpha
- * - 'observer' for all other queries
+ * - 'reasoning' for general queries requiring LLM analysis (market outlook, analysis, etc.)
+ * - 'observer' for simple queries
  */
 export function routerNode(state: CIOState): string {
   // Safety check: ensure messages array exists and has content
@@ -51,6 +52,26 @@ export function routerNode(state: CIOState): string {
     content.includes('underperform')
   ) {
     return 'performance_attribution';
+  }
+
+  // Route to reasoning node for queries requiring LLM analysis
+  // These keywords indicate the user wants detailed, thoughtful analysis
+  if (
+    content.includes('analysis') ||
+    content.includes('analyze') ||
+    content.includes('market') ||
+    content.includes('outlook') ||
+    content.includes('sector') ||
+    content.includes('technology') ||
+    content.includes('financial') ||
+    content.includes('tech stocks') ||
+    content.includes('detail') ||
+    content.includes('insights') ||
+    content.includes('sentiment') ||
+    content.includes('provide') ||
+    content.includes('explain')
+  ) {
+    return 'reasoning';
   }
 
   return 'observer';

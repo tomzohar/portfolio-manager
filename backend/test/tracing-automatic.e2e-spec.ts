@@ -170,8 +170,14 @@ describe('Automatic Tracing Callbacks', () => {
 
       // Verify traces are in chronological order (oldest first)
       for (let i = 0; i < traces.length - 1; i++) {
-        const currentTime = new Date(traces[i].createdAt).getTime();
-        const nextTime = new Date(traces[i + 1].createdAt).getTime();
+        const currentTime = new Date(
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+          traces[i].createdAt,
+        ).getTime();
+        const nextTime = new Date(
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+          traces[i + 1].createdAt,
+        ).getTime();
         expect(currentTime).toBeLessThanOrEqual(nextTime);
       }
 

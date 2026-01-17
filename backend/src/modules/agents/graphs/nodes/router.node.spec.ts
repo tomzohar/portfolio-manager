@@ -36,7 +36,31 @@ describe('routerNode', () => {
     expect(route).toBe('performance_attribution');
   });
 
-  it('should route to observer for non-performance queries', () => {
+  it('should route to reasoning for analysis queries', () => {
+    const state = createState('Provide a detailed analysis of the tech sector');
+    const route = routerNode(state);
+    expect(route).toBe('reasoning');
+  });
+
+  it('should route to reasoning for market outlook queries', () => {
+    const state = createState('What is the market outlook today?');
+    const route = routerNode(state);
+    expect(route).toBe('reasoning');
+  });
+
+  it('should route to reasoning for sector analysis queries', () => {
+    const state = createState('Analyze the financial services sector');
+    const route = routerNode(state);
+    expect(route).toBe('reasoning');
+  });
+
+  it('should route to reasoning for detailed insight queries', () => {
+    const state = createState('Give me insights on technology stocks');
+    const route = routerNode(state);
+    expect(route).toBe('reasoning');
+  });
+
+  it('should route to observer for simple queries without analysis keywords', () => {
     const state = createState('What stocks should I buy?');
     const route = routerNode(state);
     expect(route).toBe('observer');
