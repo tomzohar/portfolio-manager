@@ -1,13 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { interrupt } from '@langchain/langgraph';
+import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { OrchestratorService, GraphResult } from './orchestrator.service';
-import { StateService } from './state.service';
-import { ToolRegistryService } from './tool-registry.service';
+import { Test, TestingModule } from '@nestjs/testing';
 import { PerformanceService } from '../../performance/performance.service';
 import { GraphExecutorService } from './graph-executor.service';
 import { InterruptHandlerService } from './interrupt-handler.service';
-import { interrupt } from '@langchain/langgraph';
-import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
+import { GraphResult, OrchestratorService } from './orchestrator.service';
+import { StateService } from './state.service';
+import { ToolRegistryService } from './tool-registry.service';
+import { TracingService } from './tracing.service';
 
 /**
  * HITL (Human-in-the-Loop) Test Suite for OrchestratorService
@@ -75,6 +76,12 @@ describe('OrchestratorService - HITL (Interrupt & Suspend)', () => {
     removeAllListeners: jest.fn(),
   };
 
+  const mockTracingService = {
+    recordTrace: jest.fn(),
+    getTracesByThread: jest.fn().mockResolvedValue([]),
+    getTracesByUser: jest.fn().mockResolvedValue([]),
+  };
+
   beforeAll(() => {
     process.env.ENABLE_HITL_TEST_NODE = 'true';
   });
@@ -111,6 +118,10 @@ describe('OrchestratorService - HITL (Interrupt & Suspend)', () => {
         {
           provide: EventEmitter2,
           useValue: mockEventEmitter,
+        },
+        {
+          provide: TracingService,
+          useValue: mockTracingService,
         },
       ],
     }).compile();

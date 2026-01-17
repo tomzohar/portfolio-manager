@@ -7,6 +7,7 @@ import { ToolRegistryService } from './tool-registry.service';
 import { PerformanceService } from '../../performance/performance.service';
 import { GraphExecutorService } from './graph-executor.service';
 import { InterruptHandlerService } from './interrupt-handler.service';
+import { TracingService } from './tracing.service';
 import { HumanMessage } from '@langchain/core/messages';
 import { GuardrailException } from '../graphs/nodes/guardrail.node';
 
@@ -45,6 +46,12 @@ describe('OrchestratorService', () => {
     removeAllListeners: jest.fn(),
   };
 
+  const mockTracingService = {
+    recordTrace: jest.fn(),
+    getTracesByThread: jest.fn().mockResolvedValue([]),
+    getTracesByUser: jest.fn().mockResolvedValue([]),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -68,6 +75,10 @@ describe('OrchestratorService', () => {
         {
           provide: EventEmitter2,
           useValue: mockEventEmitter,
+        },
+        {
+          provide: TracingService,
+          useValue: mockTracingService,
         },
       ],
     }).compile();

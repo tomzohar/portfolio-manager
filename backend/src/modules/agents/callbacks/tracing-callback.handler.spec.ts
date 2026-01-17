@@ -179,7 +179,7 @@ describe('TracingCallbackHandler', () => {
   });
 
   describe('Node-level hooks', () => {
-    it('should track node start on onChainStart', () => {
+    it('should track node start on onChainStart', async () => {
       // Arrange
       const threadId = 'thread-123';
       const userId = 'user-456';
@@ -191,13 +191,40 @@ describe('TracingCallbackHandler', () => {
       );
 
       const chain = { _chainType: jest.fn().mockReturnValue('graph_node') };
-      const inputs = { message: 'test input' };
+      const inputs = { message: 'test input', data: 'test data' };
+      const nodeName = 'test-node';
 
-      // Act
-      handler.handleChainStart(chain, inputs);
+      mockTracingService.recordTrace.mockResolvedValue(undefined);
 
-      // Assert - Should track internally for later use in onChainEnd
-      expect(handler).toBeDefined();
+      // Act - Call handleChainStart followed by handleChainEnd
+      handler.handleChainStart(
+        chain,
+        inputs,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        nodeName,
+      );
+
+      await handler.handleChainEnd(
+        { result: 'output' },
+        undefined,
+        undefined,
+        undefined,
+        { metadata: { nodeName } },
+      );
+
+      // Assert - Should have stored inputs and passed them to recordTrace
+      expect(tracingService.recordTrace).toHaveBeenCalledWith(
+        threadId,
+        userId,
+        nodeName,
+        expect.objectContaining(inputs),
+        expect.any(Object),
+        expect.any(String),
+      );
     });
 
     it('should call tracingService.recordTrace with node data on onChainEnd', async () => {
@@ -256,7 +283,7 @@ describe('TracingCallbackHandler', () => {
       const nodeName = 'performance_attribution';
       const outputs = { alpha: -0.06 };
 
-      mockTracingService.recordTrace.mockResolvedValue(undefined as any);
+      mockTracingService.recordTrace.mockResolvedValue(undefined);
 
       // Act
       await handler.handleChainEnd(outputs, undefined, undefined, undefined, {
@@ -322,7 +349,7 @@ describe('TracingCallbackHandler', () => {
       const handler = new TracingCallbackHandler(
         threadId,
         userId,
-        null as any,
+        null,
         eventEmitter,
       );
 
@@ -344,7 +371,7 @@ describe('TracingCallbackHandler', () => {
         threadId,
         userId,
         tracingService,
-        null as any,
+        null,
       );
 
       const token = 'test';
@@ -391,21 +418,15 @@ describe('TracingCallbackHandler', () => {
 
       const outputs = { result: 'test' };
 
-      mockTracingService.recordTrace.mockResolvedValue(undefined as any);
+      mockTracingService.recordTrace.mockResolvedValue(undefined);
 
-      // Act & Assert - Should use fallback node name
+      // Act - Should skip recording when node name is 'unknown'
       await handler.handleChainEnd(outputs, undefined, undefined, undefined, {
         metadata: {},
       });
 
-      expect(tracingService.recordTrace).toHaveBeenCalledWith(
-        threadId,
-        userId,
-        'unknown', // Fallback node name
-        expect.any(Object),
-        outputs,
-        expect.any(String),
-      );
+      // Assert - Should NOT record trace for 'unknown' node (filtered out)
+      expect(tracingService.recordTrace).not.toHaveBeenCalled();
     });
   });
 
@@ -554,7 +575,7 @@ describe('TracingCallbackHandler', () => {
         { name: 'end', output: { response: 'Final answer' } },
       ];
 
-      mockTracingService.recordTrace.mockResolvedValue(undefined as any);
+      mockTracingService.recordTrace.mockResolvedValue(undefined);
 
       // Act
       for (const node of nodes) {

@@ -18,6 +18,8 @@ import {
 import { GraphExecutorService } from './graph-executor.service';
 import { InterruptHandlerService } from './interrupt-handler.service';
 import { GuardrailException } from '../graphs/nodes/guardrail.node';
+import { TracingService } from './tracing.service';
+import { TracingCallbackHandler } from '../callbacks/tracing-callback.handler';
 
 // ============================================================================
 // Types & Interfaces
@@ -68,6 +70,7 @@ export class OrchestratorService {
     private readonly eventEmitter: EventEmitter2,
     private readonly graphExecutor: GraphExecutorService,
     private readonly interruptHandler: InterruptHandlerService,
+    private readonly tracingService: TracingService,
   ) {}
 
   // ============================================================================
@@ -92,7 +95,7 @@ export class OrchestratorService {
 
     const scopedThreadId = this.getScopedThreadId(userId, threadId);
     const initialState = this.buildInitialState(userId, scopedThreadId, input);
-    const config = this.buildGraphConfig(scopedThreadId);
+    const config = this.buildGraphConfig(scopedThreadId, userId);
 
     try {
       const finalState = await this.graphExecutor.invoke(initialState, config);
@@ -136,7 +139,7 @@ export class OrchestratorService {
 
     this.logger.log(`Resuming graph for user ${userId}, thread ${threadId}`);
 
-    const config = this.buildGraphConfig(threadId);
+    const config = this.buildGraphConfig(threadId, userId);
 
     try {
       await this.validateThreadSuspended(config);
@@ -303,16 +306,33 @@ export class OrchestratorService {
    * Build graph execution configuration
    *
    * @param threadId - Scoped thread ID
-   * @returns Graph configuration object
+   * @param userId - User ID for tracing
+   * @returns Graph configuration object with tracing callback
    */
-  private buildGraphConfig(threadId: string): GraphExecutionConfig {
-    return {
+  private buildGraphConfig(
+    threadId: string,
+    userId?: string,
+  ): GraphExecutionConfig {
+    const config: GraphExecutionConfig = {
       configurable: {
         thread_id: threadId,
         performanceService: this.performanceService,
       },
       recursionLimit: RECURSION_LIMIT,
     };
+
+    // Add automatic tracing callback if userId is provided
+    if (userId) {
+      const tracingCallback = new TracingCallbackHandler(
+        threadId,
+        userId,
+        this.tracingService,
+        this.eventEmitter,
+      );
+      config.callbacks = [tracingCallback];
+    }
+
+    return config;
   }
 
   // ============================================================================

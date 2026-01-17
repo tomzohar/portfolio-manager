@@ -27,6 +27,7 @@ export class TracingCallbackHandler extends BaseCallbackHandler {
   name = 'TracingCallbackHandler';
   private readonly logger = new Logger(TracingCallbackHandler.name);
   private currentNodeInput: Record<string, unknown> = {};
+  private currentNodeName = 'unknown';
   private currentLLMOutput = '';
 
   constructor(
@@ -111,10 +112,25 @@ export class TracingCallbackHandler extends BaseCallbackHandler {
   /**
    * Called when a chain/node starts execution
    * Stores input for later use in onChainEnd
+   * Also captures tags which may contain the node name
    */
-  handleChainStart(_chain: unknown, inputs: Record<string, unknown>): void {
+  handleChainStart(
+    chain: unknown,
+    inputs: Record<string, unknown>,
+    _runId?: string,
+    _parentRunId?: string,
+    tags?: string[],
+    _metadata?: Record<string, unknown>,
+    _runType?: string,
+    name?: string,
+  ): void {
     try {
       this.currentNodeInput = inputs;
+      // Filter out LangGraph internal operations
+      if (name && !this.shouldSkipTrace(name)) {
+        this.currentNodeName = name;
+        this.logger.debug(`Tracking node: ${name}`);
+      }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
@@ -130,14 +146,31 @@ export class TracingCallbackHandler extends BaseCallbackHandler {
     outputs: Record<string, unknown> & { reasoning?: string },
     _runId?: string,
     _parentRunId?: string,
-    _tags?: string[],
+    tags?: string[],
     kwargs?: {
       inputs?: Record<string, unknown>;
-      metadata?: { nodeName?: string };
+      metadata?: { nodeName?: string; name?: string };
     },
+    name?: string,
   ): Promise<void> {
     try {
-      const nodeName: string = kwargs?.metadata?.nodeName || 'unknown';
+      // Determine the node name
+      let nodeName = this.currentNodeName;
+
+      // Check kwargs metadata
+      if (kwargs?.metadata?.nodeName) {
+        nodeName = kwargs.metadata.nodeName;
+      } else if (kwargs?.metadata?.name) {
+        nodeName = kwargs.metadata.name;
+      } else if (name) {
+        nodeName = name;
+      }
+
+      // Only save traces for actual nodes, not internal LangGraph operations
+      if (this.shouldSkipTrace(nodeName)) {
+        return; // Skip internal operations
+      }
+
       const reasoning: string =
         outputs?.reasoning || this.currentLLMOutput || '';
 
@@ -152,6 +185,7 @@ export class TracingCallbackHandler extends BaseCallbackHandler {
             outputs,
             reasoning,
           );
+          this.logger.debug(`Recorded trace for node: ${nodeName}`);
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : 'Unknown error';
@@ -163,17 +197,41 @@ export class TracingCallbackHandler extends BaseCallbackHandler {
 
       // Emit node completion event
       if (this.eventEmitter) {
-        this.eventEmitter.emit('node.complete', {
-          threadId: this.threadId,
-          userId: this.userId,
-          nodeName,
-          timestamp: new Date(),
-        });
+        try {
+          this.eventEmitter.emit('node.complete', {
+            threadId: this.threadId,
+            userId: this.userId,
+            nodeName,
+            timestamp: new Date(),
+          });
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error';
+          this.logger.warn(
+            `Error emitting node.complete event: ${errorMessage}`,
+          );
+        }
       }
+
+      // Reset for next node
+      this.currentNodeName = 'unknown';
+      this.currentLLMOutput = '';
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
       this.logger.warn(`Error in handleChainEnd: ${errorMessage}`);
     }
+  }
+
+  private shouldSkipTrace(nodeName: string): boolean {
+    // LangGraph creates multiple chains for internal operations (ChannelWrite, Branch, etc.)
+    // We only want to track actual node executions
+    // Node names come through the 'name' parameter as plain strings like 'guardrail', 'observer', 'end'
+    const keywords = ['unknown', '__start__', '__end__', 'LangGraph'];
+    const channels = ['ChannelWrite', 'Branch<', 'branch:to:'];
+    return (
+      keywords.includes(nodeName) ||
+      channels.some((channel) => nodeName.startsWith(channel))
+    );
   }
 }
