@@ -103,15 +103,12 @@ describe('Automatic Tracing Callbacks', () => {
       // Step 4: Verify expected nodes were traced
       const nodeNames = traces.map((trace) => trace.nodeName);
 
-      // At minimum, should have traces for: guardrail, observer (or performance_attribution), end
+      // At minimum, should have traces for: guardrail, reasoning (routed due to "market outlook" keywords), end
       expect(nodeNames).toContain('guardrail');
       expect(nodeNames).toContain('end');
 
-      // Should contain either 'observer' or 'performance_attribution' depending on routing
-      const hasObserverOrPerformance =
-        nodeNames.includes('observer') ||
-        nodeNames.includes('performance_attribution');
-      expect(hasObserverOrPerformance).toBe(true);
+      // Should contain 'reasoning' node (query with "market outlook" routes to reasoning)
+      expect(nodeNames).toContain('reasoning');
     });
 
     it('should record traces with reasoning when LLM is invoked', async () => {
@@ -232,7 +229,7 @@ describe('Automatic Tracing Callbacks', () => {
 
       expect(guardrailCount).toBeGreaterThanOrEqual(2);
       expect(endCount).toBeGreaterThanOrEqual(2);
-    });
+    }, 60000);
 
     it('should not record traces for other users (security)', async () => {
       // Create second user

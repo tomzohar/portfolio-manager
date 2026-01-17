@@ -1,15 +1,15 @@
 import { DataSource } from 'typeorm';
-import { TestDatabaseManager } from './helpers/test-database-manager';
 
 /**
  * Jest Global Setup for E2E Tests
  *
  * Runs once before all test suites start.
- * Ensures the database is in a clean state by truncating all tables.
+ * Drops and recreates the database schema to ensure a clean state.
  *
- * This prevents test failures due to leftover data from:
+ * This prevents test failures due to:
  * - Previous test runs that were interrupted
  * - Manual testing in the test database
+ * - Entity schema changes (e.g., foreign key updates)
  * - Failed test cleanup
  */
 export default async function globalSetup() {
@@ -32,9 +32,10 @@ export default async function globalSetup() {
 
     await dataSource.initialize();
 
-    // Use TestDatabaseManager to truncate all tables
-    const dbManager = new TestDatabaseManager(dataSource);
-    await dbManager.truncateAll();
+    // Drop and recreate the public schema for a completely clean slate
+    // This ensures entity changes (like foreign key updates) are properly applied
+    await dataSource.query('DROP SCHEMA IF EXISTS public CASCADE');
+    await dataSource.query('CREATE SCHEMA public');
 
     console.log('✅ Database cleaned successfully\n');
   } catch (error) {

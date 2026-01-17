@@ -4,6 +4,7 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   ManyToOne,
+  JoinColumn,
   Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
@@ -23,6 +24,7 @@ export class TokenUsage {
   userId: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'userId' })
   user: User;
 
   @Column()
