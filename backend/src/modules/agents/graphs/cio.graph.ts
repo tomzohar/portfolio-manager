@@ -10,6 +10,7 @@ import { endNode } from './nodes/end.node';
 import { routerNode } from './nodes/router.node';
 import { performanceAttributionNode } from './nodes/performance-attribution.node';
 import { hitlTestNode } from './nodes/hitl-test.node';
+import { approvalGateNode } from './nodes/approval-gate.node';
 import { guardrailNode } from './nodes/guardrail.node';
 import { reasoningNode } from './nodes/reasoning.node';
 import { StateService } from '../services/state.service';
@@ -46,10 +47,11 @@ const CIOStateAnnotation = Annotation.Root({
 /**
  * Build the CIO Graph
  *
- * Phase 3 graph with HITL test support, guardrails, and streaming reasoning:
- * START -> guardrail -> (hitl_test OR performance_attribution OR reasoning OR observer) -> End -> END
+ * Phase 3 graph with HITL support, guardrails, and streaming reasoning:
+ * START -> guardrail -> (approval_gate OR hitl_test OR performance_attribution OR reasoning OR observer) -> End -> END
  *
  * The guardrail node enforces iteration limits to prevent infinite loops.
+ * The approval_gate node triggers HITL for high-stakes decisions (large transactions, rebalancing, etc.)
  * The reasoning node uses streaming LLM for token-level SSE events.
  *
  * @param stateService - StateService for checkpoint persistence
@@ -57,6 +59,7 @@ const CIOStateAnnotation = Annotation.Root({
  */
 export function buildCIOGraph(stateService: StateService) {
   const enableHitlTest = process.env.ENABLE_HITL_TEST_NODE === 'true';
+  const enableApprovalGate = process.env.ENABLE_APPROVAL_GATE === 'true';
 
   // Create the state graph with routing logic
   // Use any for workflow construction to handle conditional nodes/edges
@@ -68,7 +71,12 @@ export function buildCIOGraph(stateService: StateService) {
     .addNode('reasoning', reasoningNode)
     .addNode('performance_attribution', performanceAttributionNode) as any;
 
-  // Add HITL test node only if enabled
+  // Add approval gate node if enabled (production HITL)
+  if (enableApprovalGate) {
+    workflow = workflow.addNode('approval_gate', approvalGateNode);
+  }
+
+  // Add HITL test node only if enabled (testing only)
   if (enableHitlTest) {
     workflow = workflow.addNode('hitl_test', hitlTestNode);
   }
@@ -80,11 +88,17 @@ export function buildCIOGraph(stateService: StateService) {
       performance_attribution: 'performance_attribution',
       reasoning: 'reasoning',
       observer: 'observer',
+      ...(enableApprovalGate ? { approval_gate: 'approval_gate' } : {}),
       ...(enableHitlTest ? { hitl_test: 'hitl_test' } : {}),
     })
     .addEdge('observer', 'end')
     .addEdge('reasoning', 'end')
     .addEdge('performance_attribution', 'end');
+
+  // Add edge for approval gate node only if enabled
+  if (enableApprovalGate) {
+    workflow = workflow.addEdge('approval_gate', 'end');
+  }
 
   // Add edge for HITL test node only if enabled
   if (enableHitlTest) {

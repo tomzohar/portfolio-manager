@@ -78,7 +78,74 @@ describe('routerNode', () => {
     expect(route).toBe('performance_attribution');
   });
 
-  describe('HITL Routing (guarded by env var)', () => {
+  describe('Approval Gate Routing (guarded by env var)', () => {
+    beforeEach(() => {
+      process.env.ENABLE_APPROVAL_GATE = 'true';
+    });
+
+    afterEach(() => {
+      delete process.env.ENABLE_APPROVAL_GATE;
+    });
+
+    it('should route to approval_gate for buy transactions', () => {
+      const state = createState('Buy 100 shares of AAPL at $150');
+      const route = routerNode(state);
+      expect(route).toBe('approval_gate');
+    });
+
+    it('should route to approval_gate for sell transactions', () => {
+      const state = createState('Sell 50 shares of TSLA');
+      const route = routerNode(state);
+      expect(route).toBe('approval_gate');
+    });
+
+    it('should route to approval_gate for purchase keyword', () => {
+      const state = createState('Purchase 200 shares of MSFT');
+      const route = routerNode(state);
+      expect(route).toBe('approval_gate');
+    });
+
+    it('should route to approval_gate for rebalancing', () => {
+      const state = createState('Rebalance my portfolio to 60/40');
+      const route = routerNode(state);
+      expect(route).toBe('approval_gate');
+    });
+
+    it('should route to approval_gate for reallocation', () => {
+      const state = createState('Reallocate my assets');
+      const route = routerNode(state);
+      expect(route).toBe('approval_gate');
+    });
+
+    it('should route to approval_gate for high-risk "sell all"', () => {
+      const state = createState('Sell all my positions');
+      const route = routerNode(state);
+      expect(route).toBe('approval_gate');
+    });
+
+    it('should route to approval_gate for liquidation', () => {
+      const state = createState('Liquidate my portfolio');
+      const route = routerNode(state);
+      expect(route).toBe('approval_gate');
+    });
+
+    it('should NOT route to approval_gate when disabled', () => {
+      process.env.ENABLE_APPROVAL_GATE = 'false';
+      const state = createState('Buy 100 shares of AAPL');
+      const route = routerNode(state);
+      // Should route to observer (simple query without analysis keywords)
+      expect(route).toBe('observer');
+    });
+
+    it('should prioritize approval_gate over other routes when enabled', () => {
+      const state = createState('Buy AAPL and analyze the tech sector');
+      const route = routerNode(state);
+      // Transaction keywords should trigger approval gate first
+      expect(route).toBe('approval_gate');
+    });
+  });
+
+  describe('HITL Test Routing (guarded by env var)', () => {
     beforeEach(() => {
       process.env.ENABLE_HITL_TEST_NODE = 'true';
     });
@@ -104,6 +171,14 @@ describe('routerNode', () => {
       const state = createState('I need approval');
       const route = routerNode(state);
       expect(route).toBe('hitl_test');
+    });
+
+    it('should prioritize approval_gate over hitl_test when both enabled', () => {
+      process.env.ENABLE_APPROVAL_GATE = 'true';
+      const state = createState('Buy AAPL - need approval for this');
+      const route = routerNode(state);
+      // Approval gate should take precedence
+      expect(route).toBe('approval_gate');
     });
   });
 });
