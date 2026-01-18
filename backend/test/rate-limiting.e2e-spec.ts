@@ -112,6 +112,62 @@ describe('Rate Limiting (e2e)', () => {
     });
   });
 
+  describe('Resume Endpoint Rate Limiting', () => {
+    let authToken: string;
+
+    beforeAll(async () => {
+      // Wait for rate limits to reset from previous tests
+      await new Promise((resolve) => setTimeout(resolve, 61000)); // Wait 61 seconds
+
+      // Create a test user for resume endpoint testing
+      const timestamp = Date.now();
+      const email = `ratelimit-resume-${timestamp}@test.com`;
+      const password = 'Test1234!';
+
+      // Register user
+      await request(app.getHttpServer())
+        .post('/users')
+        .send({ email, password })
+        .expect(201);
+
+      // Login to get token
+      const loginResponse = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email, password })
+        .expect(201);
+
+      authToken = (loginResponse.body as { token: string }).token;
+    }, 65000); // Set timeout to 65 seconds for this hook
+
+    it('should allow up to 10 resume requests per minute', async () => {
+      const resumeRequest = {
+        threadId: 'fake-thread-id',
+        userInput: 'Approved',
+      };
+
+      // Make 10 resume attempts (should all get through or fail with 400/403/404, not 429)
+      for (let i = 0; i < 10; i++) {
+        const response = await request(app.getHttpServer())
+          .post('/agents/resume')
+          .set('Authorization', `Bearer ${authToken}`)
+          .send(resumeRequest);
+
+        // Should NOT be rate limited (429), might be 400/403/404 for invalid thread
+        expect(response.status).not.toBe(429);
+      }
+
+      // 11th request should be rate limited
+      const response = await request(app.getHttpServer())
+        .post('/agents/resume')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(resumeRequest)
+        .expect(429);
+
+      const body = response.body as { message: string };
+      expect(body.message).toContain('ThrottlerException');
+    });
+  });
+
   describe('Rate Limit Headers', () => {
     beforeAll(async () => {
       // Wait for rate limits to reset

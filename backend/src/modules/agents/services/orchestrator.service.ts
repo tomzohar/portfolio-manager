@@ -12,6 +12,7 @@ import { ToolRegistryService } from './tool-registry.service';
 import { CIOState, PortfolioData } from '../graphs/types';
 import { PerformanceService } from '../../performance/performance.service';
 import { PortfolioService } from '../../portfolio/portfolio.service';
+import { SectorAttributionService } from '../../performance/services/sector-attribution.service';
 import {
   GraphExecutionConfig,
   GraphExecutionError,
@@ -69,6 +70,7 @@ export class OrchestratorService {
     private readonly toolRegistry: ToolRegistryService,
     private readonly performanceService: PerformanceService,
     private readonly portfolioService: PortfolioService,
+    private readonly sectorAttributionService: SectorAttributionService,
     private readonly eventEmitter: EventEmitter2,
     private readonly graphExecutor: GraphExecutorService,
     private readonly interruptHandler: InterruptHandlerService,
@@ -320,6 +322,7 @@ export class OrchestratorService {
         thread_id: threadId,
         performanceService: this.performanceService,
         portfolioService: this.portfolioService,
+        sectorAttributionService: this.sectorAttributionService,
       },
       recursionLimit: RECURSION_LIMIT,
     };

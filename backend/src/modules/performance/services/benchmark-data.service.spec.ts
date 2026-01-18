@@ -249,24 +249,25 @@ describe('BenchmarkDataService', () => {
       // Arrange
       const mockPrices = [
         { date: new Date('2024-01-01'), closePrice: 100 },
+        { date: new Date('2024-01-02'), closePrice: 101 },
       ] as MarketDataDaily[];
 
       marketDataRepo.find
-        .mockResolvedValueOnce([]) // Cache miss
-        .mockResolvedValueOnce(mockPrices); // After backfill
+        .mockResolvedValueOnce([]) // First call: cache miss (triggers backfill)
+        .mockResolvedValueOnce(mockPrices); // Second call: retry after backfill returns data
 
       marketDataIngestionService.fetchAndStoreMarketData.mockResolvedValue({
-        inserted: 1,
+        inserted: 2,
         failed: 0,
       });
 
       const loggerSpy = jest.spyOn(service['logger'], 'log');
 
-      // Act
+      // Act - Use 2-day range to trigger backfill (0 prices < 1 day difference)
       await service.getBenchmarkPricesForRangeWithAutoBackfill(
         'SPY',
         new Date('2024-01-01'),
-        new Date('2024-01-01'),
+        new Date('2024-01-02'),
       );
 
       // Assert
@@ -275,7 +276,7 @@ describe('BenchmarkDataService', () => {
       );
       expect(loggerSpy).toHaveBeenCalledWith(
         expect.stringContaining(
-          'Auto-backfill completed for SPY: 1 records inserted',
+          'Auto-backfill completed for SPY: 2 records inserted',
         ),
       );
     });

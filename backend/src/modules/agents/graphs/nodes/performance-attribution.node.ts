@@ -9,6 +9,7 @@ import {
 import { Timeframe } from '../../../performance/types/timeframe.types';
 import { PerformanceService } from '../../../performance/performance.service';
 import { PortfolioService } from '../../../portfolio/portfolio.service';
+import { SectorAttributionService } from '../../../performance/services/sector-attribution.service';
 import { MissingDataException } from '../../../performance/exceptions/missing-data.exception';
 import { getSP500Weight } from '../../../portfolio/constants/sector-mapping';
 
@@ -27,11 +28,13 @@ export async function performanceAttributionNode(
     | {
         performanceService?: PerformanceService;
         portfolioService?: PortfolioService;
+        sectorAttributionService?: SectorAttributionService;
       }
     | undefined;
 
   const performanceService = configurable?.performanceService;
   const portfolioService = configurable?.portfolioService;
+  const sectorAttributionService = configurable?.sectorAttributionService;
 
   if (!performanceService) {
     return {
@@ -90,9 +93,10 @@ export async function performanceAttributionNode(
       timeframe,
     );
 
-    // Get deep attribution data if portfolioService is available
+    // Get deep attribution data if portfolioService and sectorAttributionService are available
     const deepAnalysis = await getDeepAttributionAnalysis(
       portfolioService,
+      sectorAttributionService,
       portfolioId,
       state.userId,
       benchmarkComparison.portfolioReturn,
@@ -162,10 +166,13 @@ export async function performanceAttributionNode(
 /**
  * Get deep attribution analysis with sector breakdown and performer identification
  *
+ * Uses SectorAttributionService for sector analysis when available, falls back to inline calculations
+ *
  * @returns Object containing sector breakdown, performers, and analysis message
  */
 async function getDeepAttributionAnalysis(
   portfolioService: PortfolioService | undefined,
+  sectorAttributionService: SectorAttributionService | undefined,
   portfolioId: string,
   userId: string,
   portfolioReturn: number,
@@ -178,7 +185,7 @@ async function getDeepAttributionAnalysis(
   bottomPerformers?: TickerPerformance[];
   deepAnalysisMessage?: string;
 }> {
-  // Return empty object if portfolioService unavailable
+  // Return empty object if services unavailable
   if (
     !portfolioService ||
     typeof portfolioService.getHoldingsWithSectorData !== 'function'
@@ -196,13 +203,16 @@ async function getDeepAttributionAnalysis(
       return {};
     }
 
-    // Calculate sector breakdown
-    const sectorBreakdown = calculateSectorBreakdown(holdings);
-
-    // Identify top and bottom performers
-    const performers = identifyTopBottomPerformers(holdings);
-    const topPerformers = performers.top;
-    const bottomPerformers = performers.bottom;
+    // Calculate attribution using service or inline calculations
+    const { sectorBreakdown, topPerformers, bottomPerformers } =
+      sectorAttributionService
+        ? await getAttributionFromService(
+            sectorAttributionService,
+            holdings,
+            portfolioId,
+            userId,
+          )
+        : getAttributionInline(holdings);
 
     // Generate deep analysis message
     const deepAnalysisMessage = generateDeepAnalysisMessage(
@@ -226,6 +236,81 @@ async function getDeepAttributionAnalysis(
     // This ensures the node doesn't break if sector data is unavailable
     return {};
   }
+}
+
+/**
+ * Get attribution data using SectorAttributionService
+ */
+async function getAttributionFromService(
+  service: SectorAttributionService,
+  holdings: Array<{
+    sector: string;
+    ticker: string;
+    avgCostBasis: number;
+    currentPrice: number;
+    weight: number;
+  }>,
+  portfolioId: string,
+  userId: string,
+): Promise<{
+  sectorBreakdown: SectorBreakdown[];
+  topPerformers: TickerPerformance[];
+  bottomPerformers: TickerPerformance[];
+}> {
+  // Calculate sector breakdown using service
+  const sectorWeights = await service.calculateSectorWeights(
+    portfolioId,
+    userId,
+  );
+  const sectorBreakdown = sectorWeights.map((sw) => ({
+    sector: sw.sector,
+    weight: sw.weight,
+    return: calculateSectorReturn(holdings, sw.sector),
+  }));
+
+  // Get top performers using service
+  const topHoldings = await service.getTopPerformers(portfolioId, userId, 5);
+
+  // Convert to TickerPerformance format
+  const performances = topHoldings.map((h) => ({
+    ticker: h.ticker,
+    return: (h.currentPrice - h.avgCostBasis) / h.avgCostBasis,
+    sector: h.sector,
+    weight: h.weight,
+  }));
+
+  // Sort by return and split into top/bottom
+  const sorted = performances.sort((a, b) => b.return - a.return);
+  const topPerformers = sorted.slice(0, 3);
+  const bottomPerformers = sorted.slice(-3).reverse();
+
+  return { sectorBreakdown, topPerformers, bottomPerformers };
+}
+
+/**
+ * Get attribution data using inline calculations (fallback)
+ */
+function getAttributionInline(
+  holdings: Array<{
+    sector: string;
+    ticker: string;
+    weight: number;
+    avgCostBasis: number;
+    currentPrice: number;
+  }>,
+): {
+  sectorBreakdown: SectorBreakdown[];
+  topPerformers: TickerPerformance[];
+  bottomPerformers: TickerPerformance[];
+} {
+  const sectorBreakdown = calculateSectorBreakdown(holdings);
+  const performers = identifyTopBottomPerformers(holdings);
+
+  return {
+    sectorBreakdown,
+    topPerformers: performers.top,
+    bottomPerformers: performers.bottom,
+  };
 }
 
 /**
@@ -300,7 +385,33 @@ function extractTimeframeFromQuery(query: string): Timeframe | null {
 }
 
 /**
+ * Calculate average return for a specific sector
+ */
+function calculateSectorReturn(
+  holdings: Array<{
+    sector: string;
+    avgCostBasis: number;
+    currentPrice: number;
+  }>,
+  sector: string,
+): number {
+  const sectorHoldings = holdings.filter((h) => h.sector === sector);
+  if (sectorHoldings.length === 0) {
+    return 0;
+  }
+
+  const totalReturn = sectorHoldings.reduce((sum, holding) => {
+    const holdingReturn =
+      (holding.currentPrice - holding.avgCostBasis) / holding.avgCostBasis;
+    return sum + holdingReturn;
+  }, 0);
+
+  return totalReturn / sectorHoldings.length;
+}
+
+/**
  * Calculate sector breakdown from holdings
+ * (Legacy fallback - prefer using SectorAttributionService)
  */
 function calculateSectorBreakdown(
   holdings: Array<{
@@ -343,6 +454,7 @@ function calculateSectorBreakdown(
 
 /**
  * Identify top and bottom performers by ticker
+ * (Legacy fallback - prefer using SectorAttributionService)
  */
 function identifyTopBottomPerformers(
   holdings: Array<{

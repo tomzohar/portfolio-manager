@@ -6,6 +6,7 @@ import { StateService } from './state.service';
 import { ToolRegistryService } from './tool-registry.service';
 import { PerformanceService } from '../../performance/performance.service';
 import { PortfolioService } from '../../portfolio/portfolio.service';
+import { SectorAttributionService } from '../../performance/services/sector-attribution.service';
 import { GraphExecutorService } from './graph-executor.service';
 import { InterruptHandlerService } from './interrupt-handler.service';
 import { TracingService } from './tracing.service';
@@ -45,6 +46,12 @@ describe('OrchestratorService', () => {
     findOne: jest.fn(),
   };
 
+  const mockSectorAttributionService = {
+    calculateSectorWeights: jest.fn().mockResolvedValue([]),
+    compareSectorWeightsToSP500: jest.fn().mockResolvedValue([]),
+    getTopPerformers: jest.fn().mockResolvedValue([]),
+  };
+
   const mockEventEmitter = {
     emit: jest.fn(),
     on: jest.fn(),
@@ -82,6 +89,10 @@ describe('OrchestratorService', () => {
         {
           provide: PortfolioService,
           useValue: mockPortfolioService,
+        },
+        {
+          provide: SectorAttributionService,
+          useValue: mockSectorAttributionService,
         },
         {
           provide: EventEmitter2,

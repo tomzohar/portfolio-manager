@@ -4,6 +4,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PerformanceService } from '../../performance/performance.service';
 import { PortfolioService } from '../../portfolio/portfolio.service';
+import { SectorAttributionService } from '../../performance/services/sector-attribution.service';
 import { GraphExecutorService } from './graph-executor.service';
 import { InterruptHandlerService } from './interrupt-handler.service';
 import { GraphResult, OrchestratorService } from './orchestrator.service';
@@ -75,6 +76,12 @@ describe('OrchestratorService - HITL (Interrupt & Suspend)', () => {
     findOne: jest.fn(),
   };
 
+  const mockSectorAttributionService = {
+    calculateSectorWeights: jest.fn().mockResolvedValue([]),
+    compareSectorWeightsToSP500: jest.fn().mockResolvedValue([]),
+    getTopPerformers: jest.fn().mockResolvedValue([]),
+  };
+
   const mockEventEmitter = {
     emit: jest.fn(),
     on: jest.fn(),
@@ -127,6 +134,10 @@ describe('OrchestratorService - HITL (Interrupt & Suspend)', () => {
           useValue: mockPortfolioService,
         },
         {
+          provide: SectorAttributionService,
+          useValue: mockSectorAttributionService,
+        },
+        {
           provide: EventEmitter2,
           useValue: mockEventEmitter,
         },
@@ -173,7 +184,7 @@ describe('OrchestratorService - HITL (Interrupt & Suspend)', () => {
       // Assert: Interrupt reason is provided
       expect(result.interruptReason).toBeDefined();
       expect(typeof result.interruptReason).toBe('string');
-      expect(result.interruptReason?.length).toBeGreaterThan(0);
+      expect(result.interruptReason!.length).toBeGreaterThan(0);
     });
 
     /**
@@ -269,7 +280,7 @@ describe('OrchestratorService - HITL (Interrupt & Suspend)', () => {
       // Assert: Portfolio data preserved
       if (portfolioData) {
         expect(result.finalState.portfolio).toBeDefined();
-        expect(result.finalState.portfolio?.positions).toHaveLength(2);
+        expect(result.finalState.portfolio!.positions).toHaveLength(2);
       }
 
       // Assert: Iteration counter preserved
