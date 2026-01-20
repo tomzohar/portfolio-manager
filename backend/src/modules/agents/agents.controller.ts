@@ -19,7 +19,7 @@ import {
 } from '@nestjs/swagger';
 import { Observable } from 'rxjs';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Throttle } from '@nestjs/throttler';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
@@ -77,6 +77,7 @@ export class AgentsController {
   }
 
   @Post('resume')
+  @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 requests per minute to prevent resume spam
   @ApiOperation({
     summary: 'Resume suspended graph execution',

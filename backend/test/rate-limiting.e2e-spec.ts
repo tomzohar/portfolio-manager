@@ -140,23 +140,24 @@ describe('Rate Limiting (e2e)', () => {
     }, 65000); // Set timeout to 65 seconds for this hook
 
     it('should allow up to 10 resume requests per minute', async () => {
+      // Use valid threadId format (userId:threadId) to pass validation
       const resumeRequest = {
-        threadId: 'fake-thread-id',
+        threadId: 'fake-user-id:fake-thread-id',
         userInput: 'Approved',
       };
 
-      // Make 10 resume attempts (should all get through or fail with 400/403/404, not 429)
+      // Make 10 resume attempts (should all fail with 403/404 for non-existent thread, not 429)
       for (let i = 0; i < 10; i++) {
         const response = await request(app.getHttpServer())
           .post('/agents/resume')
           .set('Authorization', `Bearer ${authToken}`)
           .send(resumeRequest);
 
-        // Should NOT be rate limited (429), might be 400/403/404 for invalid thread
+        // Should NOT be rate limited yet (might be 403/404 for invalid thread)
         expect(response.status).not.toBe(429);
       }
 
-      // 11th request should be rate limited
+      // 11th request should be rate limited (ThrottlerGuard runs before auth/business logic)
       const response = await request(app.getHttpServer())
         .post('/agents/resume')
         .set('Authorization', `Bearer ${authToken}`)

@@ -75,6 +75,24 @@ jobs:
         JWT_SECRET: test-jwt-secret-for-ci
         POLYGON_API_KEY: test-api-key
 
+    - name: Run e2e tests
+      run: npm run test:e2e
+      env:
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_USERNAME: test_user
+        DB_PASSWORD: test_password
+        DB_DATABASE: test_db
+        JWT_SECRET: test-jwt-secret-for-ci
+        POLYGON_API_KEY: test-api-key
+        GEMINI_API_KEY: test-gemini-key
+        FRED_API_KEY: test-fred-key
+        NEWS_API_KEY: test-news-key
+        ENABLE_APPROVAL_GATE: true
+        APPROVAL_TRANSACTION_THRESHOLD: 10000
+        LOG_LEVEL: fatal
+        NODE_ENV: test
+
     - name: Upload test coverage
       if: always()
       uses: actions/upload-artifact@v4
