@@ -1,37 +1,23 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { AppModule } from '../src/app.module';
-import { DataSource } from 'typeorm';
-import { ZodValidationPipe } from 'nestjs-zod';
-import { TestDatabaseManager } from './helpers/test-database-manager';
+import { getTestApp, getTestDbManager } from './global-test-context';
 
 describe('Agents Performance (e2e)', () => {
   let app: INestApplication<App>;
   let authToken: string;
-  let dataSource: DataSource;
-  let dbManager: TestDatabaseManager;
 
   const testUser = {
-    email: 'agents-perf-test@example.com',
+    email: `agents-perf-test-${Date.now()}@example.com`,
     password: 'TestPassword123',
   };
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ZodValidationPipe());
-    await app.init();
-
-    dataSource = moduleFixture.get<DataSource>(DataSource);
-    dbManager = new TestDatabaseManager(dataSource);
+    // Get the global shared app instance
+    app = await getTestApp();
 
     // Create test user and get auth token
     const signupResponse = await request(app.getHttpServer())
@@ -44,11 +30,6 @@ describe('Agents Performance (e2e)', () => {
     if (!authToken) {
       throw new Error('Failed to get auth token from signup');
     }
-  });
-
-  afterAll(async () => {
-    await dbManager.truncateAll();
-    await app.close();
   });
 
   describe('Performance Attribution Flow', () => {
@@ -89,7 +70,7 @@ describe('Agents Performance (e2e)', () => {
       ) {
         const finalMessage =
           response.body.finalState.messages[
-            response.body.finalState.messages.length - 1
+            (response.body.finalState.messages.length as number) - 1
           ];
         expect(finalMessage).toBeDefined();
       }

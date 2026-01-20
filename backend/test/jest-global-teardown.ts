@@ -1,15 +1,19 @@
 import { DataSource } from 'typeorm';
+import { cleanupGlobalApp } from './global-test-context';
 
 /**
  * Jest Global Teardown for E2E Tests
  *
  * Runs once after all test suites complete.
- * Automatically cleans the test database by dropping and recreating the public schema.
- * This ensures a clean state for the next test run without manual intervention.
+ * Cleans up the global app instance and database.
  */
 export default async function globalTeardown() {
-  console.log('\n🧹 Test run complete - cleaning up test database...\n');
+  console.log('\n🧹 Test run complete - cleaning up...\n');
 
+  // Close global app instance
+  await cleanupGlobalApp();
+
+  // Final database cleanup
   let dataSource: DataSource | null = null;
 
   try {

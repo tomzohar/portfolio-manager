@@ -1,52 +1,29 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { AppModule } from '../src/app.module';
-import { DataSource } from 'typeorm';
-import { ZodValidationPipe } from 'nestjs-zod';
 import { AuthResponseDto } from 'src/modules/auth/dto/auth-response.dto';
-import { TestDatabaseManager } from './helpers/test-database-manager';
+import { getTestApp, getTestDbManager } from './global-test-context';
 
 describe('Authentication Flow (e2e)', () => {
   let app: INestApplication<App>;
-  let dataSource: DataSource;
-  let dbManager: TestDatabaseManager;
 
-  // Test user credentials
+  // Test user credentials (unique per test run)
   const testUser = {
-    email: 'test@example.com',
+    email: `test-${Date.now()}@example.com`,
     password: 'TestPassword123',
   };
 
   const secondUser = {
-    email: 'second@example.com',
+    email: `second-${Date.now()}@example.com`,
     password: 'TestPassword456',
   };
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-
-    // Apply global validation pipe (same as in main.ts)
-    app.useGlobalPipes(new ZodValidationPipe());
-
-    await app.init();
-
-    // Get DataSource for cleanup
-    dataSource = moduleFixture.get<DataSource>(DataSource);
-    dbManager = new TestDatabaseManager(dataSource);
-  });
-
-  afterAll(async () => {
-    await dbManager.truncateAll();
-    await app.close();
+    // Get the global shared app instance
+    app = await getTestApp();
   });
 
   describe('User Signup Flow', () => {

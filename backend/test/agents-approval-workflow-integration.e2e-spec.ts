@@ -1,11 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { AppModule } from '../src/app.module';
 import { DataSource } from 'typeorm';
-import { ZodValidationPipe } from 'nestjs-zod';
-import { TestDatabaseManager } from './helpers/test-database-manager';
+import { getTestApp, getTestDataSource } from './global-test-context';
 
 /**
  * E2E Integration Tests for Complete HITL Approval Workflow
@@ -28,23 +25,15 @@ describe('Complete HITL Approval Workflow Integration (e2e)', () => {
   let dataSource: DataSource;
   let authToken: string;
   let userId: string;
-  let dbManager: TestDatabaseManager;
 
   beforeAll(async () => {
     // Enable approval gate for production HITL
     process.env.ENABLE_APPROVAL_GATE = 'true';
     process.env.APPROVAL_TRANSACTION_THRESHOLD = '10000';
 
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ZodValidationPipe());
-    await app.init();
-
-    dataSource = moduleFixture.get<DataSource>(DataSource);
-    dbManager = new TestDatabaseManager(dataSource);
+    // Get the global shared app instance
+    app = await getTestApp();
+    dataSource = getTestDataSource();
 
     // Create test user
     const timestamp = Date.now();
@@ -65,12 +54,6 @@ describe('Complete HITL Approval Workflow Integration (e2e)', () => {
     authToken = (loginResponse.body as { token: string }).token;
     userId = (loginResponse.body as { user: { id: string } }).user.id;
   });
-
-  afterAll(async () => {
-    await dbManager.truncateAll();
-    await app.close();
-  });
-
   describe('Full Approval Workflow: trigger → fetch traces → approve → complete', () => {
     it('should complete full workflow: suspend, fetch traces, approve, verify completion', async () => {
       // ========================================================================

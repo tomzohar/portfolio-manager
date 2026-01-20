@@ -1,37 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { AppModule } from '../src/app.module';
-import { DataSource } from 'typeorm';
-import { ZodValidationPipe } from 'nestjs-zod';
-import { TestDatabaseManager } from './helpers/test-database-manager';
+import { getTestApp } from './global-test-context';
 
 describe('Rate Limiting (e2e)', () => {
   let app: INestApplication<App>;
-  let dataSource: DataSource;
-  let dbManager: TestDatabaseManager;
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-
-    // Apply global validation pipe (same as in main.ts)
-    app.useGlobalPipes(new ZodValidationPipe());
-
-    await app.init();
-
-    // Get DataSource for cleanup
-    dataSource = moduleFixture.get<DataSource>(DataSource);
-    dbManager = new TestDatabaseManager(dataSource);
-  });
-
-  afterAll(async () => {
-    await dbManager.truncateAll();
-    await app.close();
+    // Get the global shared app instance
+    app = await getTestApp();
   });
 
   describe('Login Rate Limiting', () => {

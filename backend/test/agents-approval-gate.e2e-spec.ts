@@ -1,11 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { AppModule } from '../src/app.module';
 import { DataSource } from 'typeorm';
-import { ZodValidationPipe } from 'nestjs-zod';
-import { TestDatabaseManager } from './helpers/test-database-manager';
+import { getTestApp, getTestDataSource } from './global-test-context';
 
 /**
  * E2E Tests for Production HITL Approval Gate
@@ -22,7 +19,6 @@ describe('AgentsController - Approval Gate (e2e)', () => {
   let dataSource: DataSource;
   let authToken: string;
   let userId: string;
-  let dbManager: TestDatabaseManager;
 
   beforeAll(async () => {
     // Enable approval gate in production graph
@@ -31,20 +27,9 @@ describe('AgentsController - Approval Gate (e2e)', () => {
     // Set approval threshold for testing
     process.env.APPROVAL_TRANSACTION_THRESHOLD = '10000';
 
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-
-    // Apply global validation pipe (same as in main.ts)
-    app.useGlobalPipes(new ZodValidationPipe());
-
-    await app.init();
-
-    // Get database connection for cleanup
-    dataSource = moduleFixture.get<DataSource>(DataSource);
-    dbManager = new TestDatabaseManager(dataSource);
+    // Get the global shared app instance
+    app = await getTestApp();
+    dataSource = getTestDataSource();
 
     // Create test user
     const timestamp = Date.now();
@@ -73,12 +58,6 @@ describe('AgentsController - Approval Gate (e2e)', () => {
     authToken = (loginResponse.body as { token: string }).token;
     userId = (loginResponse.body as { user: { id: string } }).user.id;
   });
-
-  afterAll(async () => {
-    await dbManager.truncateAll();
-    await app.close();
-  });
-
   describe('POST /agents/run - Large Transaction Approval', () => {
     it('should suspend execution for large buy transaction', async () => {
       const response = await request(app.getHttpServer())

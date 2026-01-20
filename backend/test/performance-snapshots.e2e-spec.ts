@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { AppModule } from '../src/app.module';
 import { DataSource } from 'typeorm';
-import { ZodValidationPipe } from 'nestjs-zod';
 import { Timeframe } from '../src/modules/performance/types/timeframe.types';
-import { TestDatabaseManager } from './helpers/test-database-manager';
+import {
+  getTestApp,
+  getTestDataSource,
+  getTestDbManager,
+} from './global-test-context';
 
 /**
  * E2E Test Suite for Phase 9: Daily Performance Snapshots
@@ -35,7 +36,6 @@ describe('Performance Snapshots E2E (Phase 9)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
   let authToken: string;
-  let dbManager: TestDatabaseManager;
 
   const testUser = {
     email: `snapshot-test-${Date.now()}@example.com`,
@@ -43,16 +43,9 @@ describe('Performance Snapshots E2E (Phase 9)', () => {
   };
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ZodValidationPipe());
-    await app.init();
-
-    dataSource = moduleFixture.get<DataSource>(DataSource);
-    dbManager = new TestDatabaseManager(dataSource);
+    // Get the global shared app instance
+    app = await getTestApp();
+    dataSource = getTestDataSource();
 
     // Create test user and get auth token
     const signupResponse = await request(app.getHttpServer())
@@ -65,11 +58,6 @@ describe('Performance Snapshots E2E (Phase 9)', () => {
     if (!authToken) {
       throw new Error('Failed to get auth token from signup');
     }
-  });
-
-  afterAll(async () => {
-    await dbManager.truncateAll();
-    await app.close();
   });
 
   describe('1. Simple Buy-and-Hold Portfolio', () => {

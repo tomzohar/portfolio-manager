@@ -1,39 +1,32 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { AppModule } from '../src/app.module';
 import { DataSource } from 'typeorm';
-import { ZodValidationPipe } from 'nestjs-zod';
-import { TestDatabaseManager } from './helpers/test-database-manager';
 import { TraceDto } from 'src/modules/agents/dto/traces-response.dto';
+import {
+  getTestApp,
+  getTestDataSource,
+  getTestDbManager,
+} from './global-test-context';
 
 describe('Automatic Tracing Callbacks', () => {
   let app: INestApplication<App>;
   let authToken: string;
   let userId: string;
   let dataSource: DataSource;
-  let dbManager: TestDatabaseManager;
 
   const testUser = {
-    email: 'tracing-auto-test@example.com',
+    email: `tracing-auto-test-${Date.now()}@example.com`,
     password: 'TestPassword123',
   };
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ZodValidationPipe());
-    await app.init();
-
-    dataSource = moduleFixture.get<DataSource>(DataSource);
-    dbManager = new TestDatabaseManager(dataSource);
+    // Get the global shared app instance
+    app = await getTestApp();
+    dataSource = getTestDataSource();
 
     // Create test user and get auth token
     const signupResponse = await request(app.getHttpServer())
@@ -50,8 +43,7 @@ describe('Automatic Tracing Callbacks', () => {
   });
 
   afterAll(async () => {
-    await dbManager.truncateAll();
-    await app.close();
+    // Database cleanup happens in global teardown to prevent FK violations
   });
 
   describe('Automatic Trace Recording', () => {

@@ -1,11 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { AppModule } from '../src/app.module';
 import { DataSource } from 'typeorm';
-import { ZodValidationPipe } from 'nestjs-zod';
-import { TestDatabaseManager } from './helpers/test-database-manager';
+import { getTestApp, getTestDataSource } from './global-test-context';
 
 /**
  * E2E Tests for Human-in-the-Loop (HITL) Resume Functionality
@@ -22,26 +19,14 @@ describe('AgentsController - HITL Resume (e2e)', () => {
   let dataSource: DataSource;
   let authToken: string;
   let userId: string;
-  let dbManager: TestDatabaseManager;
 
   beforeAll(async () => {
     // Enable HITL test node for E2E tests
     process.env.ENABLE_HITL_TEST_NODE = 'true';
 
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-
-    // Apply global validation pipe (same as in main.ts)
-    app.useGlobalPipes(new ZodValidationPipe());
-
-    await app.init();
-
-    // Get database connection for cleanup
-    dataSource = moduleFixture.get<DataSource>(DataSource);
-    dbManager = new TestDatabaseManager(dataSource);
+    // Get the global shared app instance
+    app = await getTestApp();
+    dataSource = getTestDataSource();
 
     // Create ONE test user for all tests to avoid rate limiting
     const timestamp = Date.now();
@@ -70,13 +55,6 @@ describe('AgentsController - HITL Resume (e2e)', () => {
     authToken = (loginResponse.body as { token: string }).token;
     userId = (loginResponse.body as { user: { id: string } }).user.id;
   });
-
-  afterAll(async () => {
-    await dbManager.truncateAll();
-    await app.close();
-  });
-
-  // No beforeEach - using shared user to avoid rate limiting
 
   describe('POST /agents/resume', () => {
     /**

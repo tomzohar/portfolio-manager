@@ -1,40 +1,22 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { NestExpressApplication } from '@nestjs/platform-express';
-import type { Server } from 'http';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { AppModule } from '../src/app.module';
-import { DataSource } from 'typeorm';
-import { ZodValidationPipe } from 'nestjs-zod';
 import { GraphResponseDto } from 'src/modules/agents/dto/graph-response.dto';
 import { Message } from '@langchain/core/messages';
-import { TestDatabaseManager } from './helpers/test-database-manager';
+import { getTestApp, getTestDbManager } from './global-test-context';
 
 describe('AgentsController (e2e)', () => {
-  let app: NestExpressApplication;
-  let httpServer: Server;
+  let app: INestApplication;
   let authToken: string;
-  let dataSource: DataSource;
-  let dbManager: TestDatabaseManager;
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication<NestExpressApplication>();
-    app.useGlobalPipes(new ZodValidationPipe());
-    await app.init();
-    httpServer = app.getHttpServer();
-
-    // Get DataSource for cleanup
-    dataSource = moduleFixture.get<DataSource>(DataSource);
-    dbManager = new TestDatabaseManager(dataSource);
+    // Get the global shared app instance
+    app = await getTestApp();
 
     // Create a user - returns token in response
-    const signupResponse = await request(httpServer)
+    const signupResponse = await request(app.getHttpServer())
       .post('/users')
       .send({
-        email: 'agent-test@example.com',
+        email: `agent-test-${Date.now()}@example.com`,
         password: 'Test123456',
       })
       .expect(201);
@@ -42,19 +24,9 @@ describe('AgentsController (e2e)', () => {
     authToken = (signupResponse.body as { token: string }).token;
   });
 
-  afterAll(async () => {
-    await dbManager.truncateAll();
-
-    // Close the application and all connections
-    await app.close();
-
-    // Give PostgresSaver time to close connections
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  });
-
   describe('/agents/run (POST)', () => {
     it('should execute graph and return result', async () => {
-      const response = await request(httpServer)
+      const response = await request(app.getHttpServer())
         .post('/agents/run')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -75,7 +47,7 @@ describe('AgentsController (e2e)', () => {
     });
 
     it('should require authentication', async () => {
-      await request(httpServer)
+      await request(app.getHttpServer())
         .post('/agents/run')
         .send({
           message: 'Test',
@@ -84,7 +56,7 @@ describe('AgentsController (e2e)', () => {
     });
 
     it('should validate request body', async () => {
-      await request(httpServer)
+      await request(app.getHttpServer())
         .post('/agents/run')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -94,7 +66,7 @@ describe('AgentsController (e2e)', () => {
     });
 
     it('should accept portfolio data', async () => {
-      const response = await request(httpServer)
+      const response = await request(app.getHttpServer())
         .post('/agents/run')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -126,7 +98,7 @@ describe('AgentsController (e2e)', () => {
 
     it('should accept threadId for resuming conversation', async () => {
       // First request to get a threadId
-      const firstResponse = await request(httpServer)
+      const firstResponse = await request(app.getHttpServer())
         .post('/agents/run')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -138,7 +110,7 @@ describe('AgentsController (e2e)', () => {
       const threadId = firstBody.threadId;
 
       // Second request with the same threadId
-      const secondResponse = await request(httpServer)
+      const secondResponse = await request(app.getHttpServer())
         .post('/agents/run')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -154,7 +126,7 @@ describe('AgentsController (e2e)', () => {
     });
 
     it('should accumulate messages in state', async () => {
-      const response = await request(httpServer)
+      const response = await request(app.getHttpServer())
         .post('/agents/run')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -170,7 +142,7 @@ describe('AgentsController (e2e)', () => {
     });
 
     it('should include userId in final state', async () => {
-      const response = await request(httpServer)
+      const response = await request(app.getHttpServer())
         .post('/agents/run')
         .set('Authorization', `Bearer ${authToken}`)
         .send({

@@ -1,33 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { AppModule } from '../src/app.module';
-import { DataSource } from 'typeorm';
+import { getTestApp } from './global-test-context';
 
 describe('Agents Guardrails (e2e)', () => {
   let app: INestApplication;
   let authToken: string;
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    await app.init();
-
-    // Clean up database before tests
-    const dataSource = app.get(DataSource);
-    await dataSource.query('DELETE FROM users WHERE email LIKE $1', [
-      'guardrail-test%@test.com',
-    ]);
-  });
-
-  afterAll(async () => {
-    if (app) {
-      await app.close();
-    }
+    // Get the global shared app instance
+    app = await getTestApp();
   });
 
   describe('Iteration Limit Guardrail', () => {
