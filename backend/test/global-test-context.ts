@@ -41,8 +41,7 @@ let globalApp: INestApplication | null = null;
 let globalDataSource: DataSource | null = null;
 let globalDbManager: TestDatabaseManager | null = null;
 let initializationPromise: Promise<void> | null = null;
-let marketDataSeeded = false;
-
+let globalAppInitialized = false;
 /**
  * Initialize the global test app
  * Only initializes once, subsequent calls return the existing instance
@@ -76,21 +75,35 @@ async function initializeGlobalApp(): Promise<void> {
   globalDataSource = moduleFixture.get<DataSource>(DataSource);
   globalDbManager = new TestDatabaseManager(globalDataSource);
 
-  console.log('✅ Global test app initialized successfully\n');
-}
+  // Force TypeORM to synchronize schema (create all tables)
+  // This must happen before seeding test data
+  console.log('🔧 Synchronizing database schema...');
+  try {
+    await globalDataSource.synchronize();
+    console.log('✅ Database schema synchronized');
 
-/**
- * Ensure market data is seeded (lazy initialization)
- * Called on first access to test data
- */
-async function ensureMarketDataSeeded(): Promise<void> {
-  if (marketDataSeeded || !globalDataSource) {
-    return;
+    // Verify tables were created
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const tables = await globalDataSource.query(`
+      SELECT tablename FROM pg_catalog.pg_tables 
+      WHERE schemaname = 'public'
+      ORDER BY tablename
+    `);
+    console.log(
+      `📋 Created ${(tables as Array<{ tablename: string }>).length} tables\n`,
+    );
+
+    // Now seed test market data (tables are guaranteed to exist)
+    await seedTestMarketData(globalDataSource);
+    globalAppInitialized = true;
+  } catch (error) {
+    console.warn(
+      '⚠️  Schema synchronization error:',
+      error instanceof Error ? error.message : error,
+    );
   }
 
-  // Seed market data after tables are created
-  await seedTestMarketData(globalDataSource);
-  marketDataSeeded = true;
+  console.log('✅ Global test app initialized successfully\n');
 }
 
 /**
@@ -100,6 +113,9 @@ async function ensureMarketDataSeeded(): Promise<void> {
  * @returns Promise<INestApplication> The shared app instance
  */
 export async function getTestApp(): Promise<INestApplication<App>> {
+  if (globalAppInitialized) {
+    return globalApp as INestApplication<App>;
+  }
   // Ensure initialization happens only once, even if called concurrently
   if (!initializationPromise) {
     initializationPromise = initializeGlobalApp();
@@ -110,9 +126,6 @@ export async function getTestApp(): Promise<INestApplication<App>> {
   if (!globalApp) {
     throw new Error('Global test app failed to initialize');
   }
-
-  // Seed market data lazily (after tables are created by first test)
-  await ensureMarketDataSeeded();
 
   return globalApp;
 }
@@ -157,7 +170,6 @@ export async function cleanupGlobalApp(): Promise<void> {
     globalDataSource = null;
     globalDbManager = null;
     initializationPromise = null;
-    marketDataSeeded = false;
     console.log('✅ Global test app closed\n');
   }
 }

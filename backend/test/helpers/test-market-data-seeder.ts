@@ -15,11 +15,7 @@ import { DataSource } from 'typeorm';
 interface MarketDataRow {
   ticker: string;
   date: Date;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
+  closePrice: number;
 }
 
 /**
@@ -59,20 +55,10 @@ export async function seedTestMarketData(
       const dailyChange = (Math.random() - 0.5) * 0.04; // -2% to +2%
       currentPrice = currentPrice * (1 + dailyChange);
 
-      const open = currentPrice * (1 + (Math.random() - 0.5) * 0.01);
-      const close = currentPrice * (1 + (Math.random() - 0.5) * 0.01);
-      const high = Math.max(open, close) * (1 + Math.random() * 0.02);
-      const low = Math.min(open, close) * (1 - Math.random() * 0.02);
-      const volume = Math.floor(10000000 + Math.random() * 50000000);
-
       marketDataRecords.push({
         ticker: ticker.symbol,
         date: new Date(currentDate),
-        open: Number(open.toFixed(2)),
-        high: Number(high.toFixed(2)),
-        low: Number(low.toFixed(2)),
-        close: Number(close.toFixed(2)),
-        volume,
+        closePrice: Number(currentPrice.toFixed(8)), // Match precision: 18,8
       });
 
       // Move to next day
@@ -82,32 +68,28 @@ export async function seedTestMarketData(
 
   // Batch insert for performance (use smaller chunks to avoid parameter limits)
   try {
-    const chunkSize = 100; // Insert 100 records at a time
+    const chunkSize = 200; // Insert 200 records at a time (3 params per record)
     for (let i = 0; i < marketDataRecords.length; i += chunkSize) {
       const chunk = marketDataRecords.slice(i, i + chunkSize);
 
       // Build parameterized query for PostgreSQL
       const values = chunk
         .map((_, index) => {
-          const base = index * 7;
-          return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7})`;
+          const base = index * 3;
+          return `($${base + 1}, $${base + 2}, $${base + 3})`;
         })
         .join(', ');
 
       await dataSource.query(
         `
-        INSERT INTO market_data_daily (ticker, date, open, high, low, close, volume)
+        INSERT INTO market_data_daily (ticker, date, "closePrice")
         VALUES ${values}
         ON CONFLICT (ticker, date) DO NOTHING
       `,
         chunk.flatMap((record) => [
           record.ticker,
           record.date,
-          record.open,
-          record.high,
-          record.low,
-          record.close,
-          record.volume,
+          record.closePrice,
         ]),
       );
     }
