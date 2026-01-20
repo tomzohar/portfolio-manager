@@ -5,6 +5,7 @@ import { ZodValidationPipe } from 'nestjs-zod';
 import { AppModule } from '../src/app.module';
 import { TestDatabaseManager } from './helpers/test-database-manager';
 import { App } from 'supertest/types';
+import { seedTestMarketData } from './helpers/test-market-data-seeder';
 
 /**
  * Global Test Context
@@ -40,6 +41,7 @@ let globalApp: INestApplication | null = null;
 let globalDataSource: DataSource | null = null;
 let globalDbManager: TestDatabaseManager | null = null;
 let initializationPromise: Promise<void> | null = null;
+let marketDataSeeded = false;
 
 /**
  * Initialize the global test app
@@ -78,6 +80,20 @@ async function initializeGlobalApp(): Promise<void> {
 }
 
 /**
+ * Ensure market data is seeded (lazy initialization)
+ * Called on first access to test data
+ */
+async function ensureMarketDataSeeded(): Promise<void> {
+  if (marketDataSeeded || !globalDataSource) {
+    return;
+  }
+
+  // Seed market data after tables are created
+  await seedTestMarketData(globalDataSource);
+  marketDataSeeded = true;
+}
+
+/**
  * Get the global test app instance
  * Initializes on first call, returns existing instance on subsequent calls
  *
@@ -94,6 +110,9 @@ export async function getTestApp(): Promise<INestApplication<App>> {
   if (!globalApp) {
     throw new Error('Global test app failed to initialize');
   }
+
+  // Seed market data lazily (after tables are created by first test)
+  await ensureMarketDataSeeded();
 
   return globalApp;
 }
@@ -138,6 +157,7 @@ export async function cleanupGlobalApp(): Promise<void> {
     globalDataSource = null;
     globalDbManager = null;
     initializationPromise = null;
+    marketDataSeeded = false;
     console.log('✅ Global test app closed\n');
   }
 }

@@ -68,6 +68,16 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
+    - name: Wait for PostgreSQL to be ready
+      run: |
+        until pg_isready -h localhost -p 5432 -U test_user; do
+          echo "Waiting for PostgreSQL..."
+          sleep 1
+        done
+        echo "PostgreSQL is ready!"
+      env:
+        PGPASSWORD: test_password
+
     - name: Run unit tests
       run: npm test
       env:
@@ -78,6 +88,7 @@ jobs:
     - name: Run e2e tests
       run: npm run test:e2e
       env:
+        CI: true
         DB_HOST: localhost
         DB_PORT: 5432
         DB_USERNAME: test_user

@@ -226,7 +226,7 @@ describe('Automatic Tracing Callbacks', () => {
     it('should not record traces for other users (security)', async () => {
       // Create second user
       const secondUser = {
-        email: 'tracing-auto-test-2@example.com',
+        email: `tracing-auto-test-2-${Date.now()}@example.com`,
         password: 'TestPassword123',
       };
 
