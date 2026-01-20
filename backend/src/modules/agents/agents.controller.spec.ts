@@ -11,6 +11,7 @@ import { RunGraphDto } from './dto/run-graph.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ExecutionContext } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 describe('AgentsController', () => {
   let controller: AgentsController;
@@ -88,6 +89,10 @@ describe('AgentsController', () => {
           request.user = mockUser;
           return true;
         },
+      })
+      .overrideGuard(ThrottlerGuard)
+      .useValue({
+        canActivate: () => true, // Allow all requests in unit tests
       })
       .compile();
 
