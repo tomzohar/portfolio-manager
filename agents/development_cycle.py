@@ -406,9 +406,10 @@ async def main():
         logger.phase_start("PHASE_1_TDD", "Creating verification test")
         
         prompt_tdd = (
-            f"read developer.md and act as the developer.\n"
+            f"read agents/DEVELOPER.md and act as the developer.\n"
             f"TASK: {task_description}\n"
-            f"STEP 1: Create a verification script that tests the expected functionality.\n"
+            f"STEP 1: Create a verification e2e test file that tests the expected functionality.\n"
+            f"read backend/test/README.md for reference and best practices.\n"
             f"Do NOT implement logic yet. Only create the test.\n"
             f"The test MUST fail currently."
         )
@@ -447,6 +448,9 @@ async def main():
             prompt_impl = (
                 f"STEP 2 (Attempt {attempt}):\n"
                 f"1. Implement code to satisfy `{test_result.test_file_name}`.\n"
+                f" - use TDD approach to implement the code.\n"
+                f" - write clean and scalable code."
+                f" - apply DRY and SOLID pricnciples to your plan."
                 f"2. Run the test file.\n"
                 f"3. Output status in JSON."
             )
