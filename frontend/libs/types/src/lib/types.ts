@@ -202,3 +202,146 @@ export interface HistoricalDataResponse {
   warning?: string;  // Warning message about data adjustments
   cashAllocationAvg?: number;      // Average cash allocation percentage over the period (as decimal)
 }
+
+// =========================================
+// Chat & Reasoning Trace Types (US-001)
+// =========================================
+
+/**
+ * Status of reasoning trace execution
+ */
+export enum ReasoningTraceStatus {
+  PENDING = 'pending',
+  RUNNING = 'running',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  INTERRUPTED = 'interrupted',
+}
+
+/**
+ * Tool result attached to a reasoning trace
+ */
+export interface ToolResult {
+  toolName: string;
+  input: unknown;
+  output: unknown;
+  error?: string;
+  durationMs?: number;
+}
+
+/**
+ * Reasoning trace entity from backend
+ * Represents a single step in the AI's reasoning process
+ */
+export interface ReasoningTrace {
+  id: string;
+  threadId: string;
+  userId: string;
+  nodeName: string;
+  input: unknown;
+  output: unknown;
+  reasoning: string;
+  status?: ReasoningTraceStatus;
+  toolResults?: ToolResult[];
+  durationMs?: number;
+  error?: string;
+  stepIndex?: number;
+  createdAt: Date | string;
+}
+
+/**
+ * SSE connection status
+ */
+export enum SSEConnectionStatus {
+  CONNECTED = 'connected',
+  DISCONNECTED = 'disconnected',
+  RECONNECTING = 'reconnecting',
+  ERROR = 'error',
+}
+
+/**
+ * SSE event types from backend
+ */
+export enum SSEEventType {
+  LLM_START = 'llm.start',
+  LLM_TOKEN = 'llm.token',
+  LLM_COMPLETE = 'llm.complete',
+  NODE_START = 'node.start',
+  NODE_COMPLETE = 'node.complete',
+  GRAPH_COMPLETE = 'graph.complete',
+  ERROR = 'error',
+}
+
+/**
+ * Base SSE event structure
+ */
+export interface SSEEvent {
+  type: SSEEventType;
+  data: unknown;
+  threadId?: string;
+}
+
+/**
+ * LLM token event data
+ */
+export interface LLMTokenEventData {
+  token: string;
+  nodeName: string;
+}
+
+/**
+ * Node completion event data
+ */
+export interface NodeCompleteEventData {
+  trace: ReasoningTrace;
+}
+
+/**
+ * Graph completion event data
+ */
+export interface GraphCompleteEventData {
+  threadId: string;
+  finalOutput: unknown;
+}
+
+/**
+ * Error event data
+ */
+export interface ErrorEventData {
+  message: string;
+  code?: string;
+}
+
+/**
+ * Chat message sent to the backend
+ */
+export interface ChatMessage {
+  message: string;
+  portfolioId?: string;
+  threadId?: string;
+}
+
+/**
+ * Graph execution result from backend
+ */
+export interface GraphResult {
+  threadId: string;
+  output: unknown;
+}
+
+/**
+ * Run graph DTO
+ */
+export interface RunGraphDto {
+  message: string;
+  portfolio?: string; // Portfolio ID
+  threadId?: string;
+}
+
+/**
+ * Resume graph DTO (for HITL)
+ */
+export interface ResumeGraphDto {
+  threadId: string;
+  userInput: string;
+}

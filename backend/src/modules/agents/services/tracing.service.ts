@@ -28,6 +28,7 @@ export class TracingService {
    * @param input - Input data passed to the node (JSONB)
    * @param output - Output data returned by the node (JSONB)
    * @param reasoning - Human-readable explanation of the node's decision
+   * @param options - Optional parameters (status, toolResults, durationMs, error, stepIndex)
    * @returns Saved ReasoningTrace entity
    * @throws BadRequestException if userId is missing
    */
@@ -38,6 +39,13 @@ export class TracingService {
     input: Record<string, any>,
     output: Record<string, any>,
     reasoning: string,
+    options?: {
+      status?: string;
+      toolResults?: Array<{ tool: string; result: any }>;
+      durationMs?: number;
+      error?: string;
+      stepIndex?: number;
+    },
   ): Promise<ReasoningTrace> {
     // Security validation: userId is required
     if (!userId || userId.trim() === '') {
@@ -51,6 +59,11 @@ export class TracingService {
       input,
       output,
       reasoning,
+      status: options?.status || 'completed',
+      toolResults: options?.toolResults,
+      durationMs: options?.durationMs,
+      error: options?.error,
+      stepIndex: options?.stepIndex,
     });
 
     const saved = await this.reasoningTraceRepository.save(trace);
@@ -95,5 +108,99 @@ export class TracingService {
       order: { createdAt: 'DESC' },
       take: limit,
     });
+  }
+
+  /**
+   * Update trace status (US-001 enhancement)
+   *
+   * @param traceId - Trace ID to update
+   * @param status - New status ('pending' | 'running' | 'completed' | 'failed' | 'interrupted')
+   * @param error - Optional error message if status is 'failed'
+   * @returns Updated trace or null if not found
+   */
+  async updateTraceStatus(
+    traceId: string,
+    status: string,
+    error?: string,
+  ): Promise<ReasoningTrace | null> {
+    const trace = await this.reasoningTraceRepository.findOne({
+      where: { id: traceId },
+    });
+
+    if (!trace) {
+      this.logger.warn(`Trace ${traceId} not found for status update`);
+      return null;
+    }
+
+    trace.status = status;
+    if (error) {
+      trace.error = error;
+    }
+
+    const updated = await this.reasoningTraceRepository.save(trace);
+
+    this.logger.debug(`Updated trace ${traceId} status to ${status}`);
+
+    return updated;
+  }
+
+  /**
+   * Record trace execution duration (US-001 enhancement)
+   *
+   * @param traceId - Trace ID to update
+   * @param durationMs - Duration in milliseconds
+   * @returns Updated trace or null if not found
+   */
+  async recordTraceDuration(
+    traceId: string,
+    durationMs: number,
+  ): Promise<ReasoningTrace | null> {
+    const trace = await this.reasoningTraceRepository.findOne({
+      where: { id: traceId },
+    });
+
+    if (!trace) {
+      this.logger.warn(`Trace ${traceId} not found for duration update`);
+      return null;
+    }
+
+    trace.durationMs = durationMs;
+
+    const updated = await this.reasoningTraceRepository.save(trace);
+
+    this.logger.debug(`Recorded duration ${durationMs}ms for trace ${traceId}`);
+
+    return updated;
+  }
+
+  /**
+   * Attach tool results to a trace (US-001 enhancement)
+   *
+   * @param traceId - Trace ID to update
+   * @param toolResults - Array of tool results with tool name and result data
+   * @returns Updated trace or null if not found
+   */
+  async attachToolResults(
+    traceId: string,
+    toolResults: Array<{ tool: string; result: any }>,
+  ): Promise<ReasoningTrace | null> {
+    const trace = await this.reasoningTraceRepository.findOne({
+      where: { id: traceId },
+    });
+
+    if (!trace) {
+      this.logger.warn(`Trace ${traceId} not found for tool results update`);
+      return null;
+    }
+
+    trace.toolResults = toolResults;
+
+    const updated = await this.reasoningTraceRepository.save(trace);
+
+    this.logger.debug(
+      `Attached ${toolResults.length} tool results to trace ${traceId}`,
+    );
+
+    return updated;
   }
 }

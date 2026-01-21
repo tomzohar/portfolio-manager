@@ -11,6 +11,7 @@ describe('TracingService', () => {
     create: jest.fn(),
     save: jest.fn(),
     find: jest.fn(),
+    findOne: jest.fn(),
     createQueryBuilder: jest.fn(),
   };
 
@@ -83,6 +84,11 @@ describe('TracingService', () => {
         input,
         output,
         reasoning,
+        status: 'completed',
+        toolResults: undefined,
+        durationMs: undefined,
+        error: undefined,
+        stepIndex: undefined,
       });
       expect(mockRepository.save).toHaveBeenCalledWith(expectedTrace);
       expect(result).toEqual(expectedTrace);
@@ -440,6 +446,233 @@ describe('TracingService', () => {
       // Assert
       expect(result.input).toEqual(input);
       expect(result.output).toEqual(output);
+    });
+  });
+
+  describe('recordTrace with enhanced fields', () => {
+    it('should save trace with status, toolResults, and duration', async () => {
+      // Arrange
+      const threadId = 'thread-123';
+      const userId = 'user-456';
+      const nodeName = 'observer';
+      const input = { message: 'test' };
+      const output = { result: 'test' };
+      const reasoning = 'test reasoning';
+      const options = {
+        status: 'running',
+        toolResults: [{ tool: 'FRED API', result: { value: 3.2 } }],
+        durationMs: 1234,
+        stepIndex: 1,
+      };
+
+      const expectedTrace = {
+        id: 'trace-789',
+        threadId,
+        userId,
+        nodeName,
+        input,
+        output,
+        reasoning,
+        status: 'running',
+        toolResults: [{ tool: 'FRED API', result: { value: 3.2 } }],
+        durationMs: 1234,
+        stepIndex: 1,
+        createdAt: new Date(),
+      } as unknown as ReasoningTrace;
+
+      mockRepository.create.mockReturnValue(expectedTrace);
+      mockRepository.save.mockResolvedValue(expectedTrace);
+
+      // Act
+      const result = await service.recordTrace(
+        threadId,
+        userId,
+        nodeName,
+        input,
+        output,
+        reasoning,
+        options,
+      );
+
+      // Assert
+      expect(mockRepository.create).toHaveBeenCalledWith({
+        threadId,
+        userId,
+        nodeName,
+        input,
+        output,
+        reasoning,
+        status: 'running',
+        toolResults: [{ tool: 'FRED API', result: { value: 3.2 } }],
+        durationMs: 1234,
+        error: undefined,
+        stepIndex: 1,
+      });
+      expect(result.status).toBe('running');
+      expect(result.toolResults).toEqual([
+        { tool: 'FRED API', result: { value: 3.2 } },
+      ]);
+      expect(result.durationMs).toBe(1234);
+    });
+  });
+
+  describe('updateTraceStatus', () => {
+    it('should update trace status successfully', async () => {
+      // Arrange
+      const traceId = 'trace-123';
+      const newStatus = 'completed';
+
+      const mockTrace = {
+        id: traceId,
+        threadId: 'thread-123',
+        userId: 'user-456',
+        nodeName: 'observer',
+        input: {},
+        output: {},
+        reasoning: 'test',
+        status: 'running',
+        createdAt: new Date(),
+      } as ReasoningTrace;
+
+      const updatedTrace = {
+        ...mockTrace,
+        status: 'completed',
+      };
+
+      mockRepository.findOne.mockResolvedValue(mockTrace);
+      mockRepository.save.mockResolvedValue(updatedTrace);
+
+      // Act
+      const result = await service.updateTraceStatus(traceId, newStatus);
+
+      // Assert
+      expect(mockRepository.findOne).toHaveBeenCalledWith({
+        where: { id: traceId },
+      });
+      expect(result?.status).toBe('completed');
+    });
+
+    it('should return null if trace not found', async () => {
+      // Arrange
+      const traceId = 'non-existent';
+      mockRepository.findOne.mockResolvedValue(null);
+
+      // Act
+      const result = await service.updateTraceStatus(traceId, 'completed');
+
+      // Assert
+      expect(result).toBeNull();
+    });
+
+    it('should update status and error message when trace fails', async () => {
+      // Arrange
+      const traceId = 'trace-123';
+      const errorMessage = 'API rate limit exceeded';
+
+      const mockTrace = {
+        id: traceId,
+        status: 'running',
+      } as ReasoningTrace;
+
+      const updatedTrace = {
+        ...mockTrace,
+        status: 'failed',
+        error: errorMessage,
+      };
+
+      mockRepository.findOne.mockResolvedValue(mockTrace);
+      mockRepository.save.mockResolvedValue(updatedTrace);
+
+      // Act
+      const result = await service.updateTraceStatus(
+        traceId,
+        'failed',
+        errorMessage,
+      );
+
+      // Assert
+      expect(result?.status).toBe('failed');
+      expect(result?.error).toBe(errorMessage);
+    });
+  });
+
+  describe('recordTraceDuration', () => {
+    it('should record duration for a trace', async () => {
+      // Arrange
+      const traceId = 'trace-123';
+      const durationMs = 5432;
+
+      const mockTrace = {
+        id: traceId,
+        durationMs: undefined,
+      } as ReasoningTrace;
+
+      const updatedTrace = {
+        ...mockTrace,
+        durationMs: 5432,
+      };
+
+      mockRepository.findOne.mockResolvedValue(mockTrace);
+      mockRepository.save.mockResolvedValue(updatedTrace);
+
+      // Act
+      const result = await service.recordTraceDuration(traceId, durationMs);
+
+      // Assert
+      expect(result?.durationMs).toBe(5432);
+    });
+
+    it('should return null if trace not found', async () => {
+      // Arrange
+      mockRepository.findOne.mockResolvedValue(null);
+
+      // Act
+      const result = await service.recordTraceDuration('non-existent', 1000);
+
+      // Assert
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('attachToolResults', () => {
+    it('should attach tool results to a trace', async () => {
+      // Arrange
+      const traceId = 'trace-123';
+      const toolResults = [
+        { tool: 'FRED API', result: { series: 'CPIAUCSL', value: 3.2 } },
+        { tool: 'Polygon', result: { ticker: 'AAPL', price: 150.5 } },
+      ];
+
+      const mockTrace = {
+        id: traceId,
+        toolResults: undefined,
+      } as ReasoningTrace;
+
+      const updatedTrace = {
+        ...mockTrace,
+        toolResults,
+      };
+
+      mockRepository.findOne.mockResolvedValue(mockTrace);
+      mockRepository.save.mockResolvedValue(updatedTrace);
+
+      // Act
+      const result = await service.attachToolResults(traceId, toolResults);
+
+      // Assert
+      expect(result?.toolResults).toEqual(toolResults);
+      expect(result?.toolResults).toHaveLength(2);
+    });
+
+    it('should return null if trace not found', async () => {
+      // Arrange
+      mockRepository.findOne.mockResolvedValue(null);
+
+      // Act
+      const result = await service.attachToolResults('non-existent', []);
+
+      // Assert
+      expect(result).toBeNull();
     });
   });
 });

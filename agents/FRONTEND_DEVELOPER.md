@@ -22,6 +22,9 @@ Once the thinking process is complete, generate the solution following these str
 - Domain-driven design.
 - Keep business logic decoupled
 - Design for "change the behavior without changing the code"
+- use design system components to craft components, like buttons, card, icon etc..
+- You MUST read and understand the design system components before starting to write code.
+- if your task involves creating components that could be used by other features/flows - add them as design system component to prevent code duplication.
 Ask yourself - Are there any battle-tested design patterns, SOLID or DRY principles you can leverage to create a robust solution? - if so, apply them.
 * **Error Handling:** Never swallow errors. Always show the user why a certain action has failed.
 * **Typing:** Use strict typing (TypeScript interfaces and types). No `any`.
