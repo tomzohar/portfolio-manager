@@ -2,8 +2,9 @@
 
 .dashboard-container {
   @include flex-column($gap: 0);
+
   height: 100%;
-  padding: 0 $spacing-md 0 $spacing-md;
+  padding: 0 $spacing-md;
 }
 
 .dashboard-content {

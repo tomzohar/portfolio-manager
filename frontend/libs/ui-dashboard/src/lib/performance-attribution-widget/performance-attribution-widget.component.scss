@@ -16,13 +16,14 @@
   grid-template-columns: repeat(3, 1fr);
   gap: $spacing-md;
 
-  @media (max-width: 768px) {
+  @media (width <= 768px) {
     grid-template-columns: 1fr;
   }
 }
 
 .metric-card {
   @include card-base; // Clean card from design system
+
   padding: $spacing-lg;
   display: flex;
   flex-direction: column;
@@ -32,12 +33,14 @@
 
 .metric-label {
   @include label-uppercase;
+
   color: $color-text-subtle;
   font-size: $font-size-2xs;
 }
 
 .metric-value {
   @include value-large;
+
   margin-top: $spacing-xs;
   
   &.large {
@@ -81,12 +84,14 @@
 
 .error-message {
   @include body-base;
+
   color: $color-error;
   text-align: center;
 }
 
 .help-text {
   @include body-small;
+
   color: $color-text-subtle;
   text-align: center;
   margin: 0;

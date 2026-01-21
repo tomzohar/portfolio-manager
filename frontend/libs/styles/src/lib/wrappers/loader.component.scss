@@ -45,12 +45,12 @@
     
     &--outer {
       background-color: #8e51ff; // Purple
-      box-shadow: 0 0 8px rgba(142, 81, 255, 0.6);
+      box-shadow: 0 0 8px rgb(142 81 255 / 60%);
     }
     
     &--inner {
       background-color: #615fff; // Indigo
-      box-shadow: 0 0 8px rgba(97, 95, 255, 0.6);
+      box-shadow: 0 0 8px rgb(97 95 255 / 60%);
     }
   }
   
@@ -118,6 +118,7 @@
 
 .loader-label {
   @include body-small;
+
   margin: 0;
   color: var(--color-text-subtle);
   text-align: center;
@@ -128,6 +129,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -137,6 +139,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(-360deg);
   }
@@ -146,6 +149,7 @@
   0%, 100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.1);
   }

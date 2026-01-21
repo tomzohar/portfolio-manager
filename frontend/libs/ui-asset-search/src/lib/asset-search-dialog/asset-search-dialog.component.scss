@@ -27,6 +27,7 @@
 // Selected items preview section
 .selected-preview {
   @include flex-column($spacing-sm);
+
   margin-top: $spacing-md;
   padding: $spacing-sm $spacing-md;
   background-color: var(--color-bg-tertiary);
@@ -44,6 +45,7 @@
 
   mat-chip-set {
     @include flex-row($spacing-xs);
+
     flex-wrap: wrap;
   }
 }
@@ -51,6 +53,7 @@
 // Autocomplete option layout
 .ticker-option {
   @include flex-row($spacing-sm);
+
   align-items: center;
   width: 100%;
   padding: $spacing-xs 0;
@@ -61,6 +64,7 @@
 
   .ticker-item {
     @include flex-column(2px);
+
     flex: 1;
     min-width: 0; // Enable text truncation
   }

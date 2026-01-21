@@ -260,14 +260,12 @@
 /// Remove default text selection styling
 @mixin text-no-select {
   user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
+
 }
 
 /// Enable smooth font rendering
 @mixin text-smooth {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
+  text-rendering: optimizelegibility;
 }

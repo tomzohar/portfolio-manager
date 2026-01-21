@@ -7,6 +7,7 @@
 // Cash value display
 .cash-value {
   @include value-large;
+
   color: var(--color-success); // Green for available cash
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);

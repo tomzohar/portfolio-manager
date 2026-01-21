@@ -9,6 +9,7 @@
 
 .brand-title {
   @include heading-2;
+
   margin: 0;
   display: flex;
   gap: var(--spacing-xs);
@@ -28,6 +29,7 @@
 
 .brand-subtitle {
   @include body-base;
+
   margin: 0;
   color: var(--color-text-disabled);
   text-align: center;

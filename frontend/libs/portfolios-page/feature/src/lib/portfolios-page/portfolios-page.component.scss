@@ -11,11 +11,11 @@
     margin-top: $spacing-xl;
 
     // Responsive adjustments
-    @media (max-width: 1200px) {
+    @media (width <= 1200px) {
       grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
     }
 
-    @media (max-width: 768px) {
+    @media (width <= 768px) {
       grid-template-columns: 1fr;
     }
   }

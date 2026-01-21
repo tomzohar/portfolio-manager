@@ -2,6 +2,7 @@
 
 .empty-state {
   @include flex-column;
+
   align-items: center;
   justify-content: center;
   padding: $spacing-xl;
@@ -21,14 +22,14 @@
   }
 
   &__title {
-    margin: 0 0 $spacing-sm 0;
+    margin: 0 0 $spacing-sm;
     font-size: 24px;
     font-weight: 500;
     color: $color-text-primary;
   }
 
   &__message {
-    margin: 0 0 $spacing-lg 0;
+    margin: 0 0 $spacing-lg;
     font-size: 14px;
     color: $color-text-secondary;
     max-width: 400px;

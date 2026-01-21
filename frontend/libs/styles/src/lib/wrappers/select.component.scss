@@ -10,7 +10,7 @@
       background-color: transparent;
       
       &:hover {
-        background-color: rgba(255, 255, 255, 0.05);
+        background-color: rgb(255 255 255 / 5%);
       }
     }
     
@@ -22,6 +22,7 @@
     .mdc-notched-outline__notch,
     .mdc-notched-outline__trailing {
       background-color: transparent;
+
       // border-color: rgba(255, 255, 255, .2);
     }
     
