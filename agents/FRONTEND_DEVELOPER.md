@@ -54,9 +54,10 @@ Ask yourself - Are there any battle-tested design patterns, SOLID or DRY princip
  [] fucntions and classes should have single resposiblity
  [] DRY priciple applied to all code
  [] clear separation of concers (service, state logic, components, utils etc...)
- [] nx test
- [] nx build
- [] nx lint
+ [] nx run-many -t=test
+ [] nx run-many -t=build
+ [] nx run-many -t=lint
+ [] nx run-many -t=stylelint
 
 ## 5. OUTPUT FORMAT
 1.  Begin with the `<thinking>` block.
