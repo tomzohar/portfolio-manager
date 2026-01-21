@@ -378,319 +378,459 @@ async def continuation_loop(
 
 # --- WORKFLOW FUNCTIONS ---
 
-async def main():
-    # Initialize logging and formatting
+def initialize_runtime() -> tuple[bool, AgentLogger, RichFormatter]:
+    """Initialize verbose mode, logging, and console formatting."""
     verbose = os.getenv("AGENT_VERBOSE", "0") == "1"
     logger = AgentLogger()
     formatter = RichFormatter(verbose=verbose)
-    
+    return verbose, logger, formatter
+
+
+def print_start_banner(verbose: bool) -> None:
+    """Print the startup banner and verbose status."""
     print("🚀 STARTING AGENT DEVELOPMENT CYCLE (Structured + Loop)")
     if verbose:
         print("💬 Verbose mode enabled (AGENT_VERBOSE=1)")
-    
-    try:
-        task_description = input("Enter the coding task: ")
-        if not task_description: return
 
-        cwd = os.getcwd()
-        builder_session = None
-        
-        # Track all modified files across the entire session to give the Reviewer full context
-        all_modified_files: Set[str] = set()
 
-        # --- PHASE 1: TDD ---
-        formatter.print_phase_header(
-            "PHASE 1: CREATING VERIFICATION TEST",
-            "Creating tests using Test-Driven Development approach"
-        )
-        logger.phase_start("PHASE_1_TDD", "Creating verification test")
-        
-        prompt_tdd = (
-            f"read agents/DEVELOPER.md and act as the developer.\n"
-            f"TASK: {task_description}\n"
-            f"STEP 1: Create a verification e2e test file that tests the expected functionality.\n"
-            f"read backend/test/README.md for reference and best practices.\n"
-            f"Do NOT implement logic yet. Only create the test.\n"
-            f"The test MUST fail currently."
-        )
-        
-        test_result, builder_session = await run_agent(
-            "BUILDER", prompt_tdd, schema=TestCreation, cwd=cwd,
+def prompt_for_task() -> Optional[str]:
+    """Prompt the user for a task description."""
+    return input("Enter the coding task: ").strip()
+
+
+def build_tdd_prompt(task_description: str) -> str:
+    """Build the TDD prompt for the BUILDER agent."""
+    return (
+        f"read agents/DEVELOPER.md and act as the developer.\n"
+        f"TASK: {task_description}\n"
+        f"STEP 1: Create a verification e2e test file that tests the expected functionality.\n"
+        f"read backend/test/README.md for reference and best practices.\n"
+        f"Do NOT implement logic yet. Only create the test.\n"
+        f"The test MUST fail currently."
+    )
+
+
+async def run_tdd_phase(
+    task_description: str,
+    cwd: str,
+    logger: AgentLogger,
+    formatter: RichFormatter
+) -> tuple[Optional[TestCreation], Optional[str]]:
+    """Create the verification test using a TDD prompt."""
+    formatter.print_phase_header(
+        "PHASE 1: CREATING VERIFICATION TEST",
+        "Creating tests using Test-Driven Development approach"
+    )
+    logger.phase_start("PHASE_1_TDD", "Creating verification test")
+
+    prompt_tdd = build_tdd_prompt(task_description)
+    test_result, builder_session = await run_agent(
+        "BUILDER", prompt_tdd, schema=TestCreation, cwd=cwd,
+        logger=logger, formatter=formatter
+    )
+
+    if not test_result:
+        logger.phase_end("PHASE_1_TDD", success=False)
+        return None, builder_session
+
+    print(f"📝 Test Plan: {test_result.test_plan_summary}")
+
+    phase_summary = {
+        "test_file": test_result.test_file_name,
+        "summary": test_result.test_plan_summary
+    }
+    logger.phase_end("PHASE_1_TDD", success=True, summary=phase_summary)
+    formatter.print_phase_end(
+        "PHASE_1_TDD",
+        success=True,
+        duration_s=ms_to_seconds(logger.phase_timings["PHASE_1_TDD"]["duration_ms"]),
+        summary=phase_summary
+    )
+
+    return test_result, builder_session
+
+
+def build_impl_prompt(test_file_name: str, attempt: int) -> str:
+    """Build the implementation prompt for the BUILDER agent."""
+    return (
+        f"STEP 2 (Attempt {attempt}):\n"
+        f"1. Implement code to satisfy `{test_file_name}`.\n"
+        f" - use TDD approach to implement the code.\n"
+        f" - write clean and scalable code."
+        f" - apply DRY and SOLID pricnciples to your plan."
+        f"2. Run the test file.\n"
+        f"3. Output status in JSON."
+    )
+
+
+async def run_implementation_phase(
+    test_result: TestCreation,
+    builder_session: Optional[str],
+    cwd: str,
+    logger: AgentLogger,
+    formatter: RichFormatter,
+    all_modified_files: Set[str]
+) -> tuple[bool, Optional[str], int]:
+    """Implement the feature and run tests until they pass or retries are exhausted."""
+    formatter.print_phase_header(
+        "PHASE 2: IMPLEMENTATION",
+        f"Implementing code to pass {test_result.test_file_name}"
+    )
+    logger.phase_start("PHASE_2_IMPLEMENTATION", "Implementing feature")
+
+    impl_success = False
+    attempts_used = 0
+
+    for attempt in range(1, MAX_RETRIES + 1):
+        attempts_used = attempt
+        print(f"\n🔄 Implementation Attempt {attempt}/{MAX_RETRIES}")
+
+        prompt_impl = build_impl_prompt(test_result.test_file_name, attempt)
+        impl_result, builder_session = await run_agent(
+            "BUILDER", prompt_impl, schema=ImplementationResult,
+            session_id=builder_session, cwd=cwd,
             logger=logger, formatter=formatter
         )
-        
-        if not test_result:
-            logger.phase_end("PHASE_1_TDD", success=False)
-            return
-        
-        print(f"📝 Test Plan: {test_result.test_plan_summary}")
-        
-        phase_summary = {
-            "test_file": test_result.test_file_name,
-            "summary": test_result.test_plan_summary
-        }
-        logger.phase_end("PHASE_1_TDD", success=True, summary=phase_summary)
-        formatter.print_phase_end("PHASE_1_TDD", success=True, 
-                                  duration_s=ms_to_seconds(logger.phase_timings["PHASE_1_TDD"]["duration_ms"]),
-                                  summary=phase_summary)
 
-        # --- PHASE 2: IMPLEMENTATION ---
-        formatter.print_phase_header(
-            "PHASE 2: IMPLEMENTATION",
-            f"Implementing code to pass {test_result.test_file_name}"
-        )
-        logger.phase_start("PHASE_2_IMPLEMENTATION", "Implementing feature")
-        
-        impl_success = False
-        for attempt in range(1, MAX_RETRIES + 1):
-            print(f"\n🔄 Implementation Attempt {attempt}/{MAX_RETRIES}")
-            
-            prompt_impl = (
-                f"STEP 2 (Attempt {attempt}):\n"
-                f"1. Implement code to satisfy `{test_result.test_file_name}`.\n"
-                f" - use TDD approach to implement the code.\n"
-                f" - write clean and scalable code."
-                f" - apply DRY and SOLID pricnciples to your plan."
-                f"2. Run the test file.\n"
-                f"3. Output status in JSON."
-            )
-            
-            impl_result, builder_session = await run_agent(
-                "BUILDER", prompt_impl, schema=ImplementationResult, 
-                session_id=builder_session, cwd=cwd,
-                logger=logger, formatter=formatter
-            )
-            
-            if impl_result:
-                all_modified_files.update(impl_result.files_modified)
-                logger.files_modified.update(impl_result.files_modified)
-                
-                # Log test result
-                logger.log_test_result(
-                    test_result.test_file_name,
-                    impl_result.status.value,
-                    impl_result.error_summary
-                )
-                formatter.print_test_result(
-                    test_result.test_file_name,
-                    impl_result.status.value,
-                    impl_result.error_summary
-                )
-                
-                if impl_result.status == TestStatus.PASS:
-                    print(f"🎉 Tests Passed! Files: {impl_result.files_modified}")
-                    impl_success = True
-                    break
-                else:
-                    print(f"⚠️ Tests Failed: {impl_result.error_summary}")
+        if impl_result:
+            all_modified_files.update(impl_result.files_modified)
+            logger.files_modified.update(impl_result.files_modified)
 
-        if not impl_success:
-            print("❌ Failed to implement feature. Aborting.")
-            logger.phase_end("PHASE_2_IMPLEMENTATION", success=False)
-            formatter.print_phase_end("PHASE_2_IMPLEMENTATION", success=False,
-                                      duration_s=ms_to_seconds(logger.phase_timings["PHASE_2_IMPLEMENTATION"]["duration_ms"]))
-            return
-        
-        phase_summary = {
-            "attempts": attempt,
-            "files_modified": len(all_modified_files)
-        }
-        logger.phase_end("PHASE_2_IMPLEMENTATION", success=True, summary=phase_summary)
-        formatter.print_phase_end("PHASE_2_IMPLEMENTATION", success=True,
-                                  duration_s=ms_to_seconds(logger.phase_timings["PHASE_2_IMPLEMENTATION"]["duration_ms"]),
-                                  summary=phase_summary)
-
-        # --- PHASE 3: REVIEW LOOP ---
-        formatter.print_phase_header(
-            "PHASE 3: REVIEW & REFINEMENT LOOP",
-            "Code review and iterative refinement"
-        )
-        logger.phase_start("PHASE_3_REVIEW", "Code review loop")
-        
-        review_approved = False
-        review_history = []  # Store the conversation history explicitly
-        
-        for cycle in range(1, MAX_REVIEW_CYCLES + 1):
-            print(f"\n🔎 Review Cycle {cycle}/{MAX_REVIEW_CYCLES}")
-            
-            # 1. CONSTRUCT CONTEXT AWARE PROMPT
-            files_list_str = ", ".join(list(all_modified_files))
-            
-            # Progressive Leniency: Be stricter in early cycles, looser in later ones
-            focus_instruction = "Focus on Logic, Security, and Style."
-            if cycle > 3:
-                focus_instruction = "Focus ONLY on CRITICAL Logic or Security bugs. Ignore style/naming preferences to ensure convergence."
-
-            history_context = ""
-            if review_history:
-                history_context = "\nPREVIOUS REVIEW HISTORY:\n" + "\n".join(review_history)
-
-            reviewer_prompt = (
-                f"read agents/QA.md and act as the QA engineer. You are reviewing a feature implementation.\n"
-                f"Task: '{task_description}'.\n"
-                f"Files modified: {files_list_str}\n"
-                f"Test Status: {'PASS' if impl_success else 'FAIL'} (The builder has verified functionality via tests).\n\n"
-                f"INSTRUCTIONS:\n"
-                f"1. {focus_instruction}\n"
-                f"2. Check if previous feedback (if any) was addressed.\n"
-                f"3. If only MINOR issues remain and this is cycle > 2, prefer APPROVING.\n"
-                f"{history_context}"
-            )
-
-            # We keep the reviewer session fresh to ensure it reads the *current* file state
-            # but we inject the history via prompt.
-            review_result, _ = await run_agent(
-            "REVIEWER", reviewer_prompt, schema=CodeReview, cwd=cwd,
-            logger=logger, formatter=formatter
-            )
-
-            if not review_result:
-                print("⚠️ Reviewer failed to output JSON. Skipping cycle.")
-                continue
-
-            # 2. ANALYZE DECISION WITH SEVERITY
-            # Filter out minor issues if we are in late cycles
-            critical_issues = [c for c in review_result.critique if c.severity == Severity.CRITICAL]
-            minor_issues = [c for c in review_result.critique if c.severity == Severity.MINOR]
-
-            # Auto-override: If only minor issues exist and we are deep in cycles, force approve
-            if review_result.decision == ReviewDecision.REQUEST_CHANGES:
-                if cycle > 3 and not critical_issues:
-                    print("⚠️ Overriding Reviewer: Only minor issues remaining in late cycle. Approving.")
-                    review_result.decision = ReviewDecision.APPROVED
-            
-            # Log result
-            logger.log_review(
-                review_result.decision.value,
-                [c.comment for c in review_result.critique], # Simplified for logger
-                review_result.security_concerns
-            )
-            formatter.print_review_result(
-                review_result.decision.value,
-                [f"[{c.severity.value}] {c.comment}" for c in review_result.critique],
-                review_result.security_concerns
-            )
-
-            if review_result.decision == ReviewDecision.APPROVED:
-                print("\n✅ CODE REVIEW APPROVED!")
-                review_approved = True
-                break
-            
-            # 3. PREPARE FEEDBACK FOR BUILDER
-            if cycle == MAX_REVIEW_CYCLES:
-                print("❌ Max review cycles reached without approval.")
-                break
-
-            print("\n🔧 Builder applying fixes...")
-            
-            # Construct specific feedback list
-            feedback_list = [f"{c.file_path}: {c.comment} ({c.severity.value})" for c in review_result.critique]
-            
-            # Add to history for the next reviewer to see
-            review_history.append(f"Cycle {cycle} Feedback: {json.dumps(feedback_list)}")
-
-            fix_prompt = (
-                f"The Code Reviewer requested these changes:\n"
-                f"{json.dumps(feedback_list)}\n\n"
-                f"INSTRUCTIONS:\n"
-                f"1. Fix the CRITICAL issues first.\n"
-                f"2. Address MINOR issues if possible without breaking tests.\n"
-                f"3. Run `{test_result.test_file_name}` to ensure NO regressions.\n"
-                f"4. If tests fail, fix them before replying."
-            )
-            
-            fix_result, builder_session = await run_agent(
-                "BUILDER", fix_prompt, schema=ImplementationResult, 
-                session_id=builder_session, cwd=cwd,
-                logger=logger, formatter=formatter
-            )
-
-            if fix_result:
-                all_modified_files.update(fix_result.files_modified)
-                logger.files_modified.update(fix_result.files_modified)
-                
-                # Log successful fix attempt to history
-                review_history.append(f"Cycle {cycle} Fixes: Builder updated {fix_result.files_modified}")
-            
-            # Log test result
             logger.log_test_result(
                 test_result.test_file_name,
-                fix_result.status.value,
-                fix_result.error_summary
+                impl_result.status.value,
+                impl_result.error_summary
             )
             formatter.print_test_result(
                 test_result.test_file_name,
-                fix_result.status.value,
-                fix_result.error_summary
+                impl_result.status.value,
+                impl_result.error_summary
             )
-            
-            if fix_result.status == TestStatus.FAIL:
-                print(f"⚠️ Warning: Builder's fixes caused tests to fail: {fix_result.error_summary}")
-            else:
-                print("✅ Fixes applied & tests passed. Sending back to reviewer...")
-        
-        phase_summary = {
-            "cycles": cycle,
-            "approved": review_approved
-        }
-        logger.phase_end("PHASE_3_REVIEW", success=review_approved, summary=phase_summary)
-        formatter.print_phase_end("PHASE_3_REVIEW", success=review_approved,
-                              duration_s=ms_to_seconds(logger.phase_timings["PHASE_3_REVIEW"]["duration_ms"]),
-                              summary=phase_summary)
 
-        # --- FINALIZATION ---
-        if review_approved:
-            formatter.print_phase_header("FINALIZATION", "Updating documentation")
-            logger.phase_start("PHASE_4_FINALIZATION", "Documentation and cleanup")
-            
-            final_prompt = "Update documentation and create a learning session file."
-            await run_agent(
-                "BUILDER", final_prompt,
-                session_id=builder_session, cwd=cwd,
-                logger=logger, formatter=formatter
+            if impl_result.status == TestStatus.PASS:
+                print(f"🎉 Tests Passed! Files: {impl_result.files_modified}")
+                impl_success = True
+                break
+            else:
+                print(f"⚠️ Tests Failed: {impl_result.error_summary}")
+
+    if not impl_success:
+        print("❌ Failed to implement feature. Aborting.")
+        logger.phase_end("PHASE_2_IMPLEMENTATION", success=False)
+        formatter.print_phase_end(
+            "PHASE_2_IMPLEMENTATION",
+            success=False,
+            duration_s=ms_to_seconds(logger.phase_timings["PHASE_2_IMPLEMENTATION"]["duration_ms"])
+        )
+        return False, builder_session, attempts_used
+
+    phase_summary = {
+        "attempts": attempts_used,
+        "files_modified": len(all_modified_files)
+    }
+    logger.phase_end("PHASE_2_IMPLEMENTATION", success=True, summary=phase_summary)
+    formatter.print_phase_end(
+        "PHASE_2_IMPLEMENTATION",
+        success=True,
+        duration_s=ms_to_seconds(logger.phase_timings["PHASE_2_IMPLEMENTATION"]["duration_ms"]),
+        summary=phase_summary
+    )
+
+    return True, builder_session, attempts_used
+
+
+def build_reviewer_prompt(
+    task_description: str,
+    files_list_str: str,
+    impl_success: bool,
+    focus_instruction: str,
+    history_context: str
+) -> str:
+    """Build the reviewer prompt with history and focus instructions."""
+    return (
+        f"read agents/QA.md and act as the QA engineer. You are reviewing a feature implementation.\n"
+        f"Task: '{task_description}'.\n"
+        f"Files modified: {files_list_str}\n"
+        f"Test Status: {'PASS' if impl_success else 'FAIL'} (The builder has verified functionality via tests).\n\n"
+        f"INSTRUCTIONS:\n"
+        f"1. {focus_instruction}\n"
+        f"2. Check if previous feedback (if any) was addressed.\n"
+        f"{history_context}"
+    )
+
+
+def build_fix_prompt(feedback_list: List[str], test_file_name: str) -> str:
+    """Build the fix prompt for the BUILDER agent."""
+    return (
+        f"The Code Reviewer requested these changes:\n"
+        f"{json.dumps(feedback_list)}\n\n"
+        f"INSTRUCTIONS:\n"
+        f"1. Fix the CRITICAL issues first.\n"
+        f"2. Address MINOR issues if possible without breaking tests.\n"
+        f"3. Run `{test_file_name}` to ensure NO regressions.\n"
+        f"4. If tests fail, fix them before replying."
+    )
+
+
+async def run_review_phase(
+    task_description: str,
+    test_result: TestCreation,
+    builder_session: Optional[str],
+    cwd: str,
+    logger: AgentLogger,
+    formatter: RichFormatter,
+    all_modified_files: Set[str],
+    impl_success: bool
+) -> tuple[bool, Optional[str], int]:
+    """Run the reviewer/repair loop and return approval status and cycles used."""
+    formatter.print_phase_header(
+        "PHASE 3: REVIEW & REFINEMENT LOOP",
+        "Code review and iterative refinement"
+    )
+    logger.phase_start("PHASE_3_REVIEW", "Code review loop")
+
+    review_approved = False
+    review_history: List[str] = []
+    cycles_used = 0
+
+    for cycle in range(1, MAX_REVIEW_CYCLES + 1):
+        cycles_used = cycle
+        print(f"\n🔎 Review Cycle {cycle}/{MAX_REVIEW_CYCLES}")
+
+        files_list_str = ", ".join(list(all_modified_files))
+        focus_instruction = "Focus on Logic, Security, and Style."
+        if cycle > 3:
+            focus_instruction = (
+                "Focus ONLY on CRITICAL Logic or Security bugs. "
+                "Ignore style/naming preferences to ensure convergence."
             )
-            
-            logger.phase_end("PHASE_4_FINALIZATION", success=True)
-            formatter.print_phase_end("PHASE_4_FINALIZATION", success=True,
-                                      duration_s=ms_to_seconds(logger.phase_timings["PHASE_4_FINALIZATION"]["duration_ms"]))
-            print("\n🏁 Initial Workflow Complete!")
-            
-            # --- CONTINUATION LOOP ---
-            continuation_count = await continuation_loop(
+
+        history_context = ""
+        if review_history:
+            history_context = "\nPREVIOUS REVIEW HISTORY:\n" + "\n".join(review_history)
+
+        reviewer_prompt = build_reviewer_prompt(
+            task_description=task_description,
+            files_list_str=files_list_str,
+            impl_success=impl_success,
+            focus_instruction=focus_instruction,
+            history_context=history_context
+        )
+
+        review_result, _ = await run_agent(
+            "REVIEWER", reviewer_prompt, schema=CodeReview, cwd=cwd,
+            logger=logger, formatter=formatter
+        )
+
+        if not review_result:
+            print("⚠️ Reviewer failed to output JSON. Skipping cycle.")
+            continue
+
+        critical_issues = [c for c in review_result.critique if c.severity == Severity.CRITICAL]
+
+        if review_result.decision == ReviewDecision.REQUEST_CHANGES:
+            if cycle > 3 and not critical_issues:
+                print("⚠️ Overriding Reviewer: Only minor issues remaining in late cycle. Approving.")
+                review_result.decision = ReviewDecision.APPROVED
+
+        logger.log_review(
+            review_result.decision.value,
+            [c.comment for c in review_result.critique],
+            review_result.security_concerns
+        )
+        formatter.print_review_result(
+            review_result.decision.value,
+            [f"[{c.severity.value}] {c.comment}" for c in review_result.critique],
+            review_result.security_concerns
+        )
+
+        if review_result.decision == ReviewDecision.APPROVED:
+            print("\n✅ CODE REVIEW APPROVED!")
+            review_approved = True
+            break
+
+        if cycle == MAX_REVIEW_CYCLES:
+            print("❌ Max review cycles reached without approval.")
+            break
+
+        print("\n🔧 Builder applying fixes...")
+
+        feedback_list = [f"{c.file_path}: {c.comment} ({c.severity.value})" for c in review_result.critique]
+        review_history.append(f"Cycle {cycle} Feedback: {json.dumps(feedback_list)}")
+
+        fix_prompt = build_fix_prompt(feedback_list, test_result.test_file_name)
+        fix_result, builder_session = await run_agent(
+            "BUILDER", fix_prompt, schema=ImplementationResult,
+            session_id=builder_session, cwd=cwd,
+            logger=logger, formatter=formatter
+        )
+
+        if fix_result:
+            all_modified_files.update(fix_result.files_modified)
+            logger.files_modified.update(fix_result.files_modified)
+            review_history.append(f"Cycle {cycle} Fixes: Builder updated {fix_result.files_modified}")
+
+        logger.log_test_result(
+            test_result.test_file_name,
+            fix_result.status.value,
+            fix_result.error_summary
+        )
+        formatter.print_test_result(
+            test_result.test_file_name,
+            fix_result.status.value,
+            fix_result.error_summary
+        )
+
+        if fix_result.status == TestStatus.FAIL:
+            print(f"⚠️ Warning: Builder's fixes caused tests to fail: {fix_result.error_summary}")
+        else:
+            print("✅ Fixes applied & tests passed. Sending back to reviewer...")
+
+    phase_summary = {
+        "cycles": cycles_used,
+        "approved": review_approved
+    }
+    logger.phase_end("PHASE_3_REVIEW", success=review_approved, summary=phase_summary)
+    formatter.print_phase_end(
+        "PHASE_3_REVIEW",
+        success=review_approved,
+        duration_s=ms_to_seconds(logger.phase_timings["PHASE_3_REVIEW"]["duration_ms"]),
+        summary=phase_summary
+    )
+
+    return review_approved, builder_session, cycles_used
+
+
+async def run_finalization(
+    builder_session: Optional[str],
+    cwd: str,
+    logger: AgentLogger,
+    formatter: RichFormatter
+) -> Optional[str]:
+    """Run final documentation updates and return the updated session."""
+    formatter.print_phase_header("FINALIZATION", "Updating documentation")
+    logger.phase_start("PHASE_4_FINALIZATION", "Documentation and cleanup")
+
+    final_prompt = "Update documentation and create a learning session file."
+    _, builder_session = await run_agent(
+        "BUILDER", final_prompt,
+        session_id=builder_session, cwd=cwd,
+        logger=logger, formatter=formatter
+    )
+
+    logger.phase_end("PHASE_4_FINALIZATION", success=True)
+    formatter.print_phase_end(
+        "PHASE_4_FINALIZATION",
+        success=True,
+        duration_s=ms_to_seconds(logger.phase_timings["PHASE_4_FINALIZATION"]["duration_ms"])
+    )
+    print("\n🏁 Initial Workflow Complete!")
+    return builder_session
+
+
+async def run_continuations(
+    builder_session: Optional[str],
+    cwd: str,
+    logger: AgentLogger,
+    formatter: RichFormatter
+) -> None:
+    """Run the interactive continuation loop and log its summary."""
+    continuation_count = await continuation_loop(
+        builder_session=builder_session,
+        cwd=cwd,
+        logger=logger,
+        formatter=formatter
+    )
+
+    if continuation_count > 0:
+        logger._log_event("CONTINUATION_SESSION_END", {
+            "total_continuations": continuation_count
+        })
+
+
+def print_summary(logger: AgentLogger, formatter: RichFormatter) -> None:
+    """Always print a session summary, even after errors."""
+    try:
+        summary = logger.generate_summary()
+        summary['log_file'] = str(logger.log_file)
+        summary['summary_file'] = str(logger.summary_file)
+        formatter.print_summary(summary)
+    except Exception as summary_error:
+        print(f"\n⚠️ Failed to generate summary: {summary_error}")
+        print(f"Log file: {logger.log_file if logger else 'N/A'}")
+        print(f"Summary file: {logger.summary_file if logger else 'N/A'}")
+
+
+async def main():
+    # Initialize logging and formatting
+    verbose, logger, formatter = initialize_runtime()
+
+    print_start_banner(verbose)
+
+    try:
+        task_description = prompt_for_task()
+        if not task_description:
+            return
+
+        cwd = os.getcwd()
+        builder_session = None
+        all_modified_files: Set[str] = set()
+
+        test_result, builder_session = await run_tdd_phase(
+            task_description=task_description,
+            cwd=cwd,
+            logger=logger,
+            formatter=formatter
+        )
+        if not test_result:
+            return
+
+        impl_success, builder_session, _ = await run_implementation_phase(
+            test_result=test_result,
+            builder_session=builder_session,
+            cwd=cwd,
+            logger=logger,
+            formatter=formatter,
+            all_modified_files=all_modified_files
+        )
+        if not impl_success:
+            return
+
+        review_approved, builder_session, _ = await run_review_phase(
+            task_description=task_description,
+            test_result=test_result,
+            builder_session=builder_session,
+            cwd=cwd,
+            logger=logger,
+            formatter=formatter,
+            all_modified_files=all_modified_files,
+            impl_success=impl_success
+        )
+
+        if review_approved:
+            builder_session = await run_finalization(
                 builder_session=builder_session,
                 cwd=cwd,
                 logger=logger,
                 formatter=formatter
             )
-            
-            # Track continuation count in logger
-            if continuation_count > 0:
-                logger._log_event("CONTINUATION_SESSION_END", {
-                    "total_continuations": continuation_count
-                })
+            await run_continuations(
+                builder_session=builder_session,
+                cwd=cwd,
+                logger=logger,
+                formatter=formatter
+            )
         else:
             print("\n⛔ Workflow ended without final approval.")
-    
+
     except Exception as e:
-        # Log any unexpected errors
         print(f"\n💥 Unexpected error occurred: {type(e).__name__}: {e}")
         if logger:
             logger.log_error(e, {"context": "main workflow"})
         raise
-    
     finally:
-        # ALWAYS generate and print session summary, even on errors
         if logger and formatter:
-            try:
-                summary = logger.generate_summary()
-                summary['log_file'] = str(logger.log_file)
-                summary['summary_file'] = str(logger.summary_file)
-                formatter.print_summary(summary)
-            except Exception as summary_error:
-                print(f"\n⚠️ Failed to generate summary: {summary_error}")
-                # At minimum, print basic info
-                print(f"Log file: {logger.log_file if logger else 'N/A'}")
-                print(f"Summary file: {logger.summary_file if logger else 'N/A'}")
+            print_summary(logger, formatter)
 
 if __name__ == '__main__':
     asyncio.run(main())
