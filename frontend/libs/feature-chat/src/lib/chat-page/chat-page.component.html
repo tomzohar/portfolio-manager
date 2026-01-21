@@ -1,0 +1,37 @@
+<div class="chat-page">
+  <!-- Header -->
+  <app-conversation-header
+    [threadId]="threadId()"
+    [title]="conversationTitle()"
+    (newConversation)="handleNewConversation()"
+    (settingsClick)="handleSettings()"
+    class="chat-page__header"
+  />
+
+  <!-- Main Content Area -->
+  <div class="chat-page__content">
+    <!-- Reasoning Trace Panel (Left/Main) -->
+    <div class="chat-page__trace-panel">
+      @if (threadId()) {
+        <app-reasoning-trace-panel
+          [threadId]="threadId()!"
+          (traceClick)="handleTraceClick($event)"
+        />
+      } @else {
+        <div class="chat-page__empty">
+          <p class="empty-title">Welcome to AI Chat</p>
+          <p class="empty-hint">Start a conversation to see reasoning traces here</p>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Message Input (Bottom) -->
+  <div class="chat-page__input-area">
+    <app-message-input
+      [disabled]="isMessageInputDisabled()"
+      [maxLength]="2000"
+      (messageSend)="handleMessageSend($event)"
+    />
+  </div>
+</div>

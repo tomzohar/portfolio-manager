@@ -1,0 +1,107 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.chat-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--color-bg-primary);
+}
+
+.chat-page__header {
+  flex-shrink: 0;
+}
+
+.chat-page__content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0; // Allow flex child to shrink
+}
+
+.chat-page__trace-panel {
+  flex: 1;
+  overflow: hidden;
+  padding: var(--spacing-base);
+}
+
+.chat-page__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: var(--spacing-3xl);
+
+  .empty-title {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .empty-hint {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-subtle);
+    line-height: var(--line-height-relaxed);
+  }
+}
+
+.chat-page__input-area {
+  flex-shrink: 0;
+  padding: var(--spacing-base);
+  background-color: var(--color-bg-secondary);
+  border-top: 1px solid var(--color-border-primary);
+}
+
+// ========================================
+// Responsive Design
+// ========================================
+
+@media (width <= 768px) {
+  .chat-page__trace-panel {
+    padding: var(--spacing-md);
+  }
+
+  .chat-page__input-area {
+    padding: var(--spacing-md);
+  }
+}
+
+@media (width <= 480px) {
+  .chat-page__trace-panel {
+    padding: var(--spacing-sm);
+  }
+
+  .chat-page__input-area {
+    padding: var(--spacing-sm);
+  }
+
+  .chat-page__empty {
+    padding: var(--spacing-xl);
+
+    .empty-title {
+      font-size: var(--font-size-lg);
+    }
+  }
+}
+
+// ========================================
+// Accessibility
+// ========================================
+
+.chat-page {
+  &:focus {
+    outline: none;
+  }
+}
+
+// Ensure keyboard navigation works
+.chat-page__content {
+  &:focus-within {
+    // Visual feedback when focusing child elements
+  }
+}

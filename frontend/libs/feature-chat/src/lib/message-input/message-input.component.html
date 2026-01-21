@@ -1,0 +1,40 @@
+<div class="message-input" role="region" aria-label="Message input area">
+  <div class="message-input__container">
+    <!-- Textarea -->
+    <textarea
+      class="message-input__textarea"
+      [value]="message()"
+      (input)="updateMessage($any($event.target).value)"
+      (keydown)="handleKeydown($event)"
+      [placeholder]="placeholder()"
+      [disabled]="disabled()"
+      [attr.maxlength]="maxLength()"
+      aria-label="Type your message"
+      rows="3"
+    ></textarea>
+    <!-- Character Count -->
+    @if (shouldShowCount()) {
+      <div 
+        class="message-input__count"
+        [class]="'message-input__count--' + characterCountClass()"
+        [attr.aria-live]="isNearLimit() || isOverLimit() ? 'polite' : 'off'"
+      >
+        <span class="count-text">
+          {{ characterCount() }} / {{ maxLength() }}
+        </span>
+        @if (isOverLimit()) {
+          <span class="count-error">Character limit exceeded</span>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Send Button -->
+  <div class="message-input__actions">
+    <lib-button
+      [config]="sendButtonConfig()"
+      (clicked)="handleSend()"
+      class="send-button"
+    />
+  </div>
+</div>
