@@ -1,21 +1,17 @@
 {
-  "name": "data-access-chat",
+  "name": "feature-chat",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "libs/data-access-chat/src",
+  "sourceRoot": "libs/feature-chat/src",
   "prefix": "app",
   "projectType": "library",
-  "tags": [
-    "type:data-access",
-    "scope:chat"
-  ],
+  "tags": ["type:feature", "scope:chat"],
   "targets": {
     "test": {
       "executor": "@nx/jest:jest",
-      "outputs": [
-        "{workspaceRoot}/coverage/{projectRoot}"
-      ],
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
       "options": {
-        "jestConfig": "libs/data-access-chat/jest.config.ts"
+        "jestConfig": "libs/feature-chat/jest.config.ts",
+        "tsConfig": "libs/feature-chat/tsconfig.spec.json"
       }
     },
     "lint": {
@@ -24,13 +20,13 @@
     "stylelint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "stylelint \"libs/data-access-chat/**/*.scss\" --allow-empty-input"
+        "command": "stylelint \"libs/feature-chat/**/*.scss\" --allow-empty-input"
       }
     },
     "stylelint:fix": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "stylelint \"libs/data-access-chat/**/*.scss\" --fix --allow-empty-input"
+        "command": "stylelint \"libs/feature-chat/**/*.scss\" --fix --allow-empty-input"
       }
     }
   }

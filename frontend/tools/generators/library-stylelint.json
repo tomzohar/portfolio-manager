@@ -1,0 +1,14 @@
+{
+  "stylelint": {
+    "executor": "nx:run-commands",
+    "options": {
+      "command": "stylelint \"{projectRoot}/**/*.scss\" --allow-empty-input"
+    }
+  },
+  "stylelint:fix": {
+    "executor": "nx:run-commands",
+    "options": {
+      "command": "stylelint \"{projectRoot}/**/*.scss\" --fix --allow-empty-input"
+    }
+  }
+}

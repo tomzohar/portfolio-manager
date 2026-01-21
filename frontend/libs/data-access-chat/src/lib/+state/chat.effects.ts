@@ -227,8 +227,8 @@ export class ChatEffects {
       this.actions$.pipe(
         ofType(ChatActions.sSEEventReceived),
         tap(({ event }) => {
-          // Only log in development
-          if (!environment.production) {
+          // Log SSE events (development only when environment is available)
+          if (typeof window !== 'undefined' && !(window as any).environment?.production) {
             console.log('[SSE Event]', event.type, event.data);
           }
         })

@@ -3,23 +3,44 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/data-access-dashboard/src",
   "projectType": "library",
-  "tags": ["type:data-access", "scope:dashboard"],
+  "tags": [
+    "type:data-access",
+    "scope:dashboard"
+  ],
   "targets": {
     "build": {
       "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "options": {
         "outputPath": "dist/libs/data-access-dashboard",
         "main": "libs/data-access-dashboard/src/index.ts",
         "tsConfig": "libs/data-access-dashboard/tsconfig.lib.json",
-        "assets": ["libs/data-access-dashboard/*.md"]
+        "assets": [
+          "libs/data-access-dashboard/*.md"
+        ]
       }
     },
     "test": {
       "executor": "@nx/jest:jest",
-      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "outputs": [
+        "{workspaceRoot}/coverage/{projectRoot}"
+      ],
       "options": {
         "jestConfig": "libs/data-access-dashboard/jest.config.ts"
+      }
+    },
+    "stylelint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "stylelint \"libs/data-access-dashboard/**/*.scss\" --allow-empty-input"
+      }
+    },
+    "stylelint:fix": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "stylelint \"libs/data-access-dashboard/**/*.scss\" --fix --allow-empty-input"
       }
     }
   }

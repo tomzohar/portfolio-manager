@@ -4,11 +4,16 @@
   "sourceRoot": "libs/data-access-auth/src",
   "prefix": "lib",
   "projectType": "library",
-  "tags": ["type:data-access", "scope:auth"],
+  "tags": [
+    "type:data-access",
+    "scope:auth"
+  ],
   "targets": {
     "build": {
       "executor": "@nx/angular:ng-packagr-lite",
-      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "outputs": [
+        "{workspaceRoot}/dist/{projectRoot}"
+      ],
       "options": {
         "project": "libs/data-access-auth/ng-package.json",
         "tsConfig": "libs/data-access-auth/tsconfig.lib.json"
@@ -23,7 +28,9 @@
     },
     "test": {
       "executor": "@nx/jest:jest",
-      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "outputs": [
+        "{workspaceRoot}/coverage/{projectRoot}"
+      ],
       "options": {
         "jestConfig": "libs/data-access-auth/jest.config.ts",
         "tsConfig": "libs/data-access-auth/tsconfig.spec.json"
@@ -31,6 +38,18 @@
     },
     "lint": {
       "executor": "@nx/eslint:lint"
+    },
+    "stylelint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "stylelint \"libs/data-access-auth/**/*.scss\" --allow-empty-input"
+      }
+    },
+    "stylelint:fix": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "stylelint \"libs/data-access-auth/**/*.scss\" --fix --allow-empty-input"
+      }
     }
   }
 }

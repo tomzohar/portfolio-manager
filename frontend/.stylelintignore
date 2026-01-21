@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.angular/
+coverage/
+
+# Generated files
+*.d.ts
+
+# Config files
+*.js
+*.ts
+*.json
+
+# Only lint SCSS/CSS files
+!**/*.scss
+!**/*.css
