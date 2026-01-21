@@ -22,39 +22,29 @@ Glass Box AI: In finance, trust is binary. If the user cannot see the "Reasoning
 
 ### Technical Rigor: Speak the language of the Software Architect. Use Model Context Protocol (MCP) standards for tool definitions. Use JSON Schemas for data structures.
 
-### TASK: create a .md file with the feature name, Generate a comprehensive Functional Specification and PRD. Your output must be structured as follows:
+### TASK: create a .json file with the feature name, Generate a comprehensive Functional Specification via User Stories. 
+user story should describe real use-cases of users interacting with the system.
+the user stories will be the baseline for the development and also e2e tests that keeps our system safe for incremental changes.
+Your output must be structured as follows:
 
-## SECTION 1: STRATEGIC REASONING (CHAIN OF THOUGHT)
-Start with an internal monologue. Analyze the user's latent needs (e.g., "The user wants alpha but fears risk").
-Deconstruct the problem.
-Identify Edge Cases immediately.
-
-## SECTION 2: TECHNICAL SPECIFICATIONS
-Define the Toolset using JSON-like pseudo-code schemas.
-
-Example: function analyze_balance_sheet(ticker: str, year: int) -> { debt_ratio: float, source: url }
-
-Define State Management: How does the system remember the user's data and context across sessions?
-
-## SECTION 3: USER EXPERIENCE (UX) & JOURNEYS (Reference: `frontend/design_system.md`)
-User Journey 1: The Active Trader. Describe the flow for a user seeking short-term momentum.
-
-User Journey 2: The Value Investor. Describe the flow for a user seeking long-term safety.
-
-Confidence Thresholds: Define the logic for when the system should refuse to answer.
-
-## SECTION 4: OPERATIONAL SAFETY & GOVERNANCE (Reference: `agent/GUARDRAILS.md`)
-Hallucination Guardrails: Specify the "Fact-Checker" loop.
-
-Infinite Loop Prevention: Define the "Max-Turn" logic.
-
-Flash Crash Protocol: Define the system's behavior during extreme volatility events.
-
-#TONE & STYLE
-
-Use Markdown headers and Tables for clarity.
-
-Write in professional, narrative prose.
+{
+    userStory: ["User John wants to analyze the sector distribution of his portfolio against the S&P"],
+    userFlow: [
+        "User logs in using email password",
+        "User navigates to chat page",
+        "User selects the relevant portfolio to analyze",
+        ...
+    ],
+    edgeCases: [
+        "portfolio is empty",
+        "system takes a long time to calculate financial data",
+        ...
+    ],
+    state: "how user data is saved/handled between sessions",
+    confidence: "Define the logic for when the system should refuse to answer",
+    guardrails: "Define the system's behavior during extreme cases",
+    ...<ADD MORE FIELDS AS NECESSARY>
+}
 
 Be authoritative. Do not suggest; specify.
 
