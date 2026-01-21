@@ -197,6 +197,25 @@ export class ChatFacade {
     this.store.dispatch(ChatActions.resetState());
   }
 
+  /**
+   * Send a message to start or continue a conversation.
+   * Triggers graph execution on backend.
+   * 
+   * @param params - Message send parameters
+   * @param params.message - The message text to send
+   * @param params.threadId - Optional thread ID to continue existing conversation
+   * @param params.portfolioId - Optional portfolio ID for context
+   */
+  sendMessage(params: { message: string; threadId?: string; portfolioId?: string }): void {
+    this.store.dispatch(
+      ChatActions.sendMessage({
+        message: params.message,
+        threadId: params.threadId,
+        portfolioId: params.portfolioId,
+      })
+    );
+  }
+
   // ========================================
   // Utility Methods
   // ========================================

@@ -86,5 +86,25 @@ export const ChatActions = createActionGroup({
      * Reset chat state to initial
      */
     'Reset State': emptyProps(),
+
+    /**
+     * User sends a message to start/continue conversation
+     */
+    'Send Message': props<{ message: string; threadId?: string; portfolioId?: string }>(),
+
+    /**
+     * Message sent successfully, graph execution started
+     */
+    'Send Message Success': props<{ threadId: string }>(),
+
+    /**
+     * Failed to send message
+     */
+    'Send Message Failure': props<{ error: string }>(),
+
+    /**
+     * Graph execution completed
+     */
+    'Graph Complete': props<{ threadId: string; output: unknown }>(),
   },
 });

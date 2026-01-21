@@ -33,15 +33,12 @@ import { CitationSourceType } from '../types/citation-source-type.enum';
  * from the Digital CIO Chat Interface feature.
  */
 @Entity('data_citations')
-@Index(['threadId'])
-@Index(['userId'])
-@Index(['reasoningTraceId'])
-@Index(['sourceType', 'sourceIdentifier'])
 export class DataCitation {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ name: 'reasoning_trace_id', type: 'uuid', nullable: true })
+  @Index()
   reasoningTraceId: string | null;
 
   @ManyToOne(() => ReasoningTrace, { onDelete: 'CASCADE', nullable: true })
@@ -61,6 +58,7 @@ export class DataCitation {
   user: User;
 
   @Column({ name: 'source_type', type: 'varchar', length: 50 })
+  @Index('IDX_data_citations_source', ['sourceType', 'sourceIdentifier'])
   sourceType: CitationSourceType;
 
   @Column({ name: 'source_identifier', type: 'varchar', length: 255 })

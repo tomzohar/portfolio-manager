@@ -22,6 +22,9 @@ export interface ChatState extends EntityState<ReasoningTrace> {
   currentThreadId: string | null;
   sseStatus: SSEConnectionStatus;
   
+  // Graph Execution State
+  graphExecuting: boolean;
+  
   // Loading State
   loading: boolean;
   error: string | null;
@@ -51,6 +54,7 @@ export const initialChatState: ChatState = tracesAdapter.getInitialState({
   autoScroll: true,
   currentThreadId: null,
   sseStatus: SSEConnectionStatus.DISCONNECTED,
+  graphExecuting: false,
   loading: false,
   error: null,
 });

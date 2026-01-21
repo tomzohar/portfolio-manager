@@ -93,6 +93,11 @@ export class ChatPageComponent implements OnDestroy {
    */
   traces = this.facade.currentThreadTraces;
 
+  /**
+   * Current thread ID from facade (may differ from route after message send)
+   */
+  facadeThreadId = this.facade.currentThreadId;
+
   // ========================================
   // Computed State
   // ========================================
@@ -135,6 +140,20 @@ export class ChatPageComponent implements OnDestroy {
 
     // Connection will be handled by ReasoningTracePanelComponent
     // This effect is here for future enhancements (e.g., loading conversation history)
+  });
+
+  /**
+   * Effect: Navigate to backend threadId after message sent
+   * Backend may return different threadId than what we started with
+   */
+  private syncThreadIdEffect = effect(() => {
+    const routeThreadId = this.threadId();
+    const facadeThreadId = this.facadeThreadId();
+    
+    // If facade has threadId from backend that differs from route, navigate to it
+    if (facadeThreadId && routeThreadId && facadeThreadId !== routeThreadId) {
+      this.router.navigate(['/chat', facadeThreadId], { replaceUrl: true });
+    }
   });
 
   // ========================================
@@ -180,10 +199,12 @@ export class ChatPageComponent implements OnDestroy {
 
     const threadId = this.threadId();
     
-    // TODO: Implement sendMessage action in ChatFacade
-    // this.facade.sendMessage({ message: trimmed, threadId });
-    
-    console.log('[ChatPage] Message send:', { message: trimmed, threadId });
+    // Send message to backend via ChatFacade
+    // This will trigger graph execution and start SSE streaming
+    this.facade.sendMessage({ 
+      message: trimmed, 
+      threadId: threadId || undefined,
+    });
   }
 
   /**
@@ -220,14 +241,28 @@ export class ChatPageComponent implements OnDestroy {
 
   /**
    * Validate threadId to prevent API calls with invalid IDs
+   * Accepts both formats:
+   * - Frontend format: thread-{timestamp}-{random}
+   * - Backend format: {userId}:{threadId}
    */
   isValidThreadId(threadId: string): boolean {
-    const invalidKeywords = ['new', 'undefined', 'null', ''];
+    const invalidKeywords = ['undefined', 'null', ''];
     
     if (invalidKeywords.includes(threadId.toLowerCase())) {
       return false;
     }
 
-    return threadId.startsWith('thread-');
+    // Accept frontend format
+    if (threadId.startsWith('thread-')) {
+      return true;
+    }
+
+    // Accept backend format: {userId}:{threadId}
+    if (threadId.includes(':')) {
+      const parts = threadId.split(':');
+      return parts.length === 2 && parts[0].length > 0 && parts[1].length > 0;
+    }
+
+    return false;
   }
 }

@@ -915,7 +915,7 @@ describe('TracingService', () => {
         status: TraceStatus.RUNNING,
         stepIndex: maxStepIndex + 1,
         createdAt: new Date(),
-      } as ReasoningTrace;
+      } as unknown as ReasoningTrace;
 
       mockRepository.create.mockReturnValue(expectedTrace);
       mockRepository.save.mockResolvedValue(expectedTrace);

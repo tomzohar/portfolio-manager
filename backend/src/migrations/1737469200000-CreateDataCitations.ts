@@ -153,18 +153,12 @@ export class CreateDataCitations1737469200000 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Drop indexes
-    await queryRunner.dropIndex(
-      'data_citations',
-      'IDX_data_citations_source',
-    );
+    await queryRunner.dropIndex('data_citations', 'IDX_data_citations_source');
     await queryRunner.dropIndex(
       'data_citations',
       'IDX_data_citations_trace_id',
     );
-    await queryRunner.dropIndex(
-      'data_citations',
-      'IDX_data_citations_user_id',
-    );
+    await queryRunner.dropIndex('data_citations', 'IDX_data_citations_user_id');
     await queryRunner.dropIndex(
       'data_citations',
       'IDX_data_citations_thread_id',

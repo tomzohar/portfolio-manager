@@ -56,6 +56,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
     GeminiLlmService,
     TokenUsageService,
     TracingService,
+    StateService,
   ],
 })
 export class AgentsModule {

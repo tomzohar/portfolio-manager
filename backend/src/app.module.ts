@@ -10,6 +10,7 @@ import { PortfolioModule } from './modules/portfolio/portfolio.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AssetsModule } from './modules/assets/assets.module';
 import { AgentsModule } from './modules/agents/agents.module';
+import { CitationsModule } from './modules/citations/citations.module';
 
 function shouldSynchronize(env: string | undefined): boolean {
   return env === 'development' || env === 'test';
@@ -74,6 +75,7 @@ function getTypeOrmModuleConfig(
     AuthModule,
     AssetsModule,
     AgentsModule,
+    CitationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

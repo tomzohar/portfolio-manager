@@ -65,14 +65,11 @@ export const selectCurrentThreadId = createSelector(
 );
 
 /**
- * Select whether graph is active (has active thread)
+ * Select whether graph is actively executing
  */
 export const selectIsGraphActive = createSelector(
-  selectCurrentThreadId,
-  selectSSEStatus,
-  (threadId, status) => {
-    return threadId !== null && status === 'connected';
-  }
+  selectChatState,
+  (state) => state.graphExecuting
 );
 
 /**

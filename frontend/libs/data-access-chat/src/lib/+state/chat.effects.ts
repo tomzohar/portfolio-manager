@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { NodeCompleteEventData, SSEConnectionStatus, SSEEventType } from '@stocks-researcher/types';
+import { NodeCompleteEventData, GraphCompleteEventData, SSEConnectionStatus, SSEEventType } from '@stocks-researcher/types';
 import { of } from 'rxjs';
 import {
   catchError,
@@ -108,27 +108,36 @@ export class ChatEffects {
   );
 
   /**
-   * Effect: Process SSE events
+   * Effect: Process SSE events - Node Complete
    * 
-   * Triggered by: sseEventReceived action
-   * 
-   * Flow:
-   * 1. Filter events by type
-   * 2. Extract trace data from node.complete events
-   * 3. Dispatch traceReceived action
-   * 
-   * Supported Events:
-   * - node.complete: Dispatches traceReceived with trace data
-   * - llm.token: Logged but not stored (too frequent)
-   * - graph.complete: Logged for debugging
+   * Handles node.complete events and extracts reasoning traces
    */
-  processSSEEvents$ = createEffect(() =>
+  processNodeCompleteEvents$ = createEffect(() =>
     this.actions$.pipe(
       ofType(ChatActions.sSEEventReceived),
       filter(({ event }) => event.type === SSEEventType.NODE_COMPLETE),
       map(({ event }) => {
         const data = event.data as NodeCompleteEventData;
         return ChatActions.traceReceived({ trace: data.trace });
+      })
+    )
+  );
+
+  /**
+   * Effect: Process SSE events - Graph Complete
+   * 
+   * Handles graph.complete events to mark execution as done
+   */
+  processGraphCompleteEvents$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(ChatActions.sSEEventReceived),
+      filter(({ event }) => event.type === SSEEventType.GRAPH_COMPLETE),
+      map(({ event }) => {
+        const data = event.data as GraphCompleteEventData;
+        return ChatActions.graphComplete({ 
+          threadId: data.threadId, 
+          output: data.finalOutput 
+        });
       })
     )
   );
@@ -152,11 +161,17 @@ export class ChatEffects {
       ofType(ChatActions.loadHistoricalTraces),
       switchMap(({ threadId }) =>
         this.traceApi.getTracesByThread(threadId).pipe(
-          map((traces) =>
-            ChatActions.historicalTracesLoaded({ traces })
-          ),
+          map((response) => {
+            // Ensure response is an array
+            const traces = Array.isArray(response) ? response : [];
+            return ChatActions.historicalTracesLoaded({ traces });
+          }),
           catchError((error) => {
             console.error('Failed to load historical traces:', error);
+            // If 404 (thread not found), treat as empty traces instead of error
+            if (error.status === 404) {
+              return of(ChatActions.historicalTracesLoaded({ traces: [] }));
+            }
             return of(
               ChatActions.historicalTracesLoadFailed({
                 error: 'Failed to load conversation history',
@@ -234,5 +249,40 @@ export class ChatEffects {
         })
       ),
     { dispatch: false }
+  );
+
+  /**
+   * Send message to start/continue conversation
+   * Triggers graph execution on backend
+   */
+  sendMessage$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(ChatActions.sendMessage),
+      switchMap(({ message, threadId, portfolioId }) =>
+        this.traceApi.sendMessage({ message, threadId, portfolio: portfolioId }).pipe(
+          map((result) => {
+            // After sending, connect to SSE if not already connected
+            return ChatActions.sendMessageSuccess({ threadId: result.threadId });
+          }),
+          catchError((error) =>
+            of(
+              ChatActions.sendMessageFailure({
+                error: error.message || 'Failed to send message',
+              })
+            )
+          )
+        )
+      )
+    )
+  );
+
+  /**
+   * After message sent successfully, ensure SSE is connected
+   */
+  connectAfterMessageSent$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(ChatActions.sendMessageSuccess),
+      map(({ threadId }) => ChatActions.connectSSE({ threadId }))
+    )
   );
 }

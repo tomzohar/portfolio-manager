@@ -313,18 +313,30 @@ export class ReasoningTracePanelComponent implements OnDestroy {
 
   /**
    * Validate threadId to prevent API calls with invalid IDs
-   * Prevents calls to endpoints like /api/agents/traces/new
+   * Accepts both formats:
+   * - Frontend format: thread-{timestamp}-{random}
+   * - Backend format: {userId}:{threadId}
    */
   private isValidThreadId(threadId: string): boolean {
-    // Thread IDs should start with "thread-" from our generator
-    // Also block special keywords like "new", "undefined", "null"
-    const invalidKeywords = ['new', 'undefined', 'null', ''];
+    // Block standalone invalid keywords
+    const invalidKeywords = ['undefined', 'null', ''];
     
     if (invalidKeywords.includes(threadId.toLowerCase())) {
       return false;
     }
 
-    // Valid thread IDs start with "thread-"
-    return threadId.startsWith('thread-');
+    // Accept frontend format: thread-{timestamp}-{random}
+    if (threadId.startsWith('thread-')) {
+      return true;
+    }
+
+    // Accept backend format: {userId}:{threadId}
+    // Must contain colon and have content on both sides
+    if (threadId.includes(':')) {
+      const parts = threadId.split(':');
+      return parts.length === 2 && parts[0].length > 0 && parts[1].length > 0;
+    }
+
+    return false;
   }
 }

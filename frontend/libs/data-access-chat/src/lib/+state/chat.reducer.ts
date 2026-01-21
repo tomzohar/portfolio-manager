@@ -71,13 +71,16 @@ export const chatReducer = createReducer(
     error: null,
   })),
 
-  on(ChatActions.historicalTracesLoaded, (state, { traces }) =>
-    tracesAdapter.setAll(traces, {
+  on(ChatActions.historicalTracesLoaded, (state, { traces }) => {
+    // Ensure traces is an array before passing to adapter
+    const tracesArray = Array.isArray(traces) ? traces : [];
+    
+    return tracesAdapter.setAll(tracesArray, {
       ...state,
       loading: false,
       error: null,
-    })
-  ),
+    });
+  }),
 
   on(ChatActions.historicalTracesLoadFailed, (state, { error }) => ({
     ...state,
@@ -111,6 +114,41 @@ export const chatReducer = createReducer(
   on(ChatActions.toggleAutoScroll, (state, { enabled }) => ({
     ...state,
     autoScroll: enabled,
+  })),
+
+  // ========================================
+  // Send Message
+  // ========================================
+
+  on(ChatActions.sendMessage, (state) => ({
+    ...state,
+    graphExecuting: true,  // Mark graph as executing
+    loading: true,
+    error: null,
+  })),
+
+  on(ChatActions.sendMessageSuccess, (state, { threadId }) => ({
+    ...state,
+    currentThreadId: threadId,
+    loading: false,
+    error: null,
+    // graphExecuting stays true until graph.complete event
+  })),
+
+  on(ChatActions.sendMessageFailure, (state, { error }) => ({
+    ...state,
+    graphExecuting: false,  // Stop executing on error
+    loading: false,
+    error,
+  })),
+
+  // ========================================
+  // Graph Completion
+  // ========================================
+
+  on(ChatActions.graphComplete, (state) => ({
+    ...state,
+    graphExecuting: false,  // Graph done, re-enable input
   })),
 
   // ========================================
