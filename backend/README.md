@@ -529,12 +529,12 @@ npm run test:e2e -- auth.e2e-spec.ts performance.e2e-spec.ts
 
 #### Database Setup
 
-E2E tests use a **separate test database** to avoid affecting your development data.
+E2E tests use a **separate Postgres instance** on a different port to avoid affecting your development data.
 
 **One-Time Setup:**
 ```bash
-# Create test database
-docker exec <postgres-container-name> psql -U postgres -c "CREATE DATABASE stocks_researcher_test;"
+# Start the dedicated e2e database service
+docker compose up -d postgres_e2e
 ```
 
 **Automatic Cleanup:**
@@ -563,10 +563,14 @@ Tests automatically use test-specific configuration:
 
 ```
 NODE_ENV=test
-DB_DATABASE=stocks_researcher_test
+DB_HOST=localhost
+DB_PORT=5433
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
+DB_DATABASE=stocks_researcher_e2e
 ```
 
-These are set in `test/jest-e2e.setup.ts` and take precedence over `.env` file values.
+These are forced in `test/e2e-env.ts` and take precedence over `.env` file values.
 
 #### Test Database Patterns
 
@@ -644,17 +648,17 @@ npm run test:e2e -- --verbose
 
 **GitHub Actions / GitLab CI:**
 ```yaml
-- name: Setup Test Database
-  run: |
-    docker exec postgres-container psql -U postgres -c "CREATE DATABASE stocks_researcher_test;" || true
-
 - name: Run E2E Tests
   run: |
     cd backend
     npm run test:e2e
   env:
     NODE_ENV: test
-    DB_DATABASE: stocks_researcher_test
+    DB_HOST: localhost
+    DB_PORT: 5433
+    DB_USERNAME: postgres
+    DB_PASSWORD: postgres
+    DB_DATABASE: stocks_researcher_e2e
 ```
 
 **Expected Exit Code:** 0 (success)

@@ -17,8 +17,8 @@ This directory contains end-to-end (e2e) tests for the backend API. E2E tests ve
 
 ### Prerequisites
 
-- PostgreSQL running on `localhost:5432`
-- Test database: `stocks_researcher_test`
+- E2E PostgreSQL running on `localhost:5433` (see `docker-compose.yml` `postgres_e2e`)
+- Test database: `stocks_researcher_e2e`
 - Node.js 22+
 - All dependencies installed (`npm install`)
 
@@ -79,7 +79,7 @@ describe('My Test Suite', () => {
 
 ### Test Database
 
-**Database**: `stocks_researcher_test`  
+**Database**: `stocks_researcher_e2e`  
 **Schema Management**: Automatic via TypeORM `synchronize: true`  
 **Cleanup Strategy**: Global teardown drops/recreates schema
 
@@ -150,10 +150,10 @@ E2E tests run automatically on:
 ```bash
 # Database
 DB_HOST=localhost
-DB_PORT=5432
-DB_USERNAME=test_user
-DB_PASSWORD=test_password
-DB_DATABASE=test_db
+DB_PORT=5433
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
+DB_DATABASE=stocks_researcher_e2e
 
 # Authentication
 JWT_SECRET=test-jwt-secret
