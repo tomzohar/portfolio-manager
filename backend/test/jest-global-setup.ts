@@ -1,4 +1,5 @@
 import { DataSource } from 'typeorm';
+import { applyE2eDbEnv } from './e2e-env';
 
 /**
  * Jest Global Setup for E2E Tests
@@ -18,6 +19,8 @@ export default async function globalSetup() {
   let dataSource: DataSource | null = null;
 
   try {
+    applyE2eDbEnv();
+
     // Create a temporary DataSource connection for setup
     dataSource = new DataSource({
       type: 'postgres',

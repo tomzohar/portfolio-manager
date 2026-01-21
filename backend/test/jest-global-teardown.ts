@@ -1,5 +1,6 @@
 import { DataSource } from 'typeorm';
 import { cleanupGlobalApp } from './global-test-context';
+import { applyE2eDbEnv } from './e2e-env';
 
 /**
  * Jest Global Teardown for E2E Tests
@@ -17,6 +18,8 @@ export default async function globalTeardown() {
   let dataSource: DataSource | null = null;
 
   try {
+    applyE2eDbEnv();
+
     // Create a temporary DataSource connection for cleanup
     dataSource = new DataSource({
       type: 'postgres',
