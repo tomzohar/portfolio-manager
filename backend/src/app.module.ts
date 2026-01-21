@@ -11,6 +11,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AssetsModule } from './modules/assets/assets.module';
 import { AgentsModule } from './modules/agents/agents.module';
 import { CitationsModule } from './modules/citations/citations.module';
+import { ApprovalsModule } from './modules/approvals/approvals.module';
 
 function shouldSynchronize(env: string | undefined): boolean {
   return env === 'development' || env === 'test';
@@ -76,6 +77,7 @@ function getTypeOrmModuleConfig(
     AssetsModule,
     AgentsModule,
     CitationsModule,
+    ApprovalsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
