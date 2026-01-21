@@ -7,6 +7,8 @@ import {
   PolygonTickerResponse,
   PolygonSnapshotResponse,
   PolygonPreviousCloseResponse,
+  PolygonAggregatesResponse,
+  OHLCVBar,
 } from '../types/polygon-api.types';
 
 @Injectable()
@@ -129,6 +131,69 @@ export class PolygonApiService {
         catchError((error: Error) => {
           this.logger.error(
             `Polygon API previous close error for ${ticker}: ${error.message}`,
+            error.stack,
+          );
+          return of(null);
+        }),
+      );
+  }
+
+  /**
+   * Get historical aggregate bars (OHLCV data) for a ticker
+   * @param ticker - The ticker symbol
+   * @param from - Start date (YYYY-MM-DD)
+   * @param to - End date (YYYY-MM-DD)
+   * @param timespan - Timespan (default: 'day')
+   * @returns Observable of OHLCV bars or null on error
+   */
+  getAggregates(
+    ticker: string,
+    from: string,
+    to: string,
+    timespan: string = 'day',
+  ): Observable<OHLCVBar[] | null> {
+    this.logger.log(
+      `Fetching aggregates for ${ticker} from ${from} to ${to} (${timespan})`,
+    );
+
+    const params = {
+      adjusted: 'true', // Use adjusted prices (accounts for splits/dividends)
+      sort: 'asc', // Sort by timestamp ascending
+      limit: '50000', // Maximum limit to get all data
+      apiKey: this.apiKey,
+    };
+
+    return this.httpService
+      .get<PolygonAggregatesResponse>(
+        `${this.baseUrl.replace('/v3', '/v2')}/aggs/ticker/${ticker}/range/1/${timespan}/${from}/${to}`,
+        { params },
+      )
+      .pipe(
+        map((response) => {
+          if (!response.data.results || response.data.results.length === 0) {
+            this.logger.warn(
+              `No aggregate data returned for ${ticker} (${from} to ${to})`,
+            );
+            return null;
+          }
+
+          const bars: OHLCVBar[] = response.data.results.map((bar) => ({
+            timestamp: new Date(bar.t),
+            open: bar.o,
+            high: bar.h,
+            low: bar.l,
+            close: bar.c,
+            volume: bar.v,
+          }));
+
+          this.logger.log(
+            `Successfully fetched ${bars.length} bars for ${ticker}`,
+          );
+          return bars;
+        }),
+        catchError((error: Error) => {
+          this.logger.error(
+            `Polygon API aggregates error for ${ticker}: ${error.message}`,
             error.stack,
           );
           return of(null);

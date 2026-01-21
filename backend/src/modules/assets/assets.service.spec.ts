@@ -89,7 +89,7 @@ describe('AssetsService', () => {
       polygonApiService.searchTickers.mockReturnValue(throwError(() => error));
 
       service.searchTickers(searchTerm).subscribe({
-        next: () => done.fail('Should have thrown an error'),
+        next: () => done.fail('Should have thrown an error') as never,
         error: (err) => {
           expect(err).toEqual(error);
           expect(polygonApiService.searchTickers).toHaveBeenCalledWith(

@@ -1,0 +1,34 @@
+@use 'scss' as *;
+
+.performance-metric {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.metric-label {
+  @include label-uppercase;
+  color: $color-text-subtle;
+}
+
+.metric-value {
+  @include value-medium;
+  font-weight: $font-weight-bold;
+
+  &.large {
+    @include value-large;
+  }
+
+  &.success {
+    color: $color-success;
+  }
+
+  &.error {
+    color: $color-error;
+  }
+
+  &.neutral {
+    color: $color-text-primary;
+  }
+}
+

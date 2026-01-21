@@ -19,12 +19,10 @@ import {
 } from './dto/portfolio-summary.dto';
 import { UsersService } from '../users/users.service';
 import { PolygonApiService } from '../assets/services/polygon-api.service';
-import type {
-  PolygonSnapshotResponse,
-  PolygonPreviousCloseResponse,
-} from '../assets/types/polygon-api.types';
+import type { PolygonPreviousCloseResponse } from '../assets/types/polygon-api.types';
 import { EnrichedAssetDto } from './dto/asset-response.dto';
 import { lastValueFrom } from 'rxjs';
+import { getSectorForTicker } from './constants/sector-mapping';
 
 @Injectable()
 export class PortfolioService {
@@ -70,7 +68,7 @@ export class PortfolioService {
     if (initialInvestment && initialInvestment > 0) {
       await this.transactionRepository.save(
         this.transactionRepository.create({
-          type: TransactionType.BUY,
+          type: TransactionType.DEPOSIT,
           ticker: CASH_TICKER,
           quantity: initialInvestment,
           price: 1, // Cash is always 1:1
@@ -434,16 +432,30 @@ export class PortfolioService {
 
       const position = positionMap.get(ticker) || { quantity: 0, totalCost: 0 };
 
-      if (transaction.type === TransactionType.BUY) {
+      if (
+        transaction.type === TransactionType.BUY ||
+        transaction.type === TransactionType.DEPOSIT
+      ) {
         // Add to position and update total cost
         position.quantity += qty;
         position.totalCost += qty * price;
-      } else if (transaction.type === TransactionType.SELL) {
-        // Reduce position proportionally
+      } else if (
+        transaction.type === TransactionType.SELL ||
+        transaction.type === TransactionType.WITHDRAWAL
+      ) {
+        // Reduce position
+        // NOTE: For CASH, SELL can happen before BUY due to double-entry bookkeeping
+        // In this case, quantity goes negative temporarily, which is valid for CASH
         if (position.quantity > 0) {
+          // Normal case: selling from existing position
           const avgCost = position.totalCost / position.quantity;
           position.quantity -= qty;
           position.totalCost = position.quantity * avgCost;
+        } else {
+          // Edge case: SELL before BUY (happens with CASH due to transaction ordering)
+          // Subtract quantity and cost (will go negative, then corrected by subsequent BUY)
+          position.quantity -= qty;
+          position.totalCost -= qty * price;
         }
       }
 
@@ -468,6 +480,51 @@ export class PortfolioService {
     }
 
     return positions;
+  }
+
+  /**
+   * Get holdings with sector data for performance attribution
+   * Returns enriched holdings with sector classification and portfolio weights
+   *
+   * @param portfolioId - Portfolio UUID
+   * @param userId - User UUID (for ownership verification)
+   * @returns Array of holdings with sector data and weights
+   */
+  async getHoldingsWithSectorData(
+    portfolioId: string,
+    userId: string,
+  ): Promise<
+    Array<{
+      ticker: string;
+      quantity: number;
+      avgCostBasis: number;
+      currentPrice: number;
+      marketValue: number;
+      sector: string;
+      weight: number;
+    }>
+  > {
+    // Verify ownership and get portfolio summary
+    const summary = await this.getPortfolioSummary(portfolioId, userId);
+
+    if (!summary.positions || summary.positions.length === 0) {
+      return [];
+    }
+
+    const totalValue = summary.totalValue || 1; // Avoid division by zero
+
+    // Map positions to holdings with sector data
+    return summary.positions
+      .filter((position) => position.ticker !== CASH_TICKER) // Exclude cash from sector analysis
+      .map((position) => ({
+        ticker: position.ticker,
+        quantity: position.quantity,
+        avgCostBasis: position.avgCostBasis,
+        currentPrice: position.currentPrice ?? position.avgCostBasis,
+        marketValue: position.marketValue ?? 0,
+        sector: getSectorForTicker(position.ticker),
+        weight: (position.marketValue ?? 0) / totalValue,
+      }));
   }
 
   /**

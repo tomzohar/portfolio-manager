@@ -2,9 +2,11 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Between, FindOptionsWhere, Repository } from 'typeorm';
 import {
   CreateTransactionDto,
@@ -19,14 +21,25 @@ import {
 } from './entities/transaction.entity';
 import { PortfolioService } from './portfolio.service';
 
+/**
+ * Event payload for historical transaction creation/deletion
+ */
+export interface HistoricalTransactionEvent {
+  portfolioId: string;
+  transactionDate: Date;
+}
+
 @Injectable()
 export class TransactionsService {
+  private readonly logger = new Logger(TransactionsService.name);
+
   constructor(
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
     @InjectRepository(Portfolio)
     private portfolioRepository: Repository<Portfolio>,
     private portfolioService: PortfolioService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -43,16 +56,74 @@ export class TransactionsService {
     await this.verifyPortfolioOwnership(portfolioId, userId);
 
     const ticker = createTransactionDto.ticker.toUpperCase();
+
+    // Handle DEPOSIT/WITHDRAWAL (external cash flows)
+    if (
+      createTransactionDto.type === TransactionType.DEPOSIT ||
+      createTransactionDto.type === TransactionType.WITHDRAWAL
+    ) {
+      // Validate CASH ticker (redundant with DTO validation, but defensive)
+      if (ticker !== CASH_TICKER) {
+        throw new BadRequestException(
+          'DEPOSIT and WITHDRAWAL transactions must use CASH ticker',
+        );
+      }
+
+      // Parse transaction date early - needed for historical validation
+      const transactionDate = createTransactionDto.transactionDate
+        ? new Date(createTransactionDto.transactionDate)
+        : new Date();
+
+      // For WITHDRAWAL, validate sufficient cash balance as of the transaction date
+      if (createTransactionDto.type === TransactionType.WITHDRAWAL) {
+        const cashPosition = await this.calculatePositionForTicker(
+          portfolioId,
+          CASH_TICKER,
+          transactionDate,
+        );
+        if (cashPosition < createTransactionDto.quantity) {
+          throw new BadRequestException(
+            `Insufficient cash balance. Required: $${createTransactionDto.quantity.toFixed(2)}, Available: $${cashPosition.toFixed(2)}`,
+          );
+        }
+      }
+
+      // Create single transaction (no offsetting entry)
+      const transaction = this.transactionRepository.create({
+        type: createTransactionDto.type,
+        ticker: CASH_TICKER,
+        quantity: createTransactionDto.quantity,
+        price: 1, // CASH always 1:1
+        transactionDate,
+        portfolio: { id: portfolioId } as Portfolio,
+      });
+
+      const savedTransaction =
+        await this.transactionRepository.save(transaction);
+      await this.portfolioService.recalculatePositions(portfolioId);
+
+      // Check if this is a historical transaction and emit event for backfill
+      this.checkAndEmitHistoricalEvent(portfolioId, transactionDate);
+
+      return new TransactionResponseDto(savedTransaction);
+    }
+
     const transactionValue =
       createTransactionDto.quantity * createTransactionDto.price;
+
+    // Parse transaction date early - needed for historical validation
+    const transactionDate = createTransactionDto.transactionDate
+      ? new Date(createTransactionDto.transactionDate)
+      : new Date();
 
     // For non-CASH transactions, validate CASH balance
     if (ticker !== CASH_TICKER) {
       if (createTransactionDto.type === TransactionType.BUY) {
-        // Validate sufficient CASH for purchase
+        // Validate sufficient CASH for purchase as of the transaction date
         const cashPosition = await this.calculatePositionForTicker(
           portfolioId,
           CASH_TICKER,
+          transactionDate,
         );
         if (cashPosition < transactionValue) {
           throw new BadRequestException(
@@ -61,11 +132,12 @@ export class TransactionsService {
         }
       }
 
-      // For SELL transactions, validate that user has enough shares
+      // For SELL transactions, validate that user has enough shares as of the transaction date
       if (createTransactionDto.type === TransactionType.SELL) {
         const currentPosition = await this.calculatePositionForTicker(
           portfolioId,
           ticker,
+          transactionDate,
         );
 
         if (currentPosition < createTransactionDto.quantity) {
@@ -75,10 +147,6 @@ export class TransactionsService {
         }
       }
     }
-
-    const transactionDate = createTransactionDto.transactionDate
-      ? new Date(createTransactionDto.transactionDate)
-      : new Date();
 
     // Create the main transaction
     const transaction = this.transactionRepository.create({
@@ -111,6 +179,9 @@ export class TransactionsService {
 
     // Recalculate positions to keep assets table in sync
     await this.portfolioService.recalculatePositions(portfolioId);
+
+    // Check if this is a historical transaction and emit event for backfill
+    this.checkAndEmitHistoricalEvent(portfolioId, transactionDate);
 
     return new TransactionResponseDto(savedTransaction);
   }
@@ -217,6 +288,9 @@ export class TransactionsService {
 
     // Recalculate positions to keep assets table in sync
     await this.portfolioService.recalculatePositions(portfolioId);
+
+    // Check if deleted transaction was historical and emit event for backfill
+    this.checkAndEmitHistoricalEvent(portfolioId, transaction.transactionDate);
   }
 
   /**
@@ -243,12 +317,18 @@ export class TransactionsService {
   }
 
   /**
-   * Calculate the current position (net quantity) for a specific ticker in a portfolio
-   * Used for validating SELL transactions
+   * Calculate the position (net quantity) for a specific ticker in a portfolio
+   * Used for validating SELL/BUY/WITHDRAWAL transactions
+   *
+   * @param portfolioId - Portfolio UUID
+   * @param ticker - Ticker symbol
+   * @param asOfDate - Optional date to calculate position as of (inclusive). If not provided, calculates current position.
+   * @returns Net quantity of the ticker
    */
   private async calculatePositionForTicker(
     portfolioId: string,
     ticker: string,
+    asOfDate?: Date,
   ): Promise<number> {
     const transactions = await this.transactionRepository.find({
       where: {
@@ -260,13 +340,50 @@ export class TransactionsService {
 
     let position = 0;
     for (const transaction of transactions) {
-      if (transaction.type === TransactionType.BUY) {
+      // If asOfDate is provided, only include transactions up to and including that date
+      if (asOfDate && transaction.transactionDate > asOfDate) {
+        continue;
+      }
+
+      if (
+        transaction.type === TransactionType.BUY ||
+        transaction.type === TransactionType.DEPOSIT
+      ) {
         position += Number(transaction.quantity);
-      } else if (transaction.type === TransactionType.SELL) {
+      } else if (
+        transaction.type === TransactionType.SELL ||
+        transaction.type === TransactionType.WITHDRAWAL
+      ) {
         position -= Number(transaction.quantity);
       }
     }
 
     return position;
+  }
+
+  /**
+   * Emit event for automatic performance snapshot backfill
+   * This triggers the performance snapshot recalculation from the transaction date forward
+   *
+   * Note: ALL transactions trigger backfill to ensure no gaps in snapshot data.
+   * The backfill service is smart enough to only calculate missing snapshots.
+   *
+   * @param portfolioId - Portfolio UUID
+   * @param transactionDate - Transaction date to check
+   */
+  private checkAndEmitHistoricalEvent(
+    portfolioId: string,
+    transactionDate: Date,
+  ): void {
+    this.logger.log(
+      `Transaction detected for portfolio ${portfolioId} on ${transactionDate.toISOString()}. ` +
+        `Auto-triggering performance snapshot backfill from ${transactionDate.toISOString()}.`,
+    );
+
+    // Emit event for automatic backfill (all transactions trigger backfill to avoid gaps)
+    this.eventEmitter.emit('transaction.historical', {
+      portfolioId,
+      transactionDate,
+    } as HistoricalTransactionEvent);
   }
 }

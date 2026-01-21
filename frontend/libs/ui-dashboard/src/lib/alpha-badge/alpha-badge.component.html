@@ -1,0 +1,9 @@
+<div 
+  class="alpha-badge"
+  [class.outperform]="isOutperforming()"
+  [class.underperform]="!isOutperforming()"
+>
+  <lib-icon [name]="iconName()" [size]="16" />
+  <span class="badge-text">{{ badgeText() }}</span>
+</div>
+

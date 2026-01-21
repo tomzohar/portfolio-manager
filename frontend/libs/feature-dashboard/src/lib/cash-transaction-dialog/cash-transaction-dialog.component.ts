@@ -22,7 +22,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
+import { provideNativeDateAdapter } from '@angular/material/core';
 import { CommonModule } from '@angular/common';
 import {
   ButtonComponent,
@@ -94,11 +94,11 @@ enum CashTransactionMode {
     MatInputModule,
     MatIconModule,
     MatDatepickerModule,
-    MatNativeDateModule,
     ButtonComponent,
     InputComponent,
     RadioButtonGroupComponent,
   ],
+  providers: [provideNativeDateAdapter()],
   templateUrl: './cash-transaction-dialog.component.html',
   styleUrl: './cash-transaction-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -233,10 +233,10 @@ export class CashTransactionDialogComponent {
     const amount = parseFloat(formValue.amount);
     const transactionDate = formValue.transactionDate;
 
-    // Map mode to TransactionType
+    // Map mode to TransactionType (DEPOSIT/WITHDRAWAL)
     const type = mode === CashTransactionMode.DEPOSIT 
-      ? TransactionType.BUY 
-      : TransactionType.SELL;
+      ? TransactionType.DEPOSIT 
+      : TransactionType.WITHDRAWAL;
 
     // Create DTO with CASH ticker and price of 1
     const dto: CreateTransactionDto = {

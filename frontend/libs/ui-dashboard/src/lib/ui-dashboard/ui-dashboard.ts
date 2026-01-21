@@ -10,8 +10,6 @@ import {
   EmptyStateComponent,
   LoadingPageComponent,
   MenuItem,
-  PageHeaderComponent,
-  PageHeaderConfig,
   SelectOption,
   TableComponent,
 } from '@stocks-researcher/styles';
@@ -35,7 +33,6 @@ const CASH_TICKER = 'CASH';
     LoadingPageComponent,
     NetAccountValueWidgetComponent,
     CashBalanceWidgetComponent,
-    PageHeaderComponent,
   ],
   templateUrl: './ui-dashboard.html',
   styleUrl: './ui-dashboard.scss',
@@ -55,50 +52,6 @@ export class UiDashboardComponent {
   sellAsset = output<DashboardAsset>();
   viewTransactions = output<string | undefined>();
   manageCash = output<void>();
-
-  /**
-   * Get the selected portfolio name for the header
-   */
-  selectedPortfolioName = computed<string>(() => {
-    const selectedId = this.selectedPortfolioId();
-    const portfolio = this.portfolios().find((p) => p.id === selectedId);
-    return portfolio?.name || 'Portfolio';
-  });
-
-  /**
-   * Page header configuration
-   */
-  pageHeaderConfig = computed<PageHeaderConfig>(() => ({
-    title: this.selectedPortfolioName(),
-    backButton: {
-      route: '/portfolios',
-      label: 'All Portfolios',
-    },
-    actionMenu: {
-      button: {
-        label: 'Actions',
-        icon: ACTION_ICONS.MORE,
-        variant: 'icon',
-        color: 'accent',
-        ariaLabel: 'Portfolio actions menu',
-      },
-      menu: {
-        items: [
-          {
-            id: 'manage-cash',
-            label: 'Deposit/Withdraw Cash',
-            icon: 'account_balance_wallet',
-          },
-          {
-            id: 'delete-portfolio',
-            label: 'Delete Portfolio',
-            icon: ACTION_ICONS.DELETE,
-          },
-        ],
-        ariaLabel: 'Portfolio actions',
-      },
-    },
-  }));
 
   /**
    * Filter out CASH from assets for display
@@ -255,20 +208,6 @@ export class UiDashboardComponent {
         break;
       case 'delete-portfolio':
         this.onDeletePortfolio();
-        break;
-    }
-  }
-
-  /**
-   * Handle page header menu item click
-   */
-  onHeaderMenuItemClick(item: MenuItem): void {
-    switch (item.id) {
-      case 'manage-cash':
-        this.onManageCash();
-        break;
-      default:
-        this.onActionMenuItemSelected(item);
         break;
     }
   }

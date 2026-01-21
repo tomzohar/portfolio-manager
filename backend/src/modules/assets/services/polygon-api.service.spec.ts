@@ -5,6 +5,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AxiosError, AxiosResponse } from 'axios';
 import { of, throwError } from 'rxjs';
 import { PolygonApiService } from './polygon-api.service';
+import { PolygonTickerResponse } from '../types/polygon-api.types';
 
 describe('PolygonApiService', () => {
   let service: PolygonApiService;
@@ -103,7 +104,7 @@ describe('PolygonApiService', () => {
         status: 200,
         statusText: 'OK',
         headers: {},
-        config: {} as any,
+        config: {} as AxiosResponse['config'],
       };
 
       jest.spyOn(httpService, 'get').mockReturnValue(of(mockAxiosResponse));
@@ -142,7 +143,7 @@ describe('PolygonApiService', () => {
         status: 200,
         statusText: 'OK',
         headers: {},
-        config: {} as any,
+        config: {} as AxiosResponse['config'],
       };
 
       const getSpy = jest
@@ -180,7 +181,7 @@ describe('PolygonApiService', () => {
         status: 200,
         statusText: 'OK',
         headers: {},
-        config: {} as any,
+        config: {} as AxiosResponse['config'],
       };
 
       jest.spyOn(httpService, 'get').mockReturnValue(of(mockAxiosResponse));
@@ -202,11 +203,11 @@ describe('PolygonApiService', () => {
       };
 
       const mockAxiosResponse: AxiosResponse = {
-        data: mockPolygonResponse as any,
+        data: mockPolygonResponse as PolygonTickerResponse,
         status: 200,
         statusText: 'OK',
         headers: {},
-        config: {} as any,
+        config: {} as AxiosResponse['config'],
       };
 
       jest.spyOn(httpService, 'get').mockReturnValue(of(mockAxiosResponse));
@@ -235,9 +236,9 @@ describe('PolygonApiService', () => {
         .mockReturnValue(throwError(() => mockError));
 
       service.searchTickers(mockSearchTerm).subscribe({
-        next: () => done.fail('Should have thrown an error'),
+        next: () => done.fail('Should have thrown an error') as never,
         error: (error) => {
-          expect(error.message).toBe(
+          expect((error as Error).message).toBe(
             'Failed to fetch tickers from Polygon API',
           );
           done();
@@ -260,9 +261,9 @@ describe('PolygonApiService', () => {
         .mockReturnValue(throwError(() => mockError));
 
       service.searchTickers(mockSearchTerm).subscribe({
-        next: () => done.fail('Should have thrown an error'),
+        next: () => done.fail('Should have thrown an error') as never,
         error: (error) => {
-          expect(error.message).toBe(
+          expect((error as Error).message).toBe(
             'Failed to fetch tickers from Polygon API',
           );
           done();
@@ -285,9 +286,9 @@ describe('PolygonApiService', () => {
         .mockReturnValue(throwError(() => mockError));
 
       service.searchTickers(mockSearchTerm).subscribe({
-        next: () => done.fail('Should have thrown an error'),
+        next: () => done.fail('Should have thrown an error') as never,
         error: (error) => {
-          expect(error.message).toBe(
+          expect((error as Error).message).toBe(
             'Failed to fetch tickers from Polygon API',
           );
           done();
@@ -320,7 +321,7 @@ describe('PolygonApiService', () => {
         status: 200,
         statusText: 'OK',
         headers: {},
-        config: {},
+        config: {} as AxiosResponse['config'],
       };
 
       jest.spyOn(httpService, 'get').mockReturnValue(of(mockAxiosResponse));
@@ -356,7 +357,7 @@ describe('PolygonApiService', () => {
         status: 200,
         statusText: 'OK',
         headers: {},
-        config: {} as any,
+        config: {} as AxiosResponse['config'],
       };
 
       const getSpy = jest
@@ -366,6 +367,7 @@ describe('PolygonApiService', () => {
       service.searchTickers(specialSearchTerm).subscribe({
         next: () => {
           expect(getSpy).toHaveBeenCalledWith(mockBaseUrl, {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             params: expect.objectContaining({
               search: specialSearchTerm,
             }),
@@ -424,7 +426,7 @@ describe('PolygonApiService', () => {
         status: 200,
         statusText: 'OK',
         headers: {},
-        config: {} as any,
+        config: {} as AxiosResponse['config'],
       };
 
       jest.spyOn(httpService, 'get').mockReturnValue(of(mockAxiosResponse));
@@ -474,7 +476,7 @@ describe('PolygonApiService', () => {
         status: 200,
         statusText: 'OK',
         headers: {},
-        config: {} as any,
+        config: {} as AxiosResponse['config'],
       };
 
       const getSpy = jest
@@ -576,7 +578,7 @@ describe('PolygonApiService', () => {
         status: 200,
         statusText: 'OK',
         headers: {},
-        config: {} as any,
+        config: {} as AxiosResponse['config'],
       };
 
       jest.spyOn(httpService, 'get').mockReturnValue(of(mockAxiosResponse));
@@ -585,6 +587,235 @@ describe('PolygonApiService', () => {
         next: (result) => {
           expect(result).toEqual(mockSnapshotResponse);
           expect(result?.ticker.min).toBeUndefined();
+          done();
+        },
+        error: done.fail,
+      });
+    });
+  });
+
+  describe('getAggregates', () => {
+    const mockTicker = 'AAPL';
+    const fromDate = '2024-01-01';
+    const toDate = '2024-12-31';
+
+    it('should return OHLCV bars for valid ticker and date range', (done) => {
+      const mockAggregatesResponse = {
+        ticker: 'AAPL',
+        queryCount: 3,
+        resultsCount: 3,
+        adjusted: true,
+        results: [
+          {
+            v: 1000000,
+            vw: 150.5,
+            o: 150,
+            c: 151,
+            h: 152,
+            l: 149,
+            t: 1704067200000, // 2024-01-01
+            n: 100,
+          },
+          {
+            v: 1100000,
+            vw: 151.5,
+            o: 151,
+            c: 152,
+            h: 153,
+            l: 150,
+            t: 1704153600000, // 2024-01-02
+            n: 110,
+          },
+          {
+            v: 1200000,
+            vw: 152.5,
+            o: 152,
+            c: 153,
+            h: 154,
+            l: 151,
+            t: 1704240000000, // 2024-01-03
+            n: 120,
+          },
+        ],
+        status: 'OK',
+        request_id: 'test-request-id',
+      };
+
+      const mockAxiosResponse: AxiosResponse = {
+        data: mockAggregatesResponse,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as AxiosResponse['config'],
+      };
+
+      jest.spyOn(httpService, 'get').mockReturnValue(of(mockAxiosResponse));
+
+      service.getAggregates(mockTicker, fromDate, toDate).subscribe({
+        next: (result) => {
+          expect(result).toBeDefined();
+          expect(result).toHaveLength(3);
+          expect(result?.[0]).toEqual({
+            timestamp: new Date(1704067200000),
+            open: 150,
+            high: 152,
+            low: 149,
+            close: 151,
+            volume: 1000000,
+          });
+          expect(result?.[2].close).toBe(153);
+          done();
+        },
+        error: done.fail,
+      });
+    });
+
+    it('should call Polygon API with correct endpoint and parameters', (done) => {
+      const mockAggregatesResponse = {
+        ticker: 'AAPL',
+        queryCount: 1,
+        resultsCount: 1,
+        adjusted: true,
+        results: [
+          {
+            v: 1000000,
+            vw: 150.5,
+            o: 150,
+            c: 151,
+            h: 152,
+            l: 149,
+            t: 1704067200000,
+            n: 100,
+          },
+        ],
+        status: 'OK',
+        request_id: 'test-request-id',
+      };
+
+      const mockAxiosResponse: AxiosResponse = {
+        data: mockAggregatesResponse,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as AxiosResponse['config'],
+      };
+
+      const getSpy = jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(of(mockAxiosResponse));
+
+      service.getAggregates(mockTicker, fromDate, toDate, 'day').subscribe({
+        next: () => {
+          expect(getSpy).toHaveBeenCalledWith(
+            'https://api.polygon.io/v2/aggs/ticker/AAPL/range/1/day/2024-01-01/2024-12-31',
+            {
+              params: {
+                adjusted: 'true',
+                sort: 'asc',
+                limit: '50000',
+                apiKey: mockApiKey,
+              },
+            },
+          );
+          done();
+        },
+        error: done.fail,
+      });
+    });
+
+    it('should return null when no results are returned', (done) => {
+      const mockAggregatesResponse = {
+        ticker: 'INVALID',
+        queryCount: 0,
+        resultsCount: 0,
+        adjusted: true,
+        results: [],
+        status: 'OK',
+        request_id: 'test-request-id',
+      };
+
+      const mockAxiosResponse: AxiosResponse = {
+        data: mockAggregatesResponse,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as AxiosResponse['config'],
+      };
+
+      jest.spyOn(httpService, 'get').mockReturnValue(of(mockAxiosResponse));
+
+      service.getAggregates('INVALID', fromDate, toDate).subscribe({
+        next: (result) => {
+          expect(result).toBeNull();
+          done();
+        },
+        error: done.fail,
+      });
+    });
+
+    it('should return null on API error', (done) => {
+      const mockError = {
+        message: 'Network error',
+        name: 'AxiosError',
+        response: {
+          status: 500,
+          statusText: 'Internal Server Error',
+        },
+      } as AxiosError;
+
+      jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(throwError(() => mockError));
+
+      service.getAggregates(mockTicker, fromDate, toDate).subscribe({
+        next: (result) => {
+          expect(result).toBeNull();
+          done();
+        },
+        error: done.fail,
+      });
+    });
+
+    it('should use default timespan of "day" if not specified', (done) => {
+      const mockAggregatesResponse = {
+        ticker: 'AAPL',
+        queryCount: 1,
+        resultsCount: 1,
+        adjusted: true,
+        results: [
+          {
+            v: 1000000,
+            vw: 150.5,
+            o: 150,
+            c: 151,
+            h: 152,
+            l: 149,
+            t: 1704067200000,
+            n: 100,
+          },
+        ],
+        status: 'OK',
+        request_id: 'test-request-id',
+      };
+
+      const mockAxiosResponse: AxiosResponse = {
+        data: mockAggregatesResponse,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as AxiosResponse['config'],
+      };
+
+      const getSpy = jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(of(mockAxiosResponse));
+
+      service.getAggregates(mockTicker, fromDate, toDate).subscribe({
+        next: () => {
+          expect(getSpy).toHaveBeenCalledWith(
+            expect.stringContaining('/range/1/day/'),
+            expect.any(Object),
+          );
           done();
         },
         error: done.fail,

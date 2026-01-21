@@ -62,16 +62,7 @@ describe('UiDashboardComponent', () => {
     expect(loadingPage).toBeTruthy();
   });
 
-  it('should render page header when portfolios exist and not loading', () => {
-    fixture.componentRef.setInput('portfolios', mockPortfolios);
-    fixture.componentRef.setInput('loading', false);
-    fixture.componentRef.setInput('selectedPortfolioId', '1');
-    fixture.detectChanges();
-
-    const compiled = fixture.nativeElement as HTMLElement;
-    const pageHeader = compiled.querySelector('lib-page-header');
-    expect(pageHeader).toBeTruthy();
-  });
+  // Page header test removed - header is now in parent FeatureDashboardComponent
 
   it('should render assets card when portfolio is selected', () => {
     fixture.componentRef.setInput('portfolios', mockPortfolios);
@@ -146,28 +137,22 @@ describe('UiDashboardComponent', () => {
       expect(emptyState).toBeTruthy();
     });
 
-    it('should render page header when portfolios exist', () => {
+    // Page header test removed - header is now in parent FeatureDashboardComponent
+    
+    it('should render widgets when portfolios exist', () => {
       fixture.componentRef.setInput('portfolios', mockPortfolios);
       fixture.componentRef.setInput('selectedPortfolioId', '1');
       fixture.componentRef.setInput('loading', false);
       fixture.detectChanges();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      // Should show page header when portfolios exist
-      const pageHeader = compiled.querySelector('lib-page-header');
+      // Should show widgets when portfolio selected
+      const widgets = compiled.querySelector('.portfolio-widgets');
       
-      expect(pageHeader).toBeTruthy();
+      expect(widgets).toBeTruthy();
     });
 
-    it('should not display page header when portfolios are empty', () => {
-      fixture.componentRef.setInput('portfolios', []);
-      fixture.componentRef.setInput('loading', false);
-      fixture.detectChanges();
-
-      const compiled = fixture.nativeElement as HTMLElement;
-      const pageHeader = compiled.querySelector('lib-page-header');
-      expect(pageHeader).toBeNull();
-    });
+    // Page header test removed - header is now in parent FeatureDashboardComponent
 
     it('should emit createPortfolio event when empty state action is clicked', (done) => {
       fixture.componentRef.setInput('portfolios', []);

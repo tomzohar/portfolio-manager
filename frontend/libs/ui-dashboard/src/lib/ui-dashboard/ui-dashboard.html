@@ -10,12 +10,6 @@
       (actionClick)="onCreatePortfolio()"
     />
     } @else {
-    <!-- Page Header -->
-    <lib-page-header
-      [config]="pageHeaderConfig()"
-      (menuItemClicked)="onHeaderMenuItemClick($event)"
-    />
-
     <!-- Portfolio Widgets -->
     @if (!loading() && selectedPortfolioId()) {
     <div class="portfolio-widgets">

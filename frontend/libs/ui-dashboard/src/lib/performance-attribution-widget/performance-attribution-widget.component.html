@@ -1,0 +1,95 @@
+<div class="performance-page-layout">
+  <div class="controls-row">
+    <lib-timeframe-selector
+      [selectedTimeframe]="selectedTimeframe()"
+      (timeframeChanged)="onTimeframeChange($event)"
+    />
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="loading-state">
+      <lib-loader [config]="loaderConfig" />
+    </div>
+  }
+
+  <!-- Error State -->
+  @else if (error()) {
+    <div class="error-state">
+      <p class="error-message">{{ error() }}</p>
+      <lib-button
+        [config]="retryButtonConfig"
+        (clicked)="onTimeframeChange(selectedTimeframe())"
+      />
+    </div>
+  }
+
+  <!-- Success State -->
+  @else if (analysis()) {
+    <!-- Metrics Grid -->
+    <div class="metrics-grid">
+      <!-- Portfolio Return -->
+      <div class="metric-card">
+        <span class="metric-label">YOUR PORTFOLIO</span>
+        <div class="metric-value large" [class.success]="analysis()!.portfolioReturn > 0" [class.error]="analysis()!.portfolioReturn < 0">
+          {{ portfolioReturnPercent() }}
+        </div>
+      </div>
+
+      <!-- Benchmark Return -->
+      <div class="metric-card">
+        <span class="metric-label">S&P 500 BENCHMARK</span>
+        <div class="metric-value neutral">
+          {{ benchmarkReturnPercent() }}
+        </div>
+      </div>
+
+      <!-- Alpha -->
+      <div class="metric-card">
+        <span class="metric-label">ALPHA (EXCESS RETURN)</span>
+        <div class="metric-value" [class.success]="isOutperforming()" [class.error]="!isOutperforming()">
+          {{ alphaPercent() }}
+        </div>
+        <lib-alpha-badge
+          [alpha]="analysis()!.alpha"
+          [isOutperforming]="isOutperforming()"
+        />
+      </div>
+    </div>
+
+    <!-- Chart Section or Cash-Only Empty State -->
+    @if (isFullyCash()) {
+      <!-- Empty State for Cash-Only Portfolio -->
+      <lib-empty-state
+        [icon]="'account_balance_wallet'"
+        [title]="'Portfolio is 100% Cash'"
+        [message]="'Your portfolio currently holds only cash. Start investing to see performance metrics and track your returns against the market.'"
+        [buttonConfig]="buyStockButtonConfig"
+        (actionClick)="onBuyStockClick()"
+      />
+    } @else if (historicalData()) {
+      <div class="chart-section">
+        <lib-performance-chart
+          [data]="historicalData()!"
+          portfolioColor="#9575cd"
+          benchmarkColor="#9e9e9e"
+        />
+      </div>
+    }
+
+    <!-- Help Text (subtle) -->
+    @if (!isFullyCash()) {
+      <p class="help-text">
+        ℹ Alpha measures your excess return compared to the S&P 500 benchmark.
+      </p>
+    }
+  }
+
+  <!-- Empty State -->
+  @else {
+    <div class="empty-state">
+      <p>No performance data available</p>
+    </div>
+  }
+</div>
+

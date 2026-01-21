@@ -1,0 +1,7 @@
+@use 'scss' as *;
+
+.performance-page {
+  max-width: $max-width-wide; // Wider for charts
+  margin: 0 auto;
+}
+

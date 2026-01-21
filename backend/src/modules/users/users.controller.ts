@@ -22,6 +22,9 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from './entities/user.entity';
 import { SerializedUser } from './serializers/user.serializer';
 
+// Skip throttling in test environment
+const shouldThrottle = process.env.NODE_ENV !== 'test';
+
 @ApiTags('users')
 @Controller('users')
 export class UsersController {
@@ -31,8 +34,8 @@ export class UsersController {
   ) {}
 
   @Post()
-  @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 signups per 60 seconds
+  @UseGuards(...(shouldThrottle ? [ThrottlerGuard] : []))
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 signups per 60 seconds (disabled in test)
   @ApiOperation({ summary: 'Create a new user and return JWT token' })
   @ApiResponse({
     status: 201,

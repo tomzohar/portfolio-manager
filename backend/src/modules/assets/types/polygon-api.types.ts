@@ -70,3 +70,44 @@ export interface PolygonPreviousCloseResponse {
   status: string;
   request_id: string;
 }
+
+/**
+ * Response from Polygon Aggregates (Bars) API
+ * GET /v2/aggs/ticker/{ticker}/range/{multiplier}/{timespan}/{from}/{to}
+ */
+export interface PolygonAggregatesResponse {
+  ticker: string;
+  queryCount: number;
+  resultsCount: number;
+  adjusted: boolean;
+  results: PolygonAggregateBar[];
+  status: string;
+  request_id: string;
+  next_url?: string;
+}
+
+/**
+ * Single OHLCV bar from Polygon aggregates
+ */
+export interface PolygonAggregateBar {
+  v: number; // Volume
+  vw: number; // Volume weighted average price
+  o: number; // Open price
+  c: number; // Close price
+  h: number; // High price
+  l: number; // Low price
+  t: number; // Unix timestamp (milliseconds)
+  n: number; // Number of transactions
+}
+
+/**
+ * Simplified OHLCV bar for technical analysis
+ */
+export interface OHLCVBar {
+  timestamp: Date;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}

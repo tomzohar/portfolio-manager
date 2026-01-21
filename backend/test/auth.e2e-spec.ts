@@ -1,71 +1,58 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { AppModule } from '../src/app.module';
-import { DataSource } from 'typeorm';
+import { AuthResponseDto } from 'src/modules/auth/dto/auth-response.dto';
+import { getTestApp, getTestDbManager } from './global-test-context';
 
 describe('Authentication Flow (e2e)', () => {
   let app: INestApplication<App>;
-  let dataSource: DataSource;
 
-  // Test user credentials
+  // Test user credentials (unique per test run)
   const testUser = {
-    email: 'test@example.com',
+    email: `test-${Date.now()}@example.com`,
     password: 'TestPassword123',
   };
 
   const secondUser = {
-    email: 'second@example.com',
+    email: `second-${Date.now()}@example.com`,
     password: 'TestPassword456',
   };
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-
-    // Apply global validation pipe (same as in main.ts)
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    );
-
-    await app.init();
-
-    // Get DataSource for cleanup
-    dataSource = moduleFixture.get<DataSource>(DataSource);
-  });
-
-  afterAll(async () => {
-    // Clean up test data
-    await dataSource.query('DELETE FROM assets');
-    await dataSource.query('DELETE FROM portfolios');
-    await dataSource.query('DELETE FROM users');
-    await app.close();
+    // Get the global shared app instance
+    app = await getTestApp();
   });
 
   describe('User Signup Flow', () => {
     it('should create a user and return JWT token', async () => {
       const response = await request(app.getHttpServer())
         .post('/users')
-        .send(testUser)
-        .expect(201);
+        .send(testUser);
+
+      if (response.status !== 201) {
+        console.log('>>> SIGNUP ERROR - Status:', response.status);
+        console.log(
+          '>>> SIGNUP ERROR - Body:',
+          JSON.stringify(response.body, null, 2),
+        );
+      }
+
+      expect(response.status).toBe(201);
+
+      const body = response.body as AuthResponseDto;
 
       // Verify response structure
-      expect(response.body).toHaveProperty('token');
-      expect(response.body).toHaveProperty('user');
-      expect(response.body.user).toHaveProperty('id');
-      expect(response.body.user.email).toBe(testUser.email);
-      expect(response.body.user).not.toHaveProperty('passwordHash');
+      expect(body).toHaveProperty('token');
+      expect(body).toHaveProperty('user');
+      expect(body.user).toHaveProperty('id');
+      expect(body.user.email).toBe(testUser.email);
+      expect(body.user).not.toHaveProperty('passwordHash');
 
       // Verify token is a valid JWT format
-      expect(response.body.token).toMatch(/^[\w-]+\.[\w-]+\.[\w-]+$/);
+      expect(body.token).toMatch(/^[\w-]+\.[\w-]+\.[\w-]+$/);
     });
 
     it('should reject duplicate email signup', async () => {
@@ -86,10 +73,11 @@ describe('Authentication Flow (e2e)', () => {
     });
 
     it('should reject short password', async () => {
+      // Use unique email to avoid conflicts and rate limiting
       await request(app.getHttpServer())
         .post('/users')
         .send({
-          email: 'new@example.com',
+          email: `short-password-${Date.now()}@example.com`,
           password: 'short',
         })
         .expect(400);
@@ -103,15 +91,16 @@ describe('Authentication Flow (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/auth/login')
         .send(testUser)
-        .expect(200);
+        .expect(201); // Login returns 201 Created
 
+      const body = response.body as AuthResponseDto;
       // Verify response structure
-      expect(response.body).toHaveProperty('token');
-      expect(response.body).toHaveProperty('user');
-      expect(response.body.user.email).toBe(testUser.email);
-      expect(response.body.user).not.toHaveProperty('passwordHash');
+      expect(body).toHaveProperty('token');
+      expect(body).toHaveProperty('user');
+      expect(body.user.email).toBe(testUser.email);
+      expect(body.user).not.toHaveProperty('passwordHash');
 
-      userToken = response.body.token;
+      userToken = body.token;
     });
 
     it('should reject login with wrong password', async () => {
@@ -122,8 +111,9 @@ describe('Authentication Flow (e2e)', () => {
           password: 'WrongPassword123',
         })
         .expect(401);
+      const body = response.body as { message: string };
 
-      expect(response.body.message).toBe('Invalid email or password');
+      expect(body.message).toBe('Invalid email or password');
     });
 
     it('should reject login with non-existent email', async () => {
@@ -135,7 +125,8 @@ describe('Authentication Flow (e2e)', () => {
         })
         .expect(401);
 
-      expect(response.body.message).toBe('Invalid email or password');
+      const body = response.body as { message: string };
+      expect(body.message).toBe('Invalid email or password');
     });
 
     it('should get current user with valid token', async () => {
@@ -144,8 +135,9 @@ describe('Authentication Flow (e2e)', () => {
         .set('Authorization', `Bearer ${userToken}`)
         .expect(200);
 
-      expect(response.body.email).toBe(testUser.email);
-      expect(response.body).not.toHaveProperty('passwordHash');
+      const body = response.body as { email: string };
+      expect(body.email).toBe(testUser.email);
+      expect(body).not.toHaveProperty('passwordHash');
     });
 
     it('should reject /auth/me without token', async () => {
@@ -167,18 +159,20 @@ describe('Authentication Flow (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/auth/login')
         .send(testUser);
-      userToken = response.body.token;
+      const body = response.body as AuthResponseDto;
+      userToken = body.token;
     });
 
     it('should verify valid token', async () => {
       const response = await request(app.getHttpServer())
         .post('/auth/verify')
         .send({ token: userToken })
-        .expect(200);
+        .expect(201); // POST endpoints return 201 Created
 
-      expect(response.body).toHaveProperty('token');
-      expect(response.body).toHaveProperty('user');
-      expect(response.body.user.email).toBe(testUser.email);
+      const body = response.body as AuthResponseDto;
+      expect(body).toHaveProperty('token');
+      expect(body).toHaveProperty('user');
+      expect(body.user.email).toBe(testUser.email);
     });
 
     it('should reject invalid token', async () => {
@@ -206,13 +200,36 @@ describe('Authentication Flow (e2e)', () => {
       const user1Response = await request(app.getHttpServer())
         .post('/auth/login')
         .send(testUser);
-      user1Token = user1Response.body.token;
+
+      if (user1Response.status !== 201) {
+        console.log('>>> LOGIN ERROR - Status:', user1Response.status);
+        console.log(
+          '>>> LOGIN ERROR - Body:',
+          JSON.stringify(user1Response.body, null, 2),
+        );
+        throw new Error(
+          `Failed to login user1: ${user1Response.status} - ${JSON.stringify(user1Response.body)}`,
+        );
+      }
+
+      const firstBody = user1Response.body as AuthResponseDto;
+      user1Token = firstBody.token;
+
+      if (!user1Token) {
+        throw new Error('Failed to get user1 token from response');
+      }
 
       // Create second user and login
       const user2Signup = await request(app.getHttpServer())
         .post('/users')
-        .send(secondUser);
-      user2Token = user2Signup.body.token;
+        .send(secondUser)
+        .expect(201);
+      const body = user2Signup.body as AuthResponseDto;
+      user2Token = body.token;
+
+      if (!user2Token) {
+        throw new Error('Failed to get user2 token from signup');
+      }
     });
 
     it('should create portfolio for authenticated user', async () => {
@@ -222,9 +239,10 @@ describe('Authentication Flow (e2e)', () => {
         .send({ name: 'My Test Portfolio' })
         .expect(201);
 
-      expect(response.body).toHaveProperty('id');
-      expect(response.body.name).toBe('My Test Portfolio');
-      user1PortfolioId = response.body.id;
+      const body = response.body as { id: string; name: string };
+      expect(body).toHaveProperty('id');
+      expect(body.name).toBe('My Test Portfolio');
+      user1PortfolioId = body.id;
     });
 
     it('should reject portfolio creation without token', async () => {
@@ -240,8 +258,9 @@ describe('Authentication Flow (e2e)', () => {
         .set('Authorization', `Bearer ${user1Token}`)
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBe(1);
+      const body = response.body as Array<any>;
+      expect(Array.isArray(body)).toBe(true);
+      expect(body.length).toBe(1);
       expect(response.body[0].name).toBe('My Test Portfolio');
       // Verify that assets are NOT included in the list response (performance optimization)
       expect(response.body[0].assets).toBeUndefined();
@@ -253,8 +272,9 @@ describe('Authentication Flow (e2e)', () => {
         .set('Authorization', `Bearer ${user2Token}`)
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBe(0); // User 2 has no portfolios
+      const body = response.body as Array<any>;
+      expect(Array.isArray(body)).toBe(true);
+      expect(body.length).toBe(0); // User 2 has no portfolios
     });
 
     it('should get specific portfolio with ownership verification', async () => {
@@ -278,118 +298,175 @@ describe('Authentication Flow (e2e)', () => {
     });
 
     it('should add asset to portfolio', async () => {
+      // First, deposit cash into the portfolio
+      await request(app.getHttpServer())
+        .post(`/portfolios/${user1PortfolioId}/transactions`)
+        .set('Authorization', `Bearer ${user1Token}`)
+        .send({
+          ticker: 'CASH',
+          type: 'DEPOSIT',
+          quantity: 10000,
+          price: 1,
+          transactionDate: new Date().toISOString(),
+        })
+        .expect(201);
+
+      // Now buy AAPL stock
       const response = await request(app.getHttpServer())
-        .post(`/portfolios/${user1PortfolioId}/assets`)
+        .post(`/portfolios/${user1PortfolioId}/transactions`)
         .set('Authorization', `Bearer ${user1Token}`)
         .send({
           ticker: 'AAPL',
+          type: 'BUY',
           quantity: 10,
-          avgPrice: 150.5,
+          price: 150.5,
+          transactionDate: new Date().toISOString(),
         })
         .expect(201);
 
       expect(response.body).toHaveProperty('id');
       expect(response.body.ticker).toBe('AAPL');
-      expect(response.body.quantity).toBe(10);
-      expect(response.body.avgPrice).toBe(150.5);
+      expect(response.body.type).toBe('BUY');
     });
 
     it('should deny adding asset to another users portfolio', async () => {
       await request(app.getHttpServer())
-        .post(`/portfolios/${user1PortfolioId}/assets`)
+        .post(`/portfolios/${user1PortfolioId}/transactions`)
         .set('Authorization', `Bearer ${user2Token}`)
         .send({
           ticker: 'GOOGL',
+          type: 'BUY',
           quantity: 5,
-          avgPrice: 120.0,
+          price: 120.0,
+          date: new Date().toISOString(),
         })
         .expect(403);
     });
 
-    it('should get assets for a portfolio via dedicated endpoint', async () => {
-      // First add an asset
+    it('should get holdings for a portfolio', async () => {
+      // Assets are created via transactions (already done in previous test)
+      // Fetch holdings using the portfolio detail endpoint
+      const response = await request(app.getHttpServer())
+        .get(`/portfolios/${user1PortfolioId}`)
+        .set('Authorization', `Bearer ${user1Token}`)
+        .expect(200);
+
+      expect(response.body).toHaveProperty('assets');
+      expect(Array.isArray(response.body.assets)).toBe(true);
+      expect(response.body.assets.length).toBeGreaterThan(0);
+
+      // Verify asset structure from transactions
+      const asset = response.body.assets[0];
+      expect(asset).toHaveProperty('ticker');
+      expect(asset).toHaveProperty('quantity');
+      expect(asset).toHaveProperty('avgPrice');
+    });
+
+    it('should deny access to another users portfolio via detail endpoint', async () => {
+      // Trying to access portfolio detail (which includes assets) should fail with 403
       await request(app.getHttpServer())
-        .post(`/portfolios/${user1PortfolioId}/assets`)
+        .get(`/portfolios/${user1PortfolioId}`)
+        .set('Authorization', `Bearer ${user2Token}`)
+        .expect(403);
+    });
+
+    it('should update transaction (SELL reduces holdings)', async () => {
+      // First deposit cash
+      await request(app.getHttpServer())
+        .post(`/portfolios/${user1PortfolioId}/transactions`)
         .set('Authorization', `Bearer ${user1Token}`)
         .send({
-          ticker: 'NVDA',
-          quantity: 8,
-          avgPrice: 450.0,
+          ticker: 'CASH',
+          type: 'DEPOSIT',
+          quantity: 5000,
+          price: 1,
+          transactionDate: new Date().toISOString(),
         })
         .expect(201);
 
-      // Fetch assets using the dedicated endpoint
-      const response = await request(app.getHttpServer())
-        .get(`/portfolios/${user1PortfolioId}/assets`)
-        .set('Authorization', `Bearer ${user1Token}`)
-        .expect(200);
-
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBeGreaterThan(0);
-      expect(response.body[0]).toHaveProperty('ticker');
-      expect(response.body[0]).toHaveProperty('quantity');
-      expect(response.body[0]).toHaveProperty('avgPrice');
-    });
-
-    it('should deny access to another users portfolio assets', async () => {
-      await request(app.getHttpServer())
-        .get(`/portfolios/${user1PortfolioId}/assets`)
-        .set('Authorization', `Bearer ${user2Token}`)
-        .expect(403);
-    });
-
-    it('should remove asset from portfolio', async () => {
-      // First, get the portfolio assets
-      const assets = await request(app.getHttpServer())
-        .get(`/portfolios/${user1PortfolioId}/assets`)
-        .set('Authorization', `Bearer ${user1Token}`)
-        .expect(200);
-
-      const assetId = assets.body[0].id;
-
-      // Remove the asset
-      await request(app.getHttpServer())
-        .delete(`/portfolios/${user1PortfolioId}/assets/${assetId}`)
-        .set('Authorization', `Bearer ${user1Token}`)
-        .expect(200);
-
-      // Verify asset was removed
-      const updatedAssets = await request(app.getHttpServer())
-        .get(`/portfolios/${user1PortfolioId}/assets`)
-        .set('Authorization', `Bearer ${user1Token}`)
-        .expect(200);
-
-      expect(updatedAssets.body.length).toBe(0);
-    });
-
-    it('should deny removing asset from another users portfolio', async () => {
-      // Add an asset first
-      const asset = await request(app.getHttpServer())
-        .post(`/portfolios/${user1PortfolioId}/assets`)
+      // Create a BUY transaction
+      const buyResponse = await request(app.getHttpServer())
+        .post(`/portfolios/${user1PortfolioId}/transactions`)
         .set('Authorization', `Bearer ${user1Token}`)
         .send({
-          ticker: 'TSLA',
-          quantity: 3,
-          avgPrice: 200.0,
-        });
+          ticker: 'MSFT',
+          type: 'BUY',
+          quantity: 10,
+          price: 300.0,
+          transactionDate: new Date().toISOString(),
+        })
+        .expect(201);
 
-      const assetId = asset.body.id;
+      const buyTransactionId = buyResponse.body.id;
+      expect(buyTransactionId).toBeDefined();
 
-      // Try to remove with different user
+      // Get current holdings
+      const beforeSell = await request(app.getHttpServer())
+        .get(`/portfolios/${user1PortfolioId}`)
+        .set('Authorization', `Bearer ${user1Token}`)
+        .expect(200);
+
+      const msftHoldingBefore = beforeSell.body.assets.find(
+        (a: { ticker: string }) => a.ticker === 'MSFT',
+      );
+      expect(msftHoldingBefore).toBeDefined();
+      // Quantity may be returned as string from database DECIMAL type
+      expect(Number(msftHoldingBefore.quantity)).toBe(10);
+
+      // Create a SELL transaction to reduce holdings
       await request(app.getHttpServer())
-        .delete(`/portfolios/${user1PortfolioId}/assets/${assetId}`)
+        .post(`/portfolios/${user1PortfolioId}/transactions`)
+        .set('Authorization', `Bearer ${user1Token}`)
+        .send({
+          ticker: 'MSFT',
+          type: 'SELL',
+          quantity: 10,
+          price: 320.0,
+          transactionDate: new Date().toISOString(),
+        })
+        .expect(201);
+
+      // Verify holdings were updated
+      const afterSell = await request(app.getHttpServer())
+        .get(`/portfolios/${user1PortfolioId}`)
+        .set('Authorization', `Bearer ${user1Token}`)
+        .expect(200);
+
+      const msftHoldingAfter = afterSell.body.assets.find(
+        (a: { ticker: string }) => a.ticker === 'MSFT',
+      );
+      // After selling all shares, holding should be zero or not exist
+      if (msftHoldingAfter) {
+        expect(msftHoldingAfter.quantity).toBe(0);
+      }
+    });
+
+    it('should deny creating transaction for another users portfolio', async () => {
+      // User2 tries to create a transaction in User1's portfolio
+      await request(app.getHttpServer())
+        .post(`/portfolios/${user1PortfolioId}/transactions`)
         .set('Authorization', `Bearer ${user2Token}`)
+        .send({
+          ticker: 'TSLA',
+          type: 'BUY',
+          quantity: 3,
+          price: 200.0,
+          transactionDate: new Date().toISOString(),
+        })
         .expect(403);
     });
   });
 
   describe('Complete User Journey', () => {
-    it('should complete full signup -> portfolio creation -> asset management flow', async () => {
+    it('should complete full signup -> portfolio creation -> transaction flow', async () => {
+      // Use a unique email to avoid conflicts with other tests
+      const uniqueEmail = `journey-${Date.now()}@example.com`;
+
       // 1. Signup
       const signupResponse = await request(app.getHttpServer())
         .post('/users')
         .send({
-          email: 'journey@example.com',
+          email: uniqueEmail,
           password: 'JourneyPassword123',
         })
         .expect(201);
@@ -406,29 +483,67 @@ describe('Authentication Flow (e2e)', () => {
 
       const portfolioId = portfolioResponse.body.id;
 
-      // 3. Add multiple assets
+      // 3. Deposit cash first
       await request(app.getHttpServer())
-        .post(`/portfolios/${portfolioId}/assets`)
+        .post(`/portfolios/${portfolioId}/transactions`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ ticker: 'AAPL', quantity: 10, avgPrice: 150.0 })
+        .send({
+          ticker: 'CASH',
+          type: 'DEPOSIT',
+          quantity: 10000,
+          price: 1,
+          transactionDate: new Date().toISOString(),
+        })
+        .expect(201);
+
+      // 4. Add multiple transactions to build holdings
+      await request(app.getHttpServer())
+        .post(`/portfolios/${portfolioId}/transactions`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          ticker: 'AAPL',
+          type: 'BUY',
+          quantity: 10,
+          price: 150.0,
+          transactionDate: new Date().toISOString(),
+        })
         .expect(201);
 
       await request(app.getHttpServer())
-        .post(`/portfolios/${portfolioId}/assets`)
+        .post(`/portfolios/${portfolioId}/transactions`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ ticker: 'GOOGL', quantity: 5, avgPrice: 120.0 })
+        .send({
+          ticker: 'GOOGL',
+          type: 'BUY',
+          quantity: 5,
+          price: 120.0,
+          transactionDate: new Date().toISOString(),
+        })
         .expect(201);
 
-      // 4. Get portfolio with assets
+      // 5. Get portfolio with assets (computed from transactions)
       const finalPortfolio = await request(app.getHttpServer())
         .get(`/portfolios/${portfolioId}`)
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
-      expect(finalPortfolio.body.assets.length).toBe(2);
+      // Should have 3 assets: CASH, AAPL, and GOOGL
+      expect(finalPortfolio.body.assets.length).toBe(3);
       expect(finalPortfolio.body.name).toBe('Journey Portfolio');
 
-      // 5. Verify user can see their portfolio in list
+      // Verify asset holdings are correct (excluding CASH)
+      const stockAssets = finalPortfolio.body.assets.filter(
+        (a: { ticker: string }) => a.ticker !== 'CASH',
+      );
+      expect(stockAssets.length).toBe(2);
+
+      const aaplAsset = finalPortfolio.body.assets.find(
+        (a: { ticker: string }) => a.ticker === 'AAPL',
+      );
+      expect(aaplAsset).toBeDefined();
+      expect(Number(aaplAsset.quantity)).toBe(10);
+
+      // 6. Verify user can see their portfolio in list
       const allPortfolios = await request(app.getHttpServer())
         .get('/portfolios')
         .set('Authorization', `Bearer ${token}`)

@@ -39,6 +39,14 @@
       <mat-hint>Leave blank to use current date</mat-hint>
     </mat-form-field>
 
+    <!-- Warning for invalid CASH transactions -->
+    @if (cashTransactionWarning()) {
+      <div class="sell-warning">
+        <mat-icon>error</mat-icon>
+        <span>{{ cashTransactionWarning() }}</span>
+      </div>
+    }
+
     <!-- Warning for SELL transactions -->
     @if (sellWarning()) {
       <div class="sell-warning">

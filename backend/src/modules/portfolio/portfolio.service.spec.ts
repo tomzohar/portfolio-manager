@@ -3,8 +3,12 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { of } from 'rxjs';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { PolygonApiService } from '../assets/services/polygon-api.service';
+import type {
+  PolygonPreviousCloseResponse,
+  PolygonSnapshotResponse,
+} from '../assets/types/polygon-api.types';
 import { UsersService } from '../users/users.service';
 import { EnrichedAssetDto } from './dto/asset-response.dto';
 import { Asset } from './entities/asset.entity';
@@ -223,8 +227,8 @@ describe('PortfolioService', () => {
       portfolioRepository.findOne.mockResolvedValue(portfolioWithAssets);
       jest
         .spyOn(polygonApiService, 'getPreviousClose')
-        .mockReturnValueOnce(of(null as any)) // Simulate API failure for AAPL
-        .mockReturnValueOnce(of(null as any)); // Simulate API failure for GOOGL
+        .mockReturnValueOnce(of<PolygonPreviousCloseResponse | null>(null)) // Simulate API failure for AAPL
+        .mockReturnValueOnce(of<PolygonPreviousCloseResponse | null>(null)); // Simulate API failure for GOOGL
 
       const result = await service.getAssets(mockPortfolioId, mockUserId);
 
@@ -278,16 +282,16 @@ describe('PortfolioService', () => {
       jest
         .spyOn(polygonApiService, 'getPreviousClose')
         .mockReturnValueOnce(of(mockPreviousClose1)) // Success for AAPL
-        .mockReturnValueOnce(of(null as any)); // Failure for GOOGL
+        .mockReturnValueOnce(of<PolygonPreviousCloseResponse | null>(null)); // Failure for GOOGL
 
       const result = await service.getAssets(mockPortfolioId, mockUserId);
 
       expect(result).toHaveLength(2);
-      
+
       // AAPL: Has market data
       expect(result[0].currentPrice).toBe(153.75);
       expect(result[0].marketValue).toBe(1537.5); // 153.75 * 10
-      
+
       // GOOGL: Market data failed, falls back to cost basis
       expect(result[1].currentPrice).toBeUndefined();
       expect(result[1].marketValue).toBe(14000); // 2800 * 5 (avgPrice * quantity)
@@ -375,7 +379,7 @@ describe('PortfolioService', () => {
       portfolioRepository.findOne.mockResolvedValue(portfolioWithAssets);
       jest
         .spyOn(polygonApiService, 'getTickerSnapshot')
-        .mockReturnValue(of(mockSnapshotMissingDay as any));
+        .mockReturnValue(of(mockSnapshotMissingDay as PolygonSnapshotResponse));
 
       const result = await service.getAssets(mockPortfolioId, mockUserId);
 
@@ -444,7 +448,9 @@ describe('PortfolioService', () => {
         assetRepository.find.mockResolvedValue(mockAssets);
         jest
           .spyOn(polygonApiService, 'getPreviousClose')
-          .mockReturnValue(of(mockPreviousClose as any));
+          .mockReturnValue(
+            of(mockPreviousClose as PolygonPreviousCloseResponse),
+          );
 
         const result = await service.getPortfolioSummary(
           mockPortfolioId,
@@ -487,7 +493,7 @@ describe('PortfolioService', () => {
         assetRepository.find.mockResolvedValue(mockAssets);
         jest
           .spyOn(polygonApiService, 'getTickerSnapshot')
-          .mockReturnValue(of(mockSnapshot as any));
+          .mockReturnValue(of(mockSnapshot as PolygonSnapshotResponse));
 
         const result = await service.getPortfolioSummary(
           mockPortfolioId,
@@ -516,7 +522,7 @@ describe('PortfolioService', () => {
         const mockSnapshot = {
           ticker: {
             ticker: 'AAPL',
-            day: { c: 170.0 } as any,
+            day: { c: 170.0 },
           },
         };
 
@@ -524,7 +530,7 @@ describe('PortfolioService', () => {
         assetRepository.find.mockResolvedValue(mockAssets);
         jest
           .spyOn(polygonApiService, 'getTickerSnapshot')
-          .mockReturnValue(of(mockSnapshot as any));
+          .mockReturnValue(of(mockSnapshot as PolygonSnapshotResponse));
 
         const result = await service.getPortfolioSummary(
           mockPortfolioId,
@@ -578,7 +584,7 @@ describe('PortfolioService', () => {
           .spyOn(polygonApiService, 'getPreviousClose')
           .mockImplementation((ticker: string) => {
             if (ticker === 'AAPL') {
-              return of(applePreviousClose as any);
+              return of(applePreviousClose as PolygonPreviousCloseResponse);
             }
             // GOOGL fails - throw error to simulate API failure
             throw new Error('Market data unavailable');
@@ -680,14 +686,14 @@ describe('PortfolioService', () => {
 
         jest.spyOn(service, 'findOne').mockResolvedValue(mockPortfolio);
         assetRepository.find.mockResolvedValue(mockAssets);
-        
+
         jest
           .spyOn(polygonApiService, 'getPreviousClose')
           .mockImplementation((ticker: string) => {
             if (ticker === 'IREN') {
-              return of(irenPreviousClose as any);
+              return of(irenPreviousClose as PolygonPreviousCloseResponse);
             } else if (ticker === 'GOOGL') {
-              return of(googlPreviousClose as any);
+              return of(googlPreviousClose as PolygonPreviousCloseResponse);
             }
             throw new Error(`Unexpected ticker: ${ticker}`);
           });
@@ -709,7 +715,9 @@ describe('PortfolioService', () => {
         expect(irenPosition?.marketValue).toBeCloseTo(3777.0, 2); // 100 * 37.77
 
         // GOOGL: 20 shares @ $313
-        const googlPosition = result.positions.find((p) => p.ticker === 'GOOGL');
+        const googlPosition = result.positions.find(
+          (p) => p.ticker === 'GOOGL',
+        );
         expect(googlPosition).toBeDefined();
         expect(googlPosition?.quantity).toBe(20);
         expect(googlPosition?.avgCostBasis).toBe(207.0);
@@ -759,14 +767,14 @@ describe('PortfolioService', () => {
           save: jest.fn(),
           update: jest.fn(),
           delete: jest.fn(),
-        },
-      };
+        } as unknown as EntityManager,
+      } as unknown as QueryRunner;
 
       dataSource.createQueryRunner.mockReturnValue(mockQueryRunner);
     });
 
     it('should handle empty portfolio (no transactions)', async () => {
-      mockQueryRunner.manager.find
+      (mockQueryRunner.manager as unknown as { find: jest.Mock }).find
         .mockResolvedValueOnce([]) // transactions
         .mockResolvedValueOnce([]); // current assets
 
@@ -790,7 +798,7 @@ describe('PortfolioService', () => {
         transactionDate: new Date('2024-01-01'),
       } as Transaction;
 
-      mockQueryRunner.manager.find
+      (mockQueryRunner.manager as unknown as { find: jest.Mock }).find
         .mockResolvedValueOnce([mockTransaction]) // transactions
         .mockResolvedValueOnce([]); // current assets (empty)
 
@@ -801,7 +809,9 @@ describe('PortfolioService', () => {
         portfolio: { id: mockPortfolioId },
       };
 
-      mockQueryRunner.manager.create.mockReturnValue(mockNewAsset);
+      (
+        mockQueryRunner.manager as unknown as { create: jest.Mock }
+      ).create.mockReturnValue(mockNewAsset);
 
       await service.recalculatePositions(mockPortfolioId);
 
@@ -840,11 +850,13 @@ describe('PortfolioService', () => {
 
       // Expected: quantity=150, avgPrice=(15000+8000)/150=153.33
 
-      mockQueryRunner.manager.find
+      (mockQueryRunner.manager as unknown as { find: jest.Mock }).find
         .mockResolvedValueOnce(mockTransactions) // transactions
         .mockResolvedValueOnce([]); // current assets
 
-      mockQueryRunner.manager.create.mockImplementation((entity, data) => data);
+      (
+        mockQueryRunner.manager as unknown as { create: jest.Mock }
+      ).create.mockImplementation((entity, data) => data as unknown as Asset);
 
       await service.recalculatePositions(mockPortfolioId);
 
@@ -853,6 +865,7 @@ describe('PortfolioService', () => {
         expect.objectContaining({
           ticker: 'AAPL',
           quantity: 150,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           avgPrice: expect.closeTo(153.33, 2),
         }),
       );
@@ -881,11 +894,13 @@ describe('PortfolioService', () => {
 
       // Expected: quantity=60, avgPrice=2800 (sells don't change avg cost)
 
-      mockQueryRunner.manager.find
+      (mockQueryRunner.manager as unknown as { find: jest.Mock }).find
         .mockResolvedValueOnce(mockTransactions) // transactions
         .mockResolvedValueOnce([]); // current assets
 
-      mockQueryRunner.manager.create.mockImplementation((entity, data) => data);
+      (
+        mockQueryRunner.manager as unknown as { create: jest.Mock }
+      ).create.mockImplementation((entity, data) => data as unknown as Asset);
 
       await service.recalculatePositions(mockPortfolioId);
 
@@ -926,7 +941,7 @@ describe('PortfolioService', () => {
         avgPrice: 200.0,
       } as Asset;
 
-      mockQueryRunner.manager.find
+      (mockQueryRunner.manager as unknown as { find: jest.Mock }).find
         .mockResolvedValueOnce(mockTransactions) // transactions
         .mockResolvedValueOnce([existingAsset]); // current assets
 
@@ -967,11 +982,13 @@ describe('PortfolioService', () => {
         },
       ] as Transaction[];
 
-      mockQueryRunner.manager.find
+      (mockQueryRunner.manager as unknown as { find: jest.Mock }).find
         .mockResolvedValueOnce(mockTransactions) // transactions
         .mockResolvedValueOnce([]); // current assets
 
-      mockQueryRunner.manager.create.mockImplementation((entity, data) => data);
+      (
+        mockQueryRunner.manager as unknown as { create: jest.Mock }
+      ).create.mockImplementation((entity, data) => data as unknown as Asset);
 
       await service.recalculatePositions(mockPortfolioId);
 
@@ -1018,7 +1035,7 @@ describe('PortfolioService', () => {
         avgPrice: 150.0, // Old value
       } as Asset;
 
-      mockQueryRunner.manager.find
+      (mockQueryRunner.manager as unknown as { find: jest.Mock }).find
         .mockResolvedValueOnce(mockTransactions) // transactions
         .mockResolvedValueOnce([existingAsset]); // current assets
 
@@ -1030,6 +1047,7 @@ describe('PortfolioService', () => {
         { id: 'asset-1' },
         {
           quantity: 150,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           avgPrice: expect.closeTo(153.33, 2),
         },
       );
@@ -1038,7 +1056,9 @@ describe('PortfolioService', () => {
 
     it('should rollback on error', async () => {
       const mockError = new Error('Database error');
-      mockQueryRunner.manager.find.mockRejectedValue(mockError);
+      (
+        mockQueryRunner.manager as unknown as { find: jest.Mock }
+      ).find.mockRejectedValue(mockError);
 
       await expect(
         service.recalculatePositions(mockPortfolioId),
@@ -1061,11 +1081,13 @@ describe('PortfolioService', () => {
         },
       ] as Transaction[];
 
-      mockQueryRunner.manager.find
+      (mockQueryRunner.manager as unknown as { find: jest.Mock }).find
         .mockResolvedValueOnce(mockTransactions) // transactions
         .mockResolvedValueOnce([]); // current assets
 
-      mockQueryRunner.manager.create.mockImplementation((entity, data) => data);
+      (
+        mockQueryRunner.manager as unknown as { create: jest.Mock }
+      ).create.mockImplementation((entity, data) => data as unknown as Asset);
 
       await service.recalculatePositions(mockPortfolioId);
 
@@ -1074,6 +1096,121 @@ describe('PortfolioService', () => {
         expect.objectContaining({
           ticker: 'CASH',
           quantity: 10000,
+          avgPrice: 1.0,
+        }),
+      );
+    });
+
+    it('should handle SELL before BUY for CASH (double-entry bookkeeping edge case)', async () => {
+      // Regression test for bug where SELL CASH before BUY CASH was ignored
+      // This happens when buying stock creates a SELL CASH transaction,
+      // but the initial CASH deposit has a later transactionDate
+      const mockTransactions = [
+        {
+          id: 'tx-1',
+          type: TransactionType.BUY,
+          ticker: 'AAPL',
+          quantity: 26.67,
+          price: 187.5,
+          transactionDate: new Date('2025-12-05T07:00:00.000Z'),
+        },
+        {
+          id: 'tx-2',
+          type: TransactionType.SELL,
+          ticker: 'CASH',
+          quantity: 5000.625,
+          price: 1.0,
+          transactionDate: new Date('2025-12-05T07:00:00.000Z'),
+        },
+        {
+          id: 'tx-3',
+          type: TransactionType.BUY,
+          ticker: 'CASH',
+          quantity: 10000,
+          price: 1.0,
+          transactionDate: new Date('2026-01-04T08:00:00.000Z'),
+        },
+      ] as Transaction[];
+
+      (mockQueryRunner.manager as unknown as { find: jest.Mock }).find
+        .mockResolvedValueOnce(mockTransactions) // transactions
+        .mockResolvedValueOnce([]); // current assets
+
+      (
+        mockQueryRunner.manager as unknown as { create: jest.Mock }
+      ).create.mockImplementation((entity, data) => data as unknown as Asset);
+
+      await service.recalculatePositions(mockPortfolioId);
+
+      // Verify AAPL position is correct
+      expect(mockQueryRunner.manager.create).toHaveBeenCalledWith(
+        Asset,
+        expect.objectContaining({
+          ticker: 'AAPL',
+          quantity: 26.67,
+          avgPrice: 187.5,
+        }),
+      );
+
+      // Verify CASH position is correct (NOT 10000, but 10000 - 5000.625 = 4999.375)
+      expect(mockQueryRunner.manager.create).toHaveBeenCalledWith(
+        Asset,
+        expect.objectContaining({
+          ticker: 'CASH',
+          quantity: 4999.375,
+          avgPrice: 1.0,
+        }),
+      );
+
+      // Should create exactly 2 assets (AAPL and CASH)
+      expect(mockQueryRunner.manager.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('should handle multiple SELL before BUY scenarios', async () => {
+      // Test that multiple SELLs before BUY accumulate correctly
+      const mockTransactions = [
+        {
+          id: 'tx-1',
+          type: TransactionType.SELL,
+          ticker: 'CASH',
+          quantity: 1000,
+          price: 1.0,
+          transactionDate: new Date('2024-01-01'),
+        },
+        {
+          id: 'tx-2',
+          type: TransactionType.SELL,
+          ticker: 'CASH',
+          quantity: 2000,
+          price: 1.0,
+          transactionDate: new Date('2024-01-02'),
+        },
+        {
+          id: 'tx-3',
+          type: TransactionType.BUY,
+          ticker: 'CASH',
+          quantity: 10000,
+          price: 1.0,
+          transactionDate: new Date('2024-01-03'),
+        },
+      ] as Transaction[];
+
+      (mockQueryRunner.manager as unknown as { find: jest.Mock }).find
+        .mockResolvedValueOnce(mockTransactions) // transactions
+        .mockResolvedValueOnce([]); // current assets
+
+      (
+        mockQueryRunner.manager as unknown as { create: jest.Mock }
+      ).create.mockImplementation((entity, data) => data as unknown as Asset);
+
+      await service.recalculatePositions(mockPortfolioId);
+
+      // Net CASH should be: 10000 - 1000 - 2000 = 7000
+      expect(mockQueryRunner.manager.create).toHaveBeenCalledWith(
+        Asset,
+        expect.objectContaining({
+          ticker: 'CASH',
+          quantity: 7000,
           avgPrice: 1.0,
         }),
       );

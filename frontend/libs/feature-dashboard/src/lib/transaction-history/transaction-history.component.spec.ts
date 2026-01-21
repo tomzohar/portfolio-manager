@@ -139,6 +139,11 @@ describe('TransactionHistoryComponent', () => {
       expect(variant).toBe('sell');
     });
 
+    it('should return "sell" variant for WITHDRAWAL transaction', () => {
+      const variant = component.getTransactionTypeBadgeVariant(TransactionType.WITHDRAWAL);
+      expect(variant).toBe('sell');
+    });
+
     it('should return "hold" variant for unknown transaction type', () => {
       const variant = component.getTransactionTypeBadgeVariant('UNKNOWN' as TransactionType);
       expect(variant).toBe('hold');

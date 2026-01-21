@@ -143,14 +143,21 @@ export class TransactionHistoryDialogComponent implements OnInit {
   readonly formattedTransactions = computed((): DisplayTransaction[] => {
     const filter = this.selectedTickerFilter();
     const allTransactions = this.transactions();
-    
+
     // Filter by ticker if one is selected
     const filteredTransactions = filter
       ? allTransactions.filter(t => t.ticker === filter)
       : allTransactions;
-    
+
+    // Sort by date descending (newest first)
+    const sortedTransactions = [...filteredTransactions].sort((a, b) => {
+      const dateA = new Date(a.transactionDate).getTime();
+      const dateB = new Date(b.transactionDate).getTime();
+      return dateB - dateA;
+    });
+
     // Format dates and quantities
-    return filteredTransactions.map((transaction) => ({
+    return sortedTransactions.map((transaction) => ({
       ...transaction,
       transactionDate: this.formatDate(transaction.transactionDate),
       quantity: this.roundQuantity(transaction.quantity),

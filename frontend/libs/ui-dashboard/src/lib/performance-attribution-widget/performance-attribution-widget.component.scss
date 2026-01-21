@@ -1,0 +1,101 @@
+@use 'scss' as *;
+
+.performance-page-layout {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.controls-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-md;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.metric-card {
+  @include card-base; // Clean card from design system
+  padding: $spacing-lg;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  min-height: 120px;
+}
+
+.metric-label {
+  @include label-uppercase;
+  color: $color-text-subtle;
+  font-size: $font-size-2xs;
+}
+
+.metric-value {
+  @include value-large;
+  margin-top: $spacing-xs;
+  
+  &.large {
+    font-size: $font-size-2xl;
+  }
+
+  &.success {
+    color: $color-success;
+  }
+
+  &.error {
+    color: $color-error;
+  }
+
+  &.neutral {
+    color: $color-text-primary;
+  }
+}
+
+.chart-section {
+  background: transparent;
+  border-radius: $radius-lg;
+  overflow: hidden;
+}
+
+.loading-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: $spacing-2xl;
+  min-height: 400px;
+}
+
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-2xl;
+}
+
+.error-message {
+  @include body-base;
+  color: $color-error;
+  text-align: center;
+}
+
+.help-text {
+  @include body-small;
+  color: $color-text-subtle;
+  text-align: center;
+  margin: 0;
+  opacity: 0.7;
+}
+
+.empty-state {
+  padding: $spacing-2xl;
+  text-align: center;
+  color: $color-text-muted;
+}
+

@@ -12,6 +12,8 @@ import { Portfolio } from './portfolio.entity';
 export enum TransactionType {
   BUY = 'BUY',
   SELL = 'SELL',
+  DEPOSIT = 'DEPOSIT',
+  WITHDRAWAL = 'WITHDRAWAL',
 }
 
 /**

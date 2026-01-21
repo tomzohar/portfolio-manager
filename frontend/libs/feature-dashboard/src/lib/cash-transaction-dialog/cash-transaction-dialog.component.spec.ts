@@ -232,7 +232,7 @@ describe('CashTransactionDialogComponent', () => {
       expect(dialogRef.close).toHaveBeenCalledWith({
         portfolioId: 'test-portfolio-id',
         dto: {
-          type: TransactionType.BUY,
+          type: TransactionType.DEPOSIT,
           ticker: 'CASH',
           quantity: 1000,
           price: 1.0,
@@ -255,7 +255,7 @@ describe('CashTransactionDialogComponent', () => {
       expect(dialogRef.close).toHaveBeenCalledWith({
         portfolioId: 'test-portfolio-id',
         dto: {
-          type: TransactionType.SELL,
+          type: TransactionType.WITHDRAWAL,
           ticker: 'CASH',
           quantity: 2000,
           price: 1.0,
