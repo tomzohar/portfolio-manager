@@ -1,7 +1,16 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ReasoningTrace } from '../entities/reasoning-trace.entity';
+import { TraceStatus } from '../types/trace-status.enum';
+import type { ToolResult } from '../types/tool-result.interface';
+import { TOOL_RESULTS_CONFIG } from '../types/tool-result.interface';
 
 /**
  * TracingService
@@ -9,6 +18,12 @@ import { ReasoningTrace } from '../entities/reasoning-trace.entity';
  * Handles persistence and querying of agent reasoning traces.
  * Each trace represents one node execution in the LangGraph workflow.
  * Provides transparency and debugging capabilities for agent decision-making.
+ *
+ * Enhanced for US-001: Step-by-Step Reasoning Transparency
+ * - Real-time status updates via SSE
+ * - Tool result tracking
+ * - Duration metrics
+ * - Error handling with detailed messages
  */
 @Injectable()
 export class TracingService {
@@ -17,6 +32,7 @@ export class TracingService {
   constructor(
     @InjectRepository(ReasoningTrace)
     private readonly reasoningTraceRepository: Repository<ReasoningTrace>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -40,8 +56,8 @@ export class TracingService {
     output: Record<string, any>,
     reasoning: string,
     options?: {
-      status?: string;
-      toolResults?: Array<{ tool: string; result: any }>;
+      status?: TraceStatus;
+      toolResults?: ToolResult[];
       durationMs?: number;
       error?: string;
       stepIndex?: number;
@@ -59,7 +75,7 @@ export class TracingService {
       input,
       output,
       reasoning,
-      status: options?.status || 'completed',
+      status: options?.status || TraceStatus.COMPLETED,
       toolResults: options?.toolResults,
       durationMs: options?.durationMs,
       error: options?.error,
@@ -114,22 +130,23 @@ export class TracingService {
    * Update trace status (US-001 enhancement)
    *
    * @param traceId - Trace ID to update
-   * @param status - New status ('pending' | 'running' | 'completed' | 'failed' | 'interrupted')
+   * @param status - New status
    * @param error - Optional error message if status is 'failed'
-   * @returns Updated trace or null if not found
+   * @returns Updated trace
+   * @throws NotFoundException if trace not found
    */
   async updateTraceStatus(
     traceId: string,
-    status: string,
+    status: TraceStatus,
     error?: string,
-  ): Promise<ReasoningTrace | null> {
+  ): Promise<ReasoningTrace> {
     const trace = await this.reasoningTraceRepository.findOne({
       where: { id: traceId },
     });
 
     if (!trace) {
       this.logger.warn(`Trace ${traceId} not found for status update`);
-      return null;
+      throw new NotFoundException(`Trace ${traceId} not found`);
     }
 
     trace.status = status;
@@ -138,6 +155,15 @@ export class TracingService {
     }
 
     const updated = await this.reasoningTraceRepository.save(trace);
+
+    // Emit SSE event for real-time updates
+    this.eventEmitter.emit('trace.status_updated', {
+      traceId: updated.id,
+      threadId: updated.threadId,
+      userId: updated.userId,
+      status: updated.status,
+      error: updated.error,
+    });
 
     this.logger.debug(`Updated trace ${traceId} status to ${status}`);
 
@@ -149,19 +175,28 @@ export class TracingService {
    *
    * @param traceId - Trace ID to update
    * @param durationMs - Duration in milliseconds
-   * @returns Updated trace or null if not found
+   * @returns Updated trace
+   * @throws NotFoundException if trace not found
+   * @throws BadRequestException if durationMs is negative
    */
   async recordTraceDuration(
     traceId: string,
     durationMs: number,
-  ): Promise<ReasoningTrace | null> {
+  ): Promise<ReasoningTrace> {
+    // Validate durationMs is not negative
+    if (durationMs < 0) {
+      throw new BadRequestException(
+        `Duration must be >= 0, got: ${durationMs}`,
+      );
+    }
+
     const trace = await this.reasoningTraceRepository.findOne({
       where: { id: traceId },
     });
 
     if (!trace) {
       this.logger.warn(`Trace ${traceId} not found for duration update`);
-      return null;
+      throw new NotFoundException(`Trace ${traceId} not found`);
     }
 
     trace.durationMs = durationMs;
@@ -178,27 +213,173 @@ export class TracingService {
    *
    * @param traceId - Trace ID to update
    * @param toolResults - Array of tool results with tool name and result data
-   * @returns Updated trace or null if not found
+   * @returns Updated trace
+   * @throws NotFoundException if trace not found
+   * @throws BadRequestException if toolResults is invalid or too large
    */
   async attachToolResults(
     traceId: string,
-    toolResults: Array<{ tool: string; result: any }>,
-  ): Promise<ReasoningTrace | null> {
+    toolResults: ToolResult[],
+  ): Promise<ReasoningTrace> {
+    // Validate toolResults is array
+    if (!Array.isArray(toolResults)) {
+      throw new BadRequestException('toolResults must be an array');
+    }
+
+    // Limit array size to prevent JSONB overflow
+    if (toolResults.length > TOOL_RESULTS_CONFIG.MAX_TOOL_RESULTS) {
+      throw new BadRequestException(
+        `toolResults array size (${toolResults.length}) exceeds maximum (${TOOL_RESULTS_CONFIG.MAX_TOOL_RESULTS})`,
+      );
+    }
+
     const trace = await this.reasoningTraceRepository.findOne({
       where: { id: traceId },
     });
 
     if (!trace) {
       this.logger.warn(`Trace ${traceId} not found for tool results update`);
-      return null;
+      throw new NotFoundException(`Trace ${traceId} not found`);
     }
 
     trace.toolResults = toolResults;
 
     const updated = await this.reasoningTraceRepository.save(trace);
 
+    // Emit SSE event for real-time updates
+    this.eventEmitter.emit('trace.tools_executed', {
+      traceId: updated.id,
+      threadId: updated.threadId,
+      userId: updated.userId,
+      toolCount: toolResults.length,
+    });
+
     this.logger.debug(
       `Attached ${toolResults.length} tool results to trace ${traceId}`,
+    );
+
+    return updated;
+  }
+
+  /**
+   * Start a new trace (US-001 enhancement)
+   *
+   * Helper method to create a trace at node start with status='running'
+   * and auto-incremented stepIndex.
+   *
+   * @param threadId - Thread identifier
+   * @param userId - User ID (required for security)
+   * @param nodeName - Name of the node being executed
+   * @param input - Input data for the node
+   * @returns Created trace
+   * @throws BadRequestException if userId is missing
+   */
+  async startTrace(
+    threadId: string,
+    userId: string,
+    nodeName: string,
+    input: Record<string, any>,
+  ): Promise<ReasoningTrace> {
+    // Security validation: userId is required
+    if (!userId || userId.trim() === '') {
+      throw new BadRequestException('userId is required for security');
+    }
+
+    // Get max stepIndex for this thread and auto-increment
+    const maxStepResult = await this.reasoningTraceRepository
+      .createQueryBuilder('trace')
+      .select('MAX(trace.stepIndex)', 'max')
+      .where('trace.threadId = :threadId', { threadId })
+      .getRawOne<{ max: string | null }>();
+
+    const nextStepIndex =
+      maxStepResult?.max !== null && maxStepResult?.max !== undefined
+        ? parseInt(maxStepResult.max, 10) + 1
+        : 0;
+
+    const trace = this.reasoningTraceRepository.create({
+      threadId,
+      userId,
+      nodeName,
+      input,
+      output: {},
+      reasoning: '',
+      status: TraceStatus.RUNNING,
+      stepIndex: nextStepIndex,
+    });
+
+    const saved = await this.reasoningTraceRepository.save(trace);
+
+    // Emit SSE event for node start
+    this.eventEmitter.emit('node.start', {
+      traceId: saved.id,
+      threadId: saved.threadId,
+      userId: saved.userId,
+      nodeName: saved.nodeName,
+      stepIndex: saved.stepIndex,
+    });
+
+    this.logger.debug(
+      `Started trace for node "${nodeName}" in thread ${threadId} (step ${nextStepIndex})`,
+    );
+
+    return saved;
+  }
+
+  /**
+   * Complete a trace (US-001 enhancement)
+   *
+   * Helper method to complete a trace at node end with output, reasoning,
+   * duration, and status='completed'.
+   *
+   * @param traceId - Trace ID to complete
+   * @param output - Output data from the node
+   * @param reasoning - Human-readable explanation
+   * @param durationMs - Execution duration in milliseconds
+   * @returns Updated trace
+   * @throws NotFoundException if trace not found
+   * @throws BadRequestException if durationMs is negative
+   */
+  async completeTrace(
+    traceId: string,
+    output: Record<string, any>,
+    reasoning: string,
+    durationMs: number,
+  ): Promise<ReasoningTrace> {
+    // Validate durationMs is not negative
+    if (durationMs < 0) {
+      throw new BadRequestException(
+        `Duration must be >= 0, got: ${durationMs}`,
+      );
+    }
+
+    const trace = await this.reasoningTraceRepository.findOne({
+      where: { id: traceId },
+    });
+
+    if (!trace) {
+      this.logger.warn(`Trace ${traceId} not found for completion`);
+      throw new NotFoundException(`Trace ${traceId} not found`);
+    }
+
+    trace.output = output;
+    trace.reasoning = reasoning;
+    trace.durationMs = durationMs;
+    trace.status = TraceStatus.COMPLETED;
+
+    const updated = await this.reasoningTraceRepository.save(trace);
+
+    // Emit SSE event for node completion
+    this.eventEmitter.emit('node.complete', {
+      traceId: updated.id,
+      threadId: updated.threadId,
+      userId: updated.userId,
+      nodeName: updated.nodeName,
+      durationMs: updated.durationMs,
+    });
+
+    this.logger.debug(
+      `Completed trace ${traceId} for node "${trace.nodeName}" in ${durationMs}ms`,
     );
 
     return updated;

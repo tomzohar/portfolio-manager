@@ -8,11 +8,20 @@ import {
   Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { TraceStatus } from '../types/trace-status.enum';
+import { ToolResult } from '../types/tool-result.interface';
 
 /**
  * ReasoningTrace Entity
  * Stores the agent's thought process for debugging and transparency.
  * Each trace represents one node execution in the LangGraph workflow.
+ *
+ * Enhanced: Step-by-Step Reasoning Transparency
+ * - Execution status tracking (pending, running, completed, failed, interrupted)
+ * - Tool results with data source information
+ * - Duration metrics for performance monitoring
+ * - Error messages for failure debugging
+ * - Step ordering for sequential trace display
  */
 @Entity('reasoning_traces')
 @Index(['threadId', 'createdAt'])
@@ -50,13 +59,13 @@ export class ReasoningTrace {
   @Column({
     type: 'varchar',
     length: 20,
-    default: 'completed',
+    default: TraceStatus.COMPLETED,
     nullable: true,
   })
-  status?: string; // 'pending' | 'running' | 'completed' | 'failed' | 'interrupted'
+  status?: TraceStatus;
 
   @Column({ type: 'jsonb', default: () => "'[]'", nullable: true })
-  toolResults?: Array<{ tool: string; result: any }>;
+  toolResults?: ToolResult[];
 
   @Column({ type: 'integer', nullable: true })
   durationMs?: number;

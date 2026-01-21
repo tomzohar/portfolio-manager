@@ -1,11 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { TracingService } from './tracing.service';
 import { ReasoningTrace } from '../entities/reasoning-trace.entity';
 import { User } from 'src/modules/users/entities/user.entity';
+import { TraceStatus } from '../types/trace-status.enum';
 
 describe('TracingService', () => {
   let service: TracingService;
+  let eventEmitter: jest.Mocked<EventEmitter2>;
 
   const mockRepository = {
     create: jest.fn(),
@@ -13,6 +17,11 @@ describe('TracingService', () => {
     find: jest.fn(),
     findOne: jest.fn(),
     createQueryBuilder: jest.fn(),
+    maximum: jest.fn(),
+  };
+
+  const mockEventEmitter = {
+    emit: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -23,10 +32,15 @@ describe('TracingService', () => {
           provide: getRepositoryToken(ReasoningTrace),
           useValue: mockRepository,
         },
+        {
+          provide: EventEmitter2,
+          useValue: mockEventEmitter,
+        },
       ],
     }).compile();
 
     service = module.get<TracingService>(TracingService);
+    eventEmitter = module.get(EventEmitter2);
 
     // Reset mocks
     jest.clearAllMocks();
@@ -84,7 +98,7 @@ describe('TracingService', () => {
         input,
         output,
         reasoning,
-        status: 'completed',
+        status: TraceStatus.COMPLETED,
         toolResults: undefined,
         durationMs: undefined,
         error: undefined,
@@ -459,7 +473,7 @@ describe('TracingService', () => {
       const output = { result: 'test' };
       const reasoning = 'test reasoning';
       const options = {
-        status: 'running',
+        status: TraceStatus.RUNNING,
         toolResults: [{ tool: 'FRED API', result: { value: 3.2 } }],
         durationMs: 1234,
         stepIndex: 1,
@@ -473,7 +487,7 @@ describe('TracingService', () => {
         input,
         output,
         reasoning,
-        status: 'running',
+        status: TraceStatus.RUNNING,
         toolResults: [{ tool: 'FRED API', result: { value: 3.2 } }],
         durationMs: 1234,
         stepIndex: 1,
@@ -502,13 +516,13 @@ describe('TracingService', () => {
         input,
         output,
         reasoning,
-        status: 'running',
+        status: TraceStatus.RUNNING,
         toolResults: [{ tool: 'FRED API', result: { value: 3.2 } }],
         durationMs: 1234,
         error: undefined,
         stepIndex: 1,
       });
-      expect(result.status).toBe('running');
+      expect(result.status).toBe(TraceStatus.RUNNING);
       expect(result.toolResults).toEqual([
         { tool: 'FRED API', result: { value: 3.2 } },
       ]);
@@ -520,7 +534,7 @@ describe('TracingService', () => {
     it('should update trace status successfully', async () => {
       // Arrange
       const traceId = 'trace-123';
-      const newStatus = 'completed';
+      const newStatus = TraceStatus.COMPLETED;
 
       const mockTrace = {
         id: traceId,
@@ -552,16 +566,15 @@ describe('TracingService', () => {
       expect(result?.status).toBe('completed');
     });
 
-    it('should return null if trace not found', async () => {
+    it('should throw NotFoundException if trace not found', async () => {
       // Arrange
       const traceId = 'non-existent';
       mockRepository.findOne.mockResolvedValue(null);
 
-      // Act
-      const result = await service.updateTraceStatus(traceId, 'completed');
-
-      // Assert
-      expect(result).toBeNull();
+      // Act & Assert
+      await expect(
+        service.updateTraceStatus(traceId, TraceStatus.COMPLETED),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should update status and error message when trace fails', async () => {
@@ -586,7 +599,7 @@ describe('TracingService', () => {
       // Act
       const result = await service.updateTraceStatus(
         traceId,
-        'failed',
+        TraceStatus.FAILED,
         errorMessage,
       );
 
@@ -622,15 +635,14 @@ describe('TracingService', () => {
       expect(result?.durationMs).toBe(5432);
     });
 
-    it('should return null if trace not found', async () => {
+    it('should throw NotFoundException if trace not found', async () => {
       // Arrange
       mockRepository.findOne.mockResolvedValue(null);
 
-      // Act
-      const result = await service.recordTraceDuration('non-existent', 1000);
-
-      // Assert
-      expect(result).toBeNull();
+      // Act & Assert
+      await expect(
+        service.recordTraceDuration('non-existent', 1000),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -664,15 +676,402 @@ describe('TracingService', () => {
       expect(result?.toolResults).toHaveLength(2);
     });
 
-    it('should return null if trace not found', async () => {
+    it('should throw NotFoundException if trace not found', async () => {
       // Arrange
       mockRepository.findOne.mockResolvedValue(null);
 
+      // Act & Assert
+      await expect(
+        service.attachToolResults('non-existent', []),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ============================================================================
+  // US-001-BE-T3: Enhanced TracingService Methods
+  // ============================================================================
+
+  describe('US-001-BE-T3: updateTraceStatus with EventEmitter2', () => {
+    it('should emit SSE event when status is updated', async () => {
+      // Arrange
+      const traceId = 'trace-123';
+      const threadId = 'thread-456';
+      const newStatus = TraceStatus.COMPLETED;
+
+      const mockTrace = {
+        id: traceId,
+        threadId,
+        userId: 'user-789',
+        status: TraceStatus.RUNNING,
+      } as ReasoningTrace;
+
+      const updatedTrace = { ...mockTrace, status: newStatus };
+
+      mockRepository.findOne.mockResolvedValue(mockTrace);
+      mockRepository.save.mockResolvedValue(updatedTrace);
+
       // Act
-      const result = await service.attachToolResults('non-existent', []);
+      await service.updateTraceStatus(traceId, newStatus);
 
       // Assert
-      expect(result).toBeNull();
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'trace.status_updated',
+        expect.objectContaining({
+          traceId,
+          threadId,
+          status: newStatus,
+        }),
+      );
+    });
+
+    it('should throw NotFoundException if trace not found', async () => {
+      // Arrange
+      mockRepository.findOne.mockResolvedValue(null);
+
+      // Act & Assert
+      await expect(
+        service.updateTraceStatus('non-existent', TraceStatus.COMPLETED),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should include error message when status is failed', async () => {
+      // Arrange
+      const traceId = 'trace-123';
+      const errorMessage = 'Network timeout';
+
+      const mockTrace = {
+        id: traceId,
+        threadId: 'thread-456',
+        status: TraceStatus.RUNNING,
+      } as ReasoningTrace;
+
+      const updatedTrace = {
+        ...mockTrace,
+        status: TraceStatus.FAILED,
+        error: errorMessage,
+      };
+
+      mockRepository.findOne.mockResolvedValue(mockTrace);
+      mockRepository.save.mockResolvedValue(updatedTrace);
+
+      // Act
+      const result = await service.updateTraceStatus(
+        traceId,
+        TraceStatus.FAILED,
+        errorMessage,
+      );
+
+      // Assert
+      expect(result?.status).toBe(TraceStatus.FAILED);
+      expect(result?.error).toBe(errorMessage);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(eventEmitter.emit).toHaveBeenCalled();
+    });
+  });
+
+  describe('US-001-BE-T3: recordTraceDuration with validation', () => {
+    it('should throw BadRequestException if durationMs is negative', async () => {
+      // Arrange
+      const traceId = 'trace-123';
+      const negativeDuration = -100;
+
+      // Act & Assert
+      await expect(
+        service.recordTraceDuration(traceId, negativeDuration),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should accept zero duration', async () => {
+      // Arrange
+      const traceId = 'trace-123';
+      const mockTrace = {
+        id: traceId,
+        durationMs: undefined,
+      } as ReasoningTrace;
+
+      const updatedTrace = { ...mockTrace, durationMs: 0 };
+
+      mockRepository.findOne.mockResolvedValue(mockTrace);
+      mockRepository.save.mockResolvedValue(updatedTrace);
+
+      // Act
+      const result = await service.recordTraceDuration(traceId, 0);
+
+      // Assert
+      expect(result?.durationMs).toBe(0);
+    });
+
+    it('should throw NotFoundException if trace not found', async () => {
+      // Arrange
+      mockRepository.findOne.mockResolvedValue(null);
+
+      // Act & Assert
+      await expect(
+        service.recordTraceDuration('non-existent', 1000),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('US-001-BE-T3: attachToolResults with validation and SSE', () => {
+    it('should emit SSE event when tool results are attached', async () => {
+      // Arrange
+      const traceId = 'trace-123';
+      const threadId = 'thread-456';
+      const toolResults = [{ tool: 'FRED', result: { value: 3.2 } }];
+
+      const mockTrace = {
+        id: traceId,
+        threadId,
+        toolResults: undefined,
+      } as ReasoningTrace;
+
+      const updatedTrace = { ...mockTrace, toolResults };
+
+      mockRepository.findOne.mockResolvedValue(mockTrace);
+      mockRepository.save.mockResolvedValue(updatedTrace);
+
+      // Act
+      await service.attachToolResults(traceId, toolResults);
+
+      // Assert
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'trace.tools_executed',
+        expect.objectContaining({
+          traceId,
+          threadId,
+          toolCount: 1,
+        }),
+      );
+    });
+
+    it('should validate toolResults is an array', async () => {
+      // Arrange
+      const traceId = 'trace-123';
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const invalidToolResults = 'not an array' as any;
+
+      // Act & Assert
+      await expect(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        service.attachToolResults(traceId, invalidToolResults),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should limit tool results array to 100 items', async () => {
+      // Arrange
+      const traceId = 'trace-123';
+      const tooManyResults = Array.from({ length: 150 }, (_, i) => ({
+        tool: `tool-${i}`,
+        result: { data: 'value' },
+      }));
+
+      // Act & Assert
+      await expect(
+        service.attachToolResults(traceId, tooManyResults),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw NotFoundException if trace not found', async () => {
+      // Arrange
+      mockRepository.findOne.mockResolvedValue(null);
+
+      // Act & Assert
+      await expect(
+        service.attachToolResults('non-existent', []),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('US-001-BE-T3: startTrace', () => {
+    it('should create a trace with status=running and auto-increment stepIndex', async () => {
+      // Arrange
+      const threadId = 'thread-123';
+      const userId = 'user-456';
+      const nodeName = 'macro_analysis';
+      const input = { message: 'Analyze AAPL' };
+
+      // Mock max stepIndex query result
+      const maxStepIndex = 5;
+
+      mockRepository.createQueryBuilder = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        getRawOne: jest
+          .fn()
+          .mockResolvedValue({ max: maxStepIndex.toString() }) as any,
+      });
+
+      const expectedTrace = {
+        id: 'trace-789',
+        threadId,
+        userId,
+        nodeName,
+        input,
+        output: {},
+        reasoning: '',
+        status: TraceStatus.RUNNING,
+        stepIndex: maxStepIndex + 1,
+        createdAt: new Date(),
+      } as ReasoningTrace;
+
+      mockRepository.create.mockReturnValue(expectedTrace);
+      mockRepository.save.mockResolvedValue(expectedTrace);
+
+      // Act
+      const result = await service.startTrace(
+        threadId,
+        userId,
+        nodeName,
+        input,
+      );
+
+      // Assert
+      expect(result.status).toBe(TraceStatus.RUNNING);
+      expect(result.stepIndex).toBe(6);
+      expect(result.input).toEqual(input);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'node.start',
+        expect.objectContaining({
+          traceId: expectedTrace.id,
+          threadId,
+          nodeName,
+        }),
+      );
+    });
+
+    it('should set stepIndex to 0 if no previous traces exist', async () => {
+      // Arrange
+      const threadId = 'thread-123';
+      const userId = 'user-456';
+      const nodeName = 'observer';
+      const input = {};
+
+      // Mock max stepIndex query result (no previous traces)
+
+      mockRepository.createQueryBuilder = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        getRawOne: jest.fn().mockResolvedValue({ max: null }) as any,
+      });
+
+      const expectedTrace = {
+        id: 'trace-first',
+        threadId,
+        userId,
+        nodeName,
+        input,
+        output: {},
+        reasoning: '',
+        status: TraceStatus.RUNNING,
+        stepIndex: 0,
+        createdAt: new Date(),
+      } as ReasoningTrace;
+
+      mockRepository.create.mockReturnValue(expectedTrace);
+      mockRepository.save.mockResolvedValue(expectedTrace);
+
+      // Act
+      const result = await service.startTrace(
+        threadId,
+        userId,
+        nodeName,
+        input,
+      );
+
+      // Assert
+      expect(result.stepIndex).toBe(0);
+    });
+
+    it('should validate userId is present', async () => {
+      // Act & Assert
+      await expect(
+        service.startTrace('thread-123', '', 'observer', {}),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('US-001-BE-T3: completeTrace', () => {
+    it('should update trace with output, reasoning, duration and status=completed', async () => {
+      // Arrange
+      const traceId = 'trace-123';
+      const threadId = 'thread-456';
+      const output = { result: 'Analysis complete' };
+      const reasoning = 'Processed market data and identified trends';
+      const durationMs = 3450;
+
+      const mockTrace = {
+        id: traceId,
+        threadId,
+        userId: 'user-789',
+        nodeName: 'macro_analysis',
+        status: TraceStatus.RUNNING,
+        output: {},
+        reasoning: '',
+      } as ReasoningTrace;
+
+      const updatedTrace = {
+        ...mockTrace,
+        output,
+        reasoning,
+        durationMs,
+        status: TraceStatus.COMPLETED,
+      };
+
+      mockRepository.findOne.mockResolvedValue(mockTrace);
+      mockRepository.save.mockResolvedValue(updatedTrace);
+
+      // Act
+      await service.completeTrace(traceId, output, reasoning, durationMs);
+
+      // Assert
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          output,
+          reasoning,
+          durationMs,
+          status: TraceStatus.COMPLETED,
+        }),
+      );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'node.complete',
+        expect.objectContaining({
+          traceId,
+          threadId,
+          durationMs,
+        }),
+      );
+    });
+
+    it('should throw NotFoundException if trace not found', async () => {
+      // Arrange
+      mockRepository.findOne.mockResolvedValue(null);
+
+      // Act & Assert
+      await expect(
+        service.completeTrace('non-existent', {}, 'reasoning', 1000),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should validate durationMs is not negative', async () => {
+      // Arrange
+      const traceId = 'trace-123';
+      const mockTrace = {
+        id: traceId,
+        status: TraceStatus.RUNNING,
+      } as ReasoningTrace;
+
+      mockRepository.findOne.mockResolvedValue(mockTrace);
+
+      // Act & Assert
+      await expect(
+        service.completeTrace(traceId, {}, 'reasoning', -500),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });
