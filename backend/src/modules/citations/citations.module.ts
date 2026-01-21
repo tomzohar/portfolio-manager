@@ -1,10 +1,13 @@
 import { Module, forwardRef } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { DataCitation } from './entities/data-citation.entity';
-import { ReasoningTrace } from '../agents/entities/reasoning-trace.entity';
-import { CitationService } from './services/citation.service';
-import { CitationsController } from './controllers/citations.controller';
 import { AgentsModule } from '../agents/agents.module';
+import { ReasoningTrace } from '../agents/entities/reasoning-trace.entity';
+import { AuthModule } from '../auth/auth.module';
+import { UsersModule } from '../users/users.module';
+import { CitationsController } from './controllers/citations.controller';
+import { DataCitation } from './entities/data-citation.entity';
+import { CitationService } from './services/citation.service';
 
 /**
  * Citations Module
@@ -25,7 +28,10 @@ import { AgentsModule } from '../agents/agents.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([DataCitation, ReasoningTrace]),
-    forwardRef(() => AgentsModule), // For TracingService
+    JwtModule, // For JwtAuthGuard (JwtService)
+    forwardRef(() => AuthModule), // For JwtAuthGuard
+    forwardRef(() => UsersModule), // For UsersService (needed by JwtAuthGuard)
+    forwardRef(() => AgentsModule), // For StateService
   ],
   controllers: [CitationsController],
   providers: [CitationService],

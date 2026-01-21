@@ -12,23 +12,39 @@
   margin-bottom: var(--spacing-base);
 
   &.status-connected {
-    background-color: var(--color-success-light);
+    background-color: rgb(0 212 146 / 15%);  // Success with 15% opacity
     border-left: var(--spacing-xs) solid var(--color-success);
+
+    .status-text {
+      color: var(--color-success-light);
+    }
   }
 
   &.status-disconnected {
     background-color: var(--color-bg-tertiary);
     border-left: var(--spacing-xs) solid var(--color-text-disabled);
+
+    .status-text {
+      color: var(--color-text-muted);
+    }
   }
 
   &.status-reconnecting {
-    background-color: var(--color-warning);
-    border-left: var(--spacing-xs) solid var(--color-caution);
+    background-color: rgb(255 210 48 / 15%);  // Warning with 15% opacity
+    border-left: var(--spacing-xs) solid var(--color-warning);
+
+    .status-text {
+      color: var(--color-warning);
+    }
   }
 
   &.status-error {
-    background-color: var(--color-error);
+    background-color: rgb(255 99 126 / 15%);  // Error with 15% opacity
     border-left: var(--spacing-xs) solid var(--color-error);
+
+    .status-text {
+      color: var(--color-error);
+    }
   }
 }
 
@@ -40,7 +56,7 @@
 
 .status-icon {
   &.status-connected {
-    color: var(--color-success);
+    color: var(--color-success-light);
   }
 
   &.status-disconnected {
@@ -48,7 +64,7 @@
   }
 
   &.status-reconnecting {
-    color: var(--color-caution);
+    color: var(--color-warning);
   }
 
   &.status-error {
@@ -59,7 +75,8 @@
 .status-text {
   font-weight: var(--font-weight-medium);
   font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
+
+  // Color set per status in parent
 }
 
 .thinking-indicator {

@@ -43,11 +43,9 @@
 .trace-list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
 }
 
 .trace-item {
-  cursor: pointer;
   transition: transform var(--transition-fast);
   
   &:hover {

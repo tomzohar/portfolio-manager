@@ -10,6 +10,24 @@
 
   <!-- Main Content Area -->
   <div class="chat-page__content">
+    <!-- Error Banner -->
+    @if (error()) {
+      <div class="chat-page__error-banner">
+        <div class="error-content">
+          <lib-icon name="error" [size]="20" class="error-icon" />
+          <span class="error-message">{{ error() }}</span>
+        </div>
+      </div>
+    }
+
+    <!-- Sending Indicator -->
+    @if (loading() && traces().length === 0) {
+      <div class="chat-page__sending">
+        <lib-loader [config]="{ size: 'sm' }" />
+        <span class="sending-text">Sending message and starting analysis...</span>
+      </div>
+    }
+
     <!-- Reasoning Trace Panel (Left/Main) -->
     <div class="chat-page__trace-panel">
       @if (threadId() && isValidThreadId(threadId()!)) {

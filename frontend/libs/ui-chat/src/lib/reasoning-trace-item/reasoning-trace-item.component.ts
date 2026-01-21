@@ -78,6 +78,9 @@ import {
         </div>
 
         <div class="trace-actions">
+          <span class="timestamp" [title]="trace().createdAt.toString()">
+            {{ formatTimestamp(trace().createdAt) }}
+          </span>
           @if (trace().durationMs) {
             <span class="duration" aria-label="Duration">{{ formatDuration(trace().durationMs!) }}</span>
           }
@@ -198,5 +201,17 @@ export class ReasoningTraceItemComponent {
     } catch {
       return String(obj);
     }
+  }
+
+  /**
+   * Format timestamp for display
+   */
+  formatTimestamp(timestamp: Date | string): string {
+    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+    return date.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      second: '2-digit'
+    });
   }
 }

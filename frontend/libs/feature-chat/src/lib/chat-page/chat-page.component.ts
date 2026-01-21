@@ -14,6 +14,7 @@ import { ReasoningTrace } from '@stocks-researcher/types';
 import { ReasoningTracePanelComponent } from '../reasoning-trace-panel/reasoning-trace-panel.component';
 import { MessageInputComponent } from '../message-input/message-input.component';
 import { ConversationHeaderComponent } from '../conversation-header/conversation-header.component';
+import { LoaderComponent, IconComponent } from '@stocks-researcher/styles';
 
 /**
  * ChatPageComponent
@@ -52,6 +53,8 @@ import { ConversationHeaderComponent } from '../conversation-header/conversation
     ReasoningTracePanelComponent,
     MessageInputComponent,
     ConversationHeaderComponent,
+    LoaderComponent,
+    IconComponent,
   ],
   templateUrl: './chat-page.component.html',
   styleUrls: ['./chat-page.component.scss'],
@@ -97,6 +100,16 @@ export class ChatPageComponent implements OnDestroy {
    * Current thread ID from facade (may differ from route after message send)
    */
   facadeThreadId = this.facade.currentThreadId;
+
+  /**
+   * Loading state (sending message or loading traces)
+   */
+  loading = this.facade.loading;
+
+  /**
+   * Error message if any
+   */
+  error = this.facade.error;
 
   // ========================================
   // Computed State

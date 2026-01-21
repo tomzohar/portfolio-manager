@@ -1,6 +1,5 @@
 :host {
   display: block;
-  margin-bottom: var(--spacing-base);
 }
 
 .trace-item {
@@ -16,8 +15,6 @@
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  padding: var(--spacing-base);
-  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .trace-title {
@@ -71,6 +68,12 @@
   gap: var(--spacing-sm);
 }
 
+.timestamp {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-faint);
+  font-weight: var(--font-weight-regular);
+}
+
 .duration {
   font-size: var(--font-size-xs);
   color: var(--color-text-subtle);
@@ -78,7 +81,7 @@
 }
 
 .trace-content {
-  padding: var(--spacing-base);
+  // Content padding removed for flexibility
 }
 
 .trace-reasoning {
