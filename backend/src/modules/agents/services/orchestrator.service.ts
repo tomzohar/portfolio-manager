@@ -4,8 +4,10 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Inject,
+  Optional,
 } from '@nestjs/common';
-import { HumanMessage } from '@langchain/core/messages';
+import { HumanMessage, AIMessage } from '@langchain/core/messages';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { StateService } from './state.service';
 import { ToolRegistryService } from './tool-registry.service';
@@ -22,6 +24,7 @@ import { InterruptHandlerService } from './interrupt-handler.service';
 import { GuardrailException } from '../graphs/nodes/guardrail.node';
 import { TracingService } from './tracing.service';
 import { TracingCallbackHandler } from '../callbacks/tracing-callback.handler';
+import { CitationService } from '../../citations/services/citation.service';
 
 // ============================================================================
 // Types & Interfaces
@@ -39,6 +42,7 @@ export interface GraphResult {
   status: 'SUSPENDED' | 'COMPLETED' | 'FAILED';
   interruptReason?: string;
   error?: string;
+  citationCount?: number;
 }
 
 // ============================================================================
@@ -75,6 +79,9 @@ export class OrchestratorService {
     private readonly graphExecutor: GraphExecutorService,
     private readonly interruptHandler: InterruptHandlerService,
     private readonly tracingService: TracingService,
+    @Optional()
+    @Inject(CitationService)
+    private readonly citationService?: CitationService,
   ) {}
 
   // ============================================================================
@@ -99,7 +106,11 @@ export class OrchestratorService {
 
     const scopedThreadId = this.getScopedThreadId(userId, threadId);
     const initialState = this.buildInitialState(userId, scopedThreadId, input);
-    const config = this.buildGraphConfig(scopedThreadId, userId);
+    const config = this.buildGraphConfig(
+      scopedThreadId,
+      userId,
+      input.portfolio?.id,
+    );
 
     try {
       const finalState = await this.graphExecutor.invoke(initialState, config);
@@ -114,7 +125,11 @@ export class OrchestratorService {
       }
 
       // Normal completion
-      return this.buildCompletedResult(finalState, scopedThreadId, userId);
+      return await this.buildCompletedResult(
+        finalState,
+        scopedThreadId,
+        userId,
+      );
     } catch (error) {
       return this.handleGraphExecutionError(
         error,
@@ -158,7 +173,7 @@ export class OrchestratorService {
         );
       }
 
-      return this.buildCompletedResult(finalState, threadId, userId);
+      return await this.buildCompletedResult(finalState, threadId, userId);
     } catch (error) {
       return this.handleResumeError(error, userId, threadId);
     }
@@ -311,11 +326,13 @@ export class OrchestratorService {
    *
    * @param threadId - Scoped thread ID
    * @param userId - User ID for tracing
-   * @returns Graph configuration object with tracing callback
+   * @param portfolioId - Optional portfolio ID for context storage (US-004)
+   * @returns Graph configuration object with tracing callback and metadata
    */
   private buildGraphConfig(
     threadId: string,
     userId?: string,
+    portfolioId?: string,
   ): GraphExecutionConfig {
     const config: GraphExecutionConfig = {
       configurable: {
@@ -325,6 +342,9 @@ export class OrchestratorService {
         sectorAttributionService: this.sectorAttributionService,
       },
       recursionLimit: RECURSION_LIMIT,
+      metadata: {
+        portfolioId: portfolioId || null,
+      },
     };
 
     // Add automatic tracing callback if userId is provided
@@ -353,21 +373,104 @@ export class OrchestratorService {
    * @param userId - User ID for event emission
    * @returns Completed GraphResult
    */
-  private buildCompletedResult(
+  private async buildCompletedResult(
     finalState: CIOState,
     threadId: string,
     userId: string,
-  ): GraphResult {
+  ): Promise<GraphResult> {
     this.logger.log('Graph execution completed successfully');
 
     this.emitCompletionEvent(threadId, userId);
+
+    // Extract citations if CitationService is available (US-002 integration)
+    let citationCount = 0;
+    if (this.citationService) {
+      citationCount = await this.extractCitationsFromExecution(
+        threadId,
+        userId,
+        finalState,
+      );
+    }
 
     return {
       threadId,
       finalState,
       success: true,
       status: 'COMPLETED',
+      citationCount,
     };
+  }
+
+  /**
+   * Extract citations from graph execution (US-002 integration)
+   *
+   * Automatically extracts data source citations from tool results and final output.
+   * This runs after graph completion and does not block or fail the execution.
+   *
+   * @param threadId - Scoped thread ID
+   * @param userId - User ID
+   * @param finalState - Final graph state
+   * @returns Number of citations created (0 if extraction fails)
+   * @private
+   */
+  private async extractCitationsFromExecution(
+    threadId: string,
+    userId: string,
+    finalState: CIOState,
+  ): Promise<number> {
+    try {
+      // Extract final output from last AI message
+      const lastMessage = finalState.messages[finalState.messages.length - 1];
+      if (!(lastMessage instanceof AIMessage)) {
+        this.logger.debug(
+          'No AI message in final state, skipping citation extraction',
+        );
+        return 0;
+      }
+
+      const finalOutput =
+        typeof lastMessage.content === 'string'
+          ? lastMessage.content
+          : JSON.stringify(lastMessage.content);
+
+      // Collect tool results from reasoning traces
+      const traces = await this.tracingService.getTracesByThread(
+        threadId,
+        userId,
+      );
+      const toolResults = traces
+        .filter((trace) => trace.toolResults && trace.toolResults.length > 0)
+        .flatMap((trace) => trace.toolResults || []);
+
+      // Extract citations
+      const citations = await this.citationService?.extractCitations(
+        threadId,
+        userId,
+        finalOutput,
+        toolResults,
+      );
+
+      if (!citations) {
+        this.logger.debug(
+          'No citations extracted, skipping citation extraction',
+        );
+        return 0;
+      }
+
+      this.logger.log(
+        `Extracted ${citations.length} citations from ${toolResults.length} tool results (thread: ${threadId})`,
+      );
+
+      return citations.length;
+    } catch (error) {
+      // Don't fail graph execution if citation extraction fails
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `Citation extraction failed for thread ${threadId}: ${errorMessage}`,
+      );
+      return 0;
+    }
   }
 
   /**

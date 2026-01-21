@@ -93,6 +93,10 @@ export interface GraphExecutionConfig {
   recursionLimit: number;
   streamMode?: 'values' | 'updates';
   callbacks?: unknown[]; // LangChain callback handlers
+  metadata?: {
+    portfolioId?: string | null;
+    [key: string]: unknown;
+  };
 }
 
 /**

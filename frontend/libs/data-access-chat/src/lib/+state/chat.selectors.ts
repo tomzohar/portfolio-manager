@@ -162,3 +162,35 @@ export const selectTracePanelViewModel = createSelector(
     isGraphActive,
   })
 );
+
+/**
+ * Select conversation messages
+ */
+export const selectMessages = createSelector(
+  selectChatState,
+  (state) => state.messages
+);
+
+/**
+ * Select pending sent messages
+ */
+export const selectSentMessages = createSelector(
+  selectChatState,
+  (state) => state.sentMessages
+);
+
+/**
+ * Select expanded message IDs
+ */
+export const selectExpandedMessageIds = createSelector(
+  selectChatState,
+  (state) => state.expandedMessageIds
+);
+
+/**
+ * Check if a message's traces are expanded
+ */
+export const selectIsMessageExpanded = (messageId: string) => createSelector(
+  selectExpandedMessageIds,
+  (expandedIds) => expandedIds.includes(messageId)
+);

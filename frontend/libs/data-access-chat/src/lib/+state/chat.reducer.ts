@@ -120,8 +120,9 @@ export const chatReducer = createReducer(
   // Send Message
   // ========================================
 
-  on(ChatActions.sendMessage, (state) => ({
+  on(ChatActions.sendMessage, (state, { message }) => ({
     ...state,
+    sentMessages: [...state.sentMessages, message],  // Track pending message
     graphExecuting: true,  // Mark graph as executing
     loading: true,
     error: null,
@@ -149,7 +150,28 @@ export const chatReducer = createReducer(
   on(ChatActions.graphComplete, (state) => ({
     ...state,
     graphExecuting: false,  // Graph done, re-enable input
+    sentMessages: [],  // Clear pending messages after completion
   })),
+
+  // ========================================
+  // Message Management
+  // ========================================
+
+  on(ChatActions.messagesExtracted, (state, { messages }) => ({
+    ...state,
+    messages,
+  })),
+
+  on(ChatActions.toggleMessageTraces, (state, { messageId }) => {
+    const expandedMessageIds = state.expandedMessageIds.includes(messageId)
+      ? state.expandedMessageIds.filter((id) => id !== messageId)
+      : [...state.expandedMessageIds, messageId];
+
+    return {
+      ...state,
+      expandedMessageIds,
+    };
+  }),
 
   // ========================================
   // Reset

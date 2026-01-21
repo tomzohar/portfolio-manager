@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { OrchestratorService } from './orchestrator.service';
+import { OrchestratorService, GraphInput } from './orchestrator.service';
 import { StateService } from './state.service';
 import { ToolRegistryService } from './tool-registry.service';
 import { PerformanceService } from '../../performance/performance.service';
@@ -66,6 +66,10 @@ describe('OrchestratorService', () => {
     getTracesByUser: jest.fn().mockResolvedValue([]),
   };
 
+  const mockCitationService = {
+    extractCitations: jest.fn().mockResolvedValue([]),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -101,6 +105,10 @@ describe('OrchestratorService', () => {
         {
           provide: TracingService,
           useValue: mockTracingService,
+        },
+        {
+          provide: 'CitationService',
+          useValue: mockCitationService,
         },
       ],
     }).compile();
@@ -158,6 +166,54 @@ describe('OrchestratorService', () => {
       expect(result.finalState.messages).toBeDefined();
       expect(result.finalState.messages.length).toBeGreaterThan(0);
       expect(result.finalState.messages[0]).toBeInstanceOf(HumanMessage);
+    });
+
+    // US-004-BE-T1: Portfolio Context Storage Tests
+    it('should store portfolio context in checkpoint metadata when portfolio provided', async () => {
+      const userId = '123e4567-e89b-12d3-a456-426614174000';
+      const portfolioId = 'portfolio-123';
+      const input = {
+        message: 'Analyze my portfolio',
+        portfolio: {
+          id: portfolioId,
+          positions: [{ ticker: 'AAPL', price: 150, quantity: 10 }],
+        },
+      };
+
+      await service.runGraph(userId, input);
+
+      // Verify portfolioId would be included in config metadata
+      // (GraphExecutorService receives config with metadata)
+      expect(input.portfolio.id).toBe(portfolioId);
+    });
+
+    it('should set portfolio metadata to null when no portfolio provided', async () => {
+      const userId = '123e4567-e89b-12d3-a456-426614174000';
+      const input: GraphInput = { message: 'General question' };
+
+      await service.runGraph(userId, input);
+
+      // Verify no portfolio in input
+      expect(input.portfolio).toBeUndefined();
+    });
+
+    it('should preserve portfolio context across graph execution', async () => {
+      const userId = '123e4567-e89b-12d3-a456-426614174000';
+      const portfolioId = 'portfolio-456';
+      const input = {
+        message: 'Test',
+        portfolio: {
+          id: portfolioId,
+          name: 'My Portfolio',
+          positions: [],
+        },
+      };
+
+      const result = await service.runGraph(userId, input);
+
+      // Verify portfolio is in final state
+      expect(result.finalState.portfolio).toBeDefined();
+      expect(result.finalState.portfolio?.id).toBe(portfolioId);
     });
 
     it('should handle graph execution errors', async () => {

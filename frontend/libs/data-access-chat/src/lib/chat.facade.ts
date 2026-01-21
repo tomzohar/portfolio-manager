@@ -14,8 +14,12 @@ import {
   selectCurrentThreadId,
   selectIsTraceExpanded,
   selectLatestTrace,
+  selectMessages,
+  selectSentMessages,
+  selectExpandedMessageIds,
+  selectIsMessageExpanded,
 } from './+state/chat.selectors';
-import { ReasoningTrace, SSEConnectionStatus } from '@stocks-researcher/types';
+import { ReasoningTrace, SSEConnectionStatus, ConversationMessage } from '@stocks-researcher/types';
 
 /**
  * ChatFacade
@@ -128,6 +132,24 @@ export class ChatFacade {
   readonly tracePanelViewModel = 
     this.store.selectSignal(selectTracePanelViewModel);
 
+  /**
+   * Conversation messages (user + AI)
+   */
+  readonly messages: Signal<ConversationMessage[]> = 
+    this.store.selectSignal(selectMessages);
+
+  /**
+   * Pending sent messages (waiting for AI response)
+   */
+  readonly sentMessages: Signal<string[]> = 
+    this.store.selectSignal(selectSentMessages);
+
+  /**
+   * Expanded message IDs (for showing/hiding traces)
+   */
+  readonly expandedMessageIds: Signal<string[]> = 
+    this.store.selectSignal(selectExpandedMessageIds);
+
   // ========================================
   // Action Dispatch Methods
   // ========================================
@@ -214,6 +236,25 @@ export class ChatFacade {
         portfolioId: params.portfolioId,
       })
     );
+  }
+
+  /**
+   * Toggle visibility of reasoning traces for an AI message.
+   * 
+   * @param messageId - ID of the message to toggle traces for
+   */
+  toggleMessageTraces(messageId: string): void {
+    this.store.dispatch(ChatActions.toggleMessageTraces({ messageId }));
+  }
+
+  /**
+   * Check if a specific message's traces are expanded.
+   * 
+   * @param messageId - The message ID to check
+   * @returns Signal<boolean>
+   */
+  isMessageExpanded(messageId: string): Signal<boolean> {
+    return this.store.selectSignal(selectIsMessageExpanded(messageId));
   }
 
   // ========================================

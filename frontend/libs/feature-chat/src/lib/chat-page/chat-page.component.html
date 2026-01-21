@@ -21,19 +21,20 @@
     }
 
     <!-- Sending Indicator -->
-    @if (loading() && traces().length === 0) {
+    @if (loading() && messages().length === 0) {
       <div class="chat-page__sending">
         <lib-loader [config]="{ size: 'sm' }" />
         <span class="sending-text">Sending message and starting analysis...</span>
       </div>
     }
 
-    <!-- Reasoning Trace Panel (Left/Main) -->
-    <div class="chat-page__trace-panel">
+    <!-- Conversation Panel (NEW) -->
+    <div class="chat-page__conversation">
       @if (threadId() && isValidThreadId(threadId()!)) {
-        <app-reasoning-trace-panel
+        <app-conversation-panel
           [threadId]="threadId()!"
-          (traceClick)="handleTraceClick($event)"
+          [messages]="messages()"
+          [traces]="traces()"
         />
       } @else {
         <div class="chat-page__empty">

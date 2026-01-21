@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import { ReasoningTrace, SSEConnectionStatus, SSEEvent } from '@stocks-researcher/types';
+import { ReasoningTrace, SSEConnectionStatus, SSEEvent, ConversationMessage } from '@stocks-researcher/types';
 
 /**
  * Chat Feature Actions
@@ -106,5 +106,20 @@ export const ChatActions = createActionGroup({
      * Graph execution completed
      */
     'Graph Complete': props<{ threadId: string; output: unknown }>(),
+
+    /**
+     * Extract messages from loaded traces
+     */
+    'Extract Messages From Traces': props<{ traces: ReasoningTrace[] }>(),
+
+    /**
+     * Messages extracted and ready to display
+     */
+    'Messages Extracted': props<{ messages: ConversationMessage[] }>(),
+
+    /**
+     * Toggle message trace expansion
+     */
+    'Toggle Message Traces': props<{ messageId: string }>(),
   },
 });

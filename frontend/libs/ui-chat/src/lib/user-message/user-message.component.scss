@@ -1,0 +1,54 @@
+:host {
+  display: block;
+  margin-bottom: var(--spacing-base);
+}
+
+.user-message {
+  max-width: 80%;
+  padding: var(--spacing-md);
+  background-color: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--color-ai-primary);
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.sender {
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.timestamp {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-faint);
+}
+
+.message-content {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+  word-wrap: break-word;
+}
+
+// ========================================
+// Responsive Design
+// ========================================
+
+@media (width <= 768px) {
+  .user-message {
+    max-width: 90%;
+  }
+}
+
+@media (width <= 480px) {
+  .user-message {
+    max-width: 95%;
+    padding: var(--spacing-sm);
+  }
+}

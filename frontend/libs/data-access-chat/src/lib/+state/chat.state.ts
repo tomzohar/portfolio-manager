@@ -1,5 +1,5 @@
 import { EntityState, EntityAdapter, createEntityAdapter } from '@ngrx/entity';
-import { ReasoningTrace, SSEConnectionStatus } from '@stocks-researcher/types';
+import { ReasoningTrace, SSEConnectionStatus, ConversationMessage } from '@stocks-researcher/types';
 
 /**
  * Chat State Interface
@@ -24,6 +24,11 @@ export interface ChatState extends EntityState<ReasoningTrace> {
   
   // Graph Execution State
   graphExecuting: boolean;
+  
+  // Conversation State
+  messages: ConversationMessage[];
+  sentMessages: string[]; // Pending messages not yet confirmed
+  expandedMessageIds: string[]; // Which AI messages have traces expanded
   
   // Loading State
   loading: boolean;
@@ -55,6 +60,9 @@ export const initialChatState: ChatState = tracesAdapter.getInitialState({
   currentThreadId: null,
   sseStatus: SSEConnectionStatus.DISCONNECTED,
   graphExecuting: false,
+  messages: [],
+  sentMessages: [],
+  expandedMessageIds: [],
   loading: false,
   error: null,
 });

@@ -190,9 +190,17 @@ export class ReasoningTracePanelComponent implements OnDestroy {
       return;
     }
 
-    // Connect to SSE for this thread
+    // Only load historical traces if threadId is from backend (contains :)
+    // Frontend-generated threadIds won't have any traces yet
+    const isBackendThreadId = threadId.includes(':');
+
+    // Always connect SSE
     this.facade.connectSSE(threadId);
-    this.facade.loadHistoricalTraces(threadId);
+    
+    // Only load historical traces for backend threadIds
+    if (isBackendThreadId) {
+      this.facade.loadHistoricalTraces(threadId);
+    }
 
     // Cleanup function (called when effect reruns or component destroys)
     return () => {

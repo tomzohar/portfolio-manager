@@ -313,15 +313,6 @@ export interface ErrorEventData {
 }
 
 /**
- * Chat message sent to the backend
- */
-export interface ChatMessage {
-  message: string;
-  portfolioId?: string;
-  threadId?: string;
-}
-
-/**
  * Graph execution result from backend
  */
 export interface GraphResult {
@@ -344,4 +335,77 @@ export interface RunGraphDto {
 export interface ResumeGraphDto {
   threadId: string;
   userInput: string;
+}
+
+// =========================================
+// Conversation Message Types (CROSS-T1)
+// =========================================
+
+/**
+ * Message type enum for discriminated union
+ */
+export enum MessageType {
+  USER = 'user',
+  ASSISTANT = 'assistant',
+  SYSTEM = 'system',
+}
+
+/**
+ * Base message interface with common properties
+ */
+export interface BaseMessage {
+  id: string;
+  type: MessageType;
+  content: string;
+  timestamp: Date | string;
+}
+
+/**
+ * User message in conversation
+ */
+export interface UserMessage extends BaseMessage {
+  type: MessageType.USER;
+}
+
+/**
+ * AI assistant message in conversation
+ * Links to reasoning traces that generated this response
+ */
+export interface AssistantMessage extends BaseMessage {
+  type: MessageType.ASSISTANT;
+  traceIds?: string[]; // Links to reasoning traces
+}
+
+/**
+ * System message (status, errors, notifications)
+ */
+export interface SystemMessage extends BaseMessage {
+  type: MessageType.SYSTEM;
+  severity: 'info' | 'warning' | 'error';
+}
+
+/**
+ * Discriminated union of all message types
+ */
+export type ConversationMessage = UserMessage | AssistantMessage | SystemMessage;
+
+/**
+ * Type guard for UserMessage
+ */
+export function isUserMessage(msg: ConversationMessage): msg is UserMessage {
+  return msg.type === MessageType.USER;
+}
+
+/**
+ * Type guard for AssistantMessage
+ */
+export function isAssistantMessage(msg: ConversationMessage): msg is AssistantMessage {
+  return msg.type === MessageType.ASSISTANT;
+}
+
+/**
+ * Type guard for SystemMessage
+ */
+export function isSystemMessage(msg: ConversationMessage): msg is SystemMessage {
+  return msg.type === MessageType.SYSTEM;
 }

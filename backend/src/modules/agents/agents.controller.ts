@@ -30,6 +30,7 @@ import { TracesResponseDto } from './dto/traces-response.dto';
 import { TracingService } from './services/tracing.service';
 import { StateService } from './services/state.service';
 import { ResumeGraphDto } from './dto/resume-graph.dto';
+import { PortfolioService } from '../portfolio/portfolio.service';
 
 @ApiTags('agents')
 @Controller('agents')
@@ -41,6 +42,7 @@ export class AgentsController {
     private readonly eventEmitter: EventEmitter2,
     private readonly tracingService: TracingService,
     private readonly stateService: StateService,
+    private readonly portfolioService: PortfolioService,
   ) {}
 
   @Post('run')
@@ -62,10 +64,19 @@ export class AgentsController {
     status: 400,
     description: 'Bad Request - Invalid input data',
   })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - User does not own the specified portfolio',
+  })
   async runGraph(
     @CurrentUser() user: User,
     @Body() dto: RunGraphDto,
   ): Promise<GraphResponseDto> {
+    // US-004-BE-T2: Validate portfolio ownership before executing graph
+    if (dto.portfolio?.id) {
+      await this.portfolioService.getPortfolioOrFail(user.id, dto.portfolio.id);
+    }
+
     return this.orchestratorService.runGraph(
       user.id,
       {

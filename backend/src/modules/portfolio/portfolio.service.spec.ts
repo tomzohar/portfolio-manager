@@ -1216,4 +1216,124 @@ describe('PortfolioService', () => {
       );
     });
   });
+
+  // ============================================================================
+  // US-004-BE-T2: Portfolio Ownership Validation
+  // ============================================================================
+
+  describe('validateUserOwnsPortfolio', () => {
+    it('should return true if user owns portfolio', async () => {
+      // Arrange
+      const userId = 'user-123';
+      const portfolioId = 'portfolio-456';
+
+      portfolioRepository.findOne.mockResolvedValue({
+        id: portfolioId,
+        user: { id: userId } as User,
+      } as Portfolio);
+
+      // Act
+      const result = await service.validateUserOwnsPortfolio(
+        userId,
+        portfolioId,
+      );
+
+      // Assert
+      expect(result).toBe(true);
+      expect(portfolioRepository.findOne).toHaveBeenCalledWith({
+        where: { id: portfolioId },
+        relations: ['user'],
+      });
+    });
+
+    it('should return false if user does not own portfolio', async () => {
+      // Arrange
+      const userId = 'user-123';
+      const portfolioId = 'portfolio-456';
+
+      portfolioRepository.findOne.mockResolvedValue(null);
+
+      // Act
+      const result = await service.validateUserOwnsPortfolio(
+        userId,
+        portfolioId,
+      );
+
+      // Assert
+      expect(result).toBe(false);
+    });
+
+    it('should return false if portfolio does not exist', async () => {
+      // Arrange
+      const userId = 'user-123';
+      const portfolioId = 'non-existent';
+
+      portfolioRepository.findOne.mockResolvedValue(null);
+
+      // Act
+      const result = await service.validateUserOwnsPortfolio(
+        userId,
+        portfolioId,
+      );
+
+      // Assert
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('getPortfolioOrFail', () => {
+    it('should return portfolio if user owns it', async () => {
+      // Arrange
+      const userId = 'user-123';
+      const portfolioId = 'portfolio-456';
+
+      const mockOwnedPortfolio = {
+        id: portfolioId,
+        name: 'My Portfolio',
+        user: { id: userId } as User,
+      } as Portfolio;
+
+      portfolioRepository.findOne.mockResolvedValue(mockOwnedPortfolio);
+
+      // Act
+      const result = await service.getPortfolioOrFail(userId, portfolioId);
+
+      // Assert
+      expect(result).toEqual(mockOwnedPortfolio);
+      expect(portfolioRepository.findOne).toHaveBeenCalledWith({
+        where: { id: portfolioId },
+        relations: ['user'],
+      });
+    });
+
+    it('should throw ForbiddenException if user does not own portfolio', async () => {
+      // Arrange
+      const userId = 'user-123';
+      const portfolioId = 'portfolio-456';
+
+      portfolioRepository.findOne.mockResolvedValue(null);
+
+      // Act & Assert
+      await expect(
+        service.getPortfolioOrFail(userId, portfolioId),
+      ).rejects.toThrow(ForbiddenException);
+
+      await expect(
+        service.getPortfolioOrFail(userId, portfolioId),
+      ).rejects.toThrow('You do not own this portfolio');
+    });
+
+    it('should throw ForbiddenException if portfolio does not exist', async () => {
+      // Arrange
+      const userId = 'user-123';
+      const portfolioId = 'non-existent';
+
+      portfolioRepository.findOne.mockResolvedValue(null);
+
+      // Act & Assert
+      await expect(
+        service.getPortfolioOrFail(userId, portfolioId),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
 });

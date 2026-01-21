@@ -597,4 +597,51 @@ export class PortfolioService {
       });
     });
   }
+
+  // ============================================================================
+  // US-004-BE-T2: Portfolio Ownership Validation
+  // ============================================================================
+
+  /**
+   * Validate user owns a portfolio
+   *
+   * @param userId - User ID to validate
+   * @param portfolioId - Portfolio ID to check
+   * @returns true if user owns portfolio, false otherwise
+   */
+  async validateUserOwnsPortfolio(
+    userId: string,
+    portfolioId: string,
+  ): Promise<boolean> {
+    const portfolio = await this.portfolioRepository.findOne({
+      where: { id: portfolioId },
+      relations: ['user'],
+    });
+
+    return portfolio !== null && portfolio.user.id === userId;
+  }
+
+  /**
+   * Get portfolio or throw ForbiddenException if user doesn't own it
+   *
+   * @param userId - User ID to validate
+   * @param portfolioId - Portfolio ID to retrieve
+   * @returns Portfolio entity
+   * @throws ForbiddenException if user doesn't own the portfolio
+   */
+  async getPortfolioOrFail(
+    userId: string,
+    portfolioId: string,
+  ): Promise<Portfolio> {
+    const portfolio = await this.portfolioRepository.findOne({
+      where: { id: portfolioId },
+      relations: ['user'],
+    });
+
+    if (!portfolio || portfolio.user.id !== userId) {
+      throw new ForbiddenException('You do not own this portfolio');
+    }
+
+    return portfolio;
+  }
 }

@@ -11,9 +11,9 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs/operators';
 import { ChatFacade } from '@stocks-researcher/data-access-chat';
 import { ReasoningTrace } from '@stocks-researcher/types';
-import { ReasoningTracePanelComponent } from '../reasoning-trace-panel/reasoning-trace-panel.component';
 import { MessageInputComponent } from '../message-input/message-input.component';
 import { ConversationHeaderComponent } from '../conversation-header/conversation-header.component';
+import { ConversationPanelComponent } from '../conversation-panel/conversation-panel.component';
 import { LoaderComponent, IconComponent } from '@stocks-researcher/styles';
 
 /**
@@ -23,7 +23,7 @@ import { LoaderComponent, IconComponent } from '@stocks-researcher/styles';
  *
  * Responsibilities:
  * - Manage threadId from route params
- * - Integrate ReasoningTracePanelComponent
+ * - Integrate ConversationPanelComponent (messages + traces)
  * - Integrate MessageInputComponent
  * - Integrate ConversationHeaderComponent
  * - Handle message sending
@@ -50,7 +50,7 @@ import { LoaderComponent, IconComponent } from '@stocks-researcher/styles';
   standalone: true,
   imports: [
     CommonModule,
-    ReasoningTracePanelComponent,
+    ConversationPanelComponent,
     MessageInputComponent,
     ConversationHeaderComponent,
     LoaderComponent,
@@ -95,6 +95,11 @@ export class ChatPageComponent implements OnDestroy {
    * Current thread traces
    */
   traces = this.facade.currentThreadTraces;
+
+  /**
+   * Conversation messages (user + AI)
+   */
+  messages = this.facade.messages;
 
   /**
    * Current thread ID from facade (may differ from route after message send)
@@ -151,8 +156,8 @@ export class ChatPageComponent implements OnDestroy {
       return;
     }
 
-    // Connection will be handled by ReasoningTracePanelComponent
-    // This effect is here for future enhancements (e.g., loading conversation history)
+    // Connection and trace loading handled by ConversationPanel
+    // Messages extracted automatically from traces
   });
 
   /**
@@ -174,8 +179,8 @@ export class ChatPageComponent implements OnDestroy {
   // ========================================
 
   ngOnDestroy(): void {
-    // Cleanup is handled by child components (ReasoningTracePanelComponent)
-    // But we can reset state for good measure
+    // Cleanup is handled by child components (ConversationPanel)
+    // Reset state when leaving chat page
     this.facade.resetState();
   }
 
@@ -212,21 +217,26 @@ export class ChatPageComponent implements OnDestroy {
 
     const threadId = this.threadId();
     
+    // Only send threadId if it's in backend format (userId:threadId)
+    // Don't send frontend-generated threadIds (thread-timestamp-random)
+    const isBackendFormat = threadId && threadId.includes(':');
+    
     // Send message to backend via ChatFacade
-    // This will trigger graph execution and start SSE streaming
+    // Backend will generate threadId if not provided or if frontend format
     this.facade.sendMessage({ 
       message: trimmed, 
-      threadId: threadId || undefined,
+      threadId: isBackendFormat ? threadId : undefined,
     });
   }
 
   /**
-   * Handle trace click from ReasoningTracePanelComponent
+   * Handle trace click (if needed in future)
+   * Currently traces are handled within ConversationPanel
    * 
    * @param trace - The clicked trace
    */
   handleTraceClick(trace: ReasoningTrace): void {
-    // TODO: Implement trace detail view or other interaction
+    // Traces now managed within ConversationPanel
     console.log('[ChatPage] Trace clicked:', trace);
   }
 

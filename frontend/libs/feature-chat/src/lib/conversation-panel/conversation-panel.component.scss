@@ -1,0 +1,112 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.conversation-panel {
+  height: 100%;
+  overflow: hidden auto;
+  padding: var(--spacing-base);
+  scroll-behavior: smooth;
+
+  // Custom scrollbar
+  &::-webkit-scrollbar {
+    width: var(--spacing-sm);
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--color-bg-tertiary);
+    border-radius: var(--spacing-xs);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-text-subtle);
+    border-radius: var(--spacing-xs);
+
+    &:hover {
+      background: var(--color-text-muted);
+    }
+  }
+}
+
+.messages-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.empty-conversation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: var(--spacing-3xl);
+
+  .empty-title {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .empty-hint {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-subtle);
+    line-height: var(--line-height-relaxed);
+  }
+}
+
+.traces-section {
+  margin-top: var(--spacing-md);
+  margin-left: var(--spacing-xl);
+  padding: var(--spacing-md);
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  border-left: 2px solid var(--color-border-secondary);
+}
+
+.traces-header {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.traces-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+// ========================================
+// Responsive Design
+// ========================================
+
+@media (width <= 768px) {
+  .conversation-panel {
+    padding: var(--spacing-md);
+  }
+
+  .traces-section {
+    margin-left: var(--spacing-md);
+    padding: var(--spacing-sm);
+  }
+}
+
+@media (width <= 480px) {
+  .conversation-panel {
+    padding: var(--spacing-sm);
+  }
+
+  .traces-section {
+    margin-left: 0;
+  }
+
+  .empty-conversation {
+    padding: var(--spacing-xl);
+  }
+}

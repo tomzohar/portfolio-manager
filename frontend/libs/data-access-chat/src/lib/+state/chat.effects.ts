@@ -10,10 +10,13 @@ import {
   switchMap,
   takeUntil,
   tap,
+  withLatestFrom,
 } from 'rxjs/operators';
 import { ReasoningTraceApiService } from '../services/reasoning-trace-api.service';
 import { SSEService } from '../services/sse.service';
+import { MessageExtractorService } from '../services/message-extractor.service';
 import { ChatActions } from './chat.actions';
+import { selectAllTraces } from './chat.selectors';
 
 /**
  * Chat Effects
@@ -39,6 +42,7 @@ export class ChatEffects {
   private readonly store = inject(Store);
   private readonly sseService = inject(SSEService);
   private readonly traceApi = inject(ReasoningTraceApiService);
+  private readonly messageExtractor = inject(MessageExtractorService);
 
   /**
    * Effect: Connect to SSE stream
@@ -283,6 +287,33 @@ export class ChatEffects {
     this.actions$.pipe(
       ofType(ChatActions.sendMessageSuccess),
       map(({ threadId }) => ChatActions.connectSSE({ threadId }))
+    )
+  );
+
+  /**
+   * Extract messages when historical traces loaded
+   */
+  extractMessagesOnTracesLoaded$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(ChatActions.historicalTracesLoaded),
+      map(({ traces }) => {
+        const messages = this.messageExtractor.extractMessagesFromTraces(traces);
+        return ChatActions.messagesExtracted({ messages });
+      })
+    )
+  );
+
+  /**
+   * Extract messages when graph completes
+   */
+  extractMessagesOnGraphComplete$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(ChatActions.graphComplete),
+      withLatestFrom(this.store.select(selectAllTraces)),
+      map(([, traces]) => {
+        const messages = this.messageExtractor.extractMessagesFromTraces(traces);
+        return ChatActions.messagesExtracted({ messages });
+      })
     )
   );
 }
