@@ -185,8 +185,8 @@ export class ReasoningTracePanelComponent implements OnDestroy {
   private connectionEffect = effect(() => {
     const threadId = this.threadId();
 
-    // Skip empty threadId
-    if (!threadId) {
+    // Skip invalid threadIds
+    if (!threadId || !this.isValidThreadId(threadId)) {
       return;
     }
 
@@ -309,5 +309,22 @@ export class ReasoningTracePanelComponent implements OnDestroy {
    */
   trackByTraceId(_index: number, trace: ReasoningTrace): string {
     return trace.id;
+  }
+
+  /**
+   * Validate threadId to prevent API calls with invalid IDs
+   * Prevents calls to endpoints like /api/agents/traces/new
+   */
+  private isValidThreadId(threadId: string): boolean {
+    // Thread IDs should start with "thread-" from our generator
+    // Also block special keywords like "new", "undefined", "null"
+    const invalidKeywords = ['new', 'undefined', 'null', ''];
+    
+    if (invalidKeywords.includes(threadId.toLowerCase())) {
+      return false;
+    }
+
+    // Valid thread IDs start with "thread-"
+    return threadId.startsWith('thread-');
   }
 }

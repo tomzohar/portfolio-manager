@@ -12,7 +12,7 @@
   <div class="chat-page__content">
     <!-- Reasoning Trace Panel (Left/Main) -->
     <div class="chat-page__trace-panel">
-      @if (threadId()) {
+      @if (threadId() && isValidThreadId(threadId()!)) {
         <app-reasoning-trace-panel
           [threadId]="threadId()!"
           (traceClick)="handleTraceClick($event)"
@@ -20,7 +20,7 @@
       } @else {
         <div class="chat-page__empty">
           <p class="empty-title">Welcome to AI Chat</p>
-          <p class="empty-hint">Start a conversation to see reasoning traces here</p>
+          <p class="empty-hint">Initializing conversation...</p>
         </div>
       }
     </div>

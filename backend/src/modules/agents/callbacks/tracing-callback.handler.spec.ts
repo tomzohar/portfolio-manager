@@ -14,6 +14,10 @@ describe('TracingCallbackHandler', () => {
 
   const mockTracingService = {
     recordTrace: jest.fn(),
+    startTrace: jest.fn(),
+    completeTrace: jest.fn(),
+    updateTraceStatus: jest.fn(),
+    attachToolResults: jest.fn(),
   };
 
   const mockEventEmitter = {

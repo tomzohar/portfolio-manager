@@ -8,8 +8,9 @@
   align-items: center;
   padding: var(--spacing-base) var(--spacing-xl);
   background-color: var(--color-bg-elevated);
-  border-bottom: 1px solid var(--color-border-primary);
+  border-bottom: 1px solid var(--color-border-secondary);
   min-height: var(--header-height);
+  box-shadow: var(--shadow-sm);
 }
 
 .conversation-header__title-section {

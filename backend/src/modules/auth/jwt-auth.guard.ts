@@ -36,7 +36,11 @@ export class JwtAuthGuard implements CanActivate {
    */
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
-    const token = this.extractTokenFromHeader(request);
+
+    // Try header first (standard), then query param (for SSE)
+    const token =
+      this.extractTokenFromHeader(request) ||
+      this.extractTokenFromQuery(request);
 
     if (!token) {
       this.logger.warn('No token provided in request');
@@ -90,5 +94,21 @@ export class JwtAuthGuard implements CanActivate {
 
     const [type, token] = authHeader.split(' ');
     return type === 'Bearer' ? token : undefined;
+  }
+
+  /**
+   * Extracts JWT token from query parameter
+   * Used for SSE endpoints since EventSource cannot send custom headers
+   * @param request Express request object
+   * @returns JWT token string or undefined
+   */
+  private extractTokenFromQuery(request: Request): string | undefined {
+    const token = request.query?.token;
+
+    if (typeof token === 'string' && token.length > 0) {
+      return token;
+    }
+
+    return undefined;
   }
 }

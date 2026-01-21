@@ -1,11 +1,7 @@
 import { Component, input, output, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import {
-  InputComponent,
-  ButtonComponent,
-  ButtonConfig,
-} from '@stocks-researcher/styles';
+import { ButtonComponent, ButtonConfig } from '@stocks-researcher/styles';
 
 /**
  * MessageInputComponent
@@ -37,7 +33,7 @@ import {
 @Component({
   selector: 'app-message-input',
   standalone: true,
-  imports: [CommonModule, FormsModule, InputComponent, ButtonComponent],
+  imports: [CommonModule, FormsModule, ButtonComponent],
   templateUrl: './message-input.component.html',
   styleUrls: ['./message-input.component.scss'],
 })

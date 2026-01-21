@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { SSEConnectionStatus, SSEEvent, SSEEventType } from '@stocks-researcher/types';
+import { AuthStorageService } from '@frontend/data-access-auth';
 import { BehaviorSubject, Observable, throwError } from 'rxjs';
 
 /**
@@ -35,6 +36,7 @@ import { BehaviorSubject, Observable, throwError } from 'rxjs';
 })
 export class SSEService {
   private readonly http = inject(HttpClient);
+  private readonly authStorage = inject(AuthStorageService);
   private readonly apiUrl = 'http://localhost:3001';
 
   private readonly connectionStatus$ = new BehaviorSubject<SSEConnectionStatus>(
@@ -67,8 +69,8 @@ export class SSEService {
     return new Observable<SSEEvent>(observer => {
       const connect = () => {
         try {
-          // Include JWT token from localStorage (assuming it's stored there by auth service)
-          const token = localStorage.getItem('token');
+          // Get JWT token from AuthStorageService
+          const token = this.authStorage.getToken();
           const url = token
             ? `${this.apiUrl}/api/agents/traces/stream/${threadId}?token=${encodeURIComponent(token)}`
             : `${this.apiUrl}/api/agents/traces/stream/${threadId}`;

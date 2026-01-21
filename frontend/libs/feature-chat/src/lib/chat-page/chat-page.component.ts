@@ -107,7 +107,12 @@ export class ChatPageComponent implements OnDestroy {
    */
   conversationTitle = computed(() => {
     const thread = this.threadId();
-    return thread ? `Chat ${thread.slice(-8)}` : null;
+    if (!thread) {
+      return 'New Conversation';
+    }
+    // Show friendly short ID
+    const shortId = thread.length > 8 ? thread.slice(-8) : thread;
+    return `Chat ${shortId}`;
   });
 
   // ========================================
@@ -116,14 +121,15 @@ export class ChatPageComponent implements OnDestroy {
 
   /**
    * Effect: Handle threadId changes
-   * When threadId changes (e.g., navigating to different chat),
-   * we need to update the SSE connection
+   * When no threadId (new conversation), generate one and navigate
    */
   private threadIdEffect = effect(() => {
     const threadId = this.threadId();
     
-    // Skip if no threadId
+    // If no threadId (e.g., /chat with no param), create new conversation
     if (!threadId) {
+      const newThreadId = this.generateThreadId();
+      this.router.navigate(['/chat', newThreadId], { replaceUrl: true });
       return;
     }
 
@@ -210,5 +216,18 @@ export class ChatPageComponent implements OnDestroy {
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(2, 9);
     return `thread-${timestamp}-${random}`;
+  }
+
+  /**
+   * Validate threadId to prevent API calls with invalid IDs
+   */
+  isValidThreadId(threadId: string): boolean {
+    const invalidKeywords = ['new', 'undefined', 'null', ''];
+    
+    if (invalidKeywords.includes(threadId.toLowerCase())) {
+      return false;
+    }
+
+    return threadId.startsWith('thread-');
   }
 }

@@ -1,0 +1,113 @@
+:host {
+  display: block;
+}
+
+.connection-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-base);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-base);
+  margin-bottom: var(--spacing-base);
+
+  &.status-connected {
+    background-color: var(--color-success-light);
+    border-left: var(--spacing-xs) solid var(--color-success);
+  }
+
+  &.status-disconnected {
+    background-color: var(--color-bg-tertiary);
+    border-left: var(--spacing-xs) solid var(--color-text-disabled);
+  }
+
+  &.status-reconnecting {
+    background-color: var(--color-warning);
+    border-left: var(--spacing-xs) solid var(--color-caution);
+  }
+
+  &.status-error {
+    background-color: var(--color-error);
+    border-left: var(--spacing-xs) solid var(--color-error);
+  }
+}
+
+.status-content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.status-icon {
+  &.status-connected {
+    color: var(--color-success);
+  }
+
+  &.status-disconnected {
+    color: var(--color-text-disabled);
+  }
+
+  &.status-reconnecting {
+    color: var(--color-caution);
+  }
+
+  &.status-error {
+    color: var(--color-error);
+  }
+}
+
+.status-text {
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.thinking-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-left: var(--spacing-base);
+  padding-left: var(--spacing-base);
+  border-left: 1px solid var(--color-border-subtle);
+
+  .thinking-text {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-subtle);
+    font-style: italic;
+  }
+}
+
+.reconnect-button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+// ========================================
+// Responsive Design
+// ========================================
+
+@media (width <= 768px) {
+  .connection-indicator {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+
+  .thinking-indicator {
+    margin-left: var(--spacing-md);
+    padding-left: var(--spacing-md);
+  }
+}
+
+@media (width <= 480px) {
+  .connection-indicator {
+    padding: var(--spacing-sm);
+  }
+
+  .status-text {
+    font-size: var(--font-size-xs);
+  }
+
+  .thinking-indicator {
+    display: none; // Hide on very small screens to save space
+  }
+}

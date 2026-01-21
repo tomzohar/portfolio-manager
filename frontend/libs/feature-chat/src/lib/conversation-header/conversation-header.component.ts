@@ -79,11 +79,10 @@ export class ConversationHeaderComponent {
 
     const thread = this.threadId();
     if (thread) {
-      // Truncate long thread IDs for display
-      if (thread.length > 20) {
-        return `...${thread.slice(-17)}`;
-      }
-      return thread;
+      // Show a friendlier title instead of raw thread ID
+      // Extract just the last 8 characters for readability
+      const shortId = thread.length > 8 ? thread.slice(-8) : thread;
+      return `Chat ${shortId}`;
     }
 
     return 'New Conversation';

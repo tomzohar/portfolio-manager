@@ -65,18 +65,20 @@ export const appRoutes: Route[] = [
   {
     path: 'chat',
     canActivate: [authGuard],
+    data: {
+      title: 'AI Chat',
+      icon: 'chat-ai' as BrandIconName,
+    } satisfies RouteData,
     children: [
       {
         path: '',
-        redirectTo: '/chat/new',
-        pathMatch: 'full',
+        loadComponent: () =>
+          import('@stocks-researcher/feature-chat').then(
+            (m) => m.ChatPageComponent
+          ),
       },
       {
         path: ':threadId',
-        data: {
-          title: 'AI Chat',
-          icon: 'chat-ai' as BrandIconName,
-        } satisfies RouteData,
         loadComponent: () =>
           import('@stocks-researcher/feature-chat').then(
             (m) => m.ChatPageComponent

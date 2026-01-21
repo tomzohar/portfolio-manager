@@ -23,10 +23,13 @@ describe('JwtAuthGuard', () => {
     updatedAt: new Date(),
   };
 
-  const mockExecutionContext = (token?: string) => {
+  const mockExecutionContext = (token?: string, queryToken?: string) => {
     const mockRequest = {
       headers: {
         authorization: token ? `Bearer ${token}` : undefined,
+      },
+      query: {
+        token: queryToken,
       },
       user: undefined,
     };
@@ -140,6 +143,7 @@ describe('JwtAuthGuard', () => {
             headers: {
               authorization: 'NotBearer token',
             },
+            query: {},
           }),
         }),
       } as ExecutionContext;
@@ -149,6 +153,67 @@ describe('JwtAuthGuard', () => {
       );
       await expect(guard.canActivate(context)).rejects.toThrow(
         'No token provided',
+      );
+    });
+  });
+
+  describe('SSE Authentication (Query Parameter)', () => {
+    it('should authenticate with token from query parameter', async () => {
+      const context = mockExecutionContext(undefined, 'valid.jwt.token');
+      const payload = { sub: mockUser.id };
+
+      configService.get.mockReturnValue('test-secret');
+      jwtService.verifyAsync.mockResolvedValue(payload);
+      usersService.findOne.mockResolvedValue(mockUser);
+
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(true);
+      expect(jwtService.verifyAsync).toHaveBeenCalledWith(
+        'valid.jwt.token',
+        expect.objectContaining({ secret: 'test-secret' }),
+      );
+    });
+
+    it('should prefer header token over query parameter', async () => {
+      const context = mockExecutionContext('header.token', 'query.token');
+      const payload = { sub: mockUser.id };
+
+      configService.get.mockReturnValue('test-secret');
+      jwtService.verifyAsync.mockResolvedValue(payload);
+      usersService.findOne.mockResolvedValue(mockUser);
+
+      await guard.canActivate(context);
+
+      // Should use header token, not query token
+      expect(jwtService.verifyAsync).toHaveBeenCalledWith(
+        'header.token',
+        expect.any(Object),
+      );
+    });
+
+    it('should throw UnauthorizedException when query token is empty string', async () => {
+      const context = mockExecutionContext(undefined, '');
+
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        'No token provided',
+      );
+    });
+
+    it('should throw UnauthorizedException when query token is invalid', async () => {
+      const context = mockExecutionContext(undefined, 'invalid.token');
+
+      configService.get.mockReturnValue('test-secret');
+      jwtService.verifyAsync.mockRejectedValue(new Error('Invalid token'));
+
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        'Invalid or expired token',
       );
     });
   });

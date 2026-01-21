@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ReasoningTrace } from '@stocks-researcher/types';
+import { AuthStorageService } from '@frontend/data-access-auth';
 /**
  * ReasoningTraceApiService
  * 
@@ -28,13 +29,14 @@ import { ReasoningTrace } from '@stocks-researcher/types';
 })
 export class ReasoningTraceApiService {
   private readonly http = inject(HttpClient);
+  private readonly authStorage = inject(AuthStorageService);
   private readonly apiUrl = 'http://localhost:3001';
 
   /**
    * Fetches all reasoning traces for a specific thread.
    * 
    * Endpoint: GET /api/agents/traces/:threadId
-   * Auth: JWT token required
+   * Auth: JWT token required via Authorization header
    * 
    * @param threadId - The thread ID to fetch traces for
    * @returns Observable of ReasoningTrace array, ordered by createdAt ASC
@@ -43,28 +45,10 @@ export class ReasoningTraceApiService {
    * @throws HTTP 404 if thread not found
    */
   getTracesByThread(threadId: string): Observable<ReasoningTrace[]> {
-    const headers = this.getAuthHeaders();
-    
+    // Note: Authorization header is added automatically by authInterceptor
+    // from @frontend/data-access-auth, so we don't need to add it manually
     return this.http.get<ReasoningTrace[]>(
-      `${this.apiUrl}/api/agents/traces/${threadId}`,
-      { headers }
+      `${this.apiUrl}/api/agents/traces/${threadId}`
     );
-  }
-
-  /**
-   * Gets HTTP headers with JWT token for authentication.
-   * 
-   * @returns HttpHeaders with Authorization header if token exists
-   */
-  private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem('token');
-    
-    if (token) {
-      return new HttpHeaders({
-        'Authorization': `Bearer ${token}`,
-      });
-    }
-    
-    return new HttpHeaders();
   }
 }
