@@ -45,7 +45,12 @@ import {
     LoaderComponent,
   ],
   template: `
-    <div class="connection-indicator" [class]="'status-' + status()">
+    <div 
+      class="connection-indicator" 
+      [class]="'status-' + status()"
+      role="status"
+      aria-live="polite"
+      [attr.aria-label]="statusTooltip()">
       <div class="status-content">
         @if (status() === 'reconnecting') {
           <lib-loader [config]="{ size: 'sm' }" />
@@ -61,7 +66,7 @@ import {
         <span class="status-text" [title]="statusTooltip()">{{ statusText() }}</span>
 
         @if (isGraphActive()) {
-          <div class="thinking-indicator">
+          <div class="thinking-indicator" aria-live="polite" aria-label="AI is thinking">
             <lib-loader [config]="thinkingLoaderConfig()" />
             <span class="thinking-text">Thinking...</span>
           </div>

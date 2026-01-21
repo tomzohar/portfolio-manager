@@ -1,5 +1,6 @@
 import { Component, input, output, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { trigger, state, style, transition, animate } from '@angular/animations';
 import { ReasoningTrace } from '@stocks-researcher/types';
 import { 
   CardComponent, 
@@ -46,8 +47,24 @@ import {
     ButtonComponent,
     TagPillComponent,
   ],
+  animations: [
+    trigger('expandCollapse', [
+      transition(':enter', [
+        style({ height: 0, opacity: 0, overflow: 'hidden' }),
+        animate('300ms cubic-bezier(0.4, 0, 0.2, 1)', style({ height: '*', opacity: 1 })),
+      ]),
+      transition(':leave', [
+        style({ height: '*', opacity: 1, overflow: 'hidden' }),
+        animate('300ms cubic-bezier(0.4, 0, 0.2, 1)', style({ height: 0, opacity: 0 })),
+      ]),
+    ]),
+  ],
   template: `
-    <lib-card class="trace-item">
+    <lib-card 
+      class="trace-item" 
+      [attr.aria-expanded]="isExpanded()"
+      role="article"
+      [attr.aria-label]="'Reasoning trace from ' + trace().nodeName">
       <div class="trace-header">
         <div class="trace-title">
           <lib-icon [name]="nodeIcon()" [size]="20" class="node-icon" />
@@ -62,7 +79,7 @@ import {
 
         <div class="trace-actions">
           @if (trace().durationMs) {
-            <span class="duration">{{ formatDuration(trace().durationMs!) }}</span>
+            <span class="duration" aria-label="Duration">{{ formatDuration(trace().durationMs!) }}</span>
           }
           <lib-button
             [config]="expandButtonConfig()"
@@ -77,7 +94,7 @@ import {
         </div>
 
         @if (isExpanded()) {
-          <div class="trace-details">
+          <div class="trace-details" [@expandCollapse]>
             @if (trace().input) {
               <div class="detail-section">
                 <h4>Input</h4>
