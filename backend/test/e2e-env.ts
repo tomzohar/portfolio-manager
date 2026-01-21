@@ -15,10 +15,11 @@ const E2E_DB_CONFIG: E2eDbConfig = {
 };
 
 export function applyE2eDbEnv(): void {
-  // Force e2e DB settings to avoid touching development data.
-  process.env.DB_HOST = E2E_DB_CONFIG.host;
-  process.env.DB_PORT = E2E_DB_CONFIG.port;
-  process.env.DB_USERNAME = E2E_DB_CONFIG.username;
-  process.env.DB_PASSWORD = E2E_DB_CONFIG.password;
-  process.env.DB_DATABASE = E2E_DB_CONFIG.database;
+  // Set e2e DB defaults to avoid touching development data.
+  // In CI, environment variables can override these defaults.
+  process.env.DB_HOST = process.env.DB_HOST || E2E_DB_CONFIG.host;
+  process.env.DB_PORT = process.env.DB_PORT || E2E_DB_CONFIG.port;
+  process.env.DB_USERNAME = process.env.DB_USERNAME || E2E_DB_CONFIG.username;
+  process.env.DB_PASSWORD = process.env.DB_PASSWORD || E2E_DB_CONFIG.password;
+  process.env.DB_DATABASE = process.env.DB_DATABASE || E2E_DB_CONFIG.database;
 }

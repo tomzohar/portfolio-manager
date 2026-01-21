@@ -53,6 +53,20 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+      
+      postgres_e2e:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: stocks_researcher_e2e
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5433:5432
 
     steps:
     - name: Check out repository code
@@ -70,11 +84,19 @@ jobs:
 
     - name: Wait for PostgreSQL to be ready
       run: |
+        echo "Waiting for main PostgreSQL (unit tests)..."
         until pg_isready -h localhost -p 5432 -U test_user; do
-          echo "Waiting for PostgreSQL..."
+          echo "Waiting for PostgreSQL on 5432..."
           sleep 1
         done
-        echo "PostgreSQL is ready!"
+        echo "Main PostgreSQL is ready!"
+        
+        echo "Waiting for E2E PostgreSQL..."
+        until PGPASSWORD=postgres pg_isready -h localhost -p 5433 -U postgres; do
+          echo "Waiting for PostgreSQL on 5433..."
+          sleep 1
+        done
+        echo "E2E PostgreSQL is ready!"
       env:
         PGPASSWORD: test_password
 
@@ -90,10 +112,10 @@ jobs:
       env:
         CI: true
         DB_HOST: localhost
-        DB_PORT: 5432
-        DB_USERNAME: test_user
-        DB_PASSWORD: test_password
-        DB_DATABASE: test_db
+        DB_PORT: 5433
+        DB_USERNAME: postgres
+        DB_PASSWORD: postgres
+        DB_DATABASE: stocks_researcher_e2e
         JWT_SECRET: test-jwt-secret-for-ci
         POLYGON_API_KEY: test-api-key
         GEMINI_API_KEY: test-gemini-key

@@ -514,6 +514,25 @@ npm run test:cov
 
 E2E tests validate complete user workflows using a real PostgreSQL database and real HTTP requests. No mocking of database or core services - tests run against the actual application stack.
 
+#### Prerequisites
+
+E2E tests require a dedicated PostgreSQL instance to avoid touching your development data.
+
+**One-Time Setup:**
+```bash
+# Start the e2e database instance (runs on port 5433)
+docker compose up -d postgres_e2e
+
+# Verify it's running
+docker compose ps postgres_e2e
+```
+
+**E2E Database Configuration:**
+- **Host:** `localhost`
+- **Port:** `5433` (development uses `5432`)
+- **Database:** `stocks_researcher_e2e`
+- **User/Password:** `postgres/postgres`
+
 #### Quick Start
 
 ```bash
@@ -527,15 +546,7 @@ npm run test:e2e -- auth.e2e-spec.ts
 npm run test:e2e -- auth.e2e-spec.ts performance.e2e-spec.ts
 ```
 
-#### Database Setup
-
-E2E tests use a **separate Postgres instance** on a different port to avoid affecting your development data.
-
-**One-Time Setup:**
-```bash
-# Start the dedicated e2e database service
-docker compose up -d postgres_e2e
-```
+#### Database Lifecycle
 
 **Automatic Cleanup:**
 - Database is automatically cleaned **before** all tests (global setup)

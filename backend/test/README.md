@@ -22,6 +22,20 @@ This directory contains end-to-end (e2e) tests for the backend API. E2E tests ve
 - Node.js 22+
 - All dependencies installed (`npm install`)
 
+### One-Time Database Setup
+
+Before running e2e tests for the first time, start the dedicated e2e database instance:
+
+```bash
+# From the backend directory
+docker compose up -d postgres_e2e
+
+# Verify it's running
+docker compose ps postgres_e2e
+```
+
+This creates an isolated PostgreSQL instance on port **5433** (separate from development on port 5432).
+
 ### Run All Tests
 
 ```bash
