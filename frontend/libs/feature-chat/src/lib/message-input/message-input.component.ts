@@ -115,16 +115,12 @@ export class MessageInputComponent {
   });
 
   /**
-   * Whether to show character count
-   */
-  shouldShowCount = computed(() => this.characterCount() > 0);
-
-  /**
    * Send button configuration
    */
   sendButtonConfig = computed((): ButtonConfig => ({
     label: 'Send',
     variant: 'raised',
+    size: 'md',
     color: 'primary',
     icon: 'send',
     ariaLabel: 'Send message',

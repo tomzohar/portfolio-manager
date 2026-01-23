@@ -155,10 +155,7 @@ export class CreateHitlApprovals1737470400000 implements MigrationInterface {
     await queryRunner.query(
       'DROP INDEX IF EXISTS IDX_hitl_approvals_expires_at',
     );
-    await queryRunner.dropIndex(
-      'hitl_approvals',
-      'IDX_hitl_approvals_status',
-    );
+    await queryRunner.dropIndex('hitl_approvals', 'IDX_hitl_approvals_status');
     await queryRunner.dropIndex('hitl_approvals', 'IDX_hitl_approvals_user_id');
     await queryRunner.dropIndex(
       'hitl_approvals',
@@ -166,7 +163,10 @@ export class CreateHitlApprovals1737470400000 implements MigrationInterface {
     );
 
     // Drop foreign key
-    await queryRunner.dropForeignKey('hitl_approvals', 'FK_hitl_approvals_user');
+    await queryRunner.dropForeignKey(
+      'hitl_approvals',
+      'FK_hitl_approvals_user',
+    );
 
     // Drop CHECK constraint
     await queryRunner.query(`

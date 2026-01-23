@@ -64,6 +64,11 @@ export class ConversationPanelComponent {
   traces = input.required<ReasoningTrace[]>();
 
   /**
+   * Whether data is currently being loaded
+   */
+  isLoading = input<boolean>(false);
+
+  /**
    * Type guard for user messages
    */
   isUserMessage = isUserMessage;

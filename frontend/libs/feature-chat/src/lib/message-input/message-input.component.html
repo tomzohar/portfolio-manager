@@ -10,31 +10,25 @@
       [disabled]="disabled()"
       [attr.maxlength]="maxLength()"
       aria-label="Type your message"
-      rows="3"
+      id="message-input-textarea"
+      rows="2"
     ></textarea>
-    <!-- Character Count -->
-    @if (shouldShowCount()) {
-      <div 
-        class="message-input__count"
-        [class]="'message-input__count--' + characterCountClass()"
-        [attr.aria-live]="isNearLimit() || isOverLimit() ? 'polite' : 'off'"
-      >
-        <span class="count-text">
-          {{ characterCount() }} / {{ maxLength() }}
-        </span>
-        @if (isOverLimit()) {
-          <span class="count-error">Character limit exceeded</span>
-        }
-      </div>
-    }
-  </div>
-
-  <!-- Send Button -->
-  <div class="message-input__actions">
     <lib-button
       [config]="sendButtonConfig()"
       (clicked)="handleSend()"
       class="send-button"
     />
   </div>
+    <div
+      class="message-input__count"
+      [class]="'message-input__count--' + characterCountClass()"
+      [attr.aria-live]="isNearLimit() || isOverLimit() ? 'polite' : 'off'"
+    >
+      <span class="count-text">
+        {{ characterCount() }} / {{ maxLength() }}
+      </span>
+      @if (isOverLimit()) {
+      <span class="count-error">Character limit exceeded</span>
+      }
+    </div>
 </div>

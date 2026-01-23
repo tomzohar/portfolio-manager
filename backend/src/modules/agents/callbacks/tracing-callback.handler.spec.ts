@@ -228,6 +228,9 @@ describe('TracingCallbackHandler', () => {
         expect.objectContaining(inputs),
         expect.any(Object),
         expect.any(String),
+        expect.objectContaining({
+          durationMs: expect.any(Number),
+        }),
       );
     });
 
@@ -245,6 +248,7 @@ describe('TracingCallbackHandler', () => {
 
       const outputs = { result: 'node output' };
       const inputs = { message: 'test input' };
+      const chain = { _chainType: jest.fn().mockReturnValue('graph_node') };
 
       mockTracingService.recordTrace.mockResolvedValue({
         id: 'trace-123',
@@ -257,7 +261,17 @@ describe('TracingCallbackHandler', () => {
         createdAt: new Date(),
       } as any);
 
-      // Act
+      // Act - Call handleChainStart first to initialize nodeStartTime
+      handler.handleChainStart(
+        chain,
+        inputs,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        nodeName,
+      );
       await handler.handleChainEnd(outputs, undefined, undefined, undefined, {
         metadata: { nodeName },
       });
@@ -270,6 +284,9 @@ describe('TracingCallbackHandler', () => {
         expect.any(Object),
         outputs,
         expect.any(String),
+        expect.objectContaining({
+          durationMs: expect.any(Number),
+        }),
       );
     });
 
@@ -286,10 +303,22 @@ describe('TracingCallbackHandler', () => {
 
       const nodeName = 'performance_attribution';
       const outputs = { alpha: -0.06 };
+      const chain = { _chainType: jest.fn().mockReturnValue('graph_node') };
+      const inputs = { data: 'test' };
 
       mockTracingService.recordTrace.mockResolvedValue(undefined);
 
-      // Act
+      // Act - Call handleChainStart first to initialize nodeStartTime
+      handler.handleChainStart(
+        chain,
+        inputs,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        nodeName,
+      );
       await handler.handleChainEnd(outputs, undefined, undefined, undefined, {
         metadata: { nodeName },
       });
@@ -302,6 +331,9 @@ describe('TracingCallbackHandler', () => {
         expect.any(Object),
         outputs,
         expect.any(String),
+        expect.objectContaining({
+          durationMs: expect.any(Number),
+        }),
       );
     });
 
@@ -509,6 +541,248 @@ describe('TracingCallbackHandler', () => {
     });
   });
 
+  describe('Duration tracking', () => {
+    it('should calculate durationMs for node execution', async () => {
+      // Arrange
+      const threadId = 'thread-123';
+      const userId = 'user-456';
+      const handler = new TracingCallbackHandler(
+        threadId,
+        userId,
+        tracingService,
+        eventEmitter,
+      );
+
+      const chain = { _chainType: jest.fn().mockReturnValue('graph_node') };
+      const inputs = { message: 'test input' };
+      const outputs = { result: 'test output' };
+      const nodeName = 'test-node';
+
+      mockTracingService.recordTrace.mockResolvedValue(undefined);
+
+      // Act - Simulate node execution with delay
+      handler.handleChainStart(
+        chain,
+        inputs,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        nodeName,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 100)); // 100ms delay
+      await handler.handleChainEnd(outputs, undefined, undefined, undefined, {
+        metadata: { nodeName },
+      });
+
+      // Assert
+      expect(tracingService.recordTrace).toHaveBeenCalledWith(
+        threadId,
+        userId,
+        nodeName,
+        expect.objectContaining(inputs),
+        outputs,
+        expect.any(String),
+        expect.objectContaining({
+          durationMs: expect.any(Number),
+        }),
+      );
+
+      const call = (tracingService.recordTrace as jest.Mock).mock.calls[0];
+      const options = call[6];
+      expect(options.durationMs).toBeGreaterThanOrEqual(100);
+    });
+
+    it('should track duration accurately for fast nodes', async () => {
+      // Arrange
+      const threadId = 'thread-123';
+      const userId = 'user-456';
+      const handler = new TracingCallbackHandler(
+        threadId,
+        userId,
+        tracingService,
+        eventEmitter,
+      );
+
+      const chain = { _chainType: jest.fn().mockReturnValue('graph_node') };
+      const inputs = { data: 'fast' };
+      const outputs = { result: 'fast output' };
+      const nodeName = 'fast-node';
+
+      mockTracingService.recordTrace.mockResolvedValue(undefined);
+
+      // Act - No delay, should still have duration >= 0
+      handler.handleChainStart(
+        chain,
+        inputs,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        nodeName,
+      );
+      await handler.handleChainEnd(outputs, undefined, undefined, undefined, {
+        metadata: { nodeName },
+      });
+
+      // Assert
+      const call = (tracingService.recordTrace as jest.Mock).mock.calls[0];
+      const options = call[6];
+      expect(options.durationMs).toBeGreaterThanOrEqual(0);
+      expect(typeof options.durationMs).toBe('number');
+    });
+  });
+
+  describe('Reasoning extraction', () => {
+    it('should extract reasoning from explicit reasoning field', async () => {
+      // Arrange
+      const threadId = 'thread-123';
+      const userId = 'user-456';
+      const handler = new TracingCallbackHandler(
+        threadId,
+        userId,
+        tracingService,
+        eventEmitter,
+      );
+
+      const outputs = {
+        reasoning: 'Explicit reasoning from node',
+        alpha: -0.06,
+      };
+
+      mockTracingService.recordTrace.mockResolvedValue(undefined);
+
+      // Act
+      await handler.handleChainEnd(outputs, undefined, undefined, undefined, {
+        metadata: { nodeName: 'performance' },
+      });
+
+      // Assert
+      const call = (tracingService.recordTrace as jest.Mock).mock.calls[0];
+      const reasoning = call[5];
+      expect(reasoning).toBe('Explicit reasoning from node');
+    });
+
+    it('should extract reasoning from AIMessage content', async () => {
+      // Arrange
+      const threadId = 'thread-123';
+      const userId = 'user-456';
+      const handler = new TracingCallbackHandler(
+        threadId,
+        userId,
+        tracingService,
+        eventEmitter,
+      );
+
+      const outputs = {
+        messages: [
+          { content: 'Observer analyzed state and decided to proceed' },
+        ],
+      };
+
+      mockTracingService.recordTrace.mockResolvedValue(undefined);
+
+      // Act
+      await handler.handleChainEnd(outputs, undefined, undefined, undefined, {
+        metadata: { nodeName: 'observer' },
+      });
+
+      // Assert
+      const call = (tracingService.recordTrace as jest.Mock).mock.calls[0];
+      const reasoning = call[5];
+      expect(reasoning).toContain(
+        'Observer analyzed state and decided to proceed',
+      );
+    });
+
+    it('should extract reasoning from nextAction routing', async () => {
+      // Arrange
+      const threadId = 'thread-123';
+      const userId = 'user-456';
+      const handler = new TracingCallbackHandler(
+        threadId,
+        userId,
+        tracingService,
+        eventEmitter,
+      );
+
+      const outputs = { nextAction: 'end' };
+
+      mockTracingService.recordTrace.mockResolvedValue(undefined);
+
+      // Act
+      await handler.handleChainEnd(outputs, undefined, undefined, undefined, {
+        metadata: { nodeName: 'router' },
+      });
+
+      // Assert
+      const call = (tracingService.recordTrace as jest.Mock).mock.calls[0];
+      const reasoning = call[5];
+      expect(reasoning).toContain("proceeding to 'end'");
+    });
+
+    it('should use LLM output for reasoning nodes', async () => {
+      // Arrange
+      const threadId = 'thread-123';
+      const userId = 'user-456';
+      const handler = new TracingCallbackHandler(
+        threadId,
+        userId,
+        tracingService,
+        eventEmitter,
+      );
+
+      // Simulate LLM streaming
+      handler.handleLLMStart();
+      handler.handleLLMNewToken('Portfolio ');
+      handler.handleLLMNewToken('analysis ');
+      handler.handleLLMNewToken('complete');
+
+      const outputs = { result: 'done' };
+
+      mockTracingService.recordTrace.mockResolvedValue(undefined);
+
+      // Act
+      await handler.handleChainEnd(outputs, undefined, undefined, undefined, {
+        metadata: { nodeName: 'reasoning' },
+      });
+
+      // Assert
+      const call = (tracingService.recordTrace as jest.Mock).mock.calls[0];
+      const reasoning = call[5];
+      expect(reasoning).toBe('Portfolio analysis complete');
+    });
+
+    it('should provide fallback reasoning with node context', async () => {
+      // Arrange
+      const threadId = 'thread-123';
+      const userId = 'user-456';
+      const handler = new TracingCallbackHandler(
+        threadId,
+        userId,
+        tracingService,
+        eventEmitter,
+      );
+
+      const outputs = { status: 'completed', data: 'some data' };
+
+      mockTracingService.recordTrace.mockResolvedValue(undefined);
+
+      // Act
+      await handler.handleChainEnd(outputs, undefined, undefined, undefined, {
+        metadata: { nodeName: 'custom-node' },
+      });
+
+      // Assert
+      const call = (tracingService.recordTrace as jest.Mock).mock.calls[0];
+      const reasoning = call[5];
+      expect(reasoning).toContain('custom-node');
+      expect(reasoning).toContain('successfully');
+    });
+  });
+
   describe('integration scenarios', () => {
     it('should handle complete node execution flow', async () => {
       // Arrange
@@ -551,6 +825,9 @@ describe('TracingCallbackHandler', () => {
         expect.any(Object),
         outputs,
         expect.any(String),
+        expect.objectContaining({
+          durationMs: expect.any(Number),
+        }),
       );
       expect(eventEmitter.emit).toHaveBeenCalledWith(
         'node.complete',
@@ -605,6 +882,9 @@ describe('TracingCallbackHandler', () => {
           expect.any(Object),
           node.output,
           expect.any(String),
+          expect.objectContaining({
+            durationMs: expect.any(Number),
+          }),
         );
       });
     });

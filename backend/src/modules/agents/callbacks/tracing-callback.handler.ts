@@ -29,6 +29,7 @@ export class TracingCallbackHandler extends BaseCallbackHandler {
   private currentNodeInput: Record<string, unknown> = {};
   private currentNodeName = 'unknown';
   private currentLLMOutput = '';
+  private nodeStartTime = 0;
 
   constructor(
     private readonly threadId: string,
@@ -126,6 +127,7 @@ export class TracingCallbackHandler extends BaseCallbackHandler {
   ): void {
     try {
       this.currentNodeInput = inputs;
+      this.nodeStartTime = Date.now(); // Record start time for duration tracking
       // Filter out LangGraph internal operations
       if (name && !this.shouldSkipTrace(name)) {
         this.currentNodeName = name;
@@ -171,8 +173,11 @@ export class TracingCallbackHandler extends BaseCallbackHandler {
         return; // Skip internal operations
       }
 
-      const reasoning: string =
-        outputs?.reasoning || this.currentLLMOutput || '';
+      // Calculate duration
+      const durationMs = Date.now() - this.nodeStartTime;
+
+      // Extract reasoning using intelligent fallback strategy
+      const reasoning = this.extractReasoning(nodeName, outputs);
 
       // Save to database (async, non-blocking)
       if (this.tracingService) {
@@ -184,6 +189,7 @@ export class TracingCallbackHandler extends BaseCallbackHandler {
             this.currentNodeInput,
             outputs,
             reasoning,
+            { durationMs }, // Pass duration in options
           );
           this.logger.debug(`Recorded trace for node: ${nodeName}`);
         } catch (error) {
@@ -221,6 +227,53 @@ export class TracingCallbackHandler extends BaseCallbackHandler {
         error instanceof Error ? error.message : 'Unknown error';
       this.logger.warn(`Error in handleChainEnd: ${errorMessage}`);
     }
+  }
+
+  /**
+   * Extract meaningful reasoning from node outputs
+   *
+   * Implements intelligent fallback strategy:
+   * 1. Explicit reasoning field (highest priority)
+   * 2. LLM output (for reasoning nodes)
+   * 3. AIMessage content (observer, end nodes)
+   * 4. nextAction routing (router, guardrail nodes)
+   * 5. Fallback with node context
+   */
+  private extractReasoning(
+    nodeName: string,
+    outputs: Record<string, unknown> & { reasoning?: string },
+  ): string {
+    // 1. Explicit reasoning field (highest priority)
+    if (outputs.reasoning && typeof outputs.reasoning === 'string') {
+      return outputs.reasoning;
+    }
+
+    // 2. LLM output (for reasoning node)
+    if (this.currentLLMOutput) {
+      return this.currentLLMOutput;
+    }
+
+    // 3. Extract from AIMessage content (observer, end nodes)
+    if (outputs.messages && Array.isArray(outputs.messages)) {
+      const messages = outputs.messages as Array<{ content?: unknown }>;
+      const lastMessage = messages[messages.length - 1];
+      if (
+        lastMessage &&
+        'content' in lastMessage &&
+        typeof lastMessage.content === 'string'
+      ) {
+        return `Node decision: ${lastMessage.content}`;
+      }
+    }
+
+    // 4. Extract from nextAction (router, guardrail nodes)
+    if (outputs.nextAction && typeof outputs.nextAction === 'string') {
+      return `Routing decision: proceeding to '${outputs.nextAction}' based on current state`;
+    }
+
+    // 5. Fallback with node context
+    const outputKeys = Object.keys(outputs);
+    return `Executed ${nodeName} node successfully. Updated state with: ${outputKeys.join(', ')}`;
   }
 
   private shouldSkipTrace(nodeName: string): boolean {

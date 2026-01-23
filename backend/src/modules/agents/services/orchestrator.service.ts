@@ -327,7 +327,7 @@ export class OrchestratorService {
    * @param threadId - Scoped thread ID
    * @param userId - User ID for tracing
    * @param portfolioId - Optional portfolio ID for context storage (US-004)
-   * @returns Graph configuration object with tracing callback and metadata
+   * @returns Graph configuration object with tracing callback, metadata, and tool registry
    */
   private buildGraphConfig(
     threadId: string,
@@ -337,6 +337,7 @@ export class OrchestratorService {
     const config: GraphExecutionConfig = {
       configurable: {
         thread_id: threadId,
+        toolRegistry: this.toolRegistry, // Provide tool registry for agentic tool calling
         performanceService: this.performanceService,
         portfolioService: this.portfolioService,
         sectorAttributionService: this.sectorAttributionService,

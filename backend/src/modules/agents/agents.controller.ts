@@ -26,11 +26,12 @@ import { User } from '../users/entities/user.entity';
 import { OrchestratorService } from './services/orchestrator.service';
 import { RunGraphDto } from './dto/run-graph.dto';
 import { GraphResponseDto } from './dto/graph-response.dto';
-import { TracesResponseDto } from './dto/traces-response.dto';
+import { TracesResponseDto, TraceDto } from './dto/traces-response.dto';
 import { TracingService } from './services/tracing.service';
 import { StateService } from './services/state.service';
 import { ResumeGraphDto } from './dto/resume-graph.dto';
 import { PortfolioService } from '../portfolio/portfolio.service';
+import { PortfolioRiskProfile } from './graphs/types';
 
 @ApiTags('agents')
 @Controller('agents')
@@ -72,16 +73,45 @@ export class AgentsController {
     @CurrentUser() user: User,
     @Body() dto: RunGraphDto,
   ): Promise<GraphResponseDto> {
-    // US-004-BE-T2: Validate portfolio ownership before executing graph
+    // US-004-BE-T2: Enrich portfolio data with positions if portfolio ID is provided
+    let enrichedPortfolio = dto.portfolio;
+
     if (dto.portfolio?.id) {
-      await this.portfolioService.getPortfolioOrFail(user.id, dto.portfolio.id);
+      // Validate ownership and get basic portfolio data
+      const portfolio = await this.portfolioService.getPortfolioOrFail(
+        user.id,
+        dto.portfolio.id,
+      );
+
+      // Get full portfolio summary with positions and market data
+      const summary = await this.portfolioService.getPortfolioSummary(
+        dto.portfolio.id,
+        user.id,
+      );
+
+      // Transform to PortfolioData format for graph
+      enrichedPortfolio = {
+        id: dto.portfolio.id,
+        name: portfolio.name,
+        riskProfile: portfolio.riskProfile as
+          | PortfolioRiskProfile.CONSERVATIVE
+          | PortfolioRiskProfile.MODERATE
+          | PortfolioRiskProfile.AGGRESSIVE,
+        totalValue: summary.totalValue,
+        positions: summary.positions.map((pos) => ({
+          ticker: pos.ticker,
+          price: pos.currentPrice ?? pos.avgCostBasis,
+          quantity: pos.quantity,
+          marketValue: pos.marketValue,
+        })),
+      };
     }
 
     return this.orchestratorService.runGraph(
       user.id,
       {
         message: dto.message,
-        portfolio: dto.portfolio,
+        portfolio: enrichedPortfolio,
       },
       dto.threadId,
     ) as Promise<GraphResponseDto>;
@@ -154,7 +184,7 @@ export class AgentsController {
   @ApiResponse({
     status: 200,
     description: 'Traces retrieved successfully',
-    type: TracesResponseDto,
+    type: [TraceDto],
   })
   @ApiResponse({
     status: 401,

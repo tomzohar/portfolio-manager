@@ -63,6 +63,30 @@ describe('AgentsController', () => {
     getPortfolioOrFail: jest.fn().mockResolvedValue({
       id: 'portfolio-123',
       name: 'Test Portfolio',
+      riskProfile: 'moderate',
+    }),
+    getPortfolioSummary: jest.fn().mockResolvedValue({
+      totalValue: 50000,
+      totalCostBasis: 45000,
+      unrealizedPL: 5000,
+      unrealizedPLPercent: 0.111,
+      cashBalance: 1000,
+      positions: [
+        {
+          ticker: 'AAPL',
+          quantity: 10,
+          avgCostBasis: 150,
+          currentPrice: 170,
+          marketValue: 1700,
+        },
+        {
+          ticker: 'GOOGL',
+          quantity: 5,
+          avgCostBasis: 2800,
+          currentPrice: 2850,
+          marketValue: 14250,
+        },
+      ],
     }),
     validateUserOwnsPortfolio: jest.fn().mockResolvedValue(true),
   };

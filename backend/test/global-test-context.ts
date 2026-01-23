@@ -64,8 +64,8 @@ async function initializeGlobalApp(): Promise<void> {
   await globalApp.init();
 
   // Wait for async module initialization (LangGraph checkpoint tables)
-  // Longer delay in CI environments
-  const initDelay = process.env.CI ? 3000 : 1000;
+  // Need longer delay to ensure all async operations complete
+  const initDelay = process.env.CI ? 5000 : 3000;
   console.log(
     `⏳ Waiting ${initDelay}ms for async module initialization (checkpoint tables)...`,
   );
@@ -79,8 +79,14 @@ async function initializeGlobalApp(): Promise<void> {
   // This must happen before seeding test data
   console.log('🔧 Synchronizing database schema...');
   try {
+    // First, synchronize to create base tables from entities
     await globalDataSource.synchronize();
-    console.log('✅ Database schema synchronized');
+    console.log('✅ Database schema synchronized (base tables created)');
+
+    // Then run migrations to add enhancements
+    console.log('📦 Running migrations...');
+    await globalDataSource.runMigrations();
+    console.log('✅ Migrations executed (enhancements applied)');
 
     // Verify tables were created
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -101,6 +107,7 @@ async function initializeGlobalApp(): Promise<void> {
       '⚠️  Schema synchronization error:',
       error instanceof Error ? error.message : error,
     );
+    throw error; // Re-throw to fail fast if database setup fails
   }
 
   console.log('✅ Global test app initialized successfully\n');

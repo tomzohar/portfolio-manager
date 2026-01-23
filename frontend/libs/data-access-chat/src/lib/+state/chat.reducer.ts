@@ -58,12 +58,18 @@ export const chatReducer = createReducer(
   // Trace Management
   // ========================================
 
-  on(ChatActions.traceReceived, (state, { trace }) =>
-    tracesAdapter.upsertOne(trace, {
+  on(ChatActions.traceReceived, (state, { trace }) => {
+    // Fallback: If 'end' node trace received while graph executing, clear the flag
+    // This handles cases where graph.complete SSE event was missed due to timing
+    const isEndNode = trace.nodeName === 'end';
+    const shouldClearExecution = isEndNode && state.graphExecuting;
+    
+    return tracesAdapter.upsertOne(trace, {
       ...state,
+      graphExecuting: shouldClearExecution ? false : state.graphExecuting,
       error: null,
-    })
-  ),
+    });
+  }),
 
   on(ChatActions.loadHistoricalTraces, (state) => ({
     ...state,
@@ -75,9 +81,15 @@ export const chatReducer = createReducer(
     // Ensure traces is an array before passing to adapter
     const tracesArray = Array.isArray(traces) ? traces : [];
     
+    // Fallback: If historical traces include an 'end' node, graph has completed
+    // Clear graphExecuting to ensure button isn't stuck disabled
+    const hasEndNode = tracesArray.some(t => t.nodeName === 'end');
+    const shouldClearExecution = hasEndNode && state.graphExecuting;
+    
     return tracesAdapter.setAll(tracesArray, {
       ...state,
       loading: false,
+      graphExecuting: shouldClearExecution ? false : state.graphExecuting,
       error: null,
     });
   }),

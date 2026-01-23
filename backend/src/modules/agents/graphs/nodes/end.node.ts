@@ -4,12 +4,13 @@ import { CIOState, StateUpdate } from '../types';
  * End Node
  *
  * Terminal node of the CIO graph.
- * Formats and returns the final report.
+ * Extracts the final AI response and formats it as the report.
  *
- * For Phase 1 "Hello World", this generates a simple summary report.
+ * The final report is taken from the last AIMessage in the conversation,
+ * which contains the LLM's synthesized response (potentially after tool usage).
  */
 export function endNode(state: CIOState): Promise<StateUpdate> {
-  const report = formatFinalReport(state);
+  const report = extractFinalReport(state);
 
   return Promise.resolve({
     final_report: report,
@@ -17,13 +18,48 @@ export function endNode(state: CIOState): Promise<StateUpdate> {
 }
 
 /**
- * Format final report from state
+ * Extract final report from the last AI message
+ *
+ * @param state - Current CIO state
+ * @returns Final report string
  */
-function formatFinalReport(state: CIOState): string {
+function extractFinalReport(state: CIOState): string {
+  // Find the last AI message in the conversation
+  const aiMessages = state.messages.filter((msg) => msg._getType() === 'ai');
+
+  if (aiMessages.length === 0) {
+    // Fallback: No AI messages found
+    return generateFallbackReport(state);
+  }
+
+  const lastAiMessage = aiMessages[aiMessages.length - 1];
+  if (!lastAiMessage) {
+    return generateFallbackReport(state);
+  }
+
+  const content = lastAiMessage.content;
+  const reportText =
+    typeof content === 'string' ? content : JSON.stringify(content);
+
+  // If the report is empty or very short, provide a better fallback
+  if (!reportText || reportText.trim().length < 10) {
+    return generateFallbackReport(state);
+  }
+
+  return reportText;
+}
+
+/**
+ * Generate fallback report when no AI response is available
+ *
+ * @param state - Current CIO state
+ * @returns Fallback report string
+ */
+function generateFallbackReport(state: CIOState): string {
   const lines: string[] = [];
 
   lines.push('='.repeat(70));
-  lines.push('CIO GRAPH EXECUTION REPORT (Phase 1 - Hello World)');
+  lines.push('CIO GRAPH EXECUTION REPORT');
   lines.push('='.repeat(70));
   lines.push('');
 
@@ -35,28 +71,17 @@ function formatFinalReport(state: CIOState): string {
   if (state.errors.length > 0) {
     lines.push('ERRORS:');
     lines.push('-'.repeat(70));
-    lines.push(`Errors encountered: ${state.errors.length}`);
     state.errors.forEach((error, idx) => {
       lines.push(`  ${idx + 1}. ${error}`);
     });
-    lines.push('');
-  } else {
-    lines.push('STATUS: Success - No errors encountered');
     lines.push('');
   }
 
   lines.push('EXECUTION SUMMARY:');
   lines.push('-'.repeat(70));
-  lines.push('Graph Execution Complete');
-  lines.push('Observer node processed input successfully');
-  lines.push('State persisted to PostgreSQL via PostgresSaver');
-  lines.push('');
-
-  lines.push('NEXT STEPS:');
-  lines.push('-'.repeat(70));
-  lines.push('Phase 1 infrastructure is complete.');
+  lines.push('Graph execution complete');
   lines.push(
-    'Phase 2 will add portfolio analysis tools and multi-agent coordination.',
+    'No AI response generated - this may indicate an error or early termination',
   );
   lines.push('');
 

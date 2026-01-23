@@ -2,12 +2,11 @@ import { Component, input, output, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { trigger, style, transition, animate } from '@angular/animations';
 import { ReasoningTrace } from '@stocks-researcher/types';
-import { 
-  CardComponent, 
-  IconComponent, 
-  ButtonComponent, 
+import {
+  IconComponent,
+  ButtonComponent,
   TagPillComponent,
-  ButtonConfig 
+  ButtonConfig
 } from '@stocks-researcher/styles';
 
 /**
@@ -42,7 +41,6 @@ import {
   standalone: true,
   imports: [
     CommonModule,
-    CardComponent,
     IconComponent,
     ButtonComponent,
     TagPillComponent,
@@ -60,7 +58,7 @@ import {
     ]),
   ],
   template: `
-    <lib-card 
+    <div 
       class="trace-item" 
       [attr.aria-expanded]="isExpanded()"
       role="article"
@@ -136,7 +134,7 @@ import {
           </div>
         }
       </div>
-    </lib-card>
+      </div>
   `,
   styleUrls: ['./reasoning-trace-item.component.scss'],
 })
@@ -161,7 +159,7 @@ export class ReasoningTraceItemComponent {
    */
   nodeIcon = computed(() => {
     const nodeName = this.trace().nodeName.toLowerCase();
-    
+
     if (nodeName.includes('supervisor')) return 'supervisor_account';
     if (nodeName.includes('fundamental')) return 'analytics';
     if (nodeName.includes('technical')) return 'show_chart';
@@ -169,7 +167,7 @@ export class ReasoningTraceItemComponent {
     if (nodeName.includes('risk')) return 'warning';
     if (nodeName.includes('synthesis')) return 'merge';
     if (nodeName.includes('guardrail')) return 'security';
-    
+
     return 'psychology'; // Default AI icon
   });
 
@@ -208,8 +206,8 @@ export class ReasoningTraceItemComponent {
    */
   formatTimestamp(timestamp: Date | string): string {
     const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
-    return date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
       minute: '2-digit',
       second: '2-digit'
     });

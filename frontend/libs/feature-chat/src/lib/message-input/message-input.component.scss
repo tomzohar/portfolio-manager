@@ -5,11 +5,9 @@
 .message-input {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
-  padding: var(--spacing-base);
+  gap: var(--spacing-xs);
   background-color: var(--color-bg-card);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border-primary);
 }
 
 .message-input__container {
@@ -21,8 +19,9 @@
 
 .message-input__textarea {
   width: 100%;
-  min-height: 80px;
-  padding: var(--spacing-md);
+  resize: none;
+  height: unset;
+  padding: var(--spacing-sm);
   font-family: var(--font-family-primary);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-normal);
@@ -30,7 +29,6 @@
   background-color: var(--color-bg-tertiary);
   border: 1px solid var(--color-border-secondary);
   border-radius: var(--radius-sm);
-  resize: vertical;
   transition: border-color var(--transition-fast);
 
   &::placeholder {
@@ -109,15 +107,10 @@
   }
 }
 
-.message-input__actions {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: var(--spacing-sm);
-}
-
 .send-button {
-  min-width: 100px;
+  position: absolute;
+  bottom: var(--spacing-md);
+  right: var(--spacing-sm);
 }
 
 // ========================================
@@ -146,16 +139,5 @@
 
   .send-button {
     min-width: 80px;
-  }
-}
-
-// ========================================
-// Accessibility
-// ========================================
-
-.message-input__textarea {
-  &:focus-visible {
-    outline: 2px solid var(--color-ai-primary);
-    outline-offset: 2px;
   }
 }

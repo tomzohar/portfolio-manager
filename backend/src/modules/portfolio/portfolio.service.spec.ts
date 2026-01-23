@@ -1285,7 +1285,7 @@ describe('PortfolioService', () => {
     it('should return portfolio if user owns it', async () => {
       // Arrange
       const userId = 'user-123';
-      const portfolioId = 'portfolio-456';
+      const portfolioId = '550e8400-e29b-41d4-a716-446655440000'; // Valid UUID
 
       const mockOwnedPortfolio = {
         id: portfolioId,
@@ -1306,12 +1306,34 @@ describe('PortfolioService', () => {
       });
     });
 
+    it('should throw NotFoundException if portfolio does not exist', async () => {
+      // Arrange
+      const userId = 'user-123';
+      const portfolioId = '550e8400-e29b-41d4-a716-446655440000'; // Valid UUID
+
+      portfolioRepository.findOne.mockResolvedValue(null);
+
+      // Act & Assert
+      await expect(
+        service.getPortfolioOrFail(userId, portfolioId),
+      ).rejects.toThrow(NotFoundException);
+
+      await expect(
+        service.getPortfolioOrFail(userId, portfolioId),
+      ).rejects.toThrow('Portfolio not found');
+    });
+
     it('should throw ForbiddenException if user does not own portfolio', async () => {
       // Arrange
       const userId = 'user-123';
-      const portfolioId = 'portfolio-456';
+      const portfolioId = '550e8400-e29b-41d4-a716-446655440000';
 
-      portfolioRepository.findOne.mockResolvedValue(null);
+      const otherUserPortfolio = {
+        id: portfolioId,
+        user: { id: 'user-999' } as User, // Different user
+      } as Portfolio;
+
+      portfolioRepository.findOne.mockResolvedValue(otherUserPortfolio);
 
       // Act & Assert
       await expect(
@@ -1323,17 +1345,19 @@ describe('PortfolioService', () => {
       ).rejects.toThrow('You do not own this portfolio');
     });
 
-    it('should throw ForbiddenException if portfolio does not exist', async () => {
+    it('should throw NotFoundException for invalid UUID format', async () => {
       // Arrange
       const userId = 'user-123';
-      const portfolioId = 'non-existent';
-
-      portfolioRepository.findOne.mockResolvedValue(null);
+      const portfolioId = 'invalid-uuid';
 
       // Act & Assert
       await expect(
         service.getPortfolioOrFail(userId, portfolioId),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(NotFoundException);
+
+      await expect(
+        service.getPortfolioOrFail(userId, portfolioId),
+      ).rejects.toThrow('Invalid portfolio ID format');
     });
   });
 });

@@ -40,27 +40,52 @@ export class MessageExtractorService {
 
     const messages: ConversationMessage[] = [];
 
-    // Extract user message from observer node
-    const userMessage = this.extractUserMessage(traces);
-    if (userMessage) {
-      messages.push(userMessage);
-    }
+    // Find ALL observer traces (user messages)
+    const observerTraces = traces.filter((t) => t.nodeName === 'observer');
+    
+    // Find ALL end traces (AI responses)
+    const endTraces = traces.filter((t) => t.nodeName === 'end');
 
-    // Extract AI response from end node
-    const aiMessage = this.extractAIMessage(traces);
-    if (aiMessage) {
-      messages.push(aiMessage);
-    }
+    // Sort by timestamp to maintain chronological order
+    observerTraces.sort((a, b) => 
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+    endTraces.sort((a, b) => 
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
 
-    return messages;
+    // Extract all user messages
+    observerTraces.forEach((observerTrace) => {
+      const userMessage = this.extractUserMessageFromTrace(observerTrace);
+      if (userMessage) {
+        messages.push(userMessage);
+      }
+    });
+
+    // Extract all AI responses with their associated trace IDs
+    endTraces.forEach((endTrace, index) => {
+      // Get traces that belong to this execution
+      // Traces between previous end and current end belong to this execution
+      const startIdx = index === 0 ? 0 : traces.indexOf(endTraces[index - 1]) + 1;
+      const endIdx = traces.indexOf(endTrace) + 1;
+      const executionTraces = traces.slice(startIdx, endIdx);
+      
+      const aiMessage = this.extractAIMessageFromTrace(endTrace, executionTraces);
+      if (aiMessage) {
+        messages.push(aiMessage);
+      }
+    });
+
+    // Sort final messages by timestamp to maintain conversation order
+    return messages.sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
   }
 
   /**
-   * Extract user's message from observer node
+   * Extract user's message from a single observer trace
    */
-  private extractUserMessage(traces: ReasoningTrace[]): UserMessage | null {
-    const observerTrace = traces.find((t) => t.nodeName === 'observer');
-
+  private extractUserMessageFromTrace(observerTrace: ReasoningTrace): UserMessage | null {
     if (!observerTrace?.input) {
       return null;
     }
@@ -92,11 +117,15 @@ export class MessageExtractorService {
   }
 
   /**
-   * Extract AI's response from end node
+   * Extract AI's response from a single end trace
+   * 
+   * @param endTrace - The end trace containing the final report
+   * @param executionTraces - All traces from this specific execution (for linking)
    */
-  private extractAIMessage(traces: ReasoningTrace[]): AssistantMessage | null {
-    const endTrace = traces.find((t) => t.nodeName === 'end');
-    
+  private extractAIMessageFromTrace(
+    endTrace: ReasoningTrace,
+    executionTraces: ReasoningTrace[]
+  ): AssistantMessage | null {
     if (!endTrace?.output) {
       return null;
     }
@@ -113,7 +142,7 @@ export class MessageExtractorService {
       type: MessageType.ASSISTANT,
       content: output.final_report,
       timestamp: endTrace.createdAt,
-      traceIds: traces.map((t) => t.id), // Link to all traces for this execution
+      traceIds: executionTraces.map((t) => t.id), // Link to traces for this execution
     };
   }
 }

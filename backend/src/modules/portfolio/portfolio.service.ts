@@ -628,17 +628,35 @@ export class PortfolioService {
    * @param portfolioId - Portfolio ID to retrieve
    * @returns Portfolio entity
    * @throws ForbiddenException if user doesn't own the portfolio
+   * @throws NotFoundException if portfolio doesn't exist
    */
   async getPortfolioOrFail(
     userId: string,
     portfolioId: string,
   ): Promise<Portfolio> {
-    const portfolio = await this.portfolioRepository.findOne({
-      where: { id: portfolioId },
-      relations: ['user'],
-    });
+    // Validate UUID format
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(portfolioId)) {
+      throw new NotFoundException('Invalid portfolio ID format');
+    }
 
-    if (!portfolio || portfolio.user.id !== userId) {
+    let portfolio: Portfolio | null;
+    try {
+      portfolio = await this.portfolioRepository.findOne({
+        where: { id: portfolioId },
+        relations: ['user'],
+      });
+    } catch {
+      // Catch database errors (invalid UUID syntax, etc.)
+      throw new NotFoundException('Invalid portfolio ID format');
+    }
+
+    if (!portfolio) {
+      throw new NotFoundException('Portfolio not found');
+    }
+
+    if (portfolio.user.id !== userId) {
       throw new ForbiddenException('You do not own this portfolio');
     }
 

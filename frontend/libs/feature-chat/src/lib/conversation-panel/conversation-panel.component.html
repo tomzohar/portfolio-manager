@@ -1,10 +1,10 @@
 <div class="conversation-panel" role="region" aria-label="Conversation history">
-  @if (messages().length === 0) {
+  @if (messages().length === 0 && !isLoading()) {
     <div class="empty-conversation">
       <p class="empty-title">No messages yet</p>
       <p class="empty-hint">Send a message to start the conversation</p>
     </div>
-  } @else {
+  } @else if (messages().length > 0) {
     <div class="messages-list">
       @for (message of messages(); track trackByMessageId($index, message)) {
         @if (isUserMessage(message)) {
@@ -20,7 +20,6 @@
           
           @if (isMessageTracesExpanded(message.id) && message.traceIds) {
             <div class="traces-section">
-              <h4 class="traces-header">Reasoning Process:</h4>
               <div class="traces-list">
                 @for (trace of getTracesForMessage(message.traceIds); track trackByTraceId($index, trace)) {
                   <app-reasoning-trace-item

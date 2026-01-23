@@ -19,11 +19,16 @@ describe('ChatPageComponent', () => {
       isGraphActive: signal<boolean>(false),
       connectionStatus: signal<SSEConnectionStatus>(SSEConnectionStatus.DISCONNECTED),
       currentThreadTraces: signal([]),
+      messages: signal([]),
       loading: signal(false),
       error: signal(null),
+      expandedMessageIds: signal([]),
       connectSSE: jest.fn(),
       disconnectSSE: jest.fn(),
       resetState: jest.fn(),
+      sendMessage: jest.fn(),
+      toggleMessageTraces: jest.fn(),
+      toggleTraceExpansion: jest.fn(),
     };
 
     // Mock Router
@@ -109,11 +114,12 @@ describe('ChatPageComponent', () => {
       expect(navigateArgs[1]).toMatch(/thread-/);
     });
 
-    it('should reset state when creating new conversation', () => {
+    it('should disconnect and reset state when creating new conversation', () => {
       fixture.detectChanges();
 
       component.handleNewConversation();
 
+      expect(mockChatFacade.disconnectSSE).toHaveBeenCalled();
       expect(mockChatFacade.resetState).toHaveBeenCalled();
     });
   });
@@ -174,8 +180,113 @@ describe('ChatPageComponent', () => {
 
       component.ngOnDestroy();
 
-      // Should not throw
-      expect(component).toBeTruthy();
+      expect(mockChatFacade.disconnectSSE).toHaveBeenCalled();
+      expect(mockChatFacade.resetState).toHaveBeenCalled();
+    });
+  });
+
+  describe('Chat Data Loading', () => {
+    it('should load conversation when threadId is in backend format', () => {
+      // Setup backend format threadId
+      mockActivatedRoute.paramMap = signal({
+        get: (key: string) => key === 'threadId' ? 'user123:thread456' : null,
+      });
+
+      fixture.detectChanges();
+
+      expect(mockChatFacade.connectSSE).toHaveBeenCalledWith('user123:thread456');
+    });
+
+    it('should NOT load conversation for frontend-generated threadIds', () => {
+      // Setup frontend format threadId
+      mockActivatedRoute.paramMap = signal({
+        get: (key: string) => key === 'threadId' ? 'thread-1234567890-abc' : null,
+      });
+
+      fixture.detectChanges();
+
+      expect(mockChatFacade.connectSSE).not.toHaveBeenCalled();
+    });
+
+    it('should disconnect SSE when threadId changes', () => {
+      // Start with backend format
+      mockActivatedRoute.paramMap = signal({
+        get: (key: string) => key === 'threadId' ? 'user123:thread1' : null,
+      });
+      fixture.detectChanges();
+
+      // Clear previous calls
+      jest.clearAllMocks();
+
+      // Change to different backend format threadId
+      mockActivatedRoute.paramMap.set({
+        get: (key: string) => key === 'threadId' ? 'user123:thread2' : null,
+      });
+      fixture.detectChanges();
+
+      expect(mockChatFacade.disconnectSSE).toHaveBeenCalled();
+      expect(mockChatFacade.connectSSE).toHaveBeenCalledWith('user123:thread2');
+    });
+
+    it('should show loading state when loading chat history', () => {
+      // Setup: backend format threadId, no messages
+      mockActivatedRoute.paramMap = signal({
+        get: (key: string) => key === 'threadId' ? 'user123:thread456' : null,
+      });
+      mockChatFacade.messages = signal([]);
+
+      fixture.detectChanges();
+
+      // Loading flag should be set immediately when backend threadId is detected
+      expect(component.isLoadingChatHistory()).toBe(true);
+    });
+
+    it('should NOT show loading state for frontend-generated threadIds', () => {
+      // Setup: frontend format threadId
+      mockActivatedRoute.paramMap = signal({
+        get: (key: string) => key === 'threadId' ? 'thread-1234567890-abc' : null,
+      });
+      mockChatFacade.messages = signal([]);
+
+      fixture.detectChanges();
+
+      expect(component.isLoadingChatHistory()).toBe(false);
+    });
+
+    it('should NOT show loading state when messages already loaded', () => {
+      // Setup: backend format, but has messages
+      mockActivatedRoute.paramMap = signal({
+        get: (key: string) => key === 'threadId' ? 'user123:thread456' : null,
+      });
+      mockChatFacade.messages = signal([
+        { id: '1', role: 'user', content: 'Test message', timestamp: new Date() }
+      ]);
+
+      fixture.detectChanges();
+
+      expect(component.isLoadingChatHistory()).toBe(false);
+    });
+
+    it('should clear loading state when messages arrive', () => {
+      // Setup: backend format, no messages initially
+      mockActivatedRoute.paramMap = signal({
+        get: (key: string) => key === 'threadId' ? 'user123:thread456' : null,
+      });
+      mockChatFacade.messages = signal([]);
+
+      fixture.detectChanges();
+
+      // Should be loading initially
+      expect(component.isLoadingChatHistory()).toBe(true);
+
+      // Simulate messages arriving
+      mockChatFacade.messages.set([
+        { id: '1', role: 'user', content: 'Test message', timestamp: new Date() }
+      ]);
+      fixture.detectChanges();
+
+      // Should no longer be loading
+      expect(component.isLoadingChatHistory()).toBe(false);
     });
   });
 

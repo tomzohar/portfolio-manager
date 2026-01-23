@@ -20,8 +20,16 @@
       </div>
     }
 
+    <!-- Loading Chat History -->
+    @if (isLoadingChatHistory()) {
+      <div class="chat-page__loading-history">
+        <lib-loader [config]="{ size: 'md' }" />
+        <span class="loading-text">Loading conversation history...</span>
+      </div>
+    }
+
     <!-- Sending Indicator -->
-    @if (loading() && messages().length === 0) {
+    @if (loading() && messages().length === 0 && !isLoadingChatHistory()) {
       <div class="chat-page__sending">
         <lib-loader [config]="{ size: 'sm' }" />
         <span class="sending-text">Sending message and starting analysis...</span>
@@ -30,13 +38,14 @@
 
     <!-- Conversation Panel (NEW) -->
     <div class="chat-page__conversation">
-      @if (threadId() && isValidThreadId(threadId()!)) {
+      @if (threadId() && isValidThreadId(threadId()!) && !isLoadingChatHistory()) {
         <app-conversation-panel
           [threadId]="threadId()!"
           [messages]="messages()"
           [traces]="traces()"
+          [isLoading]="loading()"
         />
-      } @else {
+      } @else if (!isLoadingChatHistory()) {
         <div class="chat-page__empty">
           <p class="empty-title">Welcome to AI Chat</p>
           <p class="empty-hint">Initializing conversation...</p>

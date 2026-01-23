@@ -7,14 +7,16 @@ import { buildReasoningPrompt } from '../../prompts';
 /**
  * Reasoning Node
  *
- * Uses an LLM with streaming enabled to generate a thoughtful response
- * to the user's query. This node demonstrates token-level streaming via
- * the TracingCallbackHandler.
+ * Uses an LLM with streaming and tool calling enabled to generate thoughtful
+ * responses to user queries. The LLM can autonomously call tools (technical_analyst,
+ * macro_analyst, risk_manager) to gather data before responding.
  *
  * Key Features:
  * - Streaming enabled ({ streaming: true })
+ * - Tool calling via bindTools() for agentic behavior
  * - Callbacks automatically invoke handleLLMNewToken for each token
  * - SSE endpoint receives real-time token events
+ * - Returns AIMessage with potential tool_calls in additional_kwargs
  */
 export async function reasoningNode(
   state: CIOState,
@@ -43,6 +45,16 @@ export async function reasoningNode(
       streaming: true, // CRITICAL: Enables token-by-token streaming
     });
 
+    // Get tools from registry (passed via config)
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const toolRegistry = config.configurable?.toolRegistry;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+    const tools = (toolRegistry?.getTools() || []) as any[];
+
+    // Bind tools to LLM for agentic tool calling
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const llmWithTools = tools.length > 0 ? llm.bindTools(tools) : llm;
+
     // Get the last user message
     const lastMessage = state.messages[state.messages.length - 1];
     const userQuery =
@@ -50,22 +62,22 @@ export async function reasoningNode(
         ? lastMessage.content
         : JSON.stringify(lastMessage.content);
 
-    // Build prompt using external prompt template
-    const prompt = buildReasoningPrompt(userQuery);
+    // Build prompt using external prompt template (includes portfolio context and userId)
+    const prompt = buildReasoningPrompt(
+      userQuery,
+      state.portfolio,
+      state.userId,
+    );
 
-    // Invoke LLM with streaming
+    // Invoke LLM with streaming and tools
     // The config.callbacks from OrchestratorService will automatically handle token events
-    const response = await llm.invoke(prompt, {
+    const response = await llmWithTools.invoke(prompt, {
       callbacks: config.callbacks, // Pass through callbacks for tracing
     });
 
-    const responseText =
-      typeof response.content === 'string'
-        ? response.content
-        : JSON.stringify(response.content);
-
+    // Return AIMessage as-is to preserve tool_calls in additional_kwargs
     return {
-      messages: [new AIMessage(responseText)],
+      messages: [response],
     };
   } catch (error) {
     const errorMessage =
