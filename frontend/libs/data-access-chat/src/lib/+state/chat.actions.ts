@@ -121,5 +121,20 @@ export const ChatActions = createActionGroup({
      * Toggle message trace expansion
      */
     'Toggle Message Traces': props<{ messageId: string }>(),
+
+    /**
+     * Load conversation messages from API (new persistence layer)
+     */
+    'Load Conversation Messages': props<{ threadId: string }>(),
+
+    /**
+     * Conversation messages loaded successfully
+     */
+    'Conversation Messages Loaded': props<{ messages: ConversationMessage[] }>(),
+
+    /**
+     * Failed to load conversation messages
+     */
+    'Conversation Messages Load Failed': props<{ error: string }>(),
   },
 });

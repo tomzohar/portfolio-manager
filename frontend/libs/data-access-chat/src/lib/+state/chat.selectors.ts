@@ -230,7 +230,6 @@ export const selectDisplayMessages = createSelector(
   selectSentMessages,
   (extractedMessages, sentMessages) => {
     const displayMessages: ConversationMessage[] = [...extractedMessages];
-    
     // Add optimistic messages with preserved metadata
     sentMessages.forEach((pendingMsg) => {
       const optimisticMessage: UserMessage = {
@@ -241,25 +240,23 @@ export const selectDisplayMessages = createSelector(
         sequence: pendingMsg.sequence,   // Use preserved sequence number
         isOptimistic: true,
       };
-      
       displayMessages.push(optimisticMessage);
     });
-    
     // Sort by sequence first (primary), then timestamp (secondary)
     return displayMessages.sort((a, b) => {
       // If both have sequence numbers, use them for guaranteed ordering
       if (a.sequence !== undefined && b.sequence !== undefined) {
         return a.sequence - b.sequence;
       }
-      
+
       // Fallback to timestamp comparison
-      const timeA = typeof a.timestamp === 'string' 
-        ? new Date(a.timestamp).getTime() 
+      const timeA = typeof a.timestamp === 'string'
+        ? new Date(a.timestamp).getTime()
         : a.timestamp.getTime();
-      const timeB = typeof b.timestamp === 'string' 
-        ? new Date(b.timestamp).getTime() 
+      const timeB = typeof b.timestamp === 'string'
+        ? new Date(b.timestamp).getTime()
         : b.timestamp.getTime();
-      
+
       return timeA - timeB;
     });
   }

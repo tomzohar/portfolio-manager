@@ -422,3 +422,37 @@ export interface PendingSentMessage {
   timestamp: string;  // ISO timestamp captured when message was sent
   sequence: number;   // Sequence number for guaranteed ordering
 }
+
+// =========================================
+// Backend Conversation Message Types
+// =========================================
+
+/**
+ * Metadata attached to conversation messages from backend
+ * Used primarily for assistant messages to link to reasoning traces
+ */
+export interface ConversationMessageMetadata {
+  /** IDs of reasoning traces linked to this message (for assistant messages) */
+  traceIds?: string[];
+  /** Which LLM model generated this response */
+  modelUsed?: string;
+  /** Number of tool calls made for this response */
+  toolCallCount?: number;
+  /** Error message if the message represents a failed operation */
+  errorMessage?: string;
+}
+
+/**
+ * Conversation message as returned from the backend API
+ * GET /api/agents/conversations/:threadId/messages
+ */
+export interface BackendConversationMessage {
+  id: string;
+  threadId: string;
+  userId: string;
+  type: 'user' | 'assistant' | 'system';
+  content: string;
+  sequence: number;
+  metadata?: ConversationMessageMetadata | null;
+  createdAt: string; // ISO timestamp
+}

@@ -12,6 +12,7 @@ import { AssetsModule } from './modules/assets/assets.module';
 import { AgentsModule } from './modules/agents/agents.module';
 import { CitationsModule } from './modules/citations/citations.module';
 import { ApprovalsModule } from './modules/approvals/approvals.module';
+import { ConversationsModule } from './modules/conversations/conversations.module';
 
 function shouldSynchronize(env: string | undefined): boolean {
   return env === 'development' || env === 'test';
@@ -78,6 +79,7 @@ function getTypeOrmModuleConfig(
     AgentsModule,
     CitationsModule,
     ApprovalsModule,
+    ConversationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

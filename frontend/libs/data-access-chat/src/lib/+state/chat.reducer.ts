@@ -1,5 +1,5 @@
 import { createReducer, on } from '@ngrx/store';
-import { SSEConnectionStatus } from '@stocks-researcher/types';
+import { PendingSentMessage, SSEConnectionStatus } from '@stocks-researcher/types';
 import { ChatActions } from './chat.actions';
 import { initialChatState, tracesAdapter } from './chat.state';
 
@@ -133,7 +133,7 @@ export const chatReducer = createReducer(
   // ========================================
 
   on(ChatActions.sendMessage, (state, { message }) => {
-    const pendingMessage: import('@stocks-researcher/types').PendingSentMessage = {
+    const pendingMessage: PendingSentMessage = {
       content: message,
       timestamp: new Date().toISOString(), // Capture timestamp now
       sequence: state.nextSequence,
@@ -168,13 +168,12 @@ export const chatReducer = createReducer(
   // Graph Completion
   // ========================================
 
-  on(ChatActions.graphComplete, (state) => ({
-    ...state,
-    graphExecuting: false,  // Graph done, re-enable input
-    // NOTE: Do NOT clear sentMessages here!
-    // They should only be cleared by messagesExtracted when confirmed.
-    // Since backend may not send user messages in traces, we keep optimistic messages.
-  })),
+  on(ChatActions.graphComplete, (state, { threadId }) => {
+    return {
+      ...state,
+      graphExecuting: false,  // Graph done, re-enable input
+    };
+  }),
 
   // ========================================
   // Message Management
@@ -192,7 +191,7 @@ export const chatReducer = createReducer(
       !extractedUserContents.includes(sentMsg.content.trim().toLowerCase())
     );
     
-    return {
+    const newState = {
       ...state,
       messages,
       // Only clear sent messages that have been confirmed in extracted messages
@@ -200,6 +199,8 @@ export const chatReducer = createReducer(
       // Update nextSequence if provided (from historical trace loading)
       nextSequence: nextSequence !== undefined ? nextSequence : state.nextSequence,
     };
+    
+    return newState;
   }),
 
   on(ChatActions.toggleMessageTraces, (state, { messageId }) => {
@@ -212,6 +213,56 @@ export const chatReducer = createReducer(
       expandedMessageIds,
     };
   }),
+
+  // ========================================
+  // Conversation Messages (New Persistence Layer)
+  // ========================================
+
+  on(ChatActions.loadConversationMessages, (state) => ({
+    ...state,
+    loading: true,
+    error: null,
+  })),
+
+  /**
+   * Conversation messages loaded from API
+   * This replaces trace-based extraction with server-side persistence.
+   * Messages are now reliably persisted and survive page reloads.
+   */
+  on(ChatActions.conversationMessagesLoaded, (state, { messages }) => {
+    // Smart clearing: Remove optimistic messages that have been confirmed by backend
+    const loadedUserContents = messages
+      .filter(m => m.type === 'user')
+      .map(m => m.content.trim().toLowerCase());
+    
+    // Keep only sent messages that haven't been confirmed yet
+    const stillPendingSentMessages = state.sentMessages.filter(sentMsg => 
+      !loadedUserContents.includes(sentMsg.content.trim().toLowerCase())
+    );
+
+    // Calculate next sequence from loaded messages
+    const maxSequence = messages.reduce((max, msg) => 
+      msg.sequence !== undefined ? Math.max(max, msg.sequence) : max, 
+      -1
+    );
+
+    const newState = {
+      ...state,
+      messages,
+      sentMessages: stillPendingSentMessages,
+      nextSequence: maxSequence + 1,
+      loading: false,
+      error: null,
+    };
+    
+    return newState;
+  }),
+
+  on(ChatActions.conversationMessagesLoadFailed, (state, { error }) => ({
+    ...state,
+    loading: false,
+    error,
+  })),
 
   // ========================================
   // Reset

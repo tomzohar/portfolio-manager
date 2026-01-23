@@ -64,16 +64,6 @@ export class ChatPageComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly facade = inject(ChatFacade);
-  
-  // Track previous threadId to handle cleanup
-  private previousThreadId: string | null = null;
-  
-  // Track if we're currently loading an existing conversation
-  private isLoadingExistingConversation = signal(false);
-
-  // ========================================
-  // Route Parameter Handling
-  // ========================================
 
   /**
    * Thread ID from route parameters
@@ -83,6 +73,66 @@ export class ChatPageComponent implements OnDestroy {
     this.route.paramMap.pipe(map((params) => params.get('threadId'))),
     { initialValue: null }
   );
+
+  /**
+   * Effect: Load conversation messages when threadId exists (backend format only)
+   * 
+   * This effect watches for threadId changes and automatically loads messages
+   * when a valid backend format threadId is present in the route.
+   * 
+   * Only loads for backend format threadIds (contains ':'), not frontend-generated ones.
+   */
+  private loadMessagesEffect = effect(() => {
+    const currentThreadId = this.threadId();
+    
+    // Only load if threadId exists and is in backend format
+    if (currentThreadId && currentThreadId.includes(':')) {
+      // Validate threadId format before loading
+      if (this.isValidThreadId(currentThreadId)) {
+        this.facade.loadConversationMessages(currentThreadId);
+      }
+    }
+  });
+
+  /**
+   * Track previous graph active state to detect transitions
+   */
+  private previousGraphActive = signal<boolean | undefined>(undefined);
+
+  /**
+   * Effect: Navigate to threadId route when graph completes and route has no threadId
+   * 
+   * This effect watches for graph completion and automatically updates the route
+   * with the threadId returned from the backend when the graph execution finishes.
+   * 
+   * Only navigates if:
+   * - Graph just transitioned from active to inactive
+   * - Route doesn't have a threadId (route threadId is null)
+   * - Facade has a valid threadId from the backend
+   */
+  private navigateToThreadIdEffect = effect(() => {
+    const routeThreadId = this.threadId();
+    const facadeThreadId = this.facadeThreadId();
+    const graphActive = this.isGraphActive();
+    const wasGraphActive = this.previousGraphActive();
+    
+    // Update previous state
+    this.previousGraphActive.set(graphActive);
+    
+    // Navigate when:
+    // 1. Graph just transitioned from active to inactive (was true, now false)
+    // 2. Route has no threadId
+    // 3. Facade has a valid backend threadId
+    const graphJustCompleted = wasGraphActive === true && !graphActive;
+    
+    if (graphJustCompleted && !routeThreadId && facadeThreadId) {
+      // Only navigate if threadId is in backend format (contains ':')
+      if (facadeThreadId.includes(':')) {
+        console.log('[ChatPage] Graph completed, navigating to threadId route:', facadeThreadId);
+        this.router.navigate(['/chat', facadeThreadId], { replaceUrl: true });
+      }
+    }
+  });
 
   // ========================================
   // State from Facade
@@ -150,90 +200,7 @@ export class ChatPageComponent implements OnDestroy {
   /**
    * Whether we're loading chat history for an existing conversation
    */
-  isLoadingChatHistory = computed(() => {
-    const messages = this.messages();
-    
-    // If messages loaded, not loading anymore
-    if (messages.length > 0) {
-      return false;
-    }
-    
-    // Otherwise, check if we're in loading phase
-    return this.isLoadingExistingConversation();
-  });
-
-  // ========================================
-  // Effects
-  // ========================================
-
-  /**
-   * Effect: Handle threadId changes
-   * When no threadId (new conversation), generate one and navigate
-   * When threadId is backend format, load conversation data
-   */
-  private threadIdEffect = effect(() => {
-    const threadId = this.threadId();
-    
-    // If no threadId (e.g., /chat with no param), create new conversation
-    if (!threadId) {
-      const newThreadId = this.generateThreadId();
-      this.router.navigate(['/chat', newThreadId], { replaceUrl: true });
-      return;
-    }
-
-    // If threadId changed, disconnect from previous SSE connection
-    if (this.previousThreadId && this.previousThreadId !== threadId) {
-      this.facade.disconnectSSE();
-      this.isLoadingExistingConversation.set(false);
-    }
-
-    // If threadId is in backend format (userId:threadId), load the conversation
-    // Backend format indicates an existing conversation that needs to be loaded
-    const isBackendFormat = threadId.includes(':');
-    if (isBackendFormat && this.isValidThreadId(threadId)) {
-      // Set loading state immediately before SSE connects
-      this.isLoadingExistingConversation.set(true);
-      
-      // Connect SSE and load historical traces for existing conversation
-      // The SSE connection will automatically trigger historical trace loading
-      this.facade.connectSSE(threadId);
-    } else {
-      // Frontend-generated threadIds don't need loading
-      this.isLoadingExistingConversation.set(false);
-    }
-    
-    // Track current threadId for next change
-    this.previousThreadId = threadId;
-    
-    // Frontend-generated threadIds (thread-timestamp-random) don't need loading
-    // They represent new conversations that will be created on first message send
-  });
-
-  /**
-   * Effect: Navigate to backend threadId after message sent
-   * Backend may return different threadId than what we started with
-   */
-  private syncThreadIdEffect = effect(() => {
-    const routeThreadId = this.threadId();
-    const facadeThreadId = this.facadeThreadId();
-    
-    // If facade has threadId from backend that differs from route, navigate to it
-    if (facadeThreadId && routeThreadId && facadeThreadId !== routeThreadId) {
-      this.router.navigate(['/chat', facadeThreadId], { replaceUrl: true });
-    }
-  });
-
-  /**
-   * Effect: Clear loading state when messages arrive
-   */
-  private clearLoadingOnMessagesEffect = effect(() => {
-    const messages = this.messages();
-    
-    // Once messages are loaded, clear the loading state
-    if (messages.length > 0) {
-      this.isLoadingExistingConversation.set(false);
-    }
-  });
+  isLoadingChatHistory = this.facade.loading;
 
   // ========================================
   // Lifecycle
@@ -245,9 +212,6 @@ export class ChatPageComponent implements OnDestroy {
     
     // Reset state when leaving chat page
     this.facade.resetState();
-    
-    // Clear loading state
-    this.isLoadingExistingConversation.set(false);
   }
 
   // ========================================
@@ -265,9 +229,6 @@ export class ChatPageComponent implements OnDestroy {
     // Reset state
     this.facade.resetState();
     
-    // Clear loading state
-    this.isLoadingExistingConversation.set(false);
-
     // Generate new thread ID
     const newThreadId = this.generateThreadId();
 

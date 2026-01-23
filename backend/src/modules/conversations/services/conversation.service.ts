@@ -1,0 +1,271 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { ConversationMessage } from '../entities/conversation-message.entity';
+import { ConversationMessageType } from '../types/conversation-message-type.enum';
+import { ConversationMessageMetadata } from '../types/conversation-message-metadata.interface';
+
+/** Parameters for saving a user message */
+export interface SaveUserMessageParams {
+  threadId: string;
+  userId: string;
+  content: string;
+}
+
+/** Parameters for saving an assistant message */
+export interface SaveAssistantMessageParams {
+  threadId: string;
+  userId: string;
+  content: string;
+  traceIds: string[];
+  modelUsed?: string;
+}
+
+/** Parameters for paginated message retrieval */
+export interface GetPaginatedMessagesParams {
+  threadId: string;
+  userId?: string;
+  limit?: number;
+  beforeSequence?: number;
+  afterSequence?: number;
+}
+
+/** Result of paginated message retrieval */
+export interface PaginatedMessagesResult {
+  messages: ConversationMessage[];
+  hasMore: boolean;
+}
+
+/**
+ * ConversationService
+ *
+ * Manages conversation messages for reliable persistence and retrieval.
+ * This service implements the CQRS read model for conversation display,
+ * separate from reasoning traces which are used for debugging/observability.
+ *
+ * Key responsibilities:
+ * - Save user messages immediately when conversation starts (before graph execution)
+ * - Save AI responses when graph completes (with links to reasoning traces)
+ * - Retrieve messages in chronological order for conversation display
+ * - Support pagination for long conversations
+ *
+ * This service is part of Chat Message Persistence (Solution A)
+ * as specified in Chat_Message_Persistence.md.
+ */
+@Injectable()
+export class ConversationService {
+  private readonly logger = new Logger(ConversationService.name);
+
+  constructor(
+    @InjectRepository(ConversationMessage)
+    private readonly messageRepo: Repository<ConversationMessage>,
+  ) {}
+
+  /**
+   * Save user message when conversation starts.
+   * Called immediately when user sends message, BEFORE graph execution.
+   * This ensures the message is persisted even if the graph fails.
+   *
+   * @param params - User message parameters
+   * @returns The saved conversation message
+   */
+  async saveUserMessage(
+    params: SaveUserMessageParams,
+  ): Promise<ConversationMessage> {
+    const sequence = await this.getNextSequence(params.threadId);
+
+    const message = this.messageRepo.create({
+      threadId: params.threadId,
+      userId: params.userId,
+      type: ConversationMessageType.USER,
+      content: params.content,
+      sequence,
+      metadata: {},
+    });
+
+    const saved = await this.messageRepo.save(message);
+    this.logger.debug(
+      `User message saved: ${saved.id} (thread: ${params.threadId}, seq: ${sequence})`,
+    );
+
+    return saved;
+  }
+
+  /**
+   * Save AI response when graph completes.
+   * Called by graph completion handler with final report.
+   *
+   * @param params - Assistant message parameters including trace IDs for linking
+   * @returns The saved conversation message
+   */
+  async saveAssistantMessage(
+    params: SaveAssistantMessageParams,
+  ): Promise<ConversationMessage> {
+    const sequence = await this.getNextSequence(params.threadId);
+
+    const metadata: ConversationMessageMetadata = {
+      traceIds: params.traceIds,
+      modelUsed: params.modelUsed,
+    };
+
+    const message = this.messageRepo.create({
+      threadId: params.threadId,
+      userId: params.userId,
+      type: ConversationMessageType.ASSISTANT,
+      content: params.content,
+      sequence,
+      metadata,
+    });
+
+    const saved = await this.messageRepo.save(message);
+    this.logger.debug(
+      `Assistant message saved: ${saved.id} (thread: ${params.threadId}, seq: ${sequence})`,
+    );
+
+    return saved;
+  }
+
+  /**
+   * Get all messages for a thread (for conversation display).
+   * Messages are returned in chronological order by sequence number.
+   *
+   * @param threadId - The thread ID to get messages for
+   * @param userId - Optional user ID for authorization check
+   * @returns Array of conversation messages in order
+   */
+  async getThreadMessages(
+    threadId: string,
+    userId?: string,
+  ): Promise<ConversationMessage[]> {
+    const where: { threadId: string; userId?: string } = { threadId };
+    if (userId) {
+      where.userId = userId;
+    }
+
+    return this.messageRepo.find({
+      where,
+      order: { sequence: 'ASC' },
+    });
+  }
+
+  /**
+   * Get messages for a thread with optional pagination.
+   * Automatically decides whether to use pagination based on query parameters.
+   * This encapsulates the business logic for message retrieval.
+   *
+   * @param params - Parameters including threadId, userId, and optional pagination
+   * @returns Array of conversation messages
+   */
+  async getMessages(params: {
+    threadId: string;
+    userId: string;
+    limit?: number;
+    beforeSequence?: number;
+    afterSequence?: number;
+  }): Promise<ConversationMessage[]> {
+    // Determine if pagination is explicitly requested
+    // Pagination is only used when cursor-based pagination is requested:
+    // - beforeSequence: loading older messages (backward pagination)
+    // - afterSequence: loading newer messages (forward pagination)
+    // Note: limit alone does NOT trigger pagination - it's only used WITH cursors
+    // This prevents the default limit value from incorrectly triggering pagination
+    const hasPaginationCursors =
+      params.beforeSequence !== undefined || params.afterSequence !== undefined;
+
+    if (hasPaginationCursors) {
+      const result = await this.getPaginatedMessages({
+        threadId: params.threadId,
+        userId: params.userId,
+        limit: params.limit || 50, // Use provided limit or default to 50 for pagination
+        beforeSequence: params.beforeSequence,
+        afterSequence: params.afterSequence,
+      });
+      return result.messages;
+    }
+
+    // Default: return all messages for the thread (no pagination)
+    // Ignore limit parameter when no pagination cursors are provided
+    return this.getThreadMessages(params.threadId, params.userId);
+  }
+
+  /**
+   * Get paginated messages (for infinite scroll / large conversations).
+   * Returns messages in descending order from DB, then reverses to ascending for display.
+   *
+   * @param params - Pagination parameters
+   * @returns Messages and hasMore flag
+   */
+  async getPaginatedMessages(
+    params: GetPaginatedMessagesParams,
+  ): Promise<PaginatedMessagesResult> {
+    const limit = params.limit || 50;
+
+    const query = this.messageRepo
+      .createQueryBuilder('msg')
+      .where('msg.threadId = :threadId', { threadId: params.threadId });
+
+    if (params.userId) {
+      query.andWhere('msg.userId = :userId', { userId: params.userId });
+    }
+
+    if (params.beforeSequence !== undefined) {
+      query.andWhere('msg.sequence < :beforeSequence', {
+        beforeSequence: params.beforeSequence,
+      });
+    }
+
+    if (params.afterSequence !== undefined) {
+      query.andWhere('msg.sequence > :afterSequence', {
+        afterSequence: params.afterSequence,
+      });
+    }
+
+    // Fetch one extra to check if there are more messages
+    query.orderBy('msg.sequence', 'DESC').limit(limit + 1);
+
+    const messages = await query.getMany();
+    const hasMore = messages.length > limit;
+
+    return {
+      // Reverse to get ascending order (oldest first) for display
+      messages: messages.slice(0, limit).reverse(),
+      hasMore,
+    };
+  }
+
+  /**
+   * Get message count for a thread.
+   *
+   * @param threadId - The thread ID to count messages for
+   * @returns Number of messages in the thread
+   */
+  async getMessageCount(threadId: string): Promise<number> {
+    return this.messageRepo.count({ where: { threadId } });
+  }
+
+  /**
+   * Delete all messages for a thread (when thread is deleted).
+   *
+   * @param threadId - The thread ID to delete messages for
+   */
+  async deleteThreadMessages(threadId: string): Promise<void> {
+    await this.messageRepo.delete({ threadId });
+    this.logger.debug(`Deleted all messages for thread: ${threadId}`);
+  }
+
+  /**
+   * Get the next sequence number for a thread.
+   * Private method that finds the last message and increments its sequence.
+   *
+   * @param threadId - The thread ID to get next sequence for
+   * @returns Next sequence number (0 if no messages exist)
+   */
+  private async getNextSequence(threadId: string): Promise<number> {
+    const lastMessage = await this.messageRepo.findOne({
+      where: { threadId },
+      order: { sequence: 'DESC' },
+    });
+
+    return lastMessage ? lastMessage.sequence + 1 : 0;
+  }
+}

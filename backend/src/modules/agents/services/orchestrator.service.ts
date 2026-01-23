@@ -25,6 +25,7 @@ import { GuardrailException } from '../graphs/nodes/guardrail.node';
 import { TracingService } from './tracing.service';
 import { TracingCallbackHandler } from '../callbacks/tracing-callback.handler';
 import { CitationService } from '../../citations/services/citation.service';
+import { ConversationService } from '../../conversations/services/conversation.service';
 
 // ============================================================================
 // Types & Interfaces
@@ -79,6 +80,7 @@ export class OrchestratorService {
     private readonly graphExecutor: GraphExecutorService,
     private readonly interruptHandler: InterruptHandlerService,
     private readonly tracingService: TracingService,
+    private readonly conversationService: ConversationService,
     @Optional()
     @Inject(CitationService)
     private readonly citationService?: CitationService,
@@ -393,6 +395,10 @@ export class OrchestratorService {
       );
     }
 
+    // Save AI response as conversation message (Chat Message Persistence)
+    // This runs after graph completion, extracting the final report for display
+    await this.saveAssistantMessageFromState(threadId, userId, finalState);
+
     return {
       threadId,
       finalState,
@@ -400,6 +406,79 @@ export class OrchestratorService {
       status: 'COMPLETED',
       citationCount,
     };
+  }
+
+  /**
+   * Save assistant message from graph final state
+   *
+   * Extracts the final report from the last AI message and saves it
+   * as a conversation message. Links to reasoning traces for reference.
+   * Non-blocking - errors are logged but don't fail the execution.
+   *
+   * @param threadId - Scoped thread ID
+   * @param userId - User ID
+   * @param finalState - Final graph state
+   * @private
+   */
+  private async saveAssistantMessageFromState(
+    threadId: string,
+    userId: string,
+    finalState: CIOState,
+  ): Promise<void> {
+    try {
+      // Extract final report from last AI message or final_report field
+      let finalReport: string | undefined;
+
+      // Try to get from final_report field (set by end node)
+      if (finalState.final_report) {
+        finalReport = finalState.final_report;
+      }
+
+      // Fallback: extract from last AI message
+      if (!finalReport) {
+        const lastMessage = finalState.messages[finalState.messages.length - 1];
+        if (lastMessage instanceof AIMessage) {
+          finalReport =
+            typeof lastMessage.content === 'string'
+              ? lastMessage.content
+              : JSON.stringify(lastMessage.content);
+        }
+      }
+
+      if (!finalReport || finalReport.trim() === '') {
+        this.logger.debug(
+          `No final report found in state for thread ${threadId}, skipping AI message save`,
+        );
+        return;
+      }
+
+      // Get trace IDs for linking
+      const traces = await this.tracingService.getTracesByThread(
+        threadId,
+        userId,
+      );
+      const traceIds = traces.map((t) => t.id);
+
+      // Save the assistant message
+      await this.conversationService.saveAssistantMessage({
+        threadId,
+        userId,
+        content: finalReport,
+        traceIds,
+        modelUsed: process.env.GEMINI_MODEL || 'gemini-2.5-pro',
+      });
+
+      this.logger.debug(
+        `AI message saved for thread ${threadId} with ${traceIds.length} trace links`,
+      );
+    } catch (error) {
+      // Don't fail graph execution if message save fails
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `Failed to save AI message for thread ${threadId}: ${errorMessage}`,
+      );
+    }
   }
 
   /**

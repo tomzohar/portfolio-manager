@@ -10,27 +10,25 @@ import {
 /**
  * MessageExtractorService
  *
- * Extracts conversation messages (user input + AI responses) from reasoning traces.
+ * @deprecated This service is deprecated. Use ConversationApiService instead.
  *
- * IMPORTANT: This is a temporary solution for extracting messages from traces.
- * See Chat_Message_Persistence.md for the enterprise-grade solution using
- * dedicated ConversationMessage entity.
+ * The Chat Message Persistence feature (Solution A) has been implemented.
+ * Messages are now persisted in a dedicated `conversation_messages` table
+ * and retrieved via the new `/api/agents/conversations/:threadId/messages` endpoint.
  *
- * Current Strategy:
- * - User messages: Try to extract from observer/guardrail/reasoning node inputs
- * - AI responses: Extract from 'end' node's output.final_report
- * - Links AI messages to their corresponding reasoning traces
+ * This service extracts conversation messages from reasoning traces, which is
+ * unreliable because:
+ * - User messages are not reliably included in trace inputs
+ * - Relies on parsing JSONB data structures
+ * - Doesn't persist messages - they disappear on page reload
  *
- * Known Limitations:
- * - User messages may not be in traces (backend doesn't persist them reliably)
- * - Relies on optimistic UI updates for user messages
- * - Not suitable for long-term message persistence
+ * Migration:
+ * - Use `ConversationApiService.getMessages(threadId)` instead
+ * - The `loadConversationMessages$` effect now loads messages from the API
+ * - This service will be removed after validation period
  *
- * @example
- * ```typescript
- * const messages = this.extractor.extractMessagesFromTraces(traces);
- * // Returns: [UserMessage, AssistantMessage]
- * ```
+ * @see Chat_Message_Persistence.md for architecture details
+ * @see ConversationApiService for the replacement
  */
 @Injectable({
   providedIn: 'root',

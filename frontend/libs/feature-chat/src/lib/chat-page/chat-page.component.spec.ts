@@ -1,9 +1,24 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, ParamMap } from '@angular/router';
 import { ChatFacade } from '@stocks-researcher/data-access-chat';
 import { ChatPageComponent } from './chat-page.component';
 import { SSEConnectionStatus } from '@stocks-researcher/types';
+import { of } from 'rxjs';
+
+// Helper function for creating ParamMap
+function createParamMap(threadId: string | null): ParamMap {
+  const params = new Map<string, string>();
+  if (threadId) {
+    params.set('threadId', threadId);
+  }
+  return {
+    get: (key: string) => params.get(key) || null,
+    has: (key: string) => params.has(key),
+    getAll: (key: string) => (params.get(key) ? [params.get(key)!] : []),
+    keys: Array.from(params.keys()),
+  } as ParamMap;
+}
 
 describe('ChatPageComponent', () => {
   let component: ChatPageComponent;
@@ -17,9 +32,12 @@ describe('ChatPageComponent', () => {
     mockChatFacade = {
       currentThreadId: signal<string | null>(null),
       isGraphActive: signal<boolean>(false),
-      connectionStatus: signal<SSEConnectionStatus>(SSEConnectionStatus.DISCONNECTED),
+      connectionStatus: signal<SSEConnectionStatus>(
+        SSEConnectionStatus.DISCONNECTED
+      ),
       currentThreadTraces: signal([]),
       messages: signal([]),
+      displayMessages: signal([]),
       loading: signal(false),
       error: signal(null),
       expandedMessageIds: signal([]),
@@ -29,6 +47,7 @@ describe('ChatPageComponent', () => {
       sendMessage: jest.fn(),
       toggleMessageTraces: jest.fn(),
       toggleTraceExpansion: jest.fn(),
+      loadConversationMessages: jest.fn(),
     };
 
     // Mock Router
@@ -36,11 +55,9 @@ describe('ChatPageComponent', () => {
       navigate: jest.fn(),
     };
 
-    // Mock ActivatedRoute with paramMap
+    // Mock ActivatedRoute with paramMap Observable
     mockActivatedRoute = {
-      paramMap: signal({
-        get: (key: string) => key === 'threadId' ? 'thread-123' : null,
-      }),
+      paramMap: of(createParamMap('thread-123')),
     };
 
     await TestBed.configureTestingModule({
@@ -71,9 +88,9 @@ describe('ChatPageComponent', () => {
     });
 
     it('should handle null threadId', () => {
-      mockActivatedRoute.paramMap = signal({
-        get: () => null,
-      });
+      mockActivatedRoute.paramMap = of(createParamMap(null));
+      fixture = TestBed.createComponent(ChatPageComponent);
+      component = fixture.componentInstance;
       fixture.detectChanges();
 
       expect(component.threadId()).toBeNull();
@@ -83,10 +100,10 @@ describe('ChatPageComponent', () => {
       fixture.detectChanges();
       expect(component.threadId()).toBe('thread-123');
 
-      // Simulate route change
-      mockActivatedRoute.paramMap = signal({
-        get: (key: string) => key === 'threadId' ? 'thread-456' : null,
-      });
+      // Simulate route change - need to recreate component with new route
+      mockActivatedRoute.paramMap = of(createParamMap('thread-456'));
+      fixture = TestBed.createComponent(ChatPageComponent);
+      component = fixture.componentInstance;
       fixture.detectChanges();
 
       expect(component.threadId()).toBe('thread-456');
@@ -188,21 +205,21 @@ describe('ChatPageComponent', () => {
   describe('Chat Data Loading', () => {
     it('should load conversation when threadId is in backend format', () => {
       // Setup backend format threadId
-      mockActivatedRoute.paramMap = signal({
-        get: (key: string) => key === 'threadId' ? 'user123:thread456' : null,
-      });
-
+      mockActivatedRoute.paramMap = of(createParamMap('user123:thread456'));
+      fixture = TestBed.createComponent(ChatPageComponent);
+      component = fixture.componentInstance;
       fixture.detectChanges();
 
-      expect(mockChatFacade.connectSSE).toHaveBeenCalledWith('user123:thread456');
+      expect(mockChatFacade.connectSSE).toHaveBeenCalledWith(
+        'user123:thread456'
+      );
     });
 
     it('should NOT load conversation for frontend-generated threadIds', () => {
       // Setup frontend format threadId
-      mockActivatedRoute.paramMap = signal({
-        get: (key: string) => key === 'threadId' ? 'thread-1234567890-abc' : null,
-      });
-
+      mockActivatedRoute.paramMap = of(createParamMap('thread-1234567890-abc'));
+      fixture = TestBed.createComponent(ChatPageComponent);
+      component = fixture.componentInstance;
       fixture.detectChanges();
 
       expect(mockChatFacade.connectSSE).not.toHaveBeenCalled();
@@ -210,18 +227,18 @@ describe('ChatPageComponent', () => {
 
     it('should disconnect SSE when threadId changes', () => {
       // Start with backend format
-      mockActivatedRoute.paramMap = signal({
-        get: (key: string) => key === 'threadId' ? 'user123:thread1' : null,
-      });
+      mockActivatedRoute.paramMap = of(createParamMap('user123:thread1'));
+      fixture = TestBed.createComponent(ChatPageComponent);
+      component = fixture.componentInstance;
       fixture.detectChanges();
 
       // Clear previous calls
       jest.clearAllMocks();
 
       // Change to different backend format threadId
-      mockActivatedRoute.paramMap.set({
-        get: (key: string) => key === 'threadId' ? 'user123:thread2' : null,
-      });
+      mockActivatedRoute.paramMap = of(createParamMap('user123:thread2'));
+      fixture = TestBed.createComponent(ChatPageComponent);
+      component = fixture.componentInstance;
       fixture.detectChanges();
 
       expect(mockChatFacade.disconnectSSE).toHaveBeenCalled();
@@ -230,11 +247,10 @@ describe('ChatPageComponent', () => {
 
     it('should show loading state when loading chat history', () => {
       // Setup: backend format threadId, no messages
-      mockActivatedRoute.paramMap = signal({
-        get: (key: string) => key === 'threadId' ? 'user123:thread456' : null,
-      });
+      mockActivatedRoute.paramMap = of(createParamMap('user123:thread456'));
       mockChatFacade.messages = signal([]);
-
+      fixture = TestBed.createComponent(ChatPageComponent);
+      component = fixture.componentInstance;
       fixture.detectChanges();
 
       // Loading flag should be set immediately when backend threadId is detected
@@ -243,11 +259,10 @@ describe('ChatPageComponent', () => {
 
     it('should NOT show loading state for frontend-generated threadIds', () => {
       // Setup: frontend format threadId
-      mockActivatedRoute.paramMap = signal({
-        get: (key: string) => key === 'threadId' ? 'thread-1234567890-abc' : null,
-      });
+      mockActivatedRoute.paramMap = of(createParamMap('thread-1234567890-abc'));
       mockChatFacade.messages = signal([]);
-
+      fixture = TestBed.createComponent(ChatPageComponent);
+      component = fixture.componentInstance;
       fixture.detectChanges();
 
       expect(component.isLoadingChatHistory()).toBe(false);
@@ -255,13 +270,17 @@ describe('ChatPageComponent', () => {
 
     it('should NOT show loading state when messages already loaded', () => {
       // Setup: backend format, but has messages
-      mockActivatedRoute.paramMap = signal({
-        get: (key: string) => key === 'threadId' ? 'user123:thread456' : null,
-      });
+      mockActivatedRoute.paramMap = of(createParamMap('user123:thread456'));
       mockChatFacade.messages = signal([
-        { id: '1', role: 'user', content: 'Test message', timestamp: new Date() }
+        {
+          id: '1',
+          role: 'user',
+          content: 'Test message',
+          timestamp: new Date(),
+        },
       ]);
-
+      fixture = TestBed.createComponent(ChatPageComponent);
+      component = fixture.componentInstance;
       fixture.detectChanges();
 
       expect(component.isLoadingChatHistory()).toBe(false);
@@ -269,11 +288,10 @@ describe('ChatPageComponent', () => {
 
     it('should clear loading state when messages arrive', () => {
       // Setup: backend format, no messages initially
-      mockActivatedRoute.paramMap = signal({
-        get: (key: string) => key === 'threadId' ? 'user123:thread456' : null,
-      });
+      mockActivatedRoute.paramMap = of(createParamMap('user123:thread456'));
       mockChatFacade.messages = signal([]);
-
+      fixture = TestBed.createComponent(ChatPageComponent);
+      component = fixture.componentInstance;
       fixture.detectChanges();
 
       // Should be loading initially
@@ -281,7 +299,12 @@ describe('ChatPageComponent', () => {
 
       // Simulate messages arriving
       mockChatFacade.messages.set([
-        { id: '1', role: 'user', content: 'Test message', timestamp: new Date() }
+        {
+          id: '1',
+          role: 'user',
+          content: 'Test message',
+          timestamp: new Date(),
+        },
       ]);
       fixture.detectChanges();
 
@@ -298,6 +321,182 @@ describe('ChatPageComponent', () => {
 
       // Should not throw (settings functionality to be implemented)
       expect(component).toBeTruthy();
+    });
+  });
+
+  describe('Load Messages on Init', () => {
+    it('should load messages when threadId exists and is in backend format', () => {
+      // Setup: backend format threadId
+      mockActivatedRoute.paramMap = of(createParamMap('user123:thread456'));
+      
+      // Update TestBed provider with new route
+      TestBed.overrideProvider(ActivatedRoute, { useValue: mockActivatedRoute });
+      
+      fixture = TestBed.createComponent(ChatPageComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      expect(mockChatFacade.loadConversationMessages).toHaveBeenCalledWith(
+        'user123:thread456'
+      );
+    });
+
+    it('should NOT load messages when threadId is in frontend format', () => {
+      // Setup: frontend format threadId
+      mockActivatedRoute.paramMap = of(createParamMap('thread-1234567890-abc'));
+      
+      // Update TestBed provider with new route
+      TestBed.overrideProvider(ActivatedRoute, { useValue: mockActivatedRoute });
+      
+      fixture = TestBed.createComponent(ChatPageComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      expect(mockChatFacade.loadConversationMessages).not.toHaveBeenCalled();
+    });
+
+    it('should NOT load messages when threadId is null', () => {
+      // Setup: no threadId
+      mockActivatedRoute.paramMap = of(createParamMap(null));
+      
+      // Update TestBed provider with new route
+      TestBed.overrideProvider(ActivatedRoute, { useValue: mockActivatedRoute });
+      
+      fixture = TestBed.createComponent(ChatPageComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      expect(mockChatFacade.loadConversationMessages).not.toHaveBeenCalled();
+    });
+
+    it('should load messages when threadId changes to backend format', () => {
+      // Start with frontend format
+      mockActivatedRoute.paramMap = of(createParamMap('thread-123'));
+      TestBed.overrideProvider(ActivatedRoute, { useValue: mockActivatedRoute });
+      fixture = TestBed.createComponent(ChatPageComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      jest.clearAllMocks();
+
+      // Change to backend format - need to recreate component with new route
+      mockActivatedRoute.paramMap = of(createParamMap('user123:thread456'));
+      TestBed.overrideProvider(ActivatedRoute, { useValue: mockActivatedRoute });
+      fixture = TestBed.createComponent(ChatPageComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      expect(mockChatFacade.loadConversationMessages).toHaveBeenCalledWith(
+        'user123:thread456'
+      );
+    });
+  });
+
+  describe('Navigate to ThreadId on Graph Complete', () => {
+    it('should navigate to threadId route when graph completes and route has no threadId', () => {
+      // Setup: no threadId in route, graph is active, facade has threadId
+      mockActivatedRoute.paramMap = of(createParamMap(null));
+      mockChatFacade.isGraphActive = signal(true);
+      mockChatFacade.currentThreadId = signal('user123:thread456');
+      
+      TestBed.overrideProvider(ActivatedRoute, { useValue: mockActivatedRoute });
+      fixture = TestBed.createComponent(ChatPageComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges(); // First detectChanges sets previousGraphActive to true
+
+      jest.clearAllMocks();
+
+      // Simulate graph completion (transition from true to false)
+      mockChatFacade.isGraphActive.set(false);
+      fixture.detectChanges();
+
+      // Should navigate to route with threadId
+      expect(mockRouter.navigate).toHaveBeenCalledWith(
+        ['/chat', 'user123:thread456'],
+        { replaceUrl: true }
+      );
+    });
+
+    it('should NOT navigate if route already has threadId', () => {
+      // Setup: route has threadId, graph is active, facade has threadId
+      mockActivatedRoute.paramMap = of(createParamMap('user123:existing-thread'));
+      mockChatFacade.isGraphActive = signal(true);
+      mockChatFacade.currentThreadId = signal('user123:thread456');
+      
+      TestBed.overrideProvider(ActivatedRoute, { useValue: mockActivatedRoute });
+      fixture = TestBed.createComponent(ChatPageComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      jest.clearAllMocks();
+
+      // Simulate graph completion
+      mockChatFacade.isGraphActive.set(false);
+      fixture.detectChanges();
+
+      // Should NOT navigate since route already has threadId
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
+    });
+
+    it('should NOT navigate if graph is still active', () => {
+      // Setup: no threadId in route, graph is still active, facade has threadId
+      mockActivatedRoute.paramMap = of(createParamMap(null));
+      mockChatFacade.isGraphActive = signal(true);
+      mockChatFacade.currentThreadId = signal('user123:thread456');
+      
+      TestBed.overrideProvider(ActivatedRoute, { useValue: mockActivatedRoute });
+      fixture = TestBed.createComponent(ChatPageComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges(); // First detectChanges sets previousGraphActive
+
+      jest.clearAllMocks();
+
+      // Graph is still active (no transition), should not navigate
+      fixture.detectChanges();
+
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
+    });
+
+    it('should NOT navigate if facade has no threadId', () => {
+      // Setup: no threadId in route, graph is active, facade has no threadId
+      mockActivatedRoute.paramMap = of(createParamMap(null));
+      mockChatFacade.isGraphActive = signal(true);
+      mockChatFacade.currentThreadId = signal(null);
+      
+      TestBed.overrideProvider(ActivatedRoute, { useValue: mockActivatedRoute });
+      fixture = TestBed.createComponent(ChatPageComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges(); // First detectChanges sets previousGraphActive
+
+      jest.clearAllMocks();
+
+      // Simulate graph completion (transition from true to false)
+      mockChatFacade.isGraphActive.set(false);
+      fixture.detectChanges();
+
+      // Should NOT navigate since facade has no threadId
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
+    });
+
+    it('should NOT navigate if threadId is in frontend format', () => {
+      // Setup: no threadId in route, graph is active, facade has frontend format threadId
+      mockActivatedRoute.paramMap = of(createParamMap(null));
+      mockChatFacade.isGraphActive = signal(true);
+      mockChatFacade.currentThreadId = signal('thread-1234567890-abc');
+      
+      TestBed.overrideProvider(ActivatedRoute, { useValue: mockActivatedRoute });
+      fixture = TestBed.createComponent(ChatPageComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges(); // First detectChanges sets previousGraphActive
+
+      jest.clearAllMocks();
+
+      // Simulate graph completion (transition from true to false)
+      mockChatFacade.isGraphActive.set(false);
+      fixture.detectChanges();
+
+      // Should NOT navigate since threadId is not in backend format
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
     });
   });
 });

@@ -28,6 +28,7 @@ import { FredService } from '../assets/services/fred.service';
 import { NewsService } from '../assets/services/news.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ConversationsModule } from '../conversations/conversations.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
     forwardRef(() => PortfolioModule), // Import PortfolioModule for PortfolioService
     forwardRef(() => PerformanceModule), // Import PerformanceModule for PerformanceService
     forwardRef(() => CitationsModule), // Import CitationsModule for CitationService
+    forwardRef(() => ConversationsModule), // Import ConversationsModule for ConversationService
   ],
   controllers: [AgentsController],
   providers: [

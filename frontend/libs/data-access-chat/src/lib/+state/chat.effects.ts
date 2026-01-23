@@ -1,22 +1,22 @@
 import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { NodeCompleteEventData, GraphCompleteEventData, SSEConnectionStatus, SSEEventType } from '@stocks-researcher/types';
-import { of } from 'rxjs';
+import { GraphCompleteEventData, NodeCompleteEventData, SSEConnectionStatus, SSEEventType } from '@stocks-researcher/types';
+import { of, timer } from 'rxjs';
 import {
   catchError,
   filter,
   map,
+  mergeMap,
   switchMap,
   takeUntil,
   tap,
   withLatestFrom,
 } from 'rxjs/operators';
+import { ConversationApiService } from '../services/conversation-api.service';
 import { ReasoningTraceApiService } from '../services/reasoning-trace-api.service';
 import { SSEService } from '../services/sse.service';
-import { MessageExtractorService } from '../services/message-extractor.service';
 import { ChatActions } from './chat.actions';
-import { selectAllTraces, selectNextSequence } from './chat.selectors';
 
 /**
  * Chat Effects
@@ -42,7 +42,11 @@ export class ChatEffects {
   private readonly store = inject(Store);
   private readonly sseService = inject(SSEService);
   private readonly traceApi = inject(ReasoningTraceApiService);
-  private readonly messageExtractor = inject(MessageExtractorService);
+  private readonly conversationApi = inject(ConversationApiService);
+
+  constructor() {
+    console.log('[ChatEffects] ChatEffects instance created, effects registered');
+  }
 
   /**
    * Effect: Connect to SSE stream
@@ -62,11 +66,10 @@ export class ChatEffects {
   connectSSE$ = createEffect(() =>
     this.actions$.pipe(
       ofType(ChatActions.connectSSE),
-      switchMap(({ threadId }) =>
-        this.sseService.connect(threadId).pipe(
+      switchMap(({ threadId }) => {
+        return this.sseService.connect(threadId).pipe(
           map((event) => ChatActions.sSEEventReceived({ event })),
           catchError((error) => {
-            console.error('SSE connection error:', error);
             return of(
               ChatActions.sSEDisconnected({
                 error: 'Failed to connect to event stream',
@@ -76,8 +79,8 @@ export class ChatEffects {
           takeUntil(
             this.actions$.pipe(ofType(ChatActions.disconnectSSE))
           )
-        )
-      )
+        );
+      })
     )
   );
 
@@ -234,6 +237,67 @@ export class ChatEffects {
   );
 
   /**
+   * Effect: Load conversation messages after SSE connection
+   * 
+   * Triggered by: sseConnected action
+   * 
+   * Flow:
+   * 1. Wait for sseConnected
+   * 2. Dispatch loadConversationMessages for the thread
+   * 
+   * This is part of the new Chat Message Persistence feature.
+   * Uses the dedicated conversation messages API endpoint for
+   * reliable message persistence across page reloads.
+   * 
+   * @see Chat_Message_Persistence.md for architecture details
+   */
+  loadMessagesOnConnect$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(ChatActions.sSEConnected, ChatActions.graphComplete),
+      map(({ threadId }) =>
+        ChatActions.loadConversationMessages({ threadId })
+      )
+    )
+  );
+
+  /**
+   * Effect: Load conversation messages from API
+   * 
+   * Triggered by: loadConversationMessages action
+   * 
+   * Flow:
+   * 1. Call ConversationApiService.getMessages()
+   * 2. Dispatch conversationMessagesLoaded on success
+   * 3. Dispatch conversationMessagesLoadFailed on error
+   * 
+   * This replaces the trace-based message extraction with
+   * reliable server-side message persistence.
+   */
+  loadConversationMessages$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(ChatActions.loadConversationMessages),
+      switchMap(({ threadId }) => {
+        return this.conversationApi.getMessages(threadId).pipe(
+          map((messages) =>
+            ChatActions.conversationMessagesLoaded({ messages })
+          ),
+          catchError((error) => {
+            // On 404 (no messages yet), return empty array instead of error
+            if (error.status === 404) {
+              return of(ChatActions.conversationMessagesLoaded({ messages: [] }));
+            }
+            return of(
+              ChatActions.conversationMessagesLoadFailed({
+                error: 'Failed to load conversation messages',
+              })
+            );
+          })
+        );
+      })
+    )
+  );
+
+  /**
    * Effect: Log SSE events for debugging (dev only)
    * 
    * Triggered by: sseEventReceived action
@@ -247,8 +311,12 @@ export class ChatEffects {
         ofType(ChatActions.sSEEventReceived),
         tap(({ event }) => {
           // Log SSE events (development only when environment is available)
-          if (typeof window !== 'undefined' && !(window as any).environment?.production) {
-            console.log('[SSE Event]', event.type, event.data);
+          if (typeof window !== 'undefined') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const win = window as any;
+            if (!win.environment?.production) {
+              console.log('[SSE Event]', event.type, event.data);
+            }
           }
         })
       ),
@@ -282,61 +350,128 @@ export class ChatEffects {
 
   /**
    * After message sent successfully, ensure SSE is connected
+   * 
+   * Only connects if not already connected to the same threadId.
+   * This prevents disconnecting and reconnecting SSE unnecessarily,
+   * which would cause us to miss graph.complete events from previous messages.
    */
   connectAfterMessageSent$ = createEffect(() =>
     this.actions$.pipe(
       ofType(ChatActions.sendMessageSuccess),
-      map(({ threadId }) => ChatActions.connectSSE({ threadId }))
-    )
-  );
-
-  /**
-   * Extract messages when historical traces loaded
-   */
-  extractMessagesOnTracesLoaded$ = createEffect(() =>
-    this.actions$.pipe(
-      ofType(ChatActions.historicalTracesLoaded),
-      withLatestFrom(this.store.select(selectNextSequence)),
-      map(([{ traces }, currentSequence]) => {
-        const messages = this.messageExtractor.extractMessagesFromTraces(traces);
-        
-        // Find max sequence from extracted messages
-        const maxSequence = messages.reduce((max, msg) => 
-          msg.sequence !== undefined ? Math.max(max, msg.sequence) : max, 
-          currentSequence
-        );
-        
-        return ChatActions.messagesExtracted({ 
-          messages,
-          nextSequence: maxSequence + 1 // Set next sequence for future messages
-        });
+      // Use pairwise to compare previous and current threadId
+      // This allows us to detect threadId changes even after reducer updates
+      withLatestFrom(
+        this.store.select((state) => state.chat.sseStatus)
+      ),
+      // Always connect SSE after sending a message to ensure we receive graph.complete events
+      // The SSEService will handle reusing existing connections if threadId hasn't changed
+      map(([{ threadId }]) => {
+        return ChatActions.connectSSE({ threadId });
       })
     )
   );
 
   /**
-   * Extract messages when graph completes
+   * Load conversation messages when graph completes
+   * 
+   * Triggered by: graphComplete action
+   * 
+   * Flow:
+   * 1. Wait for graphComplete action
+   * 2. Get current threadId from state
+   * 3. Dispatch loadConversationMessages to fetch latest messages from API
+   * 
+   * This ensures that after the graph completes and the assistant message
+   * is persisted on the backend, we fetch the latest messages to display
+   * them in the UI. This is critical for the second and subsequent messages
+   * where SSE is already connected and messages aren't automatically reloaded.
+   * 
+   * @see loadConversationMessages$
+   * @see Chat_Message_Persistence.md
    */
-  extractMessagesOnGraphComplete$ = createEffect(() =>
+  loadMessagesOnGraphComplete$ = createEffect(() =>
     this.actions$.pipe(
       ofType(ChatActions.graphComplete),
-      withLatestFrom(
-        this.store.select(selectAllTraces),
-        this.store.select(selectNextSequence)
-      ),
-      map(([, traces, currentSequence]) => {
-        const messages = this.messageExtractor.extractMessagesFromTraces(traces);
-        
-        // Find max sequence from extracted messages
-        const maxSequence = messages.reduce((max, msg) => 
-          msg.sequence !== undefined ? Math.max(max, msg.sequence) : max, 
-          currentSequence
+      tap(({ threadId }) => {
+        console.log('[ChatEffects] graphComplete received, threadId:', threadId);
+      }),
+      filter(({ threadId }) => !!threadId), // Only proceed if we have a threadId
+      // The backend emits graph.complete SSE event BEFORE saving the assistant message.
+      // The backend saves the message asynchronously after emitting the event, so we need
+      // to wait and potentially retry to ensure the message is persisted before fetching.
+      // Using mergeMap with timer to add delay and allow multiple graph completions
+      mergeMap(({ threadId }) => {
+        console.log('[ChatEffects] Scheduling message load after 2s delay, threadId:', threadId);
+        return timer(2000).pipe(
+          tap(() => {
+            console.log('[ChatEffects] Timer completed, dispatching loadConversationMessages, threadId:', threadId);
+          }),
+          switchMap(() =>
+            this.conversationApi.getMessages(threadId).pipe(
+              tap((messages) => {
+                console.log('[ChatEffects] Messages received after graphComplete, count:', messages.length, 'threadId:', threadId);
+                // If we got fewer messages than expected, the backend might still be saving
+                // In that case, we could retry, but for now we'll just log it
+              }),
+              map((messages) => ChatActions.conversationMessagesLoaded({ messages })),
+              catchError((error) => {
+                console.error('[ChatEffects] Failed to load messages after graphComplete:', error);
+                if (error.status === 404) {
+                  return of(ChatActions.conversationMessagesLoaded({ messages: [] }));
+                }
+                return of(
+                  ChatActions.conversationMessagesLoadFailed({
+                    error: 'Failed to load conversation messages',
+                  })
+                );
+              })
+            )
+          )
         );
-        
-        return ChatActions.messagesExtracted({ 
-          messages,
-          nextSequence: maxSequence + 1 // Set next sequence for future messages
-        });
+      })
+    )
+  );
+
+  /**
+   * Fallback: Load messages when 'end' node trace is received
+   * 
+   * This is a safety net in case graphComplete action is not dispatched
+   * (e.g., if SSE connection issues prevent graph.complete event from being received).
+   * 
+   * The 'end' node trace indicates the graph has completed, so we load messages.
+   */
+  loadMessagesOnEndNode$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(ChatActions.traceReceived),
+      filter(({ trace }) => trace.nodeName === 'end'),
+      withLatestFrom(
+        this.store.select((state) => state.chat.currentThreadId),
+        this.store.select((state) => state.chat.graphExecuting)
+      ),
+      filter(([, currentThreadId, graphExecuting]) => {
+        // Only load if graph was executing (to avoid loading on historical traces)
+        return graphExecuting && !!currentThreadId;
+      }),
+      // Wait a bit to ensure backend has saved the message
+      mergeMap(([{ trace: endTrace }, currentThreadId]) => {
+        const threadIdToUse = endTrace.threadId || currentThreadId || '';
+        return timer(2000).pipe(
+          switchMap(() =>
+            this.conversationApi.getMessages(threadIdToUse).pipe(
+              map((messages) => ChatActions.conversationMessagesLoaded({ messages })),
+              catchError((error) => {
+                if (error.status === 404) {
+                  return of(ChatActions.conversationMessagesLoaded({ messages: [] }));
+                }
+                return of(
+                  ChatActions.conversationMessagesLoadFailed({
+                    error: 'Failed to load conversation messages',
+                  })
+                );
+              })
+            )
+          )
+        );
       })
     )
   );

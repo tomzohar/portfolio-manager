@@ -209,6 +209,16 @@ export class ChatFacade {
   }
 
   /**
+   * Load conversation messages for a thread from the API.
+   * This loads persisted messages that survive page reloads.
+   * 
+   * @param threadId - The thread ID to load messages for
+   */
+  loadConversationMessages(threadId: string): void {
+    this.store.dispatch(ChatActions.loadConversationMessages({ threadId }));
+  }
+
+  /**
    * Toggle expansion state of a specific trace.
    * 
    * @param traceId - The trace ID to toggle
