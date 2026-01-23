@@ -1,6 +1,7 @@
 import { RunnableConfig } from '@langchain/core/runnables';
 import { AIMessage } from '@langchain/core/messages';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { CIOState, StateUpdate } from '../types';
 import { buildReasoningPrompt } from '../../prompts';
 
@@ -49,10 +50,9 @@ export async function reasoningNode(
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const toolRegistry = config.configurable?.toolRegistry;
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-    const tools = (toolRegistry?.getTools() || []) as any[];
+    const tools = (toolRegistry?.getTools() || []) as DynamicStructuredTool[];
 
     // Bind tools to LLM for agentic tool calling
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const llmWithTools = tools.length > 0 ? llm.bindTools(tools) : llm;
 
     // Get the last user message
@@ -62,11 +62,13 @@ export async function reasoningNode(
         ? lastMessage.content
         : JSON.stringify(lastMessage.content);
 
-    // Build prompt using external prompt template (includes portfolio context and userId)
+    // Build prompt using external prompt template
+    // Includes portfolio context, userId, and dynamically formatted tools
     const prompt = buildReasoningPrompt(
       userQuery,
       state.portfolio,
       state.userId,
+      tools, // Pass tools for dynamic formatting
     );
 
     // Invoke LLM with streaming and tools

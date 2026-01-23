@@ -47,6 +47,12 @@ Ask yourself - Are there any battle-tested design patterns, SOLID or DRY princip
 * **Refactoring:**
   Files >500 lines MUST be split. Extract by responsibility (data access, calculations, orchestration). Target: <400 lines per service.
 
+## 4. BROWSER VALIDATION
+use the browser MCP to check the behavior in the browser.
+ - create a test user (signup)
+ - create necessary data (if needed)
+ - interact with the browser to test the feature
+
 ## 4. PREPARE HANDOVER
  [] cleanup any mock data created during the session
  [] functions should have strict types for inputs and outputs

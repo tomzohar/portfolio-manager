@@ -69,6 +69,11 @@ export class ConversationPanelComponent {
   isLoading = input<boolean>(false);
 
   /**
+   * Whether graph is actively executing (generating AI response)
+   */
+  isGraphExecuting = input<boolean>(false);
+
+  /**
    * Type guard for user messages
    */
   isUserMessage = isUserMessage;

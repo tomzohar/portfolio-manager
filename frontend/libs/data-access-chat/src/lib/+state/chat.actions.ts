@@ -115,7 +115,7 @@ export const ChatActions = createActionGroup({
     /**
      * Messages extracted and ready to display
      */
-    'Messages Extracted': props<{ messages: ConversationMessage[] }>(),
+    'Messages Extracted': props<{ messages: ConversationMessage[]; nextSequence?: number }>(),
 
     /**
      * Toggle message trace expansion

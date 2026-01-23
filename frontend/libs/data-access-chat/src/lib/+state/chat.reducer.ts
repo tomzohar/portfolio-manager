@@ -132,13 +132,22 @@ export const chatReducer = createReducer(
   // Send Message
   // ========================================
 
-  on(ChatActions.sendMessage, (state, { message }) => ({
-    ...state,
-    sentMessages: [...state.sentMessages, message],  // Track pending message
-    graphExecuting: true,  // Mark graph as executing
-    loading: true,
-    error: null,
-  })),
+  on(ChatActions.sendMessage, (state, { message }) => {
+    const pendingMessage: import('@stocks-researcher/types').PendingSentMessage = {
+      content: message,
+      timestamp: new Date().toISOString(), // Capture timestamp now
+      sequence: state.nextSequence,
+    };
+    
+    return {
+      ...state,
+      sentMessages: [...state.sentMessages, pendingMessage],
+      nextSequence: state.nextSequence + 1, // Increment for next message
+      graphExecuting: true,
+      loading: true,
+      error: null,
+    };
+  }),
 
   on(ChatActions.sendMessageSuccess, (state, { threadId }) => ({
     ...state,
@@ -162,17 +171,36 @@ export const chatReducer = createReducer(
   on(ChatActions.graphComplete, (state) => ({
     ...state,
     graphExecuting: false,  // Graph done, re-enable input
-    sentMessages: [],  // Clear pending messages after completion
+    // NOTE: Do NOT clear sentMessages here!
+    // They should only be cleared by messagesExtracted when confirmed.
+    // Since backend may not send user messages in traces, we keep optimistic messages.
   })),
 
   // ========================================
   // Message Management
   // ========================================
 
-  on(ChatActions.messagesExtracted, (state, { messages }) => ({
-    ...state,
-    messages,
-  })),
+  on(ChatActions.messagesExtracted, (state, { messages, nextSequence }) => {
+    // Smart clearing: Only remove optimistic messages that have been confirmed
+    // Check if extracted messages contain user messages that match our sent messages
+    const extractedUserContents = messages
+      .filter(m => m.type === 'user')
+      .map(m => m.content.trim().toLowerCase());
+    
+    // Keep only sent messages that haven't been extracted yet
+    const stillPendingSentMessages = state.sentMessages.filter(sentMsg => 
+      !extractedUserContents.includes(sentMsg.content.trim().toLowerCase())
+    );
+    
+    return {
+      ...state,
+      messages,
+      // Only clear sent messages that have been confirmed in extracted messages
+      sentMessages: stillPendingSentMessages,
+      // Update nextSequence if provided (from historical trace loading)
+      nextSequence: nextSequence !== undefined ? nextSequence : state.nextSequence,
+    };
+  }),
 
   on(ChatActions.toggleMessageTraces, (state, { messageId }) => {
     const expandedMessageIds = state.expandedMessageIds.includes(messageId)

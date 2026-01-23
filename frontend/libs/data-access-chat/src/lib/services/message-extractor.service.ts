@@ -12,10 +12,19 @@ import {
  *
  * Extracts conversation messages (user input + AI responses) from reasoning traces.
  *
- * Strategy:
- * - User messages: Extracted from 'observer' node's input.messages array
- * - AI responses: Extracted from 'end' node's output.final_report
+ * IMPORTANT: This is a temporary solution for extracting messages from traces.
+ * See Chat_Message_Persistence.md for the enterprise-grade solution using
+ * dedicated ConversationMessage entity.
+ *
+ * Current Strategy:
+ * - User messages: Try to extract from observer/guardrail/reasoning node inputs
+ * - AI responses: Extract from 'end' node's output.final_report
  * - Links AI messages to their corresponding reasoning traces
+ *
+ * Known Limitations:
+ * - User messages may not be in traces (backend doesn't persist them reliably)
+ * - Relies on optimistic UI updates for user messages
+ * - Not suitable for long-term message persistence
  *
  * @example
  * ```typescript
@@ -39,59 +48,68 @@ export class MessageExtractorService {
     }
 
     const messages: ConversationMessage[] = [];
+    let sequence = 0;
 
-    // Find ALL observer traces (user messages)
-    const observerTraces = traces.filter((t) => t.nodeName === 'observer');
+    // Find traces that may contain user messages
+    // Try observer, guardrail, and reasoning nodes (backend varies)
+    const userMessageCandidates = traces
+      .filter((t) => t.nodeName === 'observer' || t.nodeName === 'guardrail' || t.nodeName === 'reasoning')
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     
-    // Find ALL end traces (AI responses)
-    const endTraces = traces.filter((t) => t.nodeName === 'end');
+    // Find end traces (always contain AI responses)
+    const endTraces = traces
+      .filter((t) => t.nodeName === 'end')
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-    // Sort by timestamp to maintain chronological order
-    observerTraces.sort((a, b) => 
-      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    );
-    endTraces.sort((a, b) => 
-      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    );
-
-    // Extract all user messages
-    observerTraces.forEach((observerTrace) => {
-      const userMessage = this.extractUserMessageFromTrace(observerTrace);
-      if (userMessage) {
+    // Try to extract user message from candidate traces
+    // Note: Backend may not include user message in traces
+    const userMessages: UserMessage[] = [];
+    for (const candidate of userMessageCandidates) {
+      const userMessage = this.extractUserMessageFromTrace(candidate);
+      if (userMessage && !userMessages.some(um => um.content === userMessage.content)) {
+        userMessage.sequence = sequence++;
+        userMessages.push(userMessage);
         messages.push(userMessage);
+        break; // Only one user message per execution
       }
-    });
+    }
 
-    // Extract all AI responses with their associated trace IDs
+    // Extract AI responses
     endTraces.forEach((endTrace, index) => {
       // Get traces that belong to this execution
-      // Traces between previous end and current end belong to this execution
       const startIdx = index === 0 ? 0 : traces.indexOf(endTraces[index - 1]) + 1;
       const endIdx = traces.indexOf(endTrace) + 1;
       const executionTraces = traces.slice(startIdx, endIdx);
       
       const aiMessage = this.extractAIMessageFromTrace(endTrace, executionTraces);
       if (aiMessage) {
+        aiMessage.sequence = sequence++;
         messages.push(aiMessage);
       }
     });
 
-    // Sort final messages by timestamp to maintain conversation order
-    return messages.sort((a, b) => 
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
+    // Sort by sequence for guaranteed ordering
+    return messages.sort((a, b) => {
+      if (a.sequence !== undefined && b.sequence !== undefined) {
+        return a.sequence - b.sequence;
+      }
+      return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+    });
   }
 
   /**
-   * Extract user's message from a single observer trace
+   * Extract user's message from a trace (guardrail, observer, or reasoning node)
+   * 
+   * NOTE: This is a temporary solution until backend implements proper message persistence.
+   * See Chat_Message_Persistence.md for enterprise-grade solution.
    */
-  private extractUserMessageFromTrace(observerTrace: ReasoningTrace): UserMessage | null {
-    if (!observerTrace?.input) {
+  private extractUserMessageFromTrace(trace: ReasoningTrace): UserMessage | null {
+    if (!trace?.input) {
       return null;
     }
 
     // Cast to any to access dynamic properties from backend
-    const input = observerTrace.input as any;
+    const input = trace.input as any;
     
     if (!input.messages || !Array.isArray(input.messages)) {
       return null;
@@ -103,12 +121,13 @@ export class MessageExtractorService {
     // Get the last user message (most recent)
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
+      
       if (msg?.kwargs?.content && typeof msg.kwargs.content === 'string') {
         return {
-          id: `user-${observerTrace.id}`,
+          id: `user-${trace.id}`,
           type: MessageType.USER,
           content: msg.kwargs.content,
-          timestamp: observerTrace.createdAt,
+          timestamp: trace.createdAt,
         };
       }
     }

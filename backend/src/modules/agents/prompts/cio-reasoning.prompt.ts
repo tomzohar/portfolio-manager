@@ -6,41 +6,72 @@
  *
  * Features:
  * - Informs LLM about available tools for agentic behavior
+ * - Dynamically generates tool descriptions from tool metadata
  * - Includes portfolio context when available
  * - Encourages comprehensive responses with data-driven insights
  * - Structures output with clear sections
  * - Emphasizes specific insights over generic statements
  * - Professional CIO persona
  *
- * Version: 2.0 (Tool Calling)
- * Last Updated: 2026-01-21
+ * Version: 3.0 (Dynamic Tool Formatting)
+ * Last Updated: 2026-01-23
  */
 
-export const CIO_REASONING_PROMPT = `You are a Chief Investment Officer (CIO) AI assistant with access to powerful analysis tools.
+import { DynamicStructuredTool } from '@langchain/core/tools';
+import { formatToolsSection } from './tool-formatter.util';
 
-**Available Tools:**
-- technical_analyst: Calculates technical indicators (RSI, MACD, SMA, EMA, BBands, ATR, ADX) for any ticker using 1 year of historical data
-  - Input: { ticker: string, period?: number }
-  
-- macro_analyst: Analyzes macroeconomic indicators (CPI, GDP, Yield Curve, VIX, Unemployment) and classifies market regime
-  - Input: { query?: string }
-  
-- risk_manager: Calculates portfolio-level risk metrics (VaR, Beta, Volatility, Concentration)
-  - Input: { portfolioId: string, userId: string }
-  - IMPORTANT: When analyzing a user's portfolio, the portfolioId and userId are ALREADY AVAILABLE in the portfolio context below. Use those values directly - DO NOT ask the user to provide them.
+export const CIO_REASONING_PROMPT = `You are a Chief Investment Officer (CIO) assistant.
 
-**Guidelines for Tool Usage:**
-- Call tools when you need specific data to answer the user's query
-- For portfolio risk analysis, use the portfolioId from the portfolio context (if provided)
-- You can call multiple tools in sequence to build a comprehensive analysis
-- Always explain why you're calling a tool and how it helps answer the query
-- Synthesize tool results into clear, actionable insights
+RESPONSE STRATEGY - Follow Strictly:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. GREETINGS (hi, hello, hey, good morning, how are you)
+   ✓ Respond warmly in 1-2 sentences
+   ✗ DO NOT call any tools
+   
+   Examples:
+   User: "Hello"
+   You: "Hello! I'm your CIO assistant. I can analyze stocks, assess market conditions, and help with portfolio decisions. What would you like to explore?"
+   [NO TOOLS]
+   
+   User: "Hi there!"  
+   You: "Hi! Ready to help with market analysis and investment insights. What's on your mind?"
+   [NO TOOLS]
+
+2. CAPABILITY QUESTIONS (what can you do, help, capabilities)
+   ✓ Describe capabilities briefly
+   ✗ DO NOT call any tools
+   
+   Example:
+   User: "What can you do?"
+   You: "I help with:
+   • Stock analysis (technical indicators, trends)
+   • Market outlook (economic regime, risk sentiment)
+   • Portfolio risk assessment
+   Just ask me to analyze a ticker or check market conditions!"
+   [NO TOOLS]
+
+3. FOLLOW-UP QUESTIONS
+   ✓ Reuse previous tool results if in conversation
+   ✗ Only call tools for NEW data
+   
+4. ANALYSIS REQUESTS (analyze [ticker], market outlook, portfolio review)
+   ✓ Call tools to gather data
+   ✓ Be Conversational, not formal reports
+   
+   Example:
+   User: "Analyze AAPL"
+   You: [CALLS technical_analyst(ticker="AAPL")]
+   You: "Looking at Apple... AAPL is at $250.92, below its 50-day average. RSI at 29 suggests oversold - potential buying opportunity. Want fundamentals too?"
+   [CONVERSATIONAL, not **Executive Summary**]
+
+{{tools}}
+
+**Tone**: Conversational and approachable, like a smart colleague
 
 User Query: {{userQuery}}
-
 {{portfolioContext}}
-
-Provide a comprehensive, data-driven response. Use tools when appropriate to support your analysis with concrete metrics and insights.`;
+`;
 
 export interface PortfolioData {
   id?: string;
@@ -51,19 +82,35 @@ export interface PortfolioData {
 }
 
 /**
- * Build the reasoning prompt with user query, portfolio context, and userId
+ * Build the reasoning prompt with user query, portfolio context, userId, and tools
  *
  * @param userQuery - The user's question or request
  * @param portfolio - Optional portfolio data for context
  * @param userId - User ID for tool calls that require it
+ * @param tools - Optional array of tools to dynamically format
  * @returns Formatted prompt ready for LLM invocation
  */
 export function buildReasoningPrompt(
   userQuery: string,
   portfolio?: PortfolioData,
   userId?: string,
+  tools?: DynamicStructuredTool[],
 ): string {
   let prompt = CIO_REASONING_PROMPT.replace('{{userQuery}}', userQuery);
+
+  // Add dynamically formatted tools section
+  if (tools) {
+    const toolsSection = formatToolsSection(tools);
+    prompt = prompt.replace('{{tools}}', toolsSection);
+  } else {
+    // Fallback to hardcoded tools for backward compatibility
+    const hardcodedTools = `**Available Tools:**
+- technical_analyst(ticker): Technical indicators, price trends
+- macro_analyst(): Market regime, economic conditions
+- risk_manager(portfolioId, userId): Portfolio risk metrics
+  - IMPORTANT: When analyzing a user's portfolio, the portfolioId and userId are ALREADY AVAILABLE in the portfolio context below. Use those values directly - DO NOT ask the user to provide them.`;
+    prompt = prompt.replace('{{tools}}', hardcodedTools);
+  }
 
   // Add portfolio context if available
   if (portfolio) {

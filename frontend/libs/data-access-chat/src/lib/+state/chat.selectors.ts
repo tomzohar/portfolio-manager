@@ -1,5 +1,6 @@
 import { createFeatureSelector, createSelector } from '@ngrx/store';
 import { ChatState, tracesAdapter } from './chat.state';
+import { ConversationMessage, UserMessage, MessageType } from '@stocks-researcher/types';
 
 /**
  * Feature key for Chat state slice
@@ -180,6 +181,14 @@ export const selectSentMessages = createSelector(
 );
 
 /**
+ * Select next sequence number
+ */
+export const selectNextSequence = createSelector(
+  selectChatState,
+  (state) => state.nextSequence
+);
+
+/**
  * Select expanded message IDs
  */
 export const selectExpandedMessageIds = createSelector(
@@ -193,4 +202,65 @@ export const selectExpandedMessageIds = createSelector(
 export const selectIsMessageExpanded = (messageId: string) => createSelector(
   selectExpandedMessageIds,
   (expandedIds) => expandedIds.includes(messageId)
+);
+
+/**
+ * Select display messages combining extracted messages with optimistic pending messages
+ * 
+ * This selector implements optimistic UI updates:
+ * 1. Shows all extracted messages from traces (confirmed by backend)
+ * 2. Appends optimistic user messages for pending sends (from sentMessages)
+ * 3. Sorts all messages chronologically by timestamp
+ * 
+ * Optimistic messages have:
+ * - Temporary ID: `optimistic-{timestamp}-{index}`
+ * - isOptimistic flag set to true
+ * - Current timestamp
+ * 
+ * When backend confirms the message (via observer trace), the optimistic message
+ * is replaced by the real extracted message (sentMessages array is cleared).
+ * 
+ * @example
+ * // User sends "Hello"
+ * // Immediately: selectDisplayMessages returns optimistic UserMessage
+ * // After observer trace: selectDisplayMessages returns real UserMessage from traces
+ */
+export const selectDisplayMessages = createSelector(
+  selectMessages,
+  selectSentMessages,
+  (extractedMessages, sentMessages) => {
+    const displayMessages: ConversationMessage[] = [...extractedMessages];
+    
+    // Add optimistic messages with preserved metadata
+    sentMessages.forEach((pendingMsg) => {
+      const optimisticMessage: UserMessage = {
+        id: `optimistic-${pendingMsg.sequence}`,
+        type: MessageType.USER,
+        content: pendingMsg.content,
+        timestamp: pendingMsg.timestamp, // Use preserved timestamp from when message was sent
+        sequence: pendingMsg.sequence,   // Use preserved sequence number
+        isOptimistic: true,
+      };
+      
+      displayMessages.push(optimisticMessage);
+    });
+    
+    // Sort by sequence first (primary), then timestamp (secondary)
+    return displayMessages.sort((a, b) => {
+      // If both have sequence numbers, use them for guaranteed ordering
+      if (a.sequence !== undefined && b.sequence !== undefined) {
+        return a.sequence - b.sequence;
+      }
+      
+      // Fallback to timestamp comparison
+      const timeA = typeof a.timestamp === 'string' 
+        ? new Date(a.timestamp).getTime() 
+        : a.timestamp.getTime();
+      const timeB = typeof b.timestamp === 'string' 
+        ? new Date(b.timestamp).getTime() 
+        : b.timestamp.getTime();
+      
+      return timeA - timeB;
+    });
+  }
 );

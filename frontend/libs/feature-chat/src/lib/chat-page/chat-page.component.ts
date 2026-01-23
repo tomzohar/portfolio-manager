@@ -105,8 +105,10 @@ export class ChatPageComponent implements OnDestroy {
 
   /**
    * Conversation messages (user + AI)
+   * NOTE: Using displayMessages instead of messages for optimistic UI updates
+   * displayMessages combines confirmed messages with pending optimistic messages
    */
-  messages = this.facade.messages;
+  messages = this.facade.displayMessages;
 
   /**
    * Current thread ID from facade (may differ from route after message send)

@@ -358,6 +358,7 @@ export interface BaseMessage {
   type: MessageType;
   content: string;
   timestamp: Date | string;
+  sequence?: number; // For guaranteed ordering in conversation
 }
 
 /**
@@ -365,6 +366,7 @@ export interface BaseMessage {
  */
 export interface UserMessage extends BaseMessage {
   type: MessageType.USER;
+  isOptimistic?: boolean; // Flag for pending messages not yet confirmed by backend
 }
 
 /**
@@ -374,6 +376,7 @@ export interface UserMessage extends BaseMessage {
 export interface AssistantMessage extends BaseMessage {
   type: MessageType.ASSISTANT;
   traceIds?: string[]; // Links to reasoning traces
+  isOptimistic?: boolean; // Flag for streaming messages not yet complete
 }
 
 /**
@@ -408,4 +411,14 @@ export function isAssistantMessage(msg: ConversationMessage): msg is AssistantMe
  */
 export function isSystemMessage(msg: ConversationMessage): msg is SystemMessage {
   return msg.type === MessageType.SYSTEM;
+}
+
+/**
+ * Pending sent message (optimistic UI)
+ * Stores metadata about messages that have been sent but not yet confirmed by backend
+ */
+export interface PendingSentMessage {
+  content: string;
+  timestamp: string;  // ISO timestamp captured when message was sent
+  sequence: number;   // Sequence number for guaranteed ordering
 }

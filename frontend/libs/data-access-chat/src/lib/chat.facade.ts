@@ -18,8 +18,9 @@ import {
   selectSentMessages,
   selectExpandedMessageIds,
   selectIsMessageExpanded,
+  selectDisplayMessages,
 } from './+state/chat.selectors';
-import { ReasoningTrace, SSEConnectionStatus, ConversationMessage } from '@stocks-researcher/types';
+import { ReasoningTrace, SSEConnectionStatus, ConversationMessage, PendingSentMessage } from '@stocks-researcher/types';
 
 /**
  * ChatFacade
@@ -141,8 +142,30 @@ export class ChatFacade {
   /**
    * Pending sent messages (waiting for AI response)
    */
-  readonly sentMessages: Signal<string[]> = 
+  readonly sentMessages: Signal<PendingSentMessage[]> = 
     this.store.selectSignal(selectSentMessages);
+
+  /**
+   * Display messages combining extracted messages with optimistic pending messages
+   * 
+   * This is the primary selector for UI rendering.
+   * It provides immediate feedback by showing user messages before backend confirmation.
+   * 
+   * Use this instead of `messages` for displaying the conversation.
+   * 
+   * @example
+   * ```typescript
+   * // In component
+   * displayMessages = this.facade.displayMessages;
+   * 
+   * // In template
+   * @for (message of displayMessages(); track message.id) {
+   *   <app-message [message]="message" />
+   * }
+   * ```
+   */
+  readonly displayMessages: Signal<ConversationMessage[]> = 
+    this.store.selectSignal(selectDisplayMessages);
 
   /**
    * Expanded message IDs (for showing/hiding traces)

@@ -4,7 +4,7 @@
       <p class="empty-title">No messages yet</p>
       <p class="empty-hint">Send a message to start the conversation</p>
     </div>
-  } @else if (messages().length > 0) {
+  } @else if (messages().length > 0 || isGraphExecuting()) {
     <div class="messages-list">
       @for (message of messages(); track trackByMessageId($index, message)) {
         @if (isUserMessage(message)) {
@@ -32,6 +32,11 @@
             </div>
           }
         }
+      }
+      
+      <!-- Loading skeleton for AI response while graph is executing -->
+      @if (isGraphExecuting()) {
+        <app-ai-message [isLoading]="true" />
       }
     </div>
   }

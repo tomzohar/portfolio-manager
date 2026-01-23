@@ -16,7 +16,7 @@ import { ReasoningTraceApiService } from '../services/reasoning-trace-api.servic
 import { SSEService } from '../services/sse.service';
 import { MessageExtractorService } from '../services/message-extractor.service';
 import { ChatActions } from './chat.actions';
-import { selectAllTraces } from './chat.selectors';
+import { selectAllTraces, selectNextSequence } from './chat.selectors';
 
 /**
  * Chat Effects
@@ -296,9 +296,20 @@ export class ChatEffects {
   extractMessagesOnTracesLoaded$ = createEffect(() =>
     this.actions$.pipe(
       ofType(ChatActions.historicalTracesLoaded),
-      map(({ traces }) => {
+      withLatestFrom(this.store.select(selectNextSequence)),
+      map(([{ traces }, currentSequence]) => {
         const messages = this.messageExtractor.extractMessagesFromTraces(traces);
-        return ChatActions.messagesExtracted({ messages });
+        
+        // Find max sequence from extracted messages
+        const maxSequence = messages.reduce((max, msg) => 
+          msg.sequence !== undefined ? Math.max(max, msg.sequence) : max, 
+          currentSequence
+        );
+        
+        return ChatActions.messagesExtracted({ 
+          messages,
+          nextSequence: maxSequence + 1 // Set next sequence for future messages
+        });
       })
     )
   );
@@ -309,10 +320,23 @@ export class ChatEffects {
   extractMessagesOnGraphComplete$ = createEffect(() =>
     this.actions$.pipe(
       ofType(ChatActions.graphComplete),
-      withLatestFrom(this.store.select(selectAllTraces)),
-      map(([, traces]) => {
+      withLatestFrom(
+        this.store.select(selectAllTraces),
+        this.store.select(selectNextSequence)
+      ),
+      map(([, traces, currentSequence]) => {
         const messages = this.messageExtractor.extractMessagesFromTraces(traces);
-        return ChatActions.messagesExtracted({ messages });
+        
+        // Find max sequence from extracted messages
+        const maxSequence = messages.reduce((max, msg) => 
+          msg.sequence !== undefined ? Math.max(max, msg.sequence) : max, 
+          currentSequence
+        );
+        
+        return ChatActions.messagesExtracted({ 
+          messages,
+          nextSequence: maxSequence + 1 // Set next sequence for future messages
+        });
       })
     )
   );

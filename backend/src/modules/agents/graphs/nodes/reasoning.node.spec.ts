@@ -199,7 +199,13 @@ describe('reasoningNode', () => {
     const promptUsed = invokeArgs[0];
 
     // Verify prompt was built correctly
-    const expectedPrompt = buildReasoningPrompt(testQuery);
+    // buildReasoningPrompt now accepts tools parameter (empty array in this test)
+    const expectedPrompt = buildReasoningPrompt(
+      testQuery,
+      undefined,
+      undefined,
+      [],
+    );
     expect(promptUsed).toBe(expectedPrompt);
     expect(promptUsed).toContain(testQuery);
     expect(promptUsed).toContain('Chief Investment Officer');

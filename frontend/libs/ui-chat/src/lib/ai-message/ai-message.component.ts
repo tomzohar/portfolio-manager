@@ -28,18 +28,28 @@ import { ButtonComponent, IconComponent, ButtonConfig } from '@stocks-researcher
   standalone: true,
   imports: [CommonModule, ButtonComponent, IconComponent],
   template: `
-    <div class="ai-message">
+    <div class="ai-message" [class.loading]="isLoading()">
       <div class="message-header">
         <div class="sender-info">
           <lib-icon name="psychology" [size]="20" class="ai-icon" />
           <span class="sender">AI Assistant</span>
         </div>
-        <span class="timestamp">{{ formattedTime() }}</span>
+        @if (!isLoading()) {
+          <span class="timestamp">{{ formattedTime() }}</span>
+        }
       </div>
       <div class="message-content">
-        <pre class="formatted-response">{{ message().content }}</pre>
+        @if (isLoading()) {
+          <div class="loading-skeleton">
+            <div class="skeleton-line skeleton-line-1"></div>
+            <div class="skeleton-line skeleton-line-2"></div>
+            <div class="skeleton-line skeleton-line-3"></div>
+          </div>
+        } @else {
+          <pre class="formatted-response">{{ message()?.content }}</pre>
+        }
       </div>
-      @if (hasTraces()) {
+      @if (!isLoading() && hasTraces()) {
         <div class="trace-toggle">
           <lib-button
             [config]="toggleButtonConfig()"
@@ -56,7 +66,12 @@ export class AIMessageComponent {
   /**
    * AI message to display
    */
-  message = input.required<AssistantMessage>();
+  message = input<AssistantMessage | undefined>();
+
+  /**
+   * Whether this is a loading skeleton
+   */
+  isLoading = input<boolean>(false);
 
   /**
    * Whether traces are currently shown
@@ -72,7 +87,9 @@ export class AIMessageComponent {
    * Formatted timestamp
    */
   formattedTime = computed(() => {
-    const timestamp = this.message().timestamp;
+    const message = this.message();
+    if (!message) return '';
+    const timestamp = message.timestamp;
     const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
     return date.toLocaleTimeString('en-US', {
       hour: '2-digit',
@@ -84,14 +101,16 @@ export class AIMessageComponent {
    * Whether this message has linked traces
    */
   hasTraces = computed(() => {
-    const traceIds = this.message().traceIds;
+    const message = this.message();
+    if (!message) return false;
+    const traceIds = message.traceIds;
     return traceIds && traceIds.length > 0;
   });
 
   /**
    * Trace count for display
    */
-  traceCount = computed(() => this.message().traceIds?.length || 0);
+  traceCount = computed(() => this.message()?.traceIds?.length || 0);
 
   /**
    * Toggle button configuration

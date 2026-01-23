@@ -44,6 +44,7 @@
           [messages]="messages()"
           [traces]="traces()"
           [isLoading]="loading()"
+          [isGraphExecuting]="isGraphActive()"
         />
       } @else if (!isLoadingChatHistory()) {
         <div class="chat-page__empty">
