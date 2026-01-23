@@ -1,6 +1,6 @@
 import { reasoningNode } from './reasoning.node';
 import { CIOState } from '../types';
-import { HumanMessage, AIMessage } from '@langchain/core/messages';
+import { HumanMessage } from '@langchain/core/messages';
 import { RunnableConfig } from '@langchain/core/runnables';
 import { buildReasoningPrompt } from '../../prompts';
 import { Callbacks } from '@langchain/core/callbacks/manager';

@@ -26,26 +26,28 @@ type ContentPart = {
 
 /**
  * Router node that determines which path the graph should take
- * based on the user's query content and current state
+ * based on STRUCTURAL properties, not content analysis.
+ *
+ * Content-based routing (greetings vs analysis) is now handled by the LLM
+ * via prompt engineering in the reasoning node.
  *
  * Routes to:
  * - 'tool_execution' if last message has tool_calls (ReAct pattern)
- * - 'approval_gate' if query requires human approval (transactions, rebalancing, high-risk actions)
+ * - 'reasoning' if last message is ToolMessage (for observation/synthesis)
+ * - 'approval_gate' if query requires human approval (transactions, rebalancing)
  * - 'hitl_test' if query contains HITL test keywords (for testing only)
  * - 'performance_attribution' if query is about performance/returns/alpha
- * - 'reasoning' for general queries requiring LLM analysis (market outlook, analysis, etc.)
- * - 'observer' for simple queries
- * - 'end' to terminate execution
+ * - 'reasoning' for all other human queries (default route - LLM decides tool usage)
  */
 export function routerNode(state: CIOState): string {
   // Safety check: ensure messages array exists and has content
   if (!state.messages || state.messages.length === 0) {
-    return 'observer'; // Default route if no messages
+    return 'reasoning'; // Default route to reasoning
   }
 
   const lastMessage = state.messages[state.messages.length - 1];
   if (!lastMessage) {
-    return 'observer'; // Default route if no last message
+    return 'reasoning'; // Default route to reasoning
   }
 
   // Check if last message has tool calls (from reasoning node)
@@ -73,7 +75,7 @@ export function routerNode(state: CIOState): string {
 
   // If no content in the message, use default routing
   if (!lastMessage.content) {
-    return 'observer'; // Default route if no content
+    return 'reasoning'; // Default route to reasoning
   }
 
   const messageContent = lastMessage.content;
@@ -101,7 +103,7 @@ export function routerNode(state: CIOState): string {
     return 'hitl_test';
   }
 
-  // Check if query is about performance
+  // Performance attribution has complex specialized logic - keep as dedicated node
   if (
     content.includes('performance') ||
     content.includes('perform') ||
@@ -116,27 +118,10 @@ export function routerNode(state: CIOState): string {
     return 'performance_attribution';
   }
 
-  // Route to reasoning node for queries requiring LLM analysis
-  // These keywords indicate the user wants detailed, thoughtful analysis
-  if (
-    content.includes('analysis') ||
-    content.includes('analyze') ||
-    content.includes('market') ||
-    content.includes('outlook') ||
-    content.includes('sector') ||
-    content.includes('technology') ||
-    content.includes('financial') ||
-    content.includes('tech stocks') ||
-    content.includes('detail') ||
-    content.includes('insights') ||
-    content.includes('sentiment') ||
-    content.includes('provide') ||
-    content.includes('explain')
-  ) {
-    return 'reasoning';
-  }
-
-  return 'observer';
+  // Default: Route all user queries to reasoning
+  // The LLM will decide if it needs tools or can respond directly
+  // based on prompt guidance (greetings, help, analysis, etc.)
+  return 'reasoning';
 }
 
 /**

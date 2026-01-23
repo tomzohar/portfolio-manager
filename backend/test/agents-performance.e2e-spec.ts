@@ -4,7 +4,7 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { getTestApp, getTestDbManager } from './global-test-context';
+import { getTestApp } from './global-test-context';
 
 describe('Agents Performance (e2e)', () => {
   let app: INestApplication<App>;

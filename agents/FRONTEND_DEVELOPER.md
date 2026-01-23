@@ -54,6 +54,7 @@ Ask yourself - Are there any battle-tested design patterns, SOLID or DRY princip
  [] fucntions and classes should have single resposiblity
  [] DRY priciple applied to all code
  [] clear separation of concers (service, state logic, components, utils etc...)
+ [] no unused imports
  [] nx run-many -t=test
  [] nx run-many -t=build
  [] nx run-many -t=lint

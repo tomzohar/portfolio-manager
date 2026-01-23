@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { getTestApp, getTestDbManager } from './global-test-context';
+import { getTestApp } from './global-test-context';
+import { App } from 'supertest/types';
 
 /**
  * E2E Tests for SSE Streaming Endpoint (Task 3.1.3)
@@ -19,14 +20,15 @@ import { getTestApp, getTestDbManager } from './global-test-context';
 describe('Agents Streaming (e2e)', () => {
   let app: INestApplication;
   let authToken: string;
+  let httpServer: App;
 
   beforeAll(async () => {
     // Get the global shared app instance
     app = await getTestApp();
-
+    httpServer = app.getHttpServer() as App;
     // Create a user and get auth token
     const uniqueEmail = `streaming-test-${Date.now()}@example.com`;
-    const signupResponse = await request(app.getHttpServer())
+    const signupResponse = await request(httpServer)
       .post('/users')
       .send({
         email: uniqueEmail,
@@ -48,7 +50,7 @@ describe('Agents Streaming (e2e)', () => {
       // 2. Connection is established with correct headers
 
       // Step 1: Start a graph execution to get a threadId
-      const runResponse = await request(app.getHttpServer())
+      const runResponse = await request(httpServer)
         .post('/agents/run')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -59,7 +61,7 @@ describe('Agents Streaming (e2e)', () => {
       const threadId = (runResponse.body as { threadId: string }).threadId;
 
       // Step 2: Verify the SSE endpoint is accessible (with abort to prevent timeout)
-      const agent = request(app.getHttpServer());
+      const agent = request(httpServer);
       const req = agent
         .get(`/agents/traces/stream/${threadId}`)
         .set('Authorization', `Bearer ${authToken}`)
@@ -86,7 +88,7 @@ describe('Agents Streaming (e2e)', () => {
 
       const testThreadId = 'auth-test-thread-id';
 
-      const req = request(app.getHttpServer())
+      const req = request(httpServer)
         .get(`/agents/traces/stream/${testThreadId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .set('Accept', 'text/event-stream');
@@ -115,7 +117,7 @@ describe('Agents Streaming (e2e)', () => {
       const testThreadId = 'security-test-thread-id';
 
       // Connect to stream for a specific threadId
-      const req = request(app.getHttpServer())
+      const req = request(httpServer)
         .get(`/agents/traces/stream/${testThreadId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .set('Accept', 'text/event-stream');
@@ -137,7 +139,7 @@ describe('Agents Streaming (e2e)', () => {
       // Stream should accept connection even for non-existent threadId
       const nonExistentThreadId = 'non-existent-thread-12345';
 
-      const req = request(app.getHttpServer())
+      const req = request(httpServer)
         .get(`/agents/traces/stream/${nonExistentThreadId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .set('Accept', 'text/event-stream');
@@ -160,7 +162,7 @@ describe('Agents Streaming (e2e)', () => {
       // Validate the endpoint supports SSE format
 
       // Trigger graph execution
-      const runResponse = await request(app.getHttpServer())
+      const runResponse = await request(httpServer)
         .post('/agents/run')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -171,7 +173,7 @@ describe('Agents Streaming (e2e)', () => {
       const threadId = (runResponse.body as { threadId: string }).threadId;
 
       // Connect to stream and verify it's established
-      const req = request(app.getHttpServer())
+      const req = request(httpServer)
         .get(`/agents/traces/stream/${threadId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .set('Accept', 'text/event-stream');
@@ -196,7 +198,7 @@ describe('Agents Streaming (e2e)', () => {
 
       try {
         // Trigger graph execution to get a valid threadId
-        const runResponse = await request(app.getHttpServer())
+        const runResponse = await request(httpServer)
           .post('/agents/run')
           .set('Authorization', `Bearer ${authToken}`)
           .send({
@@ -234,7 +236,7 @@ describe('Agents Streaming (e2e)', () => {
 
       try {
         // Step 1: Trigger graph execution
-        const runResponse = await request(app.getHttpServer())
+        const runResponse = await request(httpServer)
           .post('/agents/run')
           .set('Authorization', `Bearer ${authToken}`)
           .send({

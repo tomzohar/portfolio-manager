@@ -1,19 +1,21 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { App } from 'supertest/types';
 import { GraphResponseDto } from 'src/modules/agents/dto/graph-response.dto';
 import { Message } from '@langchain/core/messages';
-import { getTestApp, getTestDbManager } from './global-test-context';
+import { getTestApp } from './global-test-context';
 
 describe('AgentsController (e2e)', () => {
   let app: INestApplication;
   let authToken: string;
+  let httpServer: App;
 
   beforeAll(async () => {
     // Get the global shared app instance
     app = await getTestApp();
-
+    httpServer = app.getHttpServer() as App;
     // Create a user - returns token in response
-    const signupResponse = await request(app.getHttpServer())
+    const signupResponse = await request(httpServer)
       .post('/users')
       .send({
         email: `agent-test-${Date.now()}@example.com`,
@@ -26,7 +28,7 @@ describe('AgentsController (e2e)', () => {
 
   describe('/agents/run (POST)', () => {
     it('should execute graph and return result', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(httpServer)
         .post('/agents/run')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -47,7 +49,7 @@ describe('AgentsController (e2e)', () => {
     });
 
     it('should require authentication', async () => {
-      await request(app.getHttpServer())
+      await request(httpServer)
         .post('/agents/run')
         .send({
           message: 'Test',
@@ -56,7 +58,7 @@ describe('AgentsController (e2e)', () => {
     });
 
     it('should validate request body', async () => {
-      await request(app.getHttpServer())
+      await request(httpServer)
         .post('/agents/run')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -66,7 +68,7 @@ describe('AgentsController (e2e)', () => {
     });
 
     it('should accept portfolio data', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(httpServer)
         .post('/agents/run')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -98,7 +100,7 @@ describe('AgentsController (e2e)', () => {
 
     it('should accept threadId for resuming conversation', async () => {
       // First request to get a threadId
-      const firstResponse = await request(app.getHttpServer())
+      const firstResponse = await request(httpServer)
         .post('/agents/run')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -110,7 +112,7 @@ describe('AgentsController (e2e)', () => {
       const threadId = firstBody.threadId;
 
       // Second request with the same threadId
-      const secondResponse = await request(app.getHttpServer())
+      const secondResponse = await request(httpServer)
         .post('/agents/run')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -126,7 +128,7 @@ describe('AgentsController (e2e)', () => {
     });
 
     it('should accumulate messages in state', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(httpServer)
         .post('/agents/run')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -142,7 +144,7 @@ describe('AgentsController (e2e)', () => {
     });
 
     it('should include userId in final state', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(httpServer)
         .post('/agents/run')
         .set('Authorization', `Bearer ${authToken}`)
         .send({

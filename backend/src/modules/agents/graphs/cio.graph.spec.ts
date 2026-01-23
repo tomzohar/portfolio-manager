@@ -18,6 +18,12 @@ const mockStateService = {
 describe('CIO Graph', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Set GEMINI_API_KEY for reasoning node
+    process.env.GEMINI_API_KEY = 'test-api-key';
+  });
+
+  afterEach(() => {
+    delete process.env.GEMINI_API_KEY;
   });
 
   it('should build and compile graph', () => {
@@ -25,7 +31,7 @@ describe('CIO Graph', () => {
     expect(graph).toBeDefined();
   });
 
-  it('should execute from observer to end', async () => {
+  it('should execute from reasoning to end', async () => {
     const graph = buildCIOGraph(mockStateService as any);
 
     const initialState: CIOState = {
@@ -41,8 +47,9 @@ describe('CIO Graph', () => {
 
     expect(result).toBeDefined();
     expect(result.final_report).toBeDefined();
-    // Final report is extracted from last AI message (observer response)
-    expect(result.final_report).toContain('Observer node executed');
+    // Final report is extracted from last AI message (reasoning response)
+    expect(typeof result.final_report).toBe('string');
+    expect(result.final_report.length).toBeGreaterThan(0);
     expect(result.iteration).toBeGreaterThan(0);
   });
 
@@ -78,7 +85,7 @@ describe('CIO Graph', () => {
 
     const result = await graph.invoke(initialState);
 
-    // Should have at least 2 messages (initial + observer response)
+    // Should have at least 2 messages (initial + reasoning response)
     expect(result.messages.length).toBeGreaterThanOrEqual(2);
   });
 

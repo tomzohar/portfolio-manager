@@ -55,6 +55,7 @@ Ask yourself - Are there any battle-tested design patterns, SOLID or DRY princip
  [] fucntions and classes should have single resposiblity
  [] DRY priciple applied to all code
  [] clear separation of concers (controllers, service, db interactions, utils etc...)
+ [] no unused imports
  [] npm run test
  [] npm run test:e2e
  [] npm run build

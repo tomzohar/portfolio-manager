@@ -108,10 +108,56 @@ Line 3: Risk assessment`;
       expect(CIO_REASONING_PROMPT).toContain('Available Tools');
     });
 
-    it('should emphasize data-driven analysis', () => {
-      expect(CIO_REASONING_PROMPT).toContain('data-driven');
+    it('should emphasize conversational and approachable tone', () => {
+      expect(CIO_REASONING_PROMPT).toContain('Conversational');
+      expect(CIO_REASONING_PROMPT).toContain('approachable');
       expect(CIO_REASONING_PROMPT).toContain('insights');
-      expect(CIO_REASONING_PROMPT).toContain('comprehensive');
+    });
+  });
+
+  /**
+   * Tests for Enhanced Prompt (LLM-Driven Routing Refactor)
+   *
+   * The enhanced prompt should guide the LLM to make routing decisions:
+   * - Greetings → respond directly, no tools
+   * - Help → describe capabilities, no tools
+   * - Analysis → call tools strategically
+   */
+  describe('Enhanced Prompt - Routing Guidance', () => {
+    it('should include RESPONSE STRATEGY section', () => {
+      const prompt = buildReasoningPrompt('test query');
+      expect(prompt).toContain('RESPONSE STRATEGY');
+    });
+
+    it('should include greeting routing guidance', () => {
+      const prompt = buildReasoningPrompt('test query');
+      expect(prompt).toContain('GREETINGS');
+      expect(prompt).toContain('DO NOT call any tools');
+    });
+
+    it('should include few-shot examples', () => {
+      const prompt = buildReasoningPrompt('test query');
+      expect(prompt).toContain('Examples:');
+      expect(prompt).toContain('User: "Hello"');
+    });
+
+    it('should include tone guidelines', () => {
+      const prompt = buildReasoningPrompt('test query');
+      expect(prompt).toContain('Conversational');
+      expect(prompt.toLowerCase()).toContain('approachable');
+    });
+
+    it('should include capability questions guidance', () => {
+      const prompt = buildReasoningPrompt('test query');
+      expect(prompt).toContain('CAPABILITY QUESTIONS');
+      expect(prompt).toContain('what can you do');
+    });
+
+    it('should include analysis request guidance', () => {
+      const prompt = buildReasoningPrompt('test query');
+      expect(prompt).toContain('ANALYSIS REQUESTS');
+      expect(prompt).toContain('analyze');
+      expect(prompt).toContain('market outlook');
     });
   });
 });

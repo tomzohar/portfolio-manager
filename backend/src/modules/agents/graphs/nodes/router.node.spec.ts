@@ -1,4 +1,4 @@
-import { HumanMessage } from '@langchain/core/messages';
+import { HumanMessage, ToolMessage } from '@langchain/core/messages';
 import { routerNode } from './router.node';
 import { CIOState } from '../types';
 
@@ -60,16 +60,16 @@ describe('routerNode', () => {
     expect(route).toBe('reasoning');
   });
 
-  it('should route to observer for simple queries without analysis keywords', () => {
+  it('should route to reasoning for simple queries (not observer)', () => {
     const state = createState('What stocks should I buy?');
     const route = routerNode(state);
-    expect(route).toBe('observer');
+    expect(route).toBe('reasoning');
   });
 
-  it('should route to observer for portfolio questions', () => {
+  it('should route to reasoning for portfolio questions (not observer)', () => {
     const state = createState('What are my current holdings?');
     const route = routerNode(state);
-    expect(route).toBe('observer');
+    expect(route).toBe('reasoning');
   });
 
   it('should be case insensitive', () => {
@@ -133,8 +133,8 @@ describe('routerNode', () => {
       process.env.ENABLE_APPROVAL_GATE = 'false';
       const state = createState('Buy 100 shares of AAPL');
       const route = routerNode(state);
-      // Should route to observer (simple query without analysis keywords)
-      expect(route).toBe('observer');
+      // Should route to reasoning (default route now)
+      expect(route).toBe('reasoning');
     });
 
     it('should prioritize approval_gate over other routes when enabled', () => {
@@ -164,7 +164,7 @@ describe('routerNode', () => {
       process.env.ENABLE_HITL_TEST_NODE = 'false';
       const state = createState('trigger interrupt for hitl test');
       const route = routerNode(state);
-      expect(route).toBe('observer');
+      expect(route).toBe('reasoning');
     });
 
     it('should route to hitl_test for "approval" keyword', () => {
@@ -179,6 +179,70 @@ describe('routerNode', () => {
       const route = routerNode(state);
       // Approval gate should take precedence
       expect(route).toBe('approval_gate');
+    });
+  });
+
+  /**
+   * Tests for Simplified Router (LLM-Driven Routing Refactor)
+   *
+   * The router now does STRUCTURAL routing only, not content-based routing.
+   * Content-based decisions (greetings vs analysis) are handled by the LLM via prompt.
+   */
+  describe('Simplified Router - Structural Routing Only', () => {
+    it('should route all human messages to reasoning', () => {
+      // ALL content now goes to reasoning (LLM decides tool usage)
+      expect(routerNode(createState('Hello'))).toBe('reasoning');
+      expect(routerNode(createState('analyze AAPL'))).toBe('reasoning');
+      expect(routerNode(createState('what can you do'))).toBe('reasoning');
+      expect(routerNode(createState('random message'))).toBe('reasoning');
+    });
+
+    it('should NOT route based on "analyze" keyword anymore', () => {
+      // Used to route to reasoning based on keyword
+      // Now routes to reasoning because it's the default
+      const result = routerNode(createState('analyze this stock'));
+      expect(result).toBe('reasoning');
+
+      // Verify it's not doing keyword matching
+      const result2 = routerNode(createState('nothing to analyze here'));
+      expect(result2).toBe('reasoning'); // Same route
+    });
+
+    it('should NOT route greetings to observer', () => {
+      // Greetings now go to reasoning where LLM handles them
+      const greetings = ['hi', 'hello', 'hey', 'good morning'];
+
+      greetings.forEach((greeting) => {
+        const result = routerNode(createState(greeting));
+        expect(result).not.toBe('observer');
+        expect(result).toBe('reasoning');
+      });
+    });
+
+    it('should keep performance_attribution routing', () => {
+      // This specialized node stays
+      expect(routerNode(createState('YTD performance'))).toBe(
+        'performance_attribution',
+      );
+      expect(routerNode(createState('portfolio returns'))).toBe(
+        'performance_attribution',
+      );
+      expect(routerNode(createState('alpha vs SPY'))).toBe(
+        'performance_attribution',
+      );
+    });
+
+    it('should route tool messages to reasoning', () => {
+      const state: CIOState = {
+        userId: 'user-123',
+        threadId: 'thread-123',
+        messages: [new ToolMessage({ content: 'result', tool_call_id: '123' })],
+        errors: [],
+        iteration: 0,
+        maxIterations: 10,
+      };
+
+      expect(routerNode(state)).toBe('reasoning');
     });
   });
 });
