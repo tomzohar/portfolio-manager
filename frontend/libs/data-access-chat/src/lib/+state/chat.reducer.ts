@@ -242,6 +242,55 @@ export const chatReducer = createReducer(
   })),
 
   // ========================================
+  // Lazy Loading Traces for Message
+  // ========================================
+
+  on(ChatActions.loadTracesForMessage, (state, { messageId }) => {
+    // Add messageId to loading set if not already loaded
+    if (state.loadedMessageIds.has(messageId)) {
+      return state; // Already loaded, no need to track loading
+    }
+
+    const newLoadingSet = new Set(state.loadingTracesByMessageId);
+    newLoadingSet.add(messageId);
+
+    return {
+      ...state,
+      loadingTracesByMessageId: newLoadingSet,
+    };
+  }),
+
+  on(ChatActions.tracesForMessageLoaded, (state, { messageId, traces }) => {
+    const newState = tracesAdapter.addMany(traces, state);
+    const newLoadedMessageIds = new Set(state.loadedMessageIds);
+    newLoadedMessageIds.add(messageId);
+
+    // Remove from loading set
+    const newLoadingSet = new Set(state.loadingTracesByMessageId);
+    newLoadingSet.delete(messageId);
+
+    return {
+      ...newState,
+      loadedMessageIds: newLoadedMessageIds,
+      loadingTracesByMessageId: newLoadingSet,
+      loading: false,
+    };
+  }),
+
+  on(ChatActions.tracesForMessageLoadFailed, (state, { messageId, error }) => {
+    // Remove from loading set on failure
+    const newLoadingSet = new Set(state.loadingTracesByMessageId);
+    newLoadingSet.delete(messageId);
+
+    return {
+      ...state,
+      loadingTracesByMessageId: newLoadingSet,
+      loading: false,
+      error,
+    };
+  }),
+
+  // ========================================
   // Reset
   // ========================================
 

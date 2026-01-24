@@ -36,6 +36,7 @@ export class TracingCallbackHandler extends BaseCallbackHandler {
     private readonly userId: string,
     private readonly tracingService: TracingService | null,
     private readonly eventEmitter: EventEmitter2 | null,
+    private readonly messageId?: string,
   ) {
     super();
   }
@@ -189,7 +190,7 @@ export class TracingCallbackHandler extends BaseCallbackHandler {
             this.currentNodeInput,
             outputs,
             reasoning,
-            { durationMs }, // Pass duration in options
+            { durationMs, messageId: this.messageId }, // Pass duration and messageId in options
           );
           this.logger.debug(`Recorded trace for node: ${nodeName}`);
         } catch (error) {

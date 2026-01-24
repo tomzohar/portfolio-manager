@@ -147,9 +147,10 @@ export class ChatPageComponent implements OnDestroy {
   connectionStatus = this.facade.connectionStatus;
 
   /**
-   * Current thread traces
+   * All traces (for lazy loading by messageId)
+   * The conversation panel will filter these by messageId
    */
-  traces = this.facade.currentThreadTraces;
+  traces = this.facade.allTraces;
 
   /**
    * Conversation messages (user + AI)

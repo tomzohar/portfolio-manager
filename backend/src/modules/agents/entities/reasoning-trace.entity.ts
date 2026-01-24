@@ -76,6 +76,10 @@ export class ReasoningTrace {
   @Column({ type: 'integer', nullable: true })
   stepIndex?: number;
 
+  @Column({ type: 'uuid', nullable: true })
+  @Index()
+  messageId?: string;
+
   @CreateDateColumn()
   createdAt: Date;
 }

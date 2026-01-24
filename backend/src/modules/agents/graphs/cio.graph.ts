@@ -5,7 +5,6 @@ import {
   BaseCheckpointSaver,
 } from '@langchain/langgraph';
 import { BaseMessage } from '@langchain/core/messages';
-import { observerNode } from './nodes/observer.node';
 import { endNode } from './nodes/end.node';
 import {
   routerNode,
@@ -82,7 +81,6 @@ export function buildCIOGraph(stateService: StateService) {
   /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
   let workflow = new StateGraph(CIOStateAnnotation)
     .addNode('guardrail', guardrailNode)
-    .addNode('observer', observerNode)
     .addNode('reasoning', reasoningNode)
     .addNode('tool_execution', toolExecutionNode)
     .addNode('performance_attribution', performanceAttributionNode) as any;
@@ -103,7 +101,6 @@ export function buildCIOGraph(stateService: StateService) {
     .addConditionalEdges('guardrail', routerNode, {
       performance_attribution: 'performance_attribution',
       reasoning: 'reasoning',
-      observer: 'observer',
       tool_execution: 'tool_execution',
       end: 'end',
       ...(enableApprovalGate ? { approval_gate: 'approval_gate' } : {}),
@@ -117,7 +114,6 @@ export function buildCIOGraph(stateService: StateService) {
       reasoning: 'reasoning',
       end: 'end',
     })
-    .addEdge('observer', 'end')
     .addEdge('performance_attribution', 'end');
 
   // Add edge for approval gate node only if enabled

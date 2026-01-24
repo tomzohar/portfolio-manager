@@ -18,17 +18,23 @@
             (toggleTraces)="handleToggleMessageTraces(message.id)"
           />
           
-          @if (isMessageTracesExpanded(message.id) && message.traceIds) {
+          @if (isMessageTracesExpanded(message.id)) {
             <div class="traces-section">
-              <div class="traces-list">
-                @for (trace of getTracesForMessage(message.traceIds); track trackByTraceId($index, trace)) {
-                  <app-reasoning-trace-item
-                    [trace]="trace"
-                    [isExpanded]="isTraceExpanded(trace.id)"
-                    (toggleExpand)="handleToggleTrace(trace.id)"
-                  />
-                }
-              </div>
+              @if (isLoadingTraces(message.id)) {
+                <div class="traces-loading">
+                <lib-loader [config]="loaderConfig" />
+                </div>
+              } @else {
+                <div class="traces-list">
+                  @for (trace of getTracesForMessage(message.id); track trackByTraceId($index, trace)) {
+                    <app-reasoning-trace-item
+                      [trace]="trace"
+                      [isExpanded]="isTraceExpanded(trace.id)"
+                      (toggleExpand)="handleToggleTrace(trace.id)"
+                    />
+                  }
+                </div>
+              }
             </div>
           }
         }

@@ -18,6 +18,9 @@ import { Request } from 'express';
 export const CurrentUser = createParamDecorator(
   (data: unknown, ctx: ExecutionContext): User => {
     const request = ctx.switchToHttp().getRequest<Request>();
+    if (!('user' in request)) {
+      throw new Error('User not found');
+    }
     return request.user as User;
   },
 );

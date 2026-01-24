@@ -12,6 +12,7 @@ import {
   AIMessageComponent,
   ReasoningTraceItemComponent,
 } from '@stocks-researcher/ui-chat';
+import { LoaderComponent, LoaderConfig } from '@stocks-researcher/styles';
 
 /**
  * ConversationPanelComponent
@@ -41,6 +42,7 @@ import {
     UserMessageComponent,
     AIMessageComponent,
     ReasoningTraceItemComponent,
+    LoaderComponent,
   ],
   templateUrl: './conversation-panel.component.html',
   styleUrls: ['./conversation-panel.component.scss'],
@@ -83,12 +85,19 @@ export class ConversationPanelComponent {
    */
   isAssistantMessage = isAssistantMessage;
 
+  readonly loaderConfig: LoaderConfig = {
+    size: 'sm',
+    label: 'Loading traces',
+    ariaLabel: 'Loading traces'
+  }
+
   /**
-   * Get traces for a specific message
+   * Get traces for a specific message by messageId
+   * Uses the new lazy-loaded traces filtered by messageId
    */
-  getTracesForMessage(traceIds: string[]): ReasoningTrace[] {
+  getTracesForMessage(messageId: string): ReasoningTrace[] {
     const allTraces = this.traces();
-    return allTraces.filter((trace) => traceIds.includes(trace.id));
+    return allTraces.filter((trace) => trace.messageId === messageId);
   }
 
   /**
@@ -107,8 +116,17 @@ export class ConversationPanelComponent {
 
   /**
    * Handle toggle message traces
+   * Triggers lazy loading of traces when expanding for the first time
    */
   handleToggleMessageTraces(messageId: string): void {
+    const isCurrentlyExpanded = this.isMessageTracesExpanded(messageId);
+
+    // If expanding (not currently expanded), trigger lazy loading
+    if (!isCurrentlyExpanded) {
+      this.facade.loadTracesForMessage(messageId, this.threadId());
+    }
+
+    // Toggle the expansion state
     this.facade.toggleMessageTraces(messageId);
   }
 
@@ -131,5 +149,9 @@ export class ConversationPanelComponent {
    */
   trackByTraceId(_index: number, trace: ReasoningTrace): string {
     return trace.id;
+  }
+
+  isLoadingTraces(messageId: string): boolean {
+    return this.facade.areTracesLoadingForMessage(messageId)();
   }
 }

@@ -61,6 +61,7 @@ export class TracingService {
       durationMs?: number;
       error?: string;
       stepIndex?: number;
+      messageId?: string;
     },
   ): Promise<ReasoningTrace> {
     // Security validation: userId is required
@@ -80,6 +81,7 @@ export class TracingService {
       durationMs: options?.durationMs,
       error: options?.error,
       stepIndex: options?.stepIndex,
+      messageId: options?.messageId,
     });
 
     const saved = await this.reasoningTraceRepository.save(trace);
@@ -123,6 +125,23 @@ export class TracingService {
       where: { userId },
       order: { createdAt: 'DESC' },
       take: limit,
+    });
+  }
+
+  /**
+   * Get traces for a specific message
+   *
+   * @param messageId - Message ID to get traces for
+   * @param userId - User ID (for security filtering)
+   * @returns Array of traces in chronological order
+   */
+  async getTracesByMessageId(
+    messageId: string,
+    userId: string,
+  ): Promise<ReasoningTrace[]> {
+    return this.reasoningTraceRepository.find({
+      where: { messageId, userId },
+      order: { stepIndex: 'ASC', createdAt: 'ASC' },
     });
   }
 
@@ -279,6 +298,7 @@ export class TracingService {
     userId: string,
     nodeName: string,
     input: Record<string, any>,
+    messageId?: string,
   ): Promise<ReasoningTrace> {
     // Security validation: userId is required
     if (!userId || userId.trim() === '') {
@@ -306,6 +326,7 @@ export class TracingService {
       reasoning: '',
       status: TraceStatus.RUNNING,
       stepIndex: nextStepIndex,
+      messageId,
     });
 
     const saved = await this.reasoningTraceRepository.save(trace);

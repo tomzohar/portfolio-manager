@@ -321,6 +321,50 @@ export class ChatEffects {
   );
 
   /**
+   * Effect: Load traces for a specific message (lazy loading)
+   *
+   * Triggered by: loadTracesForMessage action
+   *
+   * Flow:
+   * 1. Check if traces already loaded for this message
+   * 2. Call API to fetch traces by messageId
+   * 3. Dispatch tracesForMessageLoaded on success
+   * 4. Dispatch tracesForMessageLoadFailed on error
+   *
+   * Use Case:
+   * - User clicks "Show Reasoning" on a message
+   * - Traces are fetched on-demand instead of loading all traces upfront
+   */
+  loadTracesForMessage$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(ChatActions.loadTracesForMessage),
+      withLatestFrom(
+        this.store.select((state: any) => state.chat.loadedMessageIds)
+      ),
+      filter(([{ messageId }, loadedMessageIds]) => {
+        // Skip if already loaded
+        return !loadedMessageIds.has(messageId);
+      }),
+      switchMap(([{ messageId, threadId }]) =>
+        this.traceApi.getTracesByThread(threadId, messageId).pipe(
+          map((traces) => {
+            return ChatActions.tracesForMessageLoaded({ messageId, traces });
+          }),
+          catchError((error) => {
+            console.error(`Failed to load traces for message ${messageId}:`, error);
+            return of(
+              ChatActions.tracesForMessageLoadFailed({
+                messageId,
+                error: 'Failed to load reasoning traces',
+              })
+            );
+          })
+        )
+      )
+    )
+  );
+
+  /**
    * Send message to start/continue conversation
    * Triggers graph execution on backend
    */

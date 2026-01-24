@@ -36,20 +36,23 @@ export class ReasoningTraceApiService {
   /**
    * Fetches all reasoning traces for a specific thread.
    * 
-   * Endpoint: GET /api/agents/traces/:threadId
+   * Endpoint: GET /api/agents/traces/:threadId?messageId=xxx
    * Auth: JWT token required via Authorization header (added by authInterceptor)
    * 
    * @param threadId - The thread ID to fetch traces for
+   * @param messageId - Optional message ID to filter traces for a specific message
    * @returns Observable of ReasoningTrace array, ordered by createdAt ASC
    * 
    * @throws HTTP 403 if user doesn't own the thread
    * @throws HTTP 404 if thread not found
    */
-  getTracesByThread(threadId: string): Observable<ReasoningTrace[]> {
+  getTracesByThread(threadId: string, messageId?: string): Observable<ReasoningTrace[]> {
     // Backend returns { threadId, traces } - we need to extract traces array
-    return this.http.get<{ threadId: string; traces: ReasoningTrace[] }>(
-      `${this.apiUrl}/api/agents/traces/${threadId}`
-    ).pipe(
+    const url = messageId
+      ? `${this.apiUrl}/api/agents/traces/${threadId}?messageId=${messageId}`
+      : `${this.apiUrl}/api/agents/traces/${threadId}`;
+
+    return this.http.get<{ threadId: string; traces: ReasoningTrace[] }>(url).pipe(
       map((response) => response.traces || [])
     );
   }

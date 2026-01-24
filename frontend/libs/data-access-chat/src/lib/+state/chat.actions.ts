@@ -126,5 +126,20 @@ export const ChatActions = createActionGroup({
      * Failed to load conversation messages
      */
     'Conversation Messages Load Failed': props<{ error: string }>(),
+
+    /**
+     * Load traces for a specific message (lazy loading)
+     */
+    'Load Traces For Message': props<{ messageId: string; threadId: string }>(),
+
+    /**
+     * Traces for message loaded successfully
+     */
+    'Traces For Message Loaded': props<{ messageId: string; traces: ReasoningTrace[] }>(),
+
+    /**
+     * Failed to load traces for message
+     */
+    'Traces For Message Load Failed': props<{ messageId: string; error: string }>(),
   },
 });

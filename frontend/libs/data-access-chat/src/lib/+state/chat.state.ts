@@ -17,20 +17,22 @@ export interface ChatState extends EntityState<ReasoningTrace> {
   // UI State
   expandedTraceIds: string[];
   autoScroll: boolean;
-  
+
   // Connection State
   currentThreadId: string | null;
   sseStatus: SSEConnectionStatus;
-  
+
   // Graph Execution State
   graphExecuting: boolean;
-  
+
   // Conversation State
   messages: ConversationMessage[];
   sentMessages: PendingSentMessage[]; // Pending messages with metadata (not yet confirmed)
   nextSequence: number; // Track next sequence number for message ordering
   expandedMessageIds: string[]; // Which AI messages have traces expanded
-  
+  loadedMessageIds: Set<string>; // Which messages have had their traces loaded
+  loadingTracesByMessageId: Set<string>; // Which messages are currently loading traces
+
   // Loading State
   loading: boolean;
   error: string | null;
@@ -65,6 +67,8 @@ export const initialChatState: ChatState = tracesAdapter.getInitialState({
   sentMessages: [],
   nextSequence: 0,
   expandedMessageIds: [],
+  loadedMessageIds: new Set<string>(),
+  loadingTracesByMessageId: new Set<string>(),
   loading: false,
   error: null,
 });

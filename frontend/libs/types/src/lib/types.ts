@@ -237,6 +237,7 @@ export interface ReasoningTrace {
   id: string;
   threadId: string;
   userId: string;
+  messageId?: string; // Link to specific conversation message
   nodeName: string;
   input: unknown;
   output: unknown;

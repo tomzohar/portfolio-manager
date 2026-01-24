@@ -19,6 +19,7 @@ import {
   selectExpandedMessageIds,
   selectIsMessageExpanded,
   selectDisplayMessages,
+  selectAreTracesLoadingForMessage,
 } from './+state/chat.selectors';
 import { ReasoningTrace, SSEConnectionStatus, ConversationMessage, PendingSentMessage } from '@stocks-researcher/types';
 
@@ -69,80 +70,80 @@ export class ChatFacade {
   /**
    * All traces (across all threads)
    */
-  readonly allTraces: Signal<ReasoningTrace[]> = 
+  readonly allTraces: Signal<ReasoningTrace[]> =
     this.store.selectSignal(selectAllTraces);
 
   /**
    * Traces for the current active thread
    */
-  readonly currentThreadTraces: Signal<ReasoningTrace[]> = 
+  readonly currentThreadTraces: Signal<ReasoningTrace[]> =
     this.store.selectSignal(selectCurrentThreadTraces);
 
   /**
    * Current SSE connection status
    */
-  readonly connectionStatus: Signal<SSEConnectionStatus> = 
+  readonly connectionStatus: Signal<SSEConnectionStatus> =
     this.store.selectSignal(selectSSEStatus);
 
   /**
    * Whether graph execution is active
    */
-  readonly isGraphActive: Signal<boolean> = 
+  readonly isGraphActive: Signal<boolean> =
     this.store.selectSignal(selectIsGraphActive);
 
   /**
    * Set of expanded trace IDs
    */
-  readonly expandedTraceIds: Signal<string[]> = 
+  readonly expandedTraceIds: Signal<string[]> =
     this.store.selectSignal(selectExpandedTraceIds);
 
   /**
    * Auto-scroll setting
    */
-  readonly autoScroll: Signal<boolean> = 
+  readonly autoScroll: Signal<boolean> =
     this.store.selectSignal(selectAutoScroll);
 
   /**
    * Loading state (for historical traces)
    */
-  readonly loading: Signal<boolean> = 
+  readonly loading: Signal<boolean> =
     this.store.selectSignal(selectLoading);
 
   /**
    * Error message (if any)
    */
-  readonly error: Signal<string | null> = 
+  readonly error: Signal<string | null> =
     this.store.selectSignal(selectError);
 
   /**
    * Current thread ID
    */
-  readonly currentThreadId: Signal<string | null> = 
+  readonly currentThreadId: Signal<string | null> =
     this.store.selectSignal(selectCurrentThreadId);
 
   /**
    * Latest trace (most recent)
    */
-  readonly latestTrace: Signal<ReasoningTrace | null> = 
+  readonly latestTrace: Signal<ReasoningTrace | null> =
     this.store.selectSignal(selectLatestTrace);
 
   /**
    * Composite view model for trace panel
    * Contains all data needed to render the panel
    */
-  readonly tracePanelViewModel = 
+  readonly tracePanelViewModel =
     this.store.selectSignal(selectTracePanelViewModel);
 
   /**
    * Conversation messages (user + AI)
    */
-  readonly messages: Signal<ConversationMessage[]> = 
+  readonly messages: Signal<ConversationMessage[]> =
     this.store.selectSignal(selectMessages);
 
   /**
    * Pending sent messages (waiting for AI response)
    */
-  readonly sentMessages: Signal<PendingSentMessage[]> = 
+  readonly sentMessages: Signal<PendingSentMessage[]> =
     this.store.selectSignal(selectSentMessages);
 
   /**
@@ -164,13 +165,13 @@ export class ChatFacade {
    * }
    * ```
    */
-  readonly displayMessages: Signal<ConversationMessage[]> = 
+  readonly displayMessages: Signal<ConversationMessage[]> =
     this.store.selectSignal(selectDisplayMessages);
 
   /**
    * Expanded message IDs (for showing/hiding traces)
    */
-  readonly expandedMessageIds: Signal<string[]> = 
+  readonly expandedMessageIds: Signal<string[]> =
     this.store.selectSignal(selectExpandedMessageIds);
 
   // ========================================
@@ -269,6 +270,23 @@ export class ChatFacade {
         portfolioId: params.portfolioId,
       })
     );
+  }
+
+  /**
+   * Load traces for a specific message (lazy loading)
+   * 
+   * @param messageId - Message ID to load traces for
+   * @param threadId - Thread ID (required for API call)
+   */
+  loadTracesForMessage(messageId: string, threadId: string): void {
+    this.store.dispatch(ChatActions.loadTracesForMessage({ messageId, threadId }));
+  }
+
+  /**
+   * Check if traces are currently loading for a specific message
+   */
+  areTracesLoadingForMessage(messageId: string): Signal<boolean> {
+    return this.store.selectSignal(selectAreTracesLoadingForMessage(messageId));
   }
 
   /**

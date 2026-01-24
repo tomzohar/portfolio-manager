@@ -126,6 +126,47 @@ export class ConversationService {
   }
 
   /**
+   * Update an existing assistant message with final content.
+   * Called after graph completion to populate the message created before execution.
+   *
+   * @param messageId - ID of the message to update
+   * @param content - Final content to set
+   * @param traceIds - Optional trace IDs to link
+   * @returns The updated message
+   */
+  async updateAssistantMessage(
+    messageId: string,
+    content: string,
+    traceIds?: string[],
+  ): Promise<ConversationMessage> {
+    const message = await this.messageRepo.findOne({
+      where: { id: messageId },
+    });
+
+    if (!message) {
+      throw new Error(`Message ${messageId} not found`);
+    }
+
+    // Update content
+    message.content = content;
+
+    // Update metadata if traceIds provided
+    if (traceIds) {
+      message.metadata = {
+        ...message.metadata,
+        traceIds,
+      };
+    }
+
+    const updated = await this.messageRepo.save(message);
+    this.logger.debug(
+      `Assistant message updated: ${updated.id} (content length: ${content.length})`,
+    );
+
+    return updated;
+  }
+
+  /**
    * Get all messages for a thread (for conversation display).
    * Messages are returned in chronological order by sequence number.
    *

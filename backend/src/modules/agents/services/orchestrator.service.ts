@@ -108,10 +108,21 @@ export class OrchestratorService {
 
     const scopedThreadId = this.getScopedThreadId(userId, threadId);
     const initialState = this.buildInitialState(userId, scopedThreadId, input);
+
+    // Create assistant message placeholder before graph execution
+    const assistantMessage =
+      await this.conversationService.saveAssistantMessage({
+        threadId: scopedThreadId,
+        userId,
+        content: '', // Will be updated after completion
+        traceIds: [],
+      });
+
     const config = this.buildGraphConfig(
       scopedThreadId,
       userId,
       input.portfolio?.id,
+      assistantMessage.id, // Pass messageId to config
     );
 
     try {
@@ -131,6 +142,7 @@ export class OrchestratorService {
         finalState,
         scopedThreadId,
         userId,
+        assistantMessage.id,
       );
     } catch (error) {
       return this.handleGraphExecutionError(
@@ -175,7 +187,12 @@ export class OrchestratorService {
         );
       }
 
-      return await this.buildCompletedResult(finalState, threadId, userId);
+      return await this.buildCompletedResult(
+        finalState,
+        threadId,
+        userId,
+        null,
+      );
     } catch (error) {
       return this.handleResumeError(error, userId, threadId);
     }
@@ -335,6 +352,7 @@ export class OrchestratorService {
     threadId: string,
     userId?: string,
     portfolioId?: string,
+    messageId?: string,
   ): GraphExecutionConfig {
     const config: GraphExecutionConfig = {
       configurable: {
@@ -357,6 +375,7 @@ export class OrchestratorService {
         userId,
         this.tracingService,
         this.eventEmitter,
+        messageId, // Pass messageId to callback handler
       );
       config.callbacks = [tracingCallback];
     }
@@ -374,13 +393,15 @@ export class OrchestratorService {
    * @param finalState - Final graph state
    * @param threadId - Scoped thread ID
    * @param userId - User ID for event emission
+   * @param messageId - Optional message ID to update
    * @returns Completed GraphResult
    */
-  private async buildCompletedResult(
+  private buildCompletedResult = async (
     finalState: CIOState,
     threadId: string,
     userId: string,
-  ): Promise<GraphResult> {
+    messageId?: string | null,
+  ): Promise<GraphResult> => {
     this.logger.log('Graph execution completed successfully');
 
     this.emitCompletionEvent(threadId, userId);
@@ -395,9 +416,18 @@ export class OrchestratorService {
       );
     }
 
-    // Save AI response as conversation message (Chat Message Persistence)
-    // This runs after graph completion, extracting the final report for display
-    await this.saveAssistantMessageFromState(threadId, userId, finalState);
+    // Update AI response with final content (if messageId provided)
+    if (messageId) {
+      await this.updateAssistantMessage(
+        threadId,
+        userId,
+        finalState,
+        messageId,
+      );
+    } else {
+      // Fallback: save new message (for resume or legacy flows)
+      await this.saveAssistantMessageFromState(threadId, userId, finalState);
+    }
 
     return {
       threadId,
@@ -406,7 +436,30 @@ export class OrchestratorService {
       status: 'COMPLETED',
       citationCount,
     };
-  }
+  };
+
+  /**
+   * Extract final report from graph state
+   *
+   * @param state - Final graph state
+   * @returns Final report string or undefined
+   */
+  private extractReportFromState = (state: CIOState): string | undefined => {
+    // Try to get from final_report field (set by end node)
+    if (state.final_report) {
+      return state.final_report;
+    }
+
+    // Fallback: extract from last AI message
+    const lastMessage = state.messages[state.messages.length - 1];
+    if (lastMessage instanceof AIMessage) {
+      return typeof lastMessage.content === 'string'
+        ? lastMessage.content
+        : JSON.stringify(lastMessage.content);
+    }
+
+    return undefined;
+  };
 
   /**
    * Save assistant message from graph final state
@@ -418,32 +471,14 @@ export class OrchestratorService {
    * @param threadId - Scoped thread ID
    * @param userId - User ID
    * @param finalState - Final graph state
-   * @private
    */
-  private async saveAssistantMessageFromState(
+  private saveAssistantMessageFromState = async (
     threadId: string,
     userId: string,
     finalState: CIOState,
-  ): Promise<void> {
+  ): Promise<void> => {
     try {
-      // Extract final report from last AI message or final_report field
-      let finalReport: string | undefined;
-
-      // Try to get from final_report field (set by end node)
-      if (finalState.final_report) {
-        finalReport = finalState.final_report;
-      }
-
-      // Fallback: extract from last AI message
-      if (!finalReport) {
-        const lastMessage = finalState.messages[finalState.messages.length - 1];
-        if (lastMessage instanceof AIMessage) {
-          finalReport =
-            typeof lastMessage.content === 'string'
-              ? lastMessage.content
-              : JSON.stringify(lastMessage.content);
-        }
-      }
+      const finalReport = this.extractReportFromState(finalState);
 
       if (!finalReport || finalReport.trim() === '') {
         this.logger.debug(
@@ -479,7 +514,60 @@ export class OrchestratorService {
         `Failed to save AI message for thread ${threadId}: ${errorMessage}`,
       );
     }
-  }
+  };
+
+  /**
+   * Update assistant message with final content
+   *
+   * Updates the placeholder message created before graph execution
+   * with the final report and trace links.
+   *
+   * @param threadId - Scoped thread ID
+   * @param userId - User ID
+   * @param finalState - Final graph state
+   * @param messageId - Message ID to update
+   */
+  private updateAssistantMessage = async (
+    threadId: string,
+    userId: string,
+    finalState: CIOState,
+    messageId: string,
+  ): Promise<void> => {
+    try {
+      const finalReport = this.extractReportFromState(finalState);
+
+      if (!finalReport || finalReport.trim() === '') {
+        this.logger.warn(
+          `No final report found in state for thread ${threadId}, skipping message update. State keys: ${Object.keys(finalState).join(', ')}`,
+        );
+        return;
+      }
+
+      // Get trace IDs for the specific message
+      const traces = await this.tracingService.getTracesByMessageId(
+        messageId,
+        userId,
+      );
+      const traceIds = traces.map((t) => t.id);
+
+      // Update the message with final content and trace links
+      await this.conversationService.updateAssistantMessage(
+        messageId,
+        finalReport,
+        traceIds,
+      );
+
+      this.logger.debug(
+        `Message ${messageId} updated with final report (length: ${finalReport.length}) and ${traceIds.length} traces`,
+      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `Failed to update message ${messageId}: ${errorMessage}`,
+      );
+    }
+  };
 
   /**
    * Extract citations from graph execution (US-002 integration)

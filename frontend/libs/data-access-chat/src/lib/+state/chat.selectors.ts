@@ -261,3 +261,43 @@ export const selectDisplayMessages = createSelector(
     });
   }
 );
+
+/**
+ * Select traces for a specific message (lazy loading)
+ */
+export const selectTracesByMessageId = (messageId: string) => createSelector(
+  selectAllTraces,
+  (traces) => traces.filter(trace => trace.messageId === messageId)
+);
+
+/**
+ * Select loaded message IDs
+ */
+export const selectLoadedMessageIds = createSelector(
+  selectChatState,
+  (state) => state.loadedMessageIds
+);
+
+/**
+ * Check if traces are loaded for a specific message
+ */
+export const selectAreTracesLoadedForMessage = (messageId: string) => createSelector(
+  selectLoadedMessageIds,
+  (loadedIds) => loadedIds.has(messageId)
+);
+
+/**
+ * Select loading traces by message ID set
+ */
+export const selectLoadingTracesByMessageId = createSelector(
+  selectChatState,
+  (state) => state.loadingTracesByMessageId
+);
+
+/**
+ * Check if traces are currently loading for a specific message
+ */
+export const selectAreTracesLoadingForMessage = (messageId: string) => createSelector(
+  selectLoadingTracesByMessageId,
+  (loadingIds) => loadingIds.has(messageId)
+);

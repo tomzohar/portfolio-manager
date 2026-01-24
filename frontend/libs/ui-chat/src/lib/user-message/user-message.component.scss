@@ -4,7 +4,8 @@
 }
 
 .user-message {
-  max-width: 80%;
+  width: fit-content;
+  max-width: 90%;
   padding: var(--spacing-md);
   background-color: var(--color-bg-tertiary);
   border-radius: var(--radius-md);

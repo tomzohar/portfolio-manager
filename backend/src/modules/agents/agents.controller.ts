@@ -194,9 +194,9 @@ export class AgentsController {
 
   @Get('traces/:threadId')
   @ApiOperation({
-    summary: 'Get historical reasoning traces for a thread',
+    summary: 'Get historical reasoning traces for a thread or message',
     description:
-      'Retrieves all reasoning traces for a specific graph execution thread in chronological order. ' +
+      'Retrieves reasoning traces filtered by threadId or messageId. ' +
       'Traces provide transparency into the agent decision-making process. ' +
       'Users can only access their own traces (filtered by userId).',
   })
@@ -205,6 +205,12 @@ export class AgentsController {
     description: 'Thread identifier to retrieve traces for',
     type: 'string',
     example: '123e4567-e89b-12d3-a456-426614174000:abc123',
+  })
+  @ApiQuery({
+    name: 'messageId',
+    description: 'Optional message ID to filter traces for a specific message',
+    type: 'string',
+    required: false,
   })
   @ApiResponse({
     status: 200,
@@ -222,6 +228,7 @@ export class AgentsController {
   async getTraces(
     @CurrentUser() user: User,
     @Param('threadId') threadId: string,
+    @Query('messageId') messageId?: string,
   ): Promise<TracesResponseDto> {
     // Security: Validate thread ownership before querying database
     // This prevents thread ID enumeration attacks
@@ -232,10 +239,10 @@ export class AgentsController {
       );
     }
 
-    const traces = await this.tracingService.getTracesByThread(
-      threadId,
-      user.id,
-    );
+    // If messageId is provided, fetch traces for that specific message
+    const traces = messageId
+      ? await this.tracingService.getTracesByMessageId(messageId, user.id)
+      : await this.tracingService.getTracesByThread(threadId, user.id);
 
     return {
       threadId,
