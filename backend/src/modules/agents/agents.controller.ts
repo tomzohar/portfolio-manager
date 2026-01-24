@@ -122,9 +122,6 @@ export class AgentsController {
       dto.threadId,
     );
 
-    // IMPORTANT: Save user message BEFORE graph execution
-    // This ensures message is persisted even if graph fails
-    // See Chat_Message_Persistence.md for architecture details
     await this.conversationService.saveUserMessage({
       threadId: scopedThreadId,
       userId: user.id,
