@@ -63,7 +63,7 @@ export const chatReducer = createReducer(
     // This handles cases where graph.complete SSE event was missed due to timing
     const isEndNode = trace.nodeName === 'end';
     const shouldClearExecution = isEndNode && state.graphExecuting;
-    
+
     return tracesAdapter.upsertOne(trace, {
       ...state,
       graphExecuting: shouldClearExecution ? false : state.graphExecuting,
@@ -80,12 +80,12 @@ export const chatReducer = createReducer(
   on(ChatActions.historicalTracesLoaded, (state, { traces }) => {
     // Ensure traces is an array before passing to adapter
     const tracesArray = Array.isArray(traces) ? traces : [];
-    
+
     // Fallback: If historical traces include an 'end' node, graph has completed
     // Clear graphExecuting to ensure button isn't stuck disabled
     const hasEndNode = tracesArray.some(t => t.nodeName === 'end');
     const shouldClearExecution = hasEndNode && state.graphExecuting;
-    
+
     return tracesAdapter.setAll(tracesArray, {
       ...state,
       loading: false,
@@ -138,7 +138,7 @@ export const chatReducer = createReducer(
       timestamp: new Date().toISOString(), // Capture timestamp now
       sequence: state.nextSequence,
     };
-    
+
     return {
       ...state,
       sentMessages: [...state.sentMessages, pendingMessage],
@@ -179,29 +179,6 @@ export const chatReducer = createReducer(
   // Message Management
   // ========================================
 
-  on(ChatActions.messagesExtracted, (state, { messages, nextSequence }) => {
-    // Smart clearing: Only remove optimistic messages that have been confirmed
-    // Check if extracted messages contain user messages that match our sent messages
-    const extractedUserContents = messages
-      .filter(m => m.type === 'user')
-      .map(m => m.content.trim().toLowerCase());
-    
-    // Keep only sent messages that haven't been extracted yet
-    const stillPendingSentMessages = state.sentMessages.filter(sentMsg => 
-      !extractedUserContents.includes(sentMsg.content.trim().toLowerCase())
-    );
-    
-    const newState = {
-      ...state,
-      messages,
-      // Only clear sent messages that have been confirmed in extracted messages
-      sentMessages: stillPendingSentMessages,
-      // Update nextSequence if provided (from historical trace loading)
-      nextSequence: nextSequence !== undefined ? nextSequence : state.nextSequence,
-    };
-    
-    return newState;
-  }),
 
   on(ChatActions.toggleMessageTraces, (state, { messageId }) => {
     const expandedMessageIds = state.expandedMessageIds.includes(messageId)
@@ -234,15 +211,15 @@ export const chatReducer = createReducer(
     const loadedUserContents = messages
       .filter(m => m.type === 'user')
       .map(m => m.content.trim().toLowerCase());
-    
+
     // Keep only sent messages that haven't been confirmed yet
-    const stillPendingSentMessages = state.sentMessages.filter(sentMsg => 
+    const stillPendingSentMessages = state.sentMessages.filter(sentMsg =>
       !loadedUserContents.includes(sentMsg.content.trim().toLowerCase())
     );
 
     // Calculate next sequence from loaded messages
-    const maxSequence = messages.reduce((max, msg) => 
-      msg.sequence !== undefined ? Math.max(max, msg.sequence) : max, 
+    const maxSequence = messages.reduce((max, msg) =>
+      msg.sequence !== undefined ? Math.max(max, msg.sequence) : max,
       -1
     );
 
@@ -254,7 +231,7 @@ export const chatReducer = createReducer(
       loading: false,
       error: null,
     };
-    
+
     return newState;
   }),
 

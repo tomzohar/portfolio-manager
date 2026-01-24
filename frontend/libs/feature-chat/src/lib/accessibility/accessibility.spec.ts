@@ -19,6 +19,7 @@ import { MessageInputComponent } from '../message-input/message-input.component'
 import { ConversationHeaderComponent } from '../conversation-header/conversation-header.component';
 import { ChatFacade } from '@stocks-researcher/data-access-chat';
 import { ActivatedRoute, Router } from '@angular/router';
+import { of } from 'rxjs';
 import { SSEConnectionStatus } from '@stocks-researcher/types';
 
 describe('Accessibility Tests - US-001-T5', () => {
@@ -29,13 +30,18 @@ describe('Accessibility Tests - US-001-T5', () => {
 
     beforeEach(async () => {
       mockChatFacade = {
-        currentThreadId: signal('thread-123'),
+        currentThreadId: signal('user-1:thread-123'),
         isGraphActive: signal(false),
         connectionStatus: signal(SSEConnectionStatus.CONNECTED),
         currentThreadTraces: signal([]),
         loading: signal(false),
         error: signal(null),
+        messages: signal([]),
+        displayMessages: signal([]),
         resetState: jest.fn(),
+        connectSSE: jest.fn(),
+        disconnectSSE: jest.fn(),
+        loadConversationMessages: jest.fn(),
       };
 
       await TestBed.configureTestingModule({
@@ -45,8 +51,8 @@ describe('Accessibility Tests - US-001-T5', () => {
           {
             provide: ActivatedRoute,
             useValue: {
-              paramMap: signal({
-                get: (key: string) => (key === 'threadId' ? 'thread-123' : null),
+              paramMap: of({
+                get: (key: string) => (key === 'threadId' ? 'user-1:thread-123' : null),
               }),
             },
           },
@@ -69,7 +75,7 @@ describe('Accessibility Tests - US-001-T5', () => {
       );
 
       expect(interactiveElements.length).toBeGreaterThan(0);
-      
+
       // Verify all interactive elements are keyboard accessible
       interactiveElements.forEach((element: HTMLElement) => {
         const tabIndex = element.getAttribute('tabindex');
@@ -98,13 +104,18 @@ describe('Accessibility Tests - US-001-T5', () => {
 
     beforeEach(async () => {
       const mockChatFacade = {
-        currentThreadId: signal('thread-123'),
+        currentThreadId: signal('user-1:thread-123'),
         isGraphActive: signal(false),
         connectionStatus: signal(SSEConnectionStatus.CONNECTED),
         currentThreadTraces: signal([]),
         loading: signal(false),
         error: signal(null),
+        messages: signal([]),
+        displayMessages: signal([]),
         resetState: jest.fn(),
+        connectSSE: jest.fn(),
+        disconnectSSE: jest.fn(),
+        loadConversationMessages: jest.fn(),
       };
 
       await TestBed.configureTestingModule({
@@ -114,8 +125,8 @@ describe('Accessibility Tests - US-001-T5', () => {
           {
             provide: ActivatedRoute,
             useValue: {
-              paramMap: signal({
-                get: () => 'thread-123',
+              paramMap: of({
+                get: () => 'user-1:thread-123',
               }),
             },
           },
@@ -142,12 +153,12 @@ describe('Accessibility Tests - US-001-T5', () => {
 
     it('should have aria-labels on all buttons without visible text', () => {
       const buttons = fixture.nativeElement.querySelectorAll('button');
-      
+
       buttons.forEach((button: HTMLElement) => {
         const hasText = button.textContent?.trim();
         const hasAriaLabel = button.getAttribute('aria-label');
         const hasAriaLabelledBy = button.getAttribute('aria-labelledby');
-        
+
         if (!hasText) {
           expect(hasAriaLabel || hasAriaLabelledBy).toBeTruthy();
         }
@@ -188,7 +199,7 @@ describe('Accessibility Tests - US-001-T5', () => {
       fixture.detectChanges();
 
       const countElement = fixture.nativeElement.querySelector('.message-input__count');
-      
+
       // Should have aria-live when near/over limit
       if (countElement) {
         const ariaLive = countElement.getAttribute('aria-live');
@@ -198,18 +209,15 @@ describe('Accessibility Tests - US-001-T5', () => {
 
     it('should have proper focus order', () => {
       const textarea = fixture.nativeElement.querySelector('textarea');
-      const button = fixture.nativeElement.querySelector('button');
+      const button = fixture.nativeElement.querySelector('lib-button');
 
       expect(textarea).toBeTruthy();
       expect(button).toBeTruthy();
-      
-      // Textarea should come before button in DOM order
-      const textareaIndex = Array.from(fixture.nativeElement.children).indexOf(
-        textarea.closest('.message-input__container')
-      );
-      const buttonIndex = Array.from(fixture.nativeElement.children).indexOf(
-        button.closest('.message-input__actions')
-      );
+
+      // Verify textarea comes before button in DOM order
+      const allElements = Array.from(fixture.nativeElement.querySelectorAll('textarea, lib-button'));
+      const textareaIndex = allElements.indexOf(textarea);
+      const buttonIndex = allElements.indexOf(button);
 
       expect(textareaIndex).toBeLessThan(buttonIndex);
     });
@@ -232,7 +240,7 @@ describe('Accessibility Tests - US-001-T5', () => {
 
     it('should have keyboard-accessible buttons', () => {
       const buttons = fixture.nativeElement.querySelectorAll('button, [role="button"]');
-      
+
       buttons.forEach((button: HTMLElement) => {
         const tabIndex = button.getAttribute('tabindex');
         // Should be focusable (tabindex >= 0 or null for native buttons)
@@ -270,13 +278,18 @@ describe('Accessibility Tests - US-001-T5', () => {
 
     beforeEach(async () => {
       const mockChatFacade = {
-        currentThreadId: signal('thread-123'),
+        currentThreadId: signal('user-1:thread-123'),
         isGraphActive: signal(false),
         connectionStatus: signal(SSEConnectionStatus.CONNECTED),
         currentThreadTraces: signal([]),
         loading: signal(false),
         error: signal(null),
+        messages: signal([]),
+        displayMessages: signal([]),
         resetState: jest.fn(),
+        connectSSE: jest.fn(),
+        disconnectSSE: jest.fn(),
+        loadConversationMessages: jest.fn(),
       };
 
       await TestBed.configureTestingModule({
@@ -286,7 +299,7 @@ describe('Accessibility Tests - US-001-T5', () => {
           {
             provide: ActivatedRoute,
             useValue: {
-              paramMap: signal({ get: () => 'thread-123' }),
+              paramMap: of({ get: () => 'user-1:thread-123' }),
             },
           },
           { provide: Router, useValue: { navigate: jest.fn() } },

@@ -47,10 +47,10 @@ describe('ConversationHeaderComponent', () => {
     });
 
     it('should display threadId when no title provided', () => {
-      fixture.componentRef.setInput('threadId', 'thread-123');
+      fixture.componentRef.setInput('threadId', 'abc-123');
       fixture.detectChanges();
 
-      expect(component.displayTitle()).toContain('thread-123');
+      expect(component.displayTitle()).toContain('abc-123');
     });
 
     it('should display default when no title or threadId', () => {
@@ -84,7 +84,7 @@ describe('ConversationHeaderComponent', () => {
       fixture.detectChanges();
 
       const config = component.newConversationButtonConfig();
-      
+
       expect(config.label).toBe('New Chat');
       expect(config.icon).toBe('add');
       expect(config.variant).toBe('stroked');
@@ -106,7 +106,7 @@ describe('ConversationHeaderComponent', () => {
       fixture.detectChanges();
 
       const config = component.settingsButtonConfig();
-      
+
       expect(config.icon).toBe('settings');
       expect(config.variant).toBe('icon');
     });

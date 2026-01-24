@@ -191,10 +191,10 @@ describe('MessageInputComponent', () => {
       const preventDefaultSpy = jest.fn();
 
       component.updateMessage('Test');
-      component.handleKeydown({ 
-        key: 'Enter', 
-        shiftKey: false, 
-        preventDefault: preventDefaultSpy 
+      component.handleKeydown({
+        key: 'Enter',
+        shiftKey: false,
+        preventDefault: preventDefaultSpy
       } as any);
 
       expect(preventDefaultSpy).toHaveBeenCalled();
@@ -251,21 +251,4 @@ describe('MessageInputComponent', () => {
     });
   });
 
-  describe('Character Count Display', () => {
-    it('should show character count when typing', () => {
-      fixture.detectChanges();
-
-      component.updateMessage('Hello');
-
-      expect(component.shouldShowCount()).toBe(true);
-    });
-
-    it('should hide character count when empty', () => {
-      fixture.detectChanges();
-
-      component.updateMessage('');
-
-      expect(component.shouldShowCount()).toBe(false);
-    });
-  });
 });

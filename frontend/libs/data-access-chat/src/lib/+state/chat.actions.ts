@@ -108,16 +108,6 @@ export const ChatActions = createActionGroup({
     'Graph Complete': props<{ threadId: string; output: unknown }>(),
 
     /**
-     * Extract messages from loaded traces
-     */
-    'Extract Messages From Traces': props<{ traces: ReasoningTrace[] }>(),
-
-    /**
-     * Messages extracted and ready to display
-     */
-    'Messages Extracted': props<{ messages: ConversationMessage[]; nextSequence?: number }>(),
-
-    /**
      * Toggle message trace expansion
      */
     'Toggle Message Traces': props<{ messageId: string }>(),

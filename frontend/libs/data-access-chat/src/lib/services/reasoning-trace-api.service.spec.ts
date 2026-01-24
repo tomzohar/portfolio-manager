@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
+import { authInterceptor } from '@frontend/data-access-auth';
 import { ReasoningTraceApiService } from './reasoning-trace-api.service';
 import { ReasoningTrace, ReasoningTraceStatus } from '@stocks-researcher/types';
 
@@ -23,8 +25,11 @@ describe('ReasoningTraceApiService', () => {
     localStorage.clear();
 
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
-      providers: [ReasoningTraceApiService],
+      providers: [
+        ReasoningTraceApiService,
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+      ],
     });
 
     service = TestBed.inject(ReasoningTraceApiService);
@@ -48,14 +53,14 @@ describe('ReasoningTraceApiService', () => {
       // Assert
       const req = httpMock.expectOne(`${apiUrl}/api/agents/traces/${threadId}`);
       expect(req.request.method).toBe('GET');
-      
-      req.flush([]);
+
+      req.flush({ threadId, traces: [] });
     });
 
     it('should include Authorization header when token exists in localStorage', () => {
       // Arrange
       const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test-token';
-      localStorage.setItem('token', mockToken);
+      localStorage.setItem('portfolio_manager_auth_token', mockToken);
 
       // Act
       service.getTracesByThread(threadId).subscribe();
@@ -64,13 +69,13 @@ describe('ReasoningTraceApiService', () => {
       const req = httpMock.expectOne(`${apiUrl}/api/agents/traces/${threadId}`);
       expect(req.request.headers.has('Authorization')).toBe(true);
       expect(req.request.headers.get('Authorization')).toBe(`Bearer ${mockToken}`);
-      
-      req.flush([]);
+
+      req.flush({ threadId, traces: [] });
     });
 
     it('should not include Authorization header when token does not exist', () => {
       // Arrange - ensure no token in localStorage
-      localStorage.removeItem('token');
+      localStorage.removeItem('portfolio_manager_auth_token');
 
       // Act
       service.getTracesByThread(threadId).subscribe();
@@ -78,8 +83,8 @@ describe('ReasoningTraceApiService', () => {
       // Assert
       const req = httpMock.expectOne(`${apiUrl}/api/agents/traces/${threadId}`);
       expect(req.request.headers.has('Authorization')).toBe(false);
-      
-      req.flush([]);
+
+      req.flush({ threadId, traces: [] });
     });
 
     it('should return array of reasoning traces when successful', (done) => {
@@ -135,7 +140,7 @@ describe('ReasoningTraceApiService', () => {
       });
 
       const req = httpMock.expectOne(`${apiUrl}/api/agents/traces/${threadId}`);
-      req.flush(mockTraces);
+      req.flush({ threadId, traces: mockTraces });
     });
 
     it('should return empty array when no traces exist', (done) => {
@@ -151,7 +156,7 @@ describe('ReasoningTraceApiService', () => {
       });
 
       const req = httpMock.expectOne(`${apiUrl}/api/agents/traces/${threadId}`);
-      req.flush([]);
+      req.flush({ threadId, traces: [] });
     });
 
     it('should handle HTTP 404 Not Found error', (done) => {
@@ -201,7 +206,7 @@ describe('ReasoningTraceApiService', () => {
 
     it('should handle HTTP 401 Unauthorized error (invalid token)', (done) => {
       // Arrange
-      localStorage.setItem('token', 'invalid-or-expired-token');
+      localStorage.setItem('portfolio_manager_auth_token', 'invalid-or-expired-token');
 
       // Act
       service.getTracesByThread(threadId).subscribe({
@@ -301,7 +306,7 @@ describe('ReasoningTraceApiService', () => {
       });
 
       const req = httpMock.expectOne(`${apiUrl}/api/agents/traces/${threadId}`);
-      req.flush([complexTrace]);
+      req.flush({ threadId, traces: [complexTrace] });
     });
 
     it('should handle traces with optional fields missing', (done) => {
@@ -333,7 +338,7 @@ describe('ReasoningTraceApiService', () => {
       });
 
       const req = httpMock.expectOne(`${apiUrl}/api/agents/traces/${threadId}`);
-      req.flush([minimalTrace]);
+      req.flush({ threadId, traces: [minimalTrace] });
     });
 
     it('should handle traces sorted by createdAt (oldest first)', (done) => {
@@ -386,7 +391,7 @@ describe('ReasoningTraceApiService', () => {
       });
 
       const req = httpMock.expectOne(`${apiUrl}/api/agents/traces/${threadId}`);
-      req.flush(traces);
+      req.flush({ threadId, traces });
     });
 
     it('should handle special characters in threadId', () => {
@@ -399,8 +404,8 @@ describe('ReasoningTraceApiService', () => {
       // Assert - Should properly encode special characters in URL
       const req = httpMock.expectOne(`${apiUrl}/api/agents/traces/${specialThreadId}`);
       expect(req.request.url).toContain(specialThreadId);
-      
-      req.flush([]);
+
+      req.flush({ threadId: specialThreadId, traces: [] });
     });
   });
 
@@ -408,9 +413,9 @@ describe('ReasoningTraceApiService', () => {
     it('should propagate HTTP errors to subscribers', (done) => {
       // Arrange
       const threadId = 'test-thread';
-      const errorResponse = { 
-        message: 'Internal server error', 
-        code: 'INTERNAL_ERROR' 
+      const errorResponse = {
+        message: 'Internal server error',
+        code: 'INTERNAL_ERROR'
       };
 
       // Act
