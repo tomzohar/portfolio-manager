@@ -40,7 +40,7 @@ describe('TokenUsage Entity', () => {
       const userId = '123e4567-e89b-12d3-a456-426614174000';
       const tokenUsageData = {
         userId,
-        modelName: 'gemini-2.0-flash-exp',
+        modelName: LLMModels.GEMINI_FLASH_LATEST,
         promptTokens: 100,
         completionTokens: 50,
         totalTokens: 150,
