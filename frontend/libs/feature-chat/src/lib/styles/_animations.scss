@@ -1,0 +1,119 @@
+/**
+ * Animation Utilities for Chat Components
+ * 
+ * Respects user's motion preferences (prefers-reduced-motion)
+ * Uses design system transition tokens
+ */
+
+// ========================================
+// Smooth Transitions
+// ========================================
+
+.smooth-transition {
+  transition: all var(--transition-base);
+}
+
+.smooth-transition-fast {
+  transition: all var(--transition-fast);
+}
+
+// ========================================
+// Reduced Motion Support
+// ========================================
+
+/**
+ * Respect user's motion preferences
+ * If user has enabled "reduce motion" in OS settings,
+ * disable all animations for accessibility
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+// ========================================
+// Loading Animations
+// ========================================
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+// ========================================
+// Fade Animations
+// ========================================
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+.fade-in {
+  animation: fade-in var(--transition-base) ease-out;
+}
+
+.fade-out {
+  animation: fade-out var(--transition-base) ease-in;
+}
+
+// ========================================
+// Slide Animations
+// ========================================
+
+@keyframes slide-down {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+
+  to {
+    height: auto;
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    height: auto;
+    opacity: 1;
+  }
+
+  to {
+    height: 0;
+    opacity: 0;
+  }
+}
+
+// Note: These are handled by Angular animations in components
+// Kept here for CSS-only implementations if needed

@@ -6,6 +6,8 @@ import { AppModule } from '../src/app.module';
 import { TestDatabaseManager } from './helpers/test-database-manager';
 import { App } from 'supertest/types';
 import { seedTestMarketData } from './helpers/test-market-data-seeder';
+import { GeminiLlmService } from '../src/modules/agents/services/gemini-llm.service';
+import { mockGeminiLlmService } from './helpers/test-llm-mocker';
 
 /**
  * Global Test Context
@@ -53,19 +55,45 @@ async function initializeGlobalApp(): Promise<void> {
 
   console.log('🚀 Initializing global test app (one-time setup)...');
 
+  // Small delay to ensure database is ready after global setup
+  // This helps prevent connection issues when running all tests together
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+
   // Create test module
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [AppModule],
-  }).compile();
+  })
+    .overrideProvider(GeminiLlmService)
+    .useValue(mockGeminiLlmService)
+    .compile();
 
   // Create and initialize app
   globalApp = moduleFixture.createNestApplication();
   globalApp.useGlobalPipes(new ZodValidationPipe());
-  await globalApp.init();
+
+  // Initialize with retry logic for connection issues
+  let initAttempts = 0;
+  const maxInitAttempts = 3;
+  while (initAttempts < maxInitAttempts) {
+    try {
+      await globalApp.init();
+      break;
+    } catch (error) {
+      initAttempts++;
+      if (initAttempts >= maxInitAttempts) {
+        throw error;
+      }
+      console.log(
+        `⏳ App initialization failed, retrying (${initAttempts}/${maxInitAttempts})...`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+  }
 
   // Wait for async module initialization (LangGraph checkpoint tables)
-  // Longer delay in CI environments
-  const initDelay = process.env.CI ? 3000 : 1000;
+  // Need longer delay to ensure all async operations complete
+  const initDelay = process.env.CI ? 5000 : 3000;
   console.log(
     `⏳ Waiting ${initDelay}ms for async module initialization (checkpoint tables)...`,
   );
@@ -79,8 +107,14 @@ async function initializeGlobalApp(): Promise<void> {
   // This must happen before seeding test data
   console.log('🔧 Synchronizing database schema...');
   try {
+    // First, synchronize to create base tables from entities
     await globalDataSource.synchronize();
-    console.log('✅ Database schema synchronized');
+    console.log('✅ Database schema synchronized (base tables created)');
+
+    // Then run migrations to add enhancements
+    console.log('📦 Running migrations...');
+    await globalDataSource.runMigrations();
+    console.log('✅ Migrations executed (enhancements applied)');
 
     // Verify tables were created
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -101,6 +135,7 @@ async function initializeGlobalApp(): Promise<void> {
       '⚠️  Schema synchronization error:',
       error instanceof Error ? error.message : error,
     );
+    throw error; // Re-throw to fail fast if database setup fails
   }
 
   console.log('✅ Global test app initialized successfully\n');

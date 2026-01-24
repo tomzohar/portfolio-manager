@@ -8,7 +8,9 @@
   "targets": {
     "test": {
       "executor": "@nx/jest:jest",
-      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "outputs": [
+        "{workspaceRoot}/coverage/{projectRoot}"
+      ],
       "options": {
         "jestConfig": "libs/feature-dashboard/jest.config.ts",
         "tsConfig": "libs/feature-dashboard/tsconfig.spec.json"
@@ -16,6 +18,18 @@
     },
     "lint": {
       "executor": "@nx/eslint:lint"
+    },
+    "stylelint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "stylelint \"libs/feature-dashboard/**/*.scss\" --allow-empty-input"
+      }
+    },
+    "stylelint:fix": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "stylelint \"libs/feature-dashboard/**/*.scss\" --fix --allow-empty-input"
+      }
     }
   }
 }

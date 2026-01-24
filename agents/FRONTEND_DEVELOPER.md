@@ -22,6 +22,10 @@ Once the thinking process is complete, generate the solution following these str
 - Domain-driven design.
 - Keep business logic decoupled
 - Design for "change the behavior without changing the code"
+- use design system components to craft components, like buttons, card, icon etc..
+- You MUST read and understand the design system components before starting to write code.
+- if your task involves creating components that could be used by other features/flows - add them as design system component to prevent code duplication.
+- for scss files - use design tokens, (dont use magic numbers like 8px - use --spacing-sm)
 Ask yourself - Are there any battle-tested design patterns, SOLID or DRY principles you can leverage to create a robust solution? - if so, apply them.
 * **Error Handling:** Never swallow errors. Always show the user why a certain action has failed.
 * **Typing:** Use strict typing (TypeScript interfaces and types). No `any`.
@@ -43,6 +47,12 @@ Ask yourself - Are there any battle-tested design patterns, SOLID or DRY princip
 * **Refactoring:**
   Files >500 lines MUST be split. Extract by responsibility (data access, calculations, orchestration). Target: <400 lines per service.
 
+## 4. BROWSER VALIDATION
+use the browser MCP to check the behavior in the browser.
+ - create a test user (signup)
+ - create necessary data (if needed)
+ - interact with the browser to test the feature
+
 ## 4. PREPARE HANDOVER
  [] cleanup any mock data created during the session
  [] functions should have strict types for inputs and outputs
@@ -50,9 +60,11 @@ Ask yourself - Are there any battle-tested design patterns, SOLID or DRY princip
  [] fucntions and classes should have single resposiblity
  [] DRY priciple applied to all code
  [] clear separation of concers (service, state logic, components, utils etc...)
- [] nx test
- [] nx build
- [] nx lint
+ [] no unused imports
+ [] nx run-many -t=test
+ [] nx run-many -t=build
+ [] nx run-many -t=lint
+ [] nx run-many -t=stylelint
 
 ## 5. OUTPUT FORMAT
 1.  Begin with the `<thinking>` block.

@@ -47,6 +47,43 @@ export class TraceDto {
   reasoning: string;
 
   @ApiProperty({
+    description:
+      'Trace execution status (pending, running, completed, failed, interrupted)',
+    example: 'completed',
+    required: false,
+  })
+  status?: string;
+
+  @ApiProperty({
+    description: 'Array of tool results if node used external tools',
+    example: [{ tool: 'FRED API', result: { data: '3.2%' } }],
+    required: false,
+    isArray: true,
+  })
+  toolResults?: Array<{ tool: string; result: any }>;
+
+  @ApiProperty({
+    description: 'Execution duration in milliseconds',
+    example: 1234,
+    required: false,
+  })
+  durationMs?: number;
+
+  @ApiProperty({
+    description: 'Error message if status is failed',
+    example: 'API rate limit exceeded',
+    required: false,
+  })
+  error?: string;
+
+  @ApiProperty({
+    description: 'Step index in execution sequence',
+    example: 1,
+    required: false,
+  })
+  stepIndex?: number;
+
+  @ApiProperty({
     description: 'Timestamp when the trace was created',
     example: '2024-01-15T10:00:00.000Z',
   })

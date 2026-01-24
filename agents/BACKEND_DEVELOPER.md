@@ -32,6 +32,7 @@ Ask yourself - Are there any battle-tested design patterns, SOLID or DRY princip
 - Use explicit suffixes and entity names for domain types (`PortfolioSummaryDto`, `MarketDataDailyModel`, `RiskSignalType`).
 * **Comments:** Comment *why* complex logic exists, not *what* it does.
 * **TDD:** when in asked to perform a coding task you MUST use TDD approach - write unit tests and e2e test (when applicable) before implementing the code.
+ - read backend/test/readme.md for explanation about e2e tests in this project
  - run the tests - should FAIL
  - write the code 
  - run tests again
@@ -54,6 +55,7 @@ Ask yourself - Are there any battle-tested design patterns, SOLID or DRY princip
  [] fucntions and classes should have single resposiblity
  [] DRY priciple applied to all code
  [] clear separation of concers (controllers, service, db interactions, utils etc...)
+ [] no unused imports
  [] npm run test
  [] npm run test:e2e
  [] npm run build

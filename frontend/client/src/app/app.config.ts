@@ -9,6 +9,7 @@ import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { providePortfolioDataAccess } from '@frontend/data-access-portfolio';
 import { provideAuthDataAccess, authInterceptor } from '@frontend/data-access-auth';
 import { providePerformanceAttributionDataAccess } from '@stocks-researcher/data-access-dashboard';
+import { provideChatDataAccess } from '@stocks-researcher/data-access-chat';
 import { IconRegistryService } from '@frontend/util-auth';
 
 export const appConfig: ApplicationConfig = {
@@ -24,6 +25,7 @@ export const appConfig: ApplicationConfig = {
     provideAuthDataAccess(),
     providePortfolioDataAccess(),
     providePerformanceAttributionDataAccess(),
+    provideChatDataAccess(),
     provideAppInitializer(() => {
       const registry = inject(IconRegistryService);
       registry.init();

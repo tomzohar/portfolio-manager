@@ -4,11 +4,16 @@
   "sourceRoot": "libs/util-auth/src",
   "prefix": "lib",
   "projectType": "library",
-  "tags": ["type:util", "scope:auth"],
+  "tags": [
+    "type:util",
+    "scope:auth"
+  ],
   "targets": {
     "build": {
       "executor": "@nx/angular:ng-packagr-lite",
-      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "outputs": [
+        "{workspaceRoot}/dist/{projectRoot}"
+      ],
       "options": {
         "project": "libs/util-auth/ng-package.json",
         "tsConfig": "libs/util-auth/tsconfig.lib.json"
@@ -23,7 +28,9 @@
     },
     "test": {
       "executor": "@nx/jest:jest",
-      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "outputs": [
+        "{workspaceRoot}/coverage/{projectRoot}"
+      ],
       "options": {
         "jestConfig": "libs/util-auth/jest.config.ts",
         "tsConfig": "libs/util-auth/tsconfig.spec.json"
@@ -31,6 +38,18 @@
     },
     "lint": {
       "executor": "@nx/eslint:lint"
+    },
+    "stylelint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "stylelint \"libs/util-auth/**/*.scss\" --allow-empty-input"
+      }
+    },
+    "stylelint:fix": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "stylelint \"libs/util-auth/**/*.scss\" --fix --allow-empty-input"
+      }
     }
   }
 }

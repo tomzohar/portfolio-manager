@@ -6,11 +6,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
 import { TraceDto } from 'src/modules/agents/dto/traces-response.dto';
-import {
-  getTestApp,
-  getTestDataSource,
-  getTestDbManager,
-} from './global-test-context';
+import { getTestApp, getTestDataSource } from './global-test-context';
 
 describe('Automatic Tracing Callbacks', () => {
   let app: INestApplication<App>;

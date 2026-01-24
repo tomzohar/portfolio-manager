@@ -13,27 +13,52 @@ import { applyE2eDbEnv } from './e2e-env';
  * - Entity schema changes (e.g., foreign key updates)
  * - Failed test cleanup
  */
+/**
+ * Wait for database to be ready with retries
+ */
+async function waitForDatabase(
+  maxRetries = 10,
+  delayMs = 1000,
+): Promise<DataSource> {
+  applyE2eDbEnv();
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const dataSource = new DataSource({
+        type: 'postgres',
+        host: process.env.DB_HOST || 'localhost',
+        port: parseInt(process.env.DB_PORT || '5432', 10),
+        username: process.env.DB_USERNAME || 'postgres',
+        password: process.env.DB_PASSWORD || 'postgres',
+        database: process.env.DB_DATABASE || 'stocks_researcher_test',
+        synchronize: false,
+        logging: false,
+      });
+
+      await dataSource.initialize();
+      return dataSource;
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      console.log(
+        `⏳ Database not ready, retrying (${attempt}/${maxRetries})...`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  throw new Error('Failed to connect to database after all retries');
+}
+
 export default async function globalSetup() {
   console.log('\n🧹 Setting up test environment - cleaning database...\n');
 
   let dataSource: DataSource | null = null;
 
   try {
-    applyE2eDbEnv();
-
-    // Create a temporary DataSource connection for setup
-    dataSource = new DataSource({
-      type: 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432', 10),
-      username: process.env.DB_USERNAME || 'postgres',
-      password: process.env.DB_PASSWORD || 'postgres',
-      database: process.env.DB_DATABASE || 'stocks_researcher_test',
-      synchronize: false,
-      logging: false,
-    });
-
-    await dataSource.initialize();
+    // Wait for database to be ready with retries
+    dataSource = await waitForDatabase(10, 1000);
 
     // Drop and recreate the public schema for a completely clean slate
     // This ensures entity changes (like foreign key updates) are properly applied

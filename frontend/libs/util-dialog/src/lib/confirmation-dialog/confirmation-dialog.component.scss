@@ -6,6 +6,7 @@
 
 .title-with-icon {
   @include flex-row($spacing-sm);
+
   align-items: center;
 
   mat-icon {

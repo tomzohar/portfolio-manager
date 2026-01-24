@@ -4,8 +4,7 @@
   width: 100%;
   
   &--scrollable {
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden auto;
     
     // Apply custom scrollbar styling
     @include custom-scrollbar;

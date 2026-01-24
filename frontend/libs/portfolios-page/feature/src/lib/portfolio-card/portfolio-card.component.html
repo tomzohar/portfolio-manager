@@ -1,4 +1,11 @@
-<div class="portfolio-card" (click)="onCardClick()">
+<div 
+  class="portfolio-card" 
+  (click)="onCardClick()" 
+  (keydown.enter)="onCardClick()" 
+  (keydown.space)="onCardClick()"
+  tabindex="0"
+  role="button"
+  [attr.aria-label]="'View portfolio ' + portfolio().name">
   <!-- Header -->
   <div class="portfolio-card__header">
     <div class="portfolio-card__title-section">

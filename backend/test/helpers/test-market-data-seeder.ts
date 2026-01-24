@@ -36,6 +36,8 @@ export async function seedTestMarketData(
     { symbol: 'XOM', basePrice: 100 },
     { symbol: 'SPY', basePrice: 450 },
     { symbol: 'QQQ', basePrice: 380 },
+    { symbol: 'AMZN', basePrice: 150 },
+    { symbol: 'TSLA', basePrice: 200 },
   ];
 
   const marketDataRecords: MarketDataRow[] = [];

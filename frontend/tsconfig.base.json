@@ -48,7 +48,12 @@
         "libs/data-access-dashboard/src/index.ts"
       ],
       "@stocks-researcher/ui-charts": ["libs/ui-charts/src/index.ts"],
-      "@frontend/ui-charts": ["libs/ui-charts/src/index.ts"]
+      "@frontend/ui-charts": ["libs/ui-charts/src/index.ts"],
+      "@stocks-researcher/data-access-chat": [
+        "libs/data-access-chat/src/index.ts"
+      ],
+      "@stocks-researcher/ui-chat": ["libs/ui-chat/src/index.ts"],
+      "@stocks-researcher/feature-chat": ["libs/feature-chat/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

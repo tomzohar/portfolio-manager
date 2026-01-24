@@ -1,0 +1,56 @@
+<div class="reasoning-trace-panel" role="region" aria-label="Reasoning trace timeline">
+  <!-- Connection Status Indicator -->
+  <app-sse-connection-indicator
+    [status]="connectionStatus()"
+    [isGraphActive]="isGraphActive()"
+    (reconnect)="handleReconnect()"
+  />
+
+  <!-- Trace Container -->
+  <div class="trace-list-container" #traceContainer>
+    <!-- Loading State -->
+    @if (showLoading()) {
+      <div class="loading-state">
+        <lib-loader [config]="{ size: 'md' }" />
+        <p class="loading-text">Loading reasoning traces...</p>
+      </div>
+    }
+
+    <!-- Error State -->
+    @if (showError()) {
+      <div class="error-state">
+        <div class="error-content">
+          <p class="error-message">{{ error() }}</p>
+          <lib-button
+            [config]="retryButtonConfig()"
+            (clicked)="handleRetry()"
+            class="retry-button"
+          />
+        </div>
+      </div>
+    }
+
+    <!-- Empty State -->
+    @if (showEmptyState()) {
+      <div class="empty-state">
+        <p class="empty-text">No reasoning traces yet</p>
+        <p class="empty-hint">Traces will appear here as the AI processes your request</p>
+      </div>
+    }
+
+    <!-- Trace List -->
+    @if (traces().length > 0) {
+      <div class="trace-list">
+        @for (trace of traces(); track trackByTraceId($index, trace)) {
+          <app-reasoning-trace-item
+            [trace]="trace"
+            [isExpanded]="isTraceExpanded(trace.id)"
+            (toggleExpand)="handleTraceToggle(trace.id)"
+            (click)="handleTraceClick(trace)"
+            class="trace-item"
+          />
+        }
+      </div>
+    }
+  </div>
+</div>

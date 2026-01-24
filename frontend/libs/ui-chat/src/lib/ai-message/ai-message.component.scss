@@ -1,0 +1,139 @@
+:host {
+  display: block;
+  margin-top: var(--spacing-base);
+}
+
+.ai-message {
+  max-width: 85%;
+  padding: var(--spacing-md);
+  background-color: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--color-ai-secondary);
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+  gap: var(--spacing-xl);
+}
+
+.sender-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.ai-icon {
+  color: var(--color-ai-primary);
+}
+
+.sender {
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.timestamp {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-faint);
+}
+
+.message-content {
+  margin-bottom: var(--spacing-md);
+}
+
+.formatted-response {
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+  background-color: transparent;
+  border: none;
+  padding: 0;
+}
+
+.trace-toggle {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.toggle-button {
+  font-size: var(--font-size-xs);
+}
+
+// ========================================
+// Loading Skeleton
+// ========================================
+
+.loading-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.skeleton-line {
+  height: 14px;
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-subtle) 0%,
+    var(--color-bg-muted) 50%,
+    var(--color-bg-subtle) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: var(--radius-sm);
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+.skeleton-line-1 {
+  width: 90%;
+}
+
+.skeleton-line-2 {
+  width: 95%;
+}
+
+.skeleton-line-3 {
+  width: 75%;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.ai-message.loading {
+  border-left-color: var(--color-border-subtle);
+  opacity: 0.9;
+}
+
+// ========================================
+// Responsive Design
+// ========================================
+
+@media (width <= 768px) {
+  .ai-message {
+    max-width: 90%;
+  }
+}
+
+@media (width <= 480px) {
+  .ai-message {
+    max-width: 95%;
+    padding: var(--spacing-sm);
+  }
+
+  .formatted-response {
+    font-size: var(--font-size-xs);
+  }
+}

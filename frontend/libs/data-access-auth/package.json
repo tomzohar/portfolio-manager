@@ -3,7 +3,12 @@
   "version": "0.0.1",
   "peerDependencies": {
     "@angular/common": "^20.3.0",
-    "@angular/core": "^20.3.0"
+    "@angular/core": "^20.3.0",
+    "@ngrx/store": "^20.1.0",
+    "@stocks-researcher/types": "0.0.1",
+    "@ngrx/effects": "^20.1.0",
+    "@angular/router": "~20.3.0",
+    "rxjs": "~7.8.0"
   },
   "sideEffects": false
 }

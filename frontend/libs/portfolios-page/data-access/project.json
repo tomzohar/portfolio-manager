@@ -8,7 +8,9 @@
   "targets": {
     "test": {
       "executor": "@nx/jest:jest",
-      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "outputs": [
+        "{workspaceRoot}/coverage/{projectRoot}"
+      ],
       "options": {
         "jestConfig": "libs/portfolios-page/data-access/jest.config.ts",
         "tsConfig": "libs/portfolios-page/data-access/tsconfig.spec.json"
@@ -16,6 +18,18 @@
     },
     "lint": {
       "executor": "@nx/eslint:lint"
+    },
+    "stylelint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "stylelint \"libs/portfolios-page/data-access/**/*.scss\" --allow-empty-input"
+      }
+    },
+    "stylelint:fix": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "stylelint \"libs/portfolios-page/data-access/**/*.scss\" --fix --allow-empty-input"
+      }
     }
   }
 }

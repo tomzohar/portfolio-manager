@@ -122,6 +122,35 @@ This ensures tests:
 
 ---
 
+### LLM and Agent Mocking
+
+**Location**: `helpers/test-llm-mocker.ts`
+
+To test LangGraph agents without incurring cost, latency, or flakiness from real LLM calls, we use a sophisticated mocking infrastructure.
+
+**Key Features**:
+- ✅ **Instant Responses**: No network calls, tests run in milliseconds.
+- ✅ **Tool Call Simulation**: Mocks complex ReAct behaviors (Reasoning -> Tool -> Observation -> Final Answer).
+- ✅ **Recursion Prevention**: Automatically detects if a tool has already been executed (by checking conversation history for tool outputs like `"sma_50"` or `"current_price"`) and returns a final answer to break infinite loops.
+- ✅ **Duck Typing Support**: Ensures mock messages are correctly identified by the router logic, even when passing through serialization.
+
+**Usage**:
+
+The global test app automatically overrides the `GeminiLlmService` with the mock implementation. The mock logic in `test-llm-mocker.ts` inspects prompts to decide whether to trigger a specific tool (e.g., "Analyze AAPL" -> `technical_analyst`) or return a standard text response.
+
+```typescript
+// Example from checks in test-llm-mocker.ts
+if (prompt.includes('analyze aapl')) {
+  // Triggers technical_analyst tool call
+  return { tool_calls: [{ name: 'technical_analyst', args: { ticker: 'AAPL' } }] };
+}
+```
+
+**Adding New Mock Scenarios**:
+If you add a new tool or agent capability, you must update `test-llm-mocker.ts` to recognize the new keywords in the prompt and return the appropriate tool call structure.
+
+---
+
 ## Running Tests
 
 ### Local Development

@@ -11,6 +11,7 @@
 
 .card-header-content {
   @include flex-row($spacing-md);
+
   width: 100%;
   align-items: flex-start;
 }

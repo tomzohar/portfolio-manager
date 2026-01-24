@@ -1,0 +1,32 @@
+<header class="conversation-header" role="banner">
+  <!-- Title Section -->
+  <div class="conversation-header__title-section">
+    @if (hasThread()) {
+      <lib-icon
+        name="chat"
+        [size]="24"
+        class="conversation-header__icon"
+        ariaLabel="Active conversation"
+      />
+    }
+    
+    <h1 class="conversation-header__title">
+      {{ displayTitle() }}
+    </h1>
+  </div>
+
+  <!-- Actions Section -->
+  <div class="conversation-header__actions">
+    <lib-button
+      [config]="newConversationButtonConfig()"
+      (clicked)="handleNewConversation()"
+      class="new-conversation-button"
+    />
+    
+    <lib-button
+      [config]="settingsButtonConfig()"
+      (clicked)="handleSettings()"
+      class="settings-button"
+    />
+  </div>
+</header>

@@ -317,7 +317,7 @@ mat-card,
   }
   
   // Hover state
-  &:hover:not(.mat-focused):not(.mat-form-field-disabled) {
+  &:hover:not(.mat-focused, .mat-form-field-disabled) {
     .mdc-notched-outline,
     .mat-mdc-notched-outline {
       .mdc-notched-outline__leading,
@@ -724,7 +724,7 @@ h2.mat-mdc-dialog-title {
     }
     
     // Hover state - make it even brighter
-    &:hover:not(.mat-focused):not(.mat-form-field-disabled) {
+    &:hover:not(.mat-focused, .mat-form-field-disabled) {
       .mdc-notched-outline {
         .mdc-notched-outline__leading,
         .mdc-notched-outline__trailing,
@@ -830,7 +830,7 @@ h2.mat-mdc-dialog-title {
   }
   
   // Hover state
-  &:hover:not(.mdc-text-field--focused):not(.mdc-text-field--disabled) {
+  &:hover:not(.mdc-text-field--focused, .mdc-text-field--disabled) {
     .mdc-notched-outline {
       .mdc-notched-outline__leading,
       .mdc-notched-outline__trailing,

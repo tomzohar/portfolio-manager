@@ -29,9 +29,20 @@ export const BRAND_ICON_CHART_BARS = `<svg viewBox="0 0 24 24" fill="none" xmlns
 </svg>`;
 
 /**
+ * AI Chat icon
+ * Used in top navigation bar for chat page
+ * Represents AI-powered chat interface with sparkle effect
+ */
+export const BRAND_ICON_CHAT_AI = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 3C7.02944 3 3 6.47715 3 10.8C3 12.8124 3.84118 14.6436 5.23295 16.0124L4.5 19.5L8.25 17.8875C9.42353 18.2812 10.6882 18.5 12 18.5C16.9706 18.5 21 15.1228 21 10.8C21 6.47715 16.9706 3 12 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M15 7L16 6L15 5L14 6L15 7Z" fill="currentColor"/>
+  <path d="M18 10L19 9L18 8L17 9L18 10Z" fill="currentColor"/>
+</svg>`;
+
+/**
  * Brand icon names type for type safety
  */
-export type BrandIconName = 'arrow-trend' | 'chart-bars';
+export type BrandIconName = 'arrow-trend' | 'chart-bars' | 'chat-ai';
 
 /**
  * Get brand icon SVG by name
@@ -42,6 +53,7 @@ export function getBrandIcon(name: BrandIconName): string {
   const icons: Record<BrandIconName, string> = {
     'arrow-trend': BRAND_ICON_ARROW_TREND,
     'chart-bars': BRAND_ICON_CHART_BARS,
+    'chat-ai': BRAND_ICON_CHAT_AI,
   };
   
   return icons[name];

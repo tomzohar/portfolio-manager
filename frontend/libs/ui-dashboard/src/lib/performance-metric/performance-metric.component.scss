@@ -8,11 +8,13 @@
 
 .metric-label {
   @include label-uppercase;
+
   color: $color-text-subtle;
 }
 
 .metric-value {
   @include value-medium;
+
   font-weight: $font-weight-bold;
 
   &.large {

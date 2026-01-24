@@ -5,7 +5,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AuthResponseDto } from 'src/modules/auth/dto/auth-response.dto';
-import { getTestApp, getTestDbManager } from './global-test-context';
+import { getTestApp } from './global-test-context';
 
 describe('Authentication Flow (e2e)', () => {
   let app: INestApplication<App>;

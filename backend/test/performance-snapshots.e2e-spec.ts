@@ -5,11 +5,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
 import { Timeframe } from '../src/modules/performance/types/timeframe.types';
-import {
-  getTestApp,
-  getTestDataSource,
-  getTestDbManager,
-} from './global-test-context';
+import { getTestApp, getTestDataSource } from './global-test-context';
 
 /**
  * E2E Test Suite for Phase 9: Daily Performance Snapshots

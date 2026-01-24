@@ -5,7 +5,7 @@
   background: #18181b; // zinc-900
   border: 1px solid #27272a; // zinc-800
   border-radius: 14px;
-  padding: 25px 25px 24px 25px;
+  padding: 25px 25px 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -15,7 +15,7 @@
   &:hover {
     border-color: #3f3f46; // zinc-700
     transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 8px 16px rgb(0 0 0 / 30%);
   }
 
   // Header section
@@ -42,12 +42,12 @@
   }
 
   &__title {
-    font-family: 'Inter', sans-serif;
+    font-family: Inter, sans-serif;
     font-size: 16px;
     font-weight: 700;
     line-height: 24px;
     letter-spacing: -0.3125px;
-    color: #ffffff;
+    color: #fff;
     margin: 0;
   }
 
@@ -71,7 +71,7 @@
   }
 
   &__description {
-    font-family: 'Inter', sans-serif;
+    font-family: Inter, sans-serif;
     font-size: 14px;
     font-weight: 400;
     line-height: 20px;
@@ -84,7 +84,7 @@
   &__badge {
     padding: 3px 9px;
     border-radius: 8px;
-    font-family: 'Inter', sans-serif;
+    font-family: Inter, sans-serif;
     font-size: 12px;
     font-weight: 500;
     line-height: 16px;
@@ -94,20 +94,20 @@
     align-items: center;
 
     &.risk-aggressive {
-      background: rgba(251, 44, 54, 0.1);
-      border: 1px solid rgba(251, 44, 54, 0.2);
+      background: rgb(251 44 54 / 10%);
+      border: 1px solid rgb(251 44 54 / 20%);
       color: #ff6467;
     }
 
     &.risk-moderate {
-      background: rgba(254, 154, 0, 0.1);
-      border: 1px solid rgba(254, 154, 0, 0.2);
+      background: rgb(254 154 0 / 10%);
+      border: 1px solid rgb(254 154 0 / 20%);
       color: #ffd230;
     }
 
     &.risk-conservative {
-      background: rgba(0, 212, 146, 0.1);
-      border: 1px solid rgba(0, 212, 146, 0.2);
+      background: rgb(0 212 146 / 10%);
+      border: 1px solid rgb(0 212 146 / 20%);
       color: #00d492;
     }
   }
@@ -120,12 +120,12 @@
   }
 
   &__total-value {
-    font-family: 'Inter', sans-serif;
+    font-family: Inter, sans-serif;
     font-size: 24px;
     font-weight: 700;
     line-height: 32px;
     color: #f4f4f5; // zinc-100
-    margin: 0 0 4px 0;
+    margin: 0 0 4px;
   }
 
   &__change-row {
@@ -149,7 +149,7 @@
   }
 
   &__change-value {
-    font-family: 'Inter', sans-serif;
+    font-family: Inter, sans-serif;
     font-size: 14px;
     font-weight: 400;
     line-height: 20px;
@@ -164,7 +164,7 @@
   }
 
   &__change-label {
-    font-family: 'Inter', sans-serif;
+    font-family: Inter, sans-serif;
     font-size: 12px;
     font-weight: 400;
     line-height: 16px;
@@ -186,7 +186,7 @@
   }
 
   &__metric-label {
-    font-family: 'Inter', sans-serif;
+    font-family: Inter, sans-serif;
     font-size: 12px;
     font-weight: 400;
     line-height: 16px;
@@ -194,7 +194,7 @@
   }
 
   &__metric-value {
-    font-family: 'Inter', sans-serif;
+    font-family: Inter, sans-serif;
     font-size: 14px;
     font-weight: 500;
     line-height: 20px;
@@ -217,7 +217,7 @@
   }
 
   &__positions-label {
-    font-family: 'Inter', sans-serif;
+    font-family: Inter, sans-serif;
     font-size: 12px;
     font-weight: 400;
     line-height: 16px;
@@ -225,7 +225,7 @@
   }
 
   &__positions-count {
-    font-family: 'Inter', sans-serif;
+    font-family: Inter, sans-serif;
     font-size: 12px;
     font-weight: 400;
     line-height: 16px;
@@ -241,7 +241,7 @@
   }
 
   &__updated {
-    font-family: 'Inter', sans-serif;
+    font-family: Inter, sans-serif;
     font-size: 12px;
     font-weight: 400;
     line-height: 16px;
@@ -249,7 +249,7 @@
   }
 
   &__link {
-    font-family: 'Inter', sans-serif;
+    font-family: Inter, sans-serif;
     font-size: 12px;
     font-weight: 400;
     line-height: 16px;

@@ -7,19 +7,37 @@
   "targets": {
     "build": {
       "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "options": {
         "outputPath": "dist/libs/util-dialog",
         "main": "libs/util-dialog/src/index.ts",
         "tsConfig": "libs/util-dialog/tsconfig.lib.json",
-        "assets": ["libs/util-dialog/*.md"]
+        "assets": [
+          "libs/util-dialog/*.md"
+        ]
       }
     },
     "test": {
       "executor": "@nx/jest:jest",
-      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "outputs": [
+        "{workspaceRoot}/coverage/{projectRoot}"
+      ],
       "options": {
         "jestConfig": "libs/util-dialog/jest.config.ts"
+      }
+    },
+    "stylelint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "stylelint \"libs/util-dialog/**/*.scss\" --allow-empty-input"
+      }
+    },
+    "stylelint:fix": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "stylelint \"libs/util-dialog/**/*.scss\" --fix --allow-empty-input"
       }
     }
   }

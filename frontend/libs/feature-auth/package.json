@@ -2,8 +2,11 @@
   "name": "@frontend/feature-auth",
   "version": "0.0.1",
   "peerDependencies": {
-    "@angular/common": "^20.3.0",
-    "@angular/core": "^20.3.0"
+    "@angular/core": "^20.3.0",
+    "@angular/router": "~20.3.0",
+    "@stocks-researcher/styles": "0.0.1",
+    "@angular/forms": "~20.3.0",
+    "@frontend/data-access-auth": "0.0.1"
   },
   "sideEffects": false
 }

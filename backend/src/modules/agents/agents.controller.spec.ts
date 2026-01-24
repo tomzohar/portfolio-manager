@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Test, TestingModule } from '@nestjs/testing';
+import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { AgentsController } from './agents.controller';
 import { OrchestratorService } from './services/orchestrator.service';
 import { TracingService } from './services/tracing.service';
@@ -9,9 +10,10 @@ import { StateService } from './services/state.service';
 import { User } from '../users/entities/user.entity';
 import { RunGraphDto } from './dto/run-graph.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { ExecutionContext } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ThrottlerGuard } from '@nestjs/throttler';
+import { PortfolioService } from '../portfolio/portfolio.service';
+import { ConversationService } from '../conversations/services/conversation.service';
 
 describe('AgentsController', () => {
   let controller: AgentsController;
@@ -58,6 +60,45 @@ describe('AgentsController', () => {
     emit: jest.fn(),
   };
 
+  const mockPortfolioService = {
+    getPortfolioOrFail: jest.fn().mockResolvedValue({
+      id: 'portfolio-123',
+      name: 'Test Portfolio',
+      riskProfile: 'moderate',
+    }),
+    getPortfolioSummary: jest.fn().mockResolvedValue({
+      totalValue: 50000,
+      totalCostBasis: 45000,
+      unrealizedPL: 5000,
+      unrealizedPLPercent: 0.111,
+      cashBalance: 1000,
+      positions: [
+        {
+          ticker: 'AAPL',
+          quantity: 10,
+          avgCostBasis: 150,
+          currentPrice: 170,
+          marketValue: 1700,
+        },
+        {
+          ticker: 'GOOGL',
+          quantity: 5,
+          avgCostBasis: 2800,
+          currentPrice: 2850,
+          marketValue: 14250,
+        },
+      ],
+    }),
+    validateUserOwnsPortfolio: jest.fn().mockResolvedValue(true),
+  };
+
+  const mockConversationService = {
+    getMessages: jest.fn().mockResolvedValue([]),
+    saveUserMessage: jest.fn(),
+    saveAssistantMessage: jest.fn(),
+    getThreadMessages: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -79,6 +120,14 @@ describe('AgentsController', () => {
         {
           provide: EventEmitter2,
           useValue: mockEventEmitter,
+        },
+        {
+          provide: PortfolioService,
+          useValue: mockPortfolioService,
+        },
+        {
+          provide: ConversationService,
+          useValue: mockConversationService,
         },
       ],
     })
@@ -173,8 +222,11 @@ describe('AgentsController', () => {
         threadId: 'existing-thread-id',
       };
 
+      const scopedThreadId = `${mockUser.id}:existing-thread-id`;
+      mockStateService.scopeThreadId.mockReturnValue(scopedThreadId);
+
       const mockResult = {
-        threadId: 'user-123:existing-thread-id',
+        threadId: scopedThreadId,
         finalState: {} as any,
         success: true,
       };
@@ -183,13 +235,17 @@ describe('AgentsController', () => {
 
       await controller.runGraph(mockUser, dto);
 
+      expect(mockStateService.scopeThreadId).toHaveBeenCalledWith(
+        mockUser.id,
+        dto.threadId,
+      );
       expect(orchestratorService.runGraph).toHaveBeenCalledWith(
         mockUser.id,
         {
           message: dto.message,
           portfolio: undefined,
         },
-        dto.threadId,
+        scopedThreadId,
       );
     });
 
@@ -205,6 +261,73 @@ describe('AgentsController', () => {
       await expect(controller.runGraph(mockUser, dto)).rejects.toThrow(
         'Graph execution failed',
       );
+    });
+
+    // US-004-BE-T2: Portfolio Ownership Validation Tests
+    it('should validate portfolio ownership before running graph', async () => {
+      const dto: RunGraphDto = {
+        message: 'Analyze portfolio',
+        portfolio: {
+          id: 'portfolio-123',
+          positions: [],
+        },
+      };
+
+      mockOrchestratorService.runGraph.mockResolvedValue({
+        threadId: 'thread-123',
+        finalState: {} as any,
+        success: true,
+        status: 'COMPLETED',
+      });
+
+      await controller.runGraph(mockUser, dto);
+
+      expect(mockPortfolioService.getPortfolioOrFail).toHaveBeenCalledWith(
+        mockUser.id,
+        'portfolio-123',
+      );
+    });
+
+    it('should throw ForbiddenException if user does not own portfolio', async () => {
+      const dto: RunGraphDto = {
+        message: 'Analyze portfolio',
+        portfolio: {
+          id: 'portfolio-999',
+          positions: [],
+        },
+      };
+
+      mockPortfolioService.getPortfolioOrFail.mockRejectedValue(
+        new ForbiddenException('You do not own this portfolio'),
+      );
+
+      await expect(controller.runGraph(mockUser, dto)).rejects.toThrow(
+        ForbiddenException,
+      );
+
+      expect(mockPortfolioService.getPortfolioOrFail).toHaveBeenCalledWith(
+        mockUser.id,
+        'portfolio-999',
+      );
+      expect(mockOrchestratorService.runGraph).not.toHaveBeenCalled();
+    });
+
+    it('should skip validation if no portfolio provided', async () => {
+      const dto: RunGraphDto = {
+        message: 'General question',
+      };
+
+      mockOrchestratorService.runGraph.mockResolvedValue({
+        threadId: 'thread-123',
+        finalState: {} as any,
+        success: true,
+        status: 'COMPLETED',
+      });
+
+      await controller.runGraph(mockUser, dto);
+
+      expect(mockPortfolioService.getPortfolioOrFail).not.toHaveBeenCalled();
+      expect(mockOrchestratorService.runGraph).toHaveBeenCalled();
     });
   });
 

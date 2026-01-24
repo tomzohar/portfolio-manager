@@ -39,7 +39,7 @@
 
 .error-dialog-message {
   color: var(--color-text-primary);
-  margin: 0 0 $spacing-md 0;
+  margin: 0 0 $spacing-md;
 }
 
 .error-dialog-details {
@@ -53,12 +53,13 @@
 .error-dialog-details-label {
   font-weight: 600;
   color: var(--color-text-secondary);
-  margin: 0 0 $spacing-xs 0;
+  margin: 0 0 $spacing-xs;
 }
 
 .error-dialog-details-text {
   color: var(--color-text-secondary);
   margin: 0;
+
   // font-family: $font-mono;
 }
 

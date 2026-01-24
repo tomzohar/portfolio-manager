@@ -43,6 +43,7 @@
 /// Used for: Floating cards, modals, dropdowns
 @mixin card-elevated {
   @include card-base;
+
   box-shadow: var(--shadow-lg);
 }
 
@@ -51,7 +52,7 @@
 @mixin glassmorphism {
   background-color: var(--color-bg-card);
   backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--color-border-primary);
 }
 
@@ -77,6 +78,7 @@
 /// Used for: Stock recommendation badges showing "BUY"
 @mixin badge-buy {
   @include badge-base;
+
   background-color: var(--color-buy-bg);
   border-color: var(--color-buy-border);
   color: var(--color-buy-text);
@@ -86,6 +88,7 @@
 /// Used for: Stock recommendation badges showing "SELL"
 @mixin badge-sell {
   @include badge-base;
+
   background-color: var(--color-sell-bg);
   border-color: var(--color-sell-border);
   color: var(--color-sell-text);
@@ -95,6 +98,7 @@
 /// Used for: Stock recommendation badges showing "HOLD"
 @mixin badge-hold {
   @include badge-base;
+
   background-color: var(--color-hold-bg);
   border-color: var(--color-hold-border);
   color: var(--color-hold-text);
@@ -104,6 +108,7 @@
 /// Used for: Stock recommendation badges showing "MONITOR"
 @mixin badge-monitor {
   @include badge-base;
+
   background-color: var(--color-monitor-bg);
   border-color: var(--color-monitor-border);
   color: var(--color-monitor-text);
@@ -158,6 +163,7 @@
 /// Large progress bar variant (8px height)
 @mixin progress-bar-large {
   @include progress-bar-container;
+
   height: var(--progress-bar-height-lg);
 }
 
@@ -176,6 +182,7 @@
 /// Used for: "Analyzing", "Active" states
 @mixin status-pill-active {
   @include status-pill;
+
   background-color: var(--color-success);
   box-shadow: 0 0 8px var(--color-success);
 }
@@ -184,6 +191,7 @@
 /// Used for: "Idle", "Inactive" states
 @mixin status-pill-idle {
   @include status-pill;
+
   background-color: var(--color-text-subtle);
 }
 
@@ -191,6 +199,7 @@
 /// Used for: "Warning", "Attention needed" states
 @mixin status-pill-warning {
   @include status-pill;
+
   background-color: var(--color-warning);
   box-shadow: 0 0 8px var(--color-warning);
 }
@@ -296,6 +305,7 @@
 /// Used for: Agent reasoning entries
 @mixin log-icon-reasoning {
   @include log-icon-base;
+
   background-color: var(--color-ai-bg);
   box-shadow: 0 0 0 1px var(--color-ai-glow);
   padding: 4px;
@@ -304,18 +314,21 @@
 /// Success log icon
 @mixin log-icon-success {
   @include log-icon-base;
+
   color: var(--color-success-light);
 }
 
 /// Warning log icon
 @mixin log-icon-warning {
   @include log-icon-base;
+
   color: var(--color-warning);
 }
 
 /// Error log icon
 @mixin log-icon-error {
   @include log-icon-base;
+
   color: var(--color-error);
 }
 
@@ -353,7 +366,7 @@
 /// Rationale/explanation box
 /// Used for: Stock card rationale sections
 @mixin rationale-box {
-  background-color: rgba(9, 9, 11, 0.5);
+  background-color: rgb(9 9 11 / 50%);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
   padding: 13px;
@@ -371,10 +384,7 @@
 /// Absolute positioning cover helper
 @mixin absolute-cover {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
 }
 
 /// Focus visible styles for accessibility
@@ -413,7 +423,7 @@
 
 /// Agent brain log container
 @mixin agent-brain-log-container {
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgb(0 0 0 / 50%);
   padding: var(--spacing-base);
   height: 100%;
   overflow-y: auto;

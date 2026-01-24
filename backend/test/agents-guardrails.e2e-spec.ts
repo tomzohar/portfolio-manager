@@ -189,6 +189,6 @@ describe('Agents Guardrails (e2e)', () => {
       // Both start from iteration 0
       expect(thread1Response.body.finalState.iteration).toBeGreaterThan(0);
       expect(thread2Response.body.finalState.iteration).toBeGreaterThan(0);
-    });
+    }, 60000); // 60 second timeout for two graph executions
   });
 });

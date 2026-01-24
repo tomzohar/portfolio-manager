@@ -14,7 +14,7 @@ export interface RouteData {
 export const appRoutes: Route[] = [
   {
     path: '',
-    redirectTo: 'portfolios',
+    redirectTo: 'chat',
     pathMatch: 'full',
   },
   {
@@ -58,6 +58,30 @@ export const appRoutes: Route[] = [
         loadComponent: () =>
           import('@frontend/feature-dashboard').then(
             (m) => m.DashboardPerformanceComponent
+          ),
+      },
+    ],
+  },
+  {
+    path: 'chat',
+    canActivate: [authGuard],
+    data: {
+      title: 'AI Chat',
+      icon: 'chat-ai' as BrandIconName,
+    } satisfies RouteData,
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('@stocks-researcher/feature-chat').then(
+            (m) => m.ChatPageComponent
+          ),
+      },
+      {
+        path: ':threadId',
+        loadComponent: () =>
+          import('@stocks-researcher/feature-chat').then(
+            (m) => m.ChatPageComponent
           ),
       },
     ],

@@ -6,6 +6,7 @@
 
 .portfolio-widget {
   @include card-base;
+
   padding: var(--spacing-md);
   display: flex;
   flex-direction: column;
@@ -14,22 +15,25 @@
   // Header section
   &__header {
     @include flex-row($spacing-sm);
+
     justify-content: space-between;
     align-items: center;
   }
 
   &__label {
     @include label-medium;
+
     color: var(--color-text-disabled);
     font-size: var(--font-size-sm);
   }
 
   &__info-button {
     @include button-reset;
+
     width: 32px;
     height: 32px;
     border-radius: var(--radius-pill);
-    background-color: rgba(39, 39, 42, 0.5);
+    background-color: rgb(39 39 42 / 50%);
     display: flex;
     align-items: center;
     justify-content: center;

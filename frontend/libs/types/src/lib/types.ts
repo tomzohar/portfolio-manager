@@ -202,3 +202,258 @@ export interface HistoricalDataResponse {
   warning?: string;  // Warning message about data adjustments
   cashAllocationAvg?: number;      // Average cash allocation percentage over the period (as decimal)
 }
+
+// =========================================
+// Chat & Reasoning Trace Types (US-001)
+// =========================================
+
+/**
+ * Status of reasoning trace execution
+ */
+export enum ReasoningTraceStatus {
+  PENDING = 'pending',
+  RUNNING = 'running',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  INTERRUPTED = 'interrupted',
+}
+
+/**
+ * Tool result attached to a reasoning trace
+ */
+export interface ToolResult {
+  toolName: string;
+  input: unknown;
+  output: unknown;
+  error?: string;
+  durationMs?: number;
+}
+
+/**
+ * Reasoning trace entity from backend
+ * Represents a single step in the AI's reasoning process
+ */
+export interface ReasoningTrace {
+  id: string;
+  threadId: string;
+  userId: string;
+  messageId?: string; // Link to specific conversation message
+  nodeName: string;
+  input: unknown;
+  output: unknown;
+  reasoning: string;
+  status?: ReasoningTraceStatus;
+  toolResults?: ToolResult[];
+  durationMs?: number;
+  error?: string;
+  stepIndex?: number;
+  createdAt: Date | string;
+}
+
+/**
+ * SSE connection status
+ */
+export enum SSEConnectionStatus {
+  CONNECTED = 'connected',
+  DISCONNECTED = 'disconnected',
+  RECONNECTING = 'reconnecting',
+  ERROR = 'error',
+}
+
+/**
+ * SSE event types from backend
+ */
+export enum SSEEventType {
+  LLM_START = 'llm.start',
+  LLM_TOKEN = 'llm.token',
+  LLM_COMPLETE = 'llm.complete',
+  NODE_START = 'node.start',
+  NODE_COMPLETE = 'node.complete',
+  GRAPH_COMPLETE = 'graph.complete',
+  ERROR = 'error',
+}
+
+/**
+ * Base SSE event structure
+ */
+export interface SSEEvent {
+  type: SSEEventType;
+  data: unknown;
+  threadId?: string;
+}
+
+/**
+ * LLM token event data
+ */
+export interface LLMTokenEventData {
+  token: string;
+  nodeName: string;
+}
+
+/**
+ * Node completion event data
+ */
+export interface NodeCompleteEventData {
+  trace: ReasoningTrace;
+}
+
+/**
+ * Graph completion event data
+ */
+export interface GraphCompleteEventData {
+  threadId: string;
+  finalOutput: unknown;
+}
+
+/**
+ * Error event data
+ */
+export interface ErrorEventData {
+  message: string;
+  code?: string;
+}
+
+/**
+ * Graph execution result from backend
+ */
+export interface GraphResult {
+  threadId: string;
+  output: unknown;
+}
+
+/**
+ * Run graph DTO
+ */
+export interface RunGraphDto {
+  message: string;
+  portfolio?: string; // Portfolio ID
+  threadId?: string;
+}
+
+/**
+ * Resume graph DTO (for HITL)
+ */
+export interface ResumeGraphDto {
+  threadId: string;
+  userInput: string;
+}
+
+// =========================================
+// Conversation Message Types (CROSS-T1)
+// =========================================
+
+/**
+ * Message type enum for discriminated union
+ */
+export enum MessageType {
+  USER = 'user',
+  ASSISTANT = 'assistant',
+  SYSTEM = 'system',
+}
+
+/**
+ * Base message interface with common properties
+ */
+export interface BaseMessage {
+  id: string;
+  type: MessageType;
+  content: string;
+  timestamp: Date | string;
+  sequence?: number; // For guaranteed ordering in conversation
+}
+
+/**
+ * User message in conversation
+ */
+export interface UserMessage extends BaseMessage {
+  type: MessageType.USER;
+  isOptimistic?: boolean; // Flag for pending messages not yet confirmed by backend
+}
+
+/**
+ * AI assistant message in conversation
+ * Links to reasoning traces that generated this response
+ */
+export interface AssistantMessage extends BaseMessage {
+  type: MessageType.ASSISTANT;
+  traceIds?: string[]; // Links to reasoning traces
+  isOptimistic?: boolean; // Flag for streaming messages not yet complete
+}
+
+/**
+ * System message (status, errors, notifications)
+ */
+export interface SystemMessage extends BaseMessage {
+  type: MessageType.SYSTEM;
+  severity: 'info' | 'warning' | 'error';
+}
+
+/**
+ * Discriminated union of all message types
+ */
+export type ConversationMessage = UserMessage | AssistantMessage | SystemMessage;
+
+/**
+ * Type guard for UserMessage
+ */
+export function isUserMessage(msg: ConversationMessage): msg is UserMessage {
+  return msg.type === MessageType.USER;
+}
+
+/**
+ * Type guard for AssistantMessage
+ */
+export function isAssistantMessage(msg: ConversationMessage): msg is AssistantMessage {
+  return msg.type === MessageType.ASSISTANT;
+}
+
+/**
+ * Type guard for SystemMessage
+ */
+export function isSystemMessage(msg: ConversationMessage): msg is SystemMessage {
+  return msg.type === MessageType.SYSTEM;
+}
+
+/**
+ * Pending sent message (optimistic UI)
+ * Stores metadata about messages that have been sent but not yet confirmed by backend
+ */
+export interface PendingSentMessage {
+  content: string;
+  timestamp: string;  // ISO timestamp captured when message was sent
+  sequence: number;   // Sequence number for guaranteed ordering
+}
+
+// =========================================
+// Backend Conversation Message Types
+// =========================================
+
+/**
+ * Metadata attached to conversation messages from backend
+ * Used primarily for assistant messages to link to reasoning traces
+ */
+export interface ConversationMessageMetadata {
+  /** IDs of reasoning traces linked to this message (for assistant messages) */
+  traceIds?: string[];
+  /** Which LLM model generated this response */
+  modelUsed?: string;
+  /** Number of tool calls made for this response */
+  toolCallCount?: number;
+  /** Error message if the message represents a failed operation */
+  errorMessage?: string;
+}
+
+/**
+ * Conversation message as returned from the backend API
+ * GET /api/agents/conversations/:threadId/messages
+ */
+export interface BackendConversationMessage {
+  id: string;
+  threadId: string;
+  userId: string;
+  type: 'user' | 'assistant' | 'system';
+  content: string;
+  sequence: number;
+  metadata?: ConversationMessageMetadata | null;
+  createdAt: string; // ISO timestamp
+}

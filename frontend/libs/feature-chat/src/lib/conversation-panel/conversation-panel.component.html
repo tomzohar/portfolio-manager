@@ -1,0 +1,49 @@
+<div class="conversation-panel" role="region" aria-label="Conversation history">
+  @if (messages().length === 0 && !isLoading()) {
+    <div class="empty-conversation">
+      <p class="empty-title">No messages yet</p>
+      <p class="empty-hint">Send a message to start the conversation</p>
+    </div>
+  } @else if (messages().length > 0 || isGraphExecuting()) {
+    <div class="messages-list">
+      @for (message of messages(); track trackByMessageId($index, message)) {
+        @if (isUserMessage(message)) {
+          <app-user-message [message]="message" />
+        }
+        
+        @if (isAssistantMessage(message)) {
+          <app-ai-message
+            [message]="message"
+            [showTraces]="isMessageTracesExpanded(message.id)"
+            (toggleTraces)="handleToggleMessageTraces(message.id)"
+          />
+          
+          @if (isMessageTracesExpanded(message.id)) {
+            <div class="traces-section">
+              @if (isLoadingTraces(message.id)) {
+                <div class="traces-loading">
+                <lib-loader [config]="loaderConfig" />
+                </div>
+              } @else {
+                <div class="traces-list">
+                  @for (trace of getTracesForMessage(message.id); track trackByTraceId($index, trace)) {
+                    <app-reasoning-trace-item
+                      [trace]="trace"
+                      [isExpanded]="isTraceExpanded(trace.id)"
+                      (toggleExpand)="handleToggleTrace(trace.id)"
+                    />
+                  }
+                </div>
+              }
+            </div>
+          }
+        }
+      }
+      
+      <!-- Loading skeleton for AI response while graph is executing -->
+      @if (isGraphExecuting()) {
+        <app-ai-message [isLoading]="true" />
+      }
+    </div>
+  }
+</div>

@@ -7,6 +7,7 @@ import { AuthBrandingComponent } from '../components/auth-branding.component';
 
 @Component({
   selector: 'lib-login',
+  standalone: true,
   imports: [ReactiveFormsModule, RouterLink, InputComponent, ButtonComponent, AuthBrandingComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',

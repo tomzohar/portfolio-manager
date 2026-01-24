@@ -4,6 +4,7 @@ import { PortfolioService } from '../../portfolio/portfolio.service';
 import { PolygonApiService } from '../../assets/services/polygon-api.service';
 import { OHLCVBar } from '../../assets/types/polygon-api.types';
 import { firstValueFrom } from 'rxjs';
+import { EnhancedTool } from '../types/tool-metadata.types';
 
 /**
  * Risk Manager Tool
@@ -45,7 +46,7 @@ export function createRiskManagerTool(
   portfolioService: PortfolioService,
   polygonService: PolygonApiService,
 ): DynamicStructuredTool {
-  return new DynamicStructuredTool({
+  const tool = new DynamicStructuredTool({
     name: 'risk_manager',
     description:
       'Calculates portfolio-level risk metrics including Value at Risk (VaR), Beta, Volatility, and Concentration. ' +
@@ -245,6 +246,15 @@ export function createRiskManagerTool(
       }
     },
   });
+
+  // Add metadata for enhanced prompt generation
+  (tool as EnhancedTool).metadata = {
+    notes:
+      "When analyzing a user's portfolio, the portfolioId and userId are ALREADY AVAILABLE in the portfolio context. Use those values directly - DO NOT ask the user to provide them.",
+    category: 'risk',
+  };
+
+  return tool;
 }
 
 /**

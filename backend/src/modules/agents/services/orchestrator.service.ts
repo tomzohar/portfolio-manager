@@ -4,8 +4,10 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Inject,
+  Optional,
 } from '@nestjs/common';
-import { HumanMessage } from '@langchain/core/messages';
+import { HumanMessage, AIMessage } from '@langchain/core/messages';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { StateService } from './state.service';
 import { ToolRegistryService } from './tool-registry.service';
@@ -22,6 +24,9 @@ import { InterruptHandlerService } from './interrupt-handler.service';
 import { GuardrailException } from '../graphs/nodes/guardrail.node';
 import { TracingService } from './tracing.service';
 import { TracingCallbackHandler } from '../callbacks/tracing-callback.handler';
+import { CitationService } from '../../citations/services/citation.service';
+import { ConversationService } from '../../conversations/services/conversation.service';
+import { GeminiLlmService } from './gemini-llm.service';
 
 // ============================================================================
 // Types & Interfaces
@@ -39,6 +44,7 @@ export interface GraphResult {
   status: 'SUSPENDED' | 'COMPLETED' | 'FAILED';
   interruptReason?: string;
   error?: string;
+  citationCount?: number;
 }
 
 // ============================================================================
@@ -75,7 +81,12 @@ export class OrchestratorService {
     private readonly graphExecutor: GraphExecutorService,
     private readonly interruptHandler: InterruptHandlerService,
     private readonly tracingService: TracingService,
-  ) {}
+    private readonly conversationService: ConversationService,
+    private readonly geminiLlmService: GeminiLlmService,
+    @Optional()
+    @Inject(CitationService)
+    private readonly citationService?: CitationService,
+  ) { }
 
   // ============================================================================
   // Public API
@@ -99,7 +110,22 @@ export class OrchestratorService {
 
     const scopedThreadId = this.getScopedThreadId(userId, threadId);
     const initialState = this.buildInitialState(userId, scopedThreadId, input);
-    const config = this.buildGraphConfig(scopedThreadId, userId);
+
+    // Create assistant message placeholder before graph execution
+    const assistantMessage =
+      await this.conversationService.saveAssistantMessage({
+        threadId: scopedThreadId,
+        userId,
+        content: '', // Will be updated after completion
+        traceIds: [],
+      });
+
+    const config = this.buildGraphConfig(
+      scopedThreadId,
+      userId,
+      input.portfolio?.id,
+      assistantMessage.id, // Pass messageId to config
+    );
 
     try {
       const finalState = await this.graphExecutor.invoke(initialState, config);
@@ -114,7 +140,12 @@ export class OrchestratorService {
       }
 
       // Normal completion
-      return this.buildCompletedResult(finalState, scopedThreadId, userId);
+      return await this.buildCompletedResult(
+        finalState,
+        scopedThreadId,
+        userId,
+        assistantMessage.id,
+      );
     } catch (error) {
       return this.handleGraphExecutionError(
         error,
@@ -158,7 +189,12 @@ export class OrchestratorService {
         );
       }
 
-      return this.buildCompletedResult(finalState, threadId, userId);
+      return await this.buildCompletedResult(
+        finalState,
+        threadId,
+        userId,
+        null,
+      );
     } catch (error) {
       return this.handleResumeError(error, userId, threadId);
     }
@@ -311,20 +347,28 @@ export class OrchestratorService {
    *
    * @param threadId - Scoped thread ID
    * @param userId - User ID for tracing
-   * @returns Graph configuration object with tracing callback
+   * @param portfolioId - Optional portfolio ID for context storage (US-004)
+   * @returns Graph configuration object with tracing callback, metadata, and tool registry
    */
   private buildGraphConfig(
     threadId: string,
     userId?: string,
+    portfolioId?: string,
+    messageId?: string,
   ): GraphExecutionConfig {
     const config: GraphExecutionConfig = {
       configurable: {
         thread_id: threadId,
+        toolRegistry: this.toolRegistry, // Provide tool registry for agentic tool calling
         performanceService: this.performanceService,
         portfolioService: this.portfolioService,
         sectorAttributionService: this.sectorAttributionService,
+        geminiLlmService: this.geminiLlmService,
       },
       recursionLimit: RECURSION_LIMIT,
+      metadata: {
+        portfolioId: portfolioId || null,
+      },
     };
 
     // Add automatic tracing callback if userId is provided
@@ -334,6 +378,7 @@ export class OrchestratorService {
         userId,
         this.tracingService,
         this.eventEmitter,
+        messageId, // Pass messageId to callback handler
       );
       config.callbacks = [tracingCallback];
     }
@@ -351,23 +396,252 @@ export class OrchestratorService {
    * @param finalState - Final graph state
    * @param threadId - Scoped thread ID
    * @param userId - User ID for event emission
+   * @param messageId - Optional message ID to update
    * @returns Completed GraphResult
    */
-  private buildCompletedResult(
+  private buildCompletedResult = async (
     finalState: CIOState,
     threadId: string,
     userId: string,
-  ): GraphResult {
+    messageId?: string | null,
+  ): Promise<GraphResult> => {
     this.logger.log('Graph execution completed successfully');
 
     this.emitCompletionEvent(threadId, userId);
+
+    // Extract citations if CitationService is available (US-002 integration)
+    let citationCount = 0;
+    if (this.citationService) {
+      citationCount = await this.extractCitationsFromExecution(
+        threadId,
+        userId,
+        finalState,
+      );
+    }
+
+    // Update AI response with final content (if messageId provided)
+    if (messageId) {
+      await this.updateAssistantMessage(
+        threadId,
+        userId,
+        finalState,
+        messageId,
+      );
+    } else {
+      // Fallback: save new message (for resume or legacy flows)
+      await this.saveAssistantMessageFromState(threadId, userId, finalState);
+    }
 
     return {
       threadId,
       finalState,
       success: true,
       status: 'COMPLETED',
+      citationCount,
     };
+  };
+
+  /**
+   * Extract final report from graph state
+   *
+   * @param state - Final graph state
+   * @returns Final report string or undefined
+   */
+  private extractReportFromState = (state: CIOState): string | undefined => {
+    // Try to get from final_report field (set by end node)
+    if (state.final_report) {
+      return state.final_report;
+    }
+
+    // Fallback: extract from last AI message
+    const lastMessage = state.messages[state.messages.length - 1];
+    if (lastMessage instanceof AIMessage) {
+      return typeof lastMessage.content === 'string'
+        ? lastMessage.content
+        : JSON.stringify(lastMessage.content);
+    }
+
+    return undefined;
+  };
+
+  /**
+   * Save assistant message from graph final state
+   *
+   * Extracts the final report from the last AI message and saves it
+   * as a conversation message. Links to reasoning traces for reference.
+   * Non-blocking - errors are logged but don't fail the execution.
+   *
+   * @param threadId - Scoped thread ID
+   * @param userId - User ID
+   * @param finalState - Final graph state
+   */
+  private saveAssistantMessageFromState = async (
+    threadId: string,
+    userId: string,
+    finalState: CIOState,
+  ): Promise<void> => {
+    try {
+      const finalReport = this.extractReportFromState(finalState);
+
+      if (!finalReport || finalReport.trim() === '') {
+        this.logger.debug(
+          `No final report found in state for thread ${threadId}, skipping AI message save`,
+        );
+        return;
+      }
+
+      // Get trace IDs for linking
+      const traces = await this.tracingService.getTracesByThread(
+        threadId,
+        userId,
+      );
+      const traceIds = traces.map((t) => t.id);
+
+      // Save the assistant message
+      await this.conversationService.saveAssistantMessage({
+        threadId,
+        userId,
+        content: finalReport,
+        traceIds,
+        modelUsed: process.env.GEMINI_MODEL || 'gemini-2.5-pro',
+      });
+
+      this.logger.debug(
+        `AI message saved for thread ${threadId} with ${traceIds.length} trace links`,
+      );
+    } catch (error) {
+      // Don't fail graph execution if message save fails
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `Failed to save AI message for thread ${threadId}: ${errorMessage}`,
+      );
+    }
+  };
+
+  /**
+   * Update assistant message with final content
+   *
+   * Updates the placeholder message created before graph execution
+   * with the final report and trace links.
+   *
+   * @param threadId - Scoped thread ID
+   * @param userId - User ID
+   * @param finalState - Final graph state
+   * @param messageId - Message ID to update
+   */
+  private updateAssistantMessage = async (
+    threadId: string,
+    userId: string,
+    finalState: CIOState,
+    messageId: string,
+  ): Promise<void> => {
+    try {
+      const finalReport = this.extractReportFromState(finalState);
+
+      if (!finalReport || finalReport.trim() === '') {
+        this.logger.warn(
+          `No final report found in state for thread ${threadId}, skipping message update. State keys: ${Object.keys(finalState).join(', ')}`,
+        );
+        return;
+      }
+
+      // Get trace IDs for the specific message
+      const traces = await this.tracingService.getTracesByMessageId(
+        messageId,
+        userId,
+      );
+      const traceIds = traces.map((t) => t.id);
+
+      // Update the message with final content and trace links
+      await this.conversationService.updateAssistantMessage(
+        messageId,
+        finalReport,
+        traceIds,
+      );
+
+      this.logger.debug(
+        `Message ${messageId} updated with final report (length: ${finalReport.length}) and ${traceIds.length} traces`,
+      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `Failed to update message ${messageId}: ${errorMessage}`,
+      );
+    }
+  };
+
+  /**
+   * Extract citations from graph execution (US-002 integration)
+   *
+   * Automatically extracts data source citations from tool results and final output.
+   * This runs after graph completion and does not block or fail the execution.
+   *
+   * @param threadId - Scoped thread ID
+   * @param userId - User ID
+   * @param finalState - Final graph state
+   * @returns Number of citations created (0 if extraction fails)
+   * @private
+   */
+  private async extractCitationsFromExecution(
+    threadId: string,
+    userId: string,
+    finalState: CIOState,
+  ): Promise<number> {
+    try {
+      // Extract final output from last AI message
+      const lastMessage = finalState.messages[finalState.messages.length - 1];
+      if (!(lastMessage instanceof AIMessage)) {
+        this.logger.debug(
+          'No AI message in final state, skipping citation extraction',
+        );
+        return 0;
+      }
+
+      const finalOutput =
+        typeof lastMessage.content === 'string'
+          ? lastMessage.content
+          : JSON.stringify(lastMessage.content);
+
+      // Collect tool results from reasoning traces
+      const traces = await this.tracingService.getTracesByThread(
+        threadId,
+        userId,
+      );
+      const toolResults = traces
+        .filter((trace) => trace.toolResults && trace.toolResults.length > 0)
+        .flatMap((trace) => trace.toolResults || []);
+
+      // Extract citations
+      const citations = await this.citationService?.extractCitations(
+        threadId,
+        userId,
+        finalOutput,
+        toolResults,
+      );
+
+      if (!citations) {
+        this.logger.debug(
+          'No citations extracted, skipping citation extraction',
+        );
+        return 0;
+      }
+
+      this.logger.log(
+        `Extracted ${citations.length} citations from ${toolResults.length} tool results (thread: ${threadId})`,
+      );
+
+      return citations.length;
+    } catch (error) {
+      // Don't fail graph execution if citation extraction fails
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `Citation extraction failed for thread ${threadId}: ${errorMessage}`,
+      );
+      return 0;
+    }
   }
 
   /**

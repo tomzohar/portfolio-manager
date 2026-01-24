@@ -58,6 +58,21 @@ export class StateService {
    * @returns Scoped thread ID
    */
   scopeThreadId(userId: string, threadId?: string): string {
+    // If threadId is already scoped, validate it belongs to this user and return as-is
+    if (threadId && threadId.includes(':')) {
+      const existingUserId = this.extractUserId(threadId);
+      if (existingUserId === userId) {
+        // Already scoped and belongs to this user, return as-is
+        return threadId;
+      }
+      // Scoped but belongs to different user - extract original threadId and re-scope
+      const originalThreadId = this.extractThreadId(threadId);
+      if (originalThreadId) {
+        return `${userId}:${originalThreadId}`;
+      }
+    }
+
+    // Not scoped or invalid format - create new scoped threadId
     const actualThreadId = threadId || randomUUID();
     return `${userId}:${actualThreadId}`;
   }

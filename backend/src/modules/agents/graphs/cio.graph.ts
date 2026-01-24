@@ -5,14 +5,18 @@ import {
   BaseCheckpointSaver,
 } from '@langchain/langgraph';
 import { BaseMessage } from '@langchain/core/messages';
-import { observerNode } from './nodes/observer.node';
 import { endNode } from './nodes/end.node';
-import { routerNode } from './nodes/router.node';
+import {
+  routerNode,
+  reasoningRouter,
+  toolExecutionRouter,
+} from './nodes/router.node';
 import { performanceAttributionNode } from './nodes/performance-attribution.node';
 import { hitlTestNode } from './nodes/hitl-test.node';
 import { approvalGateNode } from './nodes/approval-gate.node';
 import { guardrailNode } from './nodes/guardrail.node';
 import { reasoningNode } from './nodes/reasoning.node';
+import { toolExecutionNode } from './nodes/tool-execution.node';
 import { StateService } from '../services/state.service';
 import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
 import { Timeframe } from '../../performance/types/timeframe.types';
@@ -47,12 +51,22 @@ const CIOStateAnnotation = Annotation.Root({
 /**
  * Build the CIO Graph
  *
- * Phase 3 graph with HITL support, guardrails, and streaming reasoning:
- * START -> guardrail -> (approval_gate OR hitl_test OR performance_attribution OR reasoning OR observer) -> End -> END
+ * Phase 3+ graph with HITL support, guardrails, streaming reasoning, and tool calling:
+ * START -> guardrail -> router -> (reasoning <-> tool_execution OR performance_attribution OR observer OR approval_gate OR hitl_test) -> End -> END
  *
- * The guardrail node enforces iteration limits to prevent infinite loops.
- * The approval_gate node triggers HITL for high-stakes decisions (large transactions, rebalancing, etc.)
- * The reasoning node uses streaming LLM for token-level SSE events.
+ * ReAct Pattern Flow (Reasoning-Action-Observation):
+ * 1. reasoning node: LLM decides to call tools
+ * 2. router: Detects tool_calls, routes to tool_execution
+ * 3. tool_execution: Executes tools, returns ToolMessages
+ * 4. router: Detects ToolMessages, routes back to reasoning
+ * 5. reasoning node: Observes tool results, synthesizes response
+ * 6. router: Routes to end when no more tool calls
+ *
+ * Key Features:
+ * - Guardrail enforces iteration and tool call limits
+ * - Approval gate triggers HITL for high-stakes decisions
+ * - Reasoning node uses streaming LLM with tool calling
+ * - Tool execution supports parallel tool calls
  *
  * @param stateService - StateService for checkpoint persistence
  * @returns Compiled graph ready for execution
@@ -67,8 +81,8 @@ export function buildCIOGraph(stateService: StateService) {
   /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
   let workflow = new StateGraph(CIOStateAnnotation)
     .addNode('guardrail', guardrailNode)
-    .addNode('observer', observerNode)
     .addNode('reasoning', reasoningNode)
+    .addNode('tool_execution', toolExecutionNode)
     .addNode('performance_attribution', performanceAttributionNode) as any;
 
   // Add approval gate node if enabled (production HITL)
@@ -87,12 +101,19 @@ export function buildCIOGraph(stateService: StateService) {
     .addConditionalEdges('guardrail', routerNode, {
       performance_attribution: 'performance_attribution',
       reasoning: 'reasoning',
-      observer: 'observer',
+      tool_execution: 'tool_execution',
+      end: 'end',
       ...(enableApprovalGate ? { approval_gate: 'approval_gate' } : {}),
       ...(enableHitlTest ? { hitl_test: 'hitl_test' } : {}),
     })
-    .addEdge('observer', 'end')
-    .addEdge('reasoning', 'end')
+    .addConditionalEdges('reasoning', reasoningRouter, {
+      tool_execution: 'tool_execution',
+      end: 'end',
+    })
+    .addConditionalEdges('tool_execution', toolExecutionRouter, {
+      reasoning: 'reasoning',
+      end: 'end',
+    })
     .addEdge('performance_attribution', 'end');
 
   // Add edge for approval gate node only if enabled

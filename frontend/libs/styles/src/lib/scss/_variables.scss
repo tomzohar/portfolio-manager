@@ -13,29 +13,25 @@
 $color-primary: #1976d2;        // Material blue - used by Angular Material
 $color-primary-light: #42a5f5;
 $color-primary-dark: #1565c0;
-
 $color-accent: #ff4081;         // Material pink - used by Angular Material
 $color-accent-light: #ff79b0;
 $color-accent-dark: #c60055;
-
 $color-warn: #f44336;           // Material red - used by Angular Material
 
 // Light theme backgrounds (for auth components only)
 $color-background: #fafafa;     // Used by login/signup pages
-$color-surface: #ffffff;
-$color-surface-elevated: #ffffff;
+$color-surface: #fff;
+$color-surface-elevated: #fff;
 
 // Light theme borders (for existing components)
 $border-radius-sm: 4px;         // Material default
 $border-radius-md: 8px;
 $border-radius-lg: 12px;
-
 $border-width-thin: 1px;
 $border-width-medium: 2px;
 $border-width-thick: 4px;
-
-$border-color: rgba(0, 0, 0, 0.12);
-$border-color-light: rgba(0, 0, 0, 0.06);
+$border-color: rgb(0 0 0 / 12%);
+$border-color-light: rgb(0 0 0 / 6%);
 
 // === Breakpoints (Standard across all components) ===
 $breakpoint-xs: 0;

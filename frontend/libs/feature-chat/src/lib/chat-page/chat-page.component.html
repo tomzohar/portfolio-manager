@@ -1,0 +1,66 @@
+<div class="chat-page">
+  <!-- Header -->
+  <app-conversation-header
+    [threadId]="threadId()"
+    [title]="conversationTitle()"
+    (newConversation)="handleNewConversation()"
+    (settingsClick)="handleSettings()"
+    class="chat-page__header"
+  />
+
+  <!-- Main Content Area -->
+  <div class="chat-page__content">
+    <!-- Error Banner -->
+    @if (error()) {
+      <div class="chat-page__error-banner">
+        <div class="error-content">
+          <lib-icon name="error" [size]="20" class="error-icon" />
+          <span class="error-message">{{ error() }}</span>
+        </div>
+      </div>
+    }
+
+    <!-- Loading Chat History -->
+    @if (isLoadingChatHistory()) {
+      <div class="chat-page__loading-history">
+        <lib-loader [config]="{ size: 'md' }" />
+        <span class="loading-text">Loading conversation history...</span>
+      </div>
+    }
+
+    <!-- Sending Indicator -->
+    @if (loading() && messages().length === 0 && !isLoadingChatHistory()) {
+      <div class="chat-page__sending">
+        <lib-loader [config]="{ size: 'sm' }" />
+        <span class="sending-text">Sending message and starting analysis...</span>
+      </div>
+    }
+
+    <!-- Conversation Panel (NEW) -->
+    <div class="chat-page__conversation">
+      @if (threadId() && !isLoadingChatHistory()) {
+        <app-conversation-panel
+          [threadId]="threadId()!"
+          [messages]="messages()"
+          [traces]="traces()"
+          [isLoading]="loading()"
+          [isGraphExecuting]="isGraphActive()"
+        />
+      } @else if (!isLoadingChatHistory()) {
+        <div class="chat-page__empty">
+          <p class="empty-title">Welcome to AI Chat</p>
+          <p class="empty-hint">Initializing conversation...</p>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Message Input (Bottom) -->
+  <div class="chat-page__input-area">
+    <app-message-input
+      [disabled]="isMessageInputDisabled()"
+      [maxLength]="2000"
+      (messageSend)="handleMessageSend($event)"
+    />
+  </div>
+</div>

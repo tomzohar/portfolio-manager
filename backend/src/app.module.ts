@@ -10,6 +10,9 @@ import { PortfolioModule } from './modules/portfolio/portfolio.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AssetsModule } from './modules/assets/assets.module';
 import { AgentsModule } from './modules/agents/agents.module';
+import { CitationsModule } from './modules/citations/citations.module';
+import { ApprovalsModule } from './modules/approvals/approvals.module';
+import { ConversationsModule } from './modules/conversations/conversations.module';
 
 function shouldSynchronize(env: string | undefined): boolean {
   return env === 'development' || env === 'test';
@@ -18,6 +21,8 @@ function shouldSynchronize(env: string | undefined): boolean {
 function getTypeOrmModuleConfig(
   configService: ConfigService,
 ): TypeOrmModuleOptions {
+  const isTest = configService.get<string>('NODE_ENV') === 'test';
+
   return {
     type: 'postgres',
     host: configService.get<string>('DB_HOST'),
@@ -30,10 +35,17 @@ function getTypeOrmModuleConfig(
     synchronize: shouldSynchronize(configService.get<string>('NODE_ENV')),
     logging: configService.get<string>('NODE_ENV') === 'development',
     // Suppress verbose logs in test environment
-    logger:
-      configService.get<string>('NODE_ENV') === 'test'
-        ? undefined
-        : 'advanced-console',
+    logger: isTest ? undefined : 'advanced-console',
+    // Connection pool configuration for tests
+    ...(isTest && {
+      extra: {
+        max: 10, // Maximum number of connections in the pool
+        connectionTimeoutMillis: 10000, // 10 seconds timeout
+        idleTimeoutMillis: 30000, // 30 seconds idle timeout
+      },
+      retryAttempts: 5, // Number of retry attempts
+      retryDelay: 3000, // Delay between retries (3 seconds)
+    }),
   };
 }
 
@@ -74,6 +86,9 @@ function getTypeOrmModuleConfig(
     AuthModule,
     AssetsModule,
     AgentsModule,
+    CitationsModule,
+    ApprovalsModule,
+    ConversationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

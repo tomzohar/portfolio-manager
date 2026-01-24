@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import type { CIOState } from '../graphs/types';
 
 /**
  * Response DTO for graph execution
@@ -13,7 +14,7 @@ export class GraphResponseDto {
   @ApiProperty({
     description: 'Final state after graph execution',
   })
-  finalState: Record<string, any>;
+  finalState: CIOState;
 
   @ApiProperty({
     description: 'Whether the graph executed successfully',

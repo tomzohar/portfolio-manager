@@ -1,20 +1,23 @@
 import { RunnableConfig } from '@langchain/core/runnables';
 import { AIMessage } from '@langchain/core/messages';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { CIOState, StateUpdate } from '../types';
 import { buildReasoningPrompt } from '../../prompts';
 
 /**
  * Reasoning Node
  *
- * Uses an LLM with streaming enabled to generate a thoughtful response
- * to the user's query. This node demonstrates token-level streaming via
- * the TracingCallbackHandler.
+ * Uses an LLM with streaming and tool calling enabled to generate thoughtful
+ * responses to user queries. The LLM can autonomously call tools (technical_analyst,
+ * macro_analyst, risk_manager) to gather data before responding.
  *
  * Key Features:
  * - Streaming enabled ({ streaming: true })
+ * - Tool calling via bindTools() for agentic behavior
  * - Callbacks automatically invoke handleLLMNewToken for each token
  * - SSE endpoint receives real-time token events
+ * - Returns AIMessage with potential tool_calls in additional_kwargs
  */
 export async function reasoningNode(
   state: CIOState,
@@ -22,26 +25,52 @@ export async function reasoningNode(
 ): Promise<StateUpdate> {
   try {
     // Get the API key from environment
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return {
-        errors: ['GEMINI_API_KEY not configured'],
-        messages: [
-          new AIMessage(
-            'Sorry, I cannot generate a response at this time due to missing configuration.',
-          ),
-        ],
-      };
+    // Check for injected service (e.g. for testing)
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const geminiService = config.configurable?.geminiLlmService;
+
+    let llm;
+
+    if (geminiService) {
+      // Use the injected service to get the model
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+      llm = geminiService.getChatModel({
+        streaming: true,
+        temperature: 0.2,
+        maxOutputTokens: 2048,
+      });
+    } else {
+      // Fallback to manual instantiation if service not provided
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return {
+          errors: ['GEMINI_API_KEY not configured'],
+          messages: [
+            new AIMessage(
+              'Sorry, I cannot generate a response at this time due to missing configuration.',
+            ),
+          ],
+        };
+      }
+
+      // Initialize LLM with streaming enabled
+      llm = new ChatGoogleGenerativeAI({
+        apiKey,
+        model: process.env.GEMINI_MODEL || 'gemini-2.5-pro',
+        temperature: 0.2, // Lower temperature for more deterministic behavior (greetings, help queries)
+        maxOutputTokens: 2048, // Increased for longer responses
+        streaming: true, // CRITICAL: Enables token-by-token streaming
+      });
     }
 
-    // Initialize LLM with streaming enabled
-    const llm = new ChatGoogleGenerativeAI({
-      apiKey,
-      model: process.env.GEMINI_MODEL || 'gemini-2.5-pro',
-      temperature: 0.5,
-      maxOutputTokens: 2048, // Increased for longer responses
-      streaming: true, // CRITICAL: Enables token-by-token streaming
-    });
+    // Get tools from registry (passed via config)
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const toolRegistry = config.configurable?.toolRegistry;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+    const tools = (toolRegistry?.getTools() || []) as DynamicStructuredTool[];
+
+    // Bind tools to LLM for agentic tool calling
+    const llmWithTools = tools.length > 0 ? llm.bindTools(tools) : llm;
 
     // Get the last user message
     const lastMessage = state.messages[state.messages.length - 1];
@@ -51,21 +80,23 @@ export async function reasoningNode(
         : JSON.stringify(lastMessage.content);
 
     // Build prompt using external prompt template
-    const prompt = buildReasoningPrompt(userQuery);
+    // Includes portfolio context, userId, and dynamically formatted tools
+    const prompt = buildReasoningPrompt(
+      userQuery,
+      state.portfolio,
+      state.userId,
+      tools, // Pass tools for dynamic formatting
+    );
 
-    // Invoke LLM with streaming
+    // Invoke LLM with streaming and tools
     // The config.callbacks from OrchestratorService will automatically handle token events
-    const response = await llm.invoke(prompt, {
+    const response = await llmWithTools.invoke(prompt, {
       callbacks: config.callbacks, // Pass through callbacks for tracing
     });
 
-    const responseText =
-      typeof response.content === 'string'
-        ? response.content
-        : JSON.stringify(response.content);
-
+    // Return AIMessage as-is to preserve tool_calls in additional_kwargs
     return {
-      messages: [new AIMessage(responseText)],
+      messages: [response],
     };
   } catch (error) {
     const errorMessage =
