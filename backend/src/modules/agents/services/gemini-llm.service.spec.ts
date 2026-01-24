@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { GeminiLlmService } from './gemini-llm.service';
+import { LLMModels } from '../types/lll-models.enum';
 
 // Mock @google/genai at module level
 jest.mock('@google/genai', () => ({
@@ -40,7 +41,7 @@ describe('GeminiLlmService', () => {
             get: jest.fn((key: string) => {
               const config = {
                 GEMINI_API_KEY: 'test-api-key',
-                GEMINI_MODEL: 'gemini-2.0-flash-exp',
+                GEMINI_MODEL: LLMModels.GEMINI_FLASH_LATEST,
               };
               return config[key as keyof typeof config];
             }),
@@ -92,10 +93,10 @@ describe('GeminiLlmService', () => {
 
       mockGenerateContent.mockResolvedValue(mockResponse);
 
-      await service.generateContent('Test prompt', 'gemini-2.0-pro');
+      await service.generateContent('Test prompt', LLMModels.GEMINI_PRO_LATEST);
 
       expect(mockGenerateContent).toHaveBeenCalledWith({
-        model: 'gemini-2.0-pro',
+        model: LLMModels.GEMINI_PRO_LATEST,
         contents: 'Test prompt',
       });
     });

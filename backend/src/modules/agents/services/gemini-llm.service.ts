@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+import { getDefaultModel } from '../utils/model.utils';
 
 export interface GeminiUsageMetadata {
   promptTokens: number;
@@ -26,17 +27,18 @@ export interface GeminiResponse {
  */
 @Injectable()
 export class GeminiLlmService {
-  private readonly logger = new Logger(GeminiLlmService.name);
   private client: GoogleGenAI | null = null;
-  private readonly defaultModel: string;
+  private readonly logger = new Logger(GeminiLlmService.name);
+  private defaultModel: string;
   private readonly maxRetries = 3;
   private readonly retryDelays = [1000, 2000, 4000]; // Exponential backoff in ms
 
   constructor(private readonly configService: ConfigService) {
-    this.defaultModel = this.configService.get<string>(
-      'GEMINI_MODEL',
-      'gemini-3-pro',
-    );
+    // ConfigService.get can override if 'GEMINI_MODEL' is injected somehow,
+    // but our utility handles process.env directly.
+    // If we want to stick to ConfigService pattern strictly:
+    const envModel = this.configService.get<string>('GEMINI_MODEL');
+    this.defaultModel = envModel || getDefaultModel();
   }
 
   /**

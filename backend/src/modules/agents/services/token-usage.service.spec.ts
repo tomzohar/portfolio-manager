@@ -4,6 +4,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { TokenUsageService } from './token-usage.service';
 import { TokenUsage } from '../entities/token-usage.entity';
+import { LLMModels } from '../types/lll-models.enum';
 
 describe('TokenUsageService', () => {
   let service: TokenUsageService;
@@ -41,7 +42,7 @@ describe('TokenUsageService', () => {
     it('should save token usage to database', async () => {
       const userId = '123e4567-e89b-12d3-a456-426614174000';
       const usageData = {
-        modelName: 'gemini-2.0-flash-exp',
+        modelName: LLMModels.GEMINI_FLASH_LATEST,
         promptTokens: 100,
         completionTokens: 50,
         totalTokens: 150,
@@ -81,7 +82,7 @@ describe('TokenUsageService', () => {
     it('should calculate estimated cost for flash model', async () => {
       const userId = '123e4567-e89b-12d3-a456-426614174000';
       const usageData = {
-        modelName: 'gemini-2.0-flash-exp',
+        modelName: LLMModels.GEMINI_FLASH_LATEST,
         promptTokens: 1000,
         completionTokens: 500,
         totalTokens: 1500,
@@ -111,7 +112,7 @@ describe('TokenUsageService', () => {
     it('should calculate estimated cost for pro model', async () => {
       const userId = '123e4567-e89b-12d3-a456-426614174000';
       const usageData = {
-        modelName: 'gemini-2.0-pro',
+        modelName: LLMModels.GEMINI_PRO_LATEST,
         promptTokens: 1000,
         completionTokens: 500,
         totalTokens: 1500,
@@ -141,7 +142,7 @@ describe('TokenUsageService', () => {
     it('should include metadata if provided', async () => {
       const userId = '123e4567-e89b-12d3-a456-426614174000';
       const usageData = {
-        modelName: 'gemini-2.0-flash-exp',
+        modelName: LLMModels.GEMINI_FLASH_LATEST,
         promptTokens: 100,
         completionTokens: 50,
         totalTokens: 150,
@@ -179,7 +180,7 @@ describe('TokenUsageService', () => {
         {
           id: '1',
           userId,
-          modelName: 'gemini-2.0-flash-exp',
+          modelName: LLMModels.GEMINI_FLASH_LATEST,
           totalTokens: 150,
           estimatedCost: 0.00015,
           createdAt: new Date('2024-01-01'),
@@ -187,7 +188,7 @@ describe('TokenUsageService', () => {
         {
           id: '2',
           userId,
-          modelName: 'gemini-2.0-pro',
+          modelName: LLMModels.GEMINI_PRO_LATEST,
           totalTokens: 200,
           estimatedCost: 0.002,
           createdAt: new Date('2024-01-02'),
@@ -214,7 +215,7 @@ describe('TokenUsageService', () => {
         {
           id: '1',
           userId,
-          modelName: 'gemini-2.0-flash-exp',
+          modelName: LLMModels.GEMINI_FLASH_LATEST,
           totalTokens: 150,
           estimatedCost: 0.00015,
           createdAt: new Date('2024-01-15'),

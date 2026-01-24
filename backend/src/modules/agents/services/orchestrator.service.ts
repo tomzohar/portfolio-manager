@@ -27,6 +27,7 @@ import { TracingCallbackHandler } from '../callbacks/tracing-callback.handler';
 import { CitationService } from '../../citations/services/citation.service';
 import { ConversationService } from '../../conversations/services/conversation.service';
 import { GeminiLlmService } from './gemini-llm.service';
+import { getDefaultModel } from '../utils/model.utils';
 
 // ============================================================================
 // Types & Interfaces
@@ -503,7 +504,7 @@ export class OrchestratorService {
         userId,
         content: finalReport,
         traceIds,
-        modelUsed: process.env.GEMINI_MODEL || 'gemini-2.5-pro',
+        modelUsed: process.env.GEMINI_MODEL || getDefaultModel(),
       });
 
       this.logger.debug(

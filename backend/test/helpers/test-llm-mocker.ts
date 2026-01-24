@@ -4,6 +4,7 @@ import {
   GeminiResponse,
   GeminiUsageMetadata,
 } from '../../src/modules/agents/services/gemini-llm.service';
+import { LLMModels } from '../../src/modules/agents/types/lll-models.enum';
 
 interface MockCallback {
   handleLLMStart?: (run: any, inputs: string[]) => Promise<void>;
@@ -96,9 +97,10 @@ export const mockGeminiLlmService = {
           try {
             for (const callback of config.callbacks) {
               if (callback.handleLLMStart)
-                await callback.handleLLMStart({ name: 'gemini-pro' }, [
-                  promptStr,
-                ]);
+                await callback.handleLLMStart(
+                  { name: LLMModels.GEMINI_PRO_LATEST },
+                  [promptStr],
+                );
               if (callback.handleLLMNewToken) {
                 await callback.handleLLMNewToken('I have ');
                 await callback.handleLLMNewToken('analyzed ');
@@ -203,9 +205,10 @@ export const mockGeminiLlmService = {
           for (const callback of config.callbacks) {
             // 1. Start event
             if (callback.handleLLMStart) {
-              await callback.handleLLMStart({ name: 'gemini-pro' }, [
-                promptStr,
-              ]);
+              await callback.handleLLMStart(
+                { name: LLMModels.GEMINI_PRO_LATEST },
+                [promptStr],
+              );
             }
 
             // 2. Streaming tokens (if configured and we have text)

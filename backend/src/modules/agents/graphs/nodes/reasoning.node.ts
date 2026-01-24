@@ -5,6 +5,7 @@ import { CIOState, StateUpdate } from '../types';
 import { buildReasoningPrompt } from '../../prompts';
 import { GeminiLlmService } from '../../services/gemini-llm.service';
 import { ToolRegistryService } from '../../services/tool-registry.service';
+import { getDefaultModel } from '../../utils/model.utils';
 
 /**
  * Reasoning Node
@@ -57,7 +58,7 @@ export async function reasoningNode(
       // Initialize LLM with streaming enabled
       llm = new ChatGoogleGenerativeAI({
         apiKey,
-        model: process.env.GEMINI_MODEL || 'gemini-2.5-pro',
+        model: getDefaultModel(),
         temperature: 0.2, // Lower temperature for more deterministic behavior (greetings, help queries)
         maxOutputTokens: 2048, // Increased for longer responses
         streaming: true, // CRITICAL: Enables token-by-token streaming
