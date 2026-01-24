@@ -79,7 +79,7 @@ function generateFallbackReport(state: CIOState): string {
 
   lines.push('EXECUTION SUMMARY:');
   lines.push('-'.repeat(70));
-  lines.push('Graph execution complete');
+  lines.push('Graph Execution Complete');
   lines.push(
     'No AI response generated - this may indicate an error or early termination',
   );
