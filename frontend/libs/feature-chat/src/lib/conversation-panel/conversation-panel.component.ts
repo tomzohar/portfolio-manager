@@ -87,7 +87,6 @@ export class ConversationPanelComponent {
 
   readonly loaderConfig: LoaderConfig = {
     size: 'sm',
-    label: 'Loading traces',
     ariaLabel: 'Loading traces'
   }
 

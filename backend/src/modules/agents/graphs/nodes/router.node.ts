@@ -50,13 +50,15 @@ export function routerNode(state: CIOState): string {
     return 'reasoning'; // Default route to reasoning
   }
 
-  // Check if last message has tool calls (from reasoning node)
-  // tool_calls property only exists on AIMessage
-  if (lastMessage instanceof AIMessage) {
-    const aiMessage = lastMessage as AIMessage & { tool_calls?: unknown[] };
-    if (aiMessage.tool_calls && aiMessage.tool_calls.length > 0) {
-      return 'tool_execution';
-    }
+  // Check if last message has tool calls (structural check instead of strict instanceof)
+  const potentialAIMessage = lastMessage as any;
+
+  if (
+    potentialAIMessage.tool_calls &&
+    Array.isArray(potentialAIMessage.tool_calls) &&
+    potentialAIMessage.tool_calls.length > 0
+  ) {
+    return 'tool_execution';
   }
 
   // Fallback: Check additional_kwargs for non-standard format
@@ -146,15 +148,10 @@ export function reasoningRouter(state: CIOState): string {
   routerLogger.debug(`Reasoning router | Message type: ${messageType}`);
 
   // Check if last message has tool calls (standardized property or kwargs)
-  if (lastMessage instanceof AIMessage) {
-    // Type assertion for accessing tool_calls property
-    const aiMessage = lastMessage as AIMessage & {
-      tool_calls?: ToolCallStructure[];
-      kwargs?: {
-        tool_calls?: ToolCallStructure[];
-      };
-    };
+  // Use duck typing instead of strict instanceof to avoid issues with package versions or compilation
+  const aiMessage = lastMessage as any;
 
+  if (lastMessage.constructor.name === 'AIMessage' || lastMessage._getType() === 'ai') {
     // Try direct property first
     if (aiMessage.tool_calls && aiMessage.tool_calls.length > 0) {
       routerLogger.debug(

@@ -6,6 +6,8 @@ import { AppModule } from '../src/app.module';
 import { TestDatabaseManager } from './helpers/test-database-manager';
 import { App } from 'supertest/types';
 import { seedTestMarketData } from './helpers/test-market-data-seeder';
+import { GeminiLlmService } from '../src/modules/agents/services/gemini-llm.service';
+import { mockGeminiLlmService } from './helpers/test-llm-mocker';
 
 /**
  * Global Test Context
@@ -57,10 +59,14 @@ async function initializeGlobalApp(): Promise<void> {
   // This helps prevent connection issues when running all tests together
   await new Promise((resolve) => setTimeout(resolve, 500));
 
+
   // Create test module
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [AppModule],
-  }).compile();
+  })
+    .overrideProvider(GeminiLlmService)
+    .useValue(mockGeminiLlmService)
+    .compile();
 
   // Create and initialize app
   globalApp = moduleFixture.createNestApplication();

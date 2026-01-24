@@ -26,6 +26,7 @@ import { TracingService } from './tracing.service';
 import { TracingCallbackHandler } from '../callbacks/tracing-callback.handler';
 import { CitationService } from '../../citations/services/citation.service';
 import { ConversationService } from '../../conversations/services/conversation.service';
+import { GeminiLlmService } from './gemini-llm.service';
 
 // ============================================================================
 // Types & Interfaces
@@ -81,10 +82,11 @@ export class OrchestratorService {
     private readonly interruptHandler: InterruptHandlerService,
     private readonly tracingService: TracingService,
     private readonly conversationService: ConversationService,
+    private readonly geminiLlmService: GeminiLlmService,
     @Optional()
     @Inject(CitationService)
     private readonly citationService?: CitationService,
-  ) {}
+  ) { }
 
   // ============================================================================
   // Public API
@@ -361,6 +363,7 @@ export class OrchestratorService {
         performanceService: this.performanceService,
         portfolioService: this.portfolioService,
         sectorAttributionService: this.sectorAttributionService,
+        geminiLlmService: this.geminiLlmService,
       },
       recursionLimit: RECURSION_LIMIT,
       metadata: {

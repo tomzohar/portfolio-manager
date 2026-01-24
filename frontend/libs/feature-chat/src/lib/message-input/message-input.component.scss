@@ -118,10 +118,6 @@
 // ========================================
 
 @media (width <= 768px) {
-  .message-input {
-    padding: var(--spacing-md);
-  }
-
   .message-input__textarea {
     min-height: 60px;
     font-size: var(--font-size-xs);

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 
 export interface GeminiUsageMetadata {
   promptTokens: number;
@@ -127,7 +128,7 @@ export class GeminiLlmService {
 
         this.logger.debug(
           `Gemini API call successful. Tokens: ${usage.totalTokens} ` +
-            `(prompt: ${usage.promptTokens}, completion: ${usage.completionTokens})`,
+          `(prompt: ${usage.promptTokens}, completion: ${usage.completionTokens})`,
         );
 
         return { text, usage };
@@ -153,6 +154,32 @@ export class GeminiLlmService {
     throw new Error(
       lastError?.message || 'Unknown error during Gemini API call',
     );
+  }
+
+  /**
+   * Get a LangChain-compatible ChatModel instance
+   * This allows sharing the configured LLM instance with LangGraph nodes
+   */
+  getChatModel(options: {
+    streaming?: boolean;
+    temperature?: number;
+    maxOutputTokens?: number;
+  } = {}): ChatGoogleGenerativeAI {
+    const apiKey = this.configService.get<string>('GEMINI_API_KEY');
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY not configured');
+    }
+
+    // Dynamic import might be needed if using ESM only, but here we can try standard constructor
+    // Note: We create a NEW instance each time to support different configs (streaming vs non-streaming)
+    // but we reuse the API key and model config.
+    return new ChatGoogleGenerativeAI({
+      apiKey,
+      model: this.defaultModel,
+      temperature: options.temperature ?? 0.7,
+      maxOutputTokens: options.maxOutputTokens ?? 1024,
+      streaming: options.streaming ?? false,
+    });
   }
 
   /**

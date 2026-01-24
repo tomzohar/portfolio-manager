@@ -25,26 +25,43 @@ export async function reasoningNode(
 ): Promise<StateUpdate> {
   try {
     // Get the API key from environment
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return {
-        errors: ['GEMINI_API_KEY not configured'],
-        messages: [
-          new AIMessage(
-            'Sorry, I cannot generate a response at this time due to missing configuration.',
-          ),
-        ],
-      };
-    }
+    // Check for injected service (e.g. for testing)
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const geminiService = config.configurable?.geminiLlmService;
 
-    // Initialize LLM with streaming enabled
-    const llm = new ChatGoogleGenerativeAI({
-      apiKey,
-      model: process.env.GEMINI_MODEL || 'gemini-2.5-pro',
-      temperature: 0.2, // Lower temperature for more deterministic behavior (greetings, help queries)
-      maxOutputTokens: 2048, // Increased for longer responses
-      streaming: true, // CRITICAL: Enables token-by-token streaming
-    });
+    let llm;
+
+    if (geminiService) {
+      // Use the injected service to get the model
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+      llm = geminiService.getChatModel({
+        streaming: true,
+        temperature: 0.2,
+        maxOutputTokens: 2048,
+      });
+    } else {
+      // Fallback to manual instantiation if service not provided
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return {
+          errors: ['GEMINI_API_KEY not configured'],
+          messages: [
+            new AIMessage(
+              'Sorry, I cannot generate a response at this time due to missing configuration.',
+            ),
+          ],
+        };
+      }
+
+      // Initialize LLM with streaming enabled
+      llm = new ChatGoogleGenerativeAI({
+        apiKey,
+        model: process.env.GEMINI_MODEL || 'gemini-2.5-pro',
+        temperature: 0.2, // Lower temperature for more deterministic behavior (greetings, help queries)
+        maxOutputTokens: 2048, // Increased for longer responses
+        streaming: true, // CRITICAL: Enables token-by-token streaming
+      });
+    }
 
     // Get tools from registry (passed via config)
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
