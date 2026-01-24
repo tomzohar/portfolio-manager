@@ -16,6 +16,7 @@ import { MessageInputComponent } from '../message-input/message-input.component'
 import { ConversationHeaderComponent } from '../conversation-header/conversation-header.component';
 import { ConversationPanelComponent } from '../conversation-panel/conversation-panel.component';
 import { LoaderComponent, IconComponent } from '@stocks-researcher/styles';
+import { isValidThreadId } from '../utils';
 
 /**
  * ChatPageComponent
@@ -84,14 +85,12 @@ export class ChatPageComponent implements OnDestroy {
    */
   private loadMessagesEffect = effect(() => {
     const currentThreadId = this.threadId();
-    
-    // Only load if threadId exists and is in backend format
-    if (currentThreadId && currentThreadId.includes(':')) {
-      // Validate threadId format before loading
-      if (this.isValidThreadId(currentThreadId)) {
-        this.facade.loadConversationMessages(currentThreadId);
-      }
+
+    // Validate threadId format before loading
+    if (currentThreadId && isValidThreadId(currentThreadId)) {
+      this.facade.loadConversationMessages(currentThreadId);
     }
+
   });
 
   /**
@@ -115,20 +114,19 @@ export class ChatPageComponent implements OnDestroy {
     const facadeThreadId = this.facadeThreadId();
     const graphActive = this.isGraphActive();
     const wasGraphActive = this.previousGraphActive();
-    
+
     // Update previous state
     this.previousGraphActive.set(graphActive);
-    
+
     // Navigate when:
     // 1. Graph just transitioned from active to inactive (was true, now false)
     // 2. Route has no threadId
     // 3. Facade has a valid backend threadId
     const graphJustCompleted = wasGraphActive === true && !graphActive;
-    
+
     if (graphJustCompleted && !routeThreadId && facadeThreadId) {
       // Only navigate if threadId is in backend format (contains ':')
       if (facadeThreadId.includes(':')) {
-        console.log('[ChatPage] Graph completed, navigating to threadId route:', facadeThreadId);
         this.router.navigate(['/chat', facadeThreadId], { replaceUrl: true });
       }
     }
@@ -209,7 +207,7 @@ export class ChatPageComponent implements OnDestroy {
   ngOnDestroy(): void {
     // Disconnect SSE connection
     this.facade.disconnectSSE();
-    
+
     // Reset state when leaving chat page
     this.facade.resetState();
   }
@@ -225,15 +223,12 @@ export class ChatPageComponent implements OnDestroy {
   handleNewConversation(): void {
     // Disconnect from current SSE connection
     this.facade.disconnectSSE();
-    
+
     // Reset state
     this.facade.resetState();
-    
-    // Generate new thread ID
-    const newThreadId = this.generateThreadId();
 
     // Navigate to new thread
-    this.router.navigate(['/chat', newThreadId]);
+    this.router.navigate(['/chat']);
   }
 
   /**
@@ -243,22 +238,22 @@ export class ChatPageComponent implements OnDestroy {
    */
   handleMessageSend(message: string): void {
     const trimmed = message.trim();
-    
+
     if (!trimmed) {
       return;
     }
 
-    const threadId = this.threadId();
-    
+    const routeThreadId = this.threadId();
+
     // Only send threadId if it's in backend format (userId:threadId)
     // Don't send frontend-generated threadIds (thread-timestamp-random)
-    const isBackendFormat = threadId && threadId.includes(':');
-    
+    const isBackendFormat = routeThreadId && isValidThreadId(routeThreadId);
+
     // Send message to backend via ChatFacade
     // Backend will generate threadId if not provided or if frontend format
-    this.facade.sendMessage({ 
-      message: trimmed, 
-      threadId: isBackendFormat ? threadId : undefined,
+    this.facade.sendMessage({
+      message: trimmed,
+      threadId: isBackendFormat ? routeThreadId : undefined,
     });
   }
 
@@ -270,7 +265,6 @@ export class ChatPageComponent implements OnDestroy {
    */
   handleTraceClick(trace: ReasoningTrace): void {
     // Traces now managed within ConversationPanel
-    console.log('[ChatPage] Trace clicked:', trace);
   }
 
   /**
@@ -278,47 +272,5 @@ export class ChatPageComponent implements OnDestroy {
    */
   handleSettings(): void {
     // TODO: Implement settings dialog
-    console.log('[ChatPage] Settings clicked');
-  }
-
-  // ========================================
-  // Helper Methods
-  // ========================================
-
-  /**
-   * Generate a new unique thread ID
-   * Format: thread-{timestamp}-{random}
-   */
-  generateThreadId(): string {
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 9);
-    return `thread-${timestamp}-${random}`;
-  }
-
-  /**
-   * Validate threadId to prevent API calls with invalid IDs
-   * Accepts both formats:
-   * - Frontend format: thread-{timestamp}-{random}
-   * - Backend format: {userId}:{threadId}
-   */
-  isValidThreadId(threadId: string): boolean {
-    const invalidKeywords = ['undefined', 'null', ''];
-    
-    if (invalidKeywords.includes(threadId.toLowerCase())) {
-      return false;
-    }
-
-    // Accept frontend format
-    if (threadId.startsWith('thread-')) {
-      return true;
-    }
-
-    // Accept backend format: {userId}:{threadId}
-    if (threadId.includes(':')) {
-      const parts = threadId.split(':');
-      return parts.length === 2 && parts[0].length > 0 && parts[1].length > 0;
-    }
-
-    return false;
   }
 }

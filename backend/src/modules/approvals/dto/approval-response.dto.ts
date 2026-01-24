@@ -1,5 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { ApprovalStatus } from '../types/approval-status.enum';
+import { CostEstimate } from '../types/cost-estimate.interface';
+
+/**
+ * Approval context can contain cost estimates or other metadata
+ * This is a flexible type that allows partial data structures
+ */
+export interface ApprovalContext {
+  costEstimate?: Partial<CostEstimate>;
+  [key: string]: unknown;
+}
 
 /**
  * ApprovalResponseDto
@@ -37,8 +47,9 @@ export class ApprovalResponseDto {
   @ApiProperty({
     description: 'Additional context (cost estimates, analysis plan)',
     example: { costEstimate: { totalCostUSD: 2.5, estimatedTimeSeconds: 120 } },
+    nullable: true,
   })
-  context: any;
+  context: ApprovalContext | null;
 
   @ApiProperty({
     description: 'Expiration timestamp',

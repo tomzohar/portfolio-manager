@@ -12,6 +12,7 @@ import { HITLApproval } from '../entities/hitl-approval.entity';
 import { ApprovalStatus } from '../types/approval-status.enum';
 import { StateService } from '../../agents/services/state.service';
 import { OrchestratorService } from '../../agents/services/orchestrator.service';
+import type { ApprovalContext } from '../dto/approval-response.dto';
 
 /**
  * ApprovalService
@@ -54,8 +55,7 @@ export class ApprovalService {
     userId: string,
     approvalType: string,
     prompt: string,
-
-    context: any,
+    context: ApprovalContext,
     expiresAt?: Date,
   ): Promise<HITLApproval> {
     const approval = this.approvalRepository.create({
@@ -64,7 +64,6 @@ export class ApprovalService {
       approvalType,
       status: ApprovalStatus.PENDING,
       prompt,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       context,
       expiresAt,
     });

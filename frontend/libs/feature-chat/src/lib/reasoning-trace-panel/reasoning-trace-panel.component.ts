@@ -22,6 +22,7 @@ import {
   ButtonComponent,
   ButtonConfig,
 } from '@stocks-researcher/styles';
+import { isValidThreadId } from '../utils';
 
 /**
  * ReasoningTracePanelComponent
@@ -186,7 +187,7 @@ export class ReasoningTracePanelComponent implements OnDestroy {
     const threadId = this.threadId();
 
     // Skip invalid threadIds
-    if (!threadId || !this.isValidThreadId(threadId)) {
+    if (!threadId || !isValidThreadId(threadId)) {
       return;
     }
 
@@ -317,34 +318,5 @@ export class ReasoningTracePanelComponent implements OnDestroy {
    */
   trackByTraceId(_index: number, trace: ReasoningTrace): string {
     return trace.id;
-  }
-
-  /**
-   * Validate threadId to prevent API calls with invalid IDs
-   * Accepts both formats:
-   * - Frontend format: thread-{timestamp}-{random}
-   * - Backend format: {userId}:{threadId}
-   */
-  private isValidThreadId(threadId: string): boolean {
-    // Block standalone invalid keywords
-    const invalidKeywords = ['undefined', 'null', ''];
-    
-    if (invalidKeywords.includes(threadId.toLowerCase())) {
-      return false;
-    }
-
-    // Accept frontend format: thread-{timestamp}-{random}
-    if (threadId.startsWith('thread-')) {
-      return true;
-    }
-
-    // Accept backend format: {userId}:{threadId}
-    // Must contain colon and have content on both sides
-    if (threadId.includes(':')) {
-      const parts = threadId.split(':');
-      return parts.length === 2 && parts[0].length > 0 && parts[1].length > 0;
-    }
-
-    return false;
   }
 }

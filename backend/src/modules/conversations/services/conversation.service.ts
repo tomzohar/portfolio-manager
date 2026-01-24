@@ -163,12 +163,10 @@ export class ConversationService {
     beforeSequence?: number;
     afterSequence?: number;
   }): Promise<ConversationMessage[]> {
-    // Determine if pagination is explicitly requested
-    // Pagination is only used when cursor-based pagination is requested:
+    // Determine if cursor-based pagination is explicitly requested
+    // Cursor-based pagination is used when:
     // - beforeSequence: loading older messages (backward pagination)
     // - afterSequence: loading newer messages (forward pagination)
-    // Note: limit alone does NOT trigger pagination - it's only used WITH cursors
-    // This prevents the default limit value from incorrectly triggering pagination
     const hasPaginationCursors =
       params.beforeSequence !== undefined || params.afterSequence !== undefined;
 
@@ -183,8 +181,19 @@ export class ConversationService {
       return result.messages;
     }
 
-    // Default: return all messages for the thread (no pagination)
-    // Ignore limit parameter when no pagination cursors are provided
+    // If limit is provided without cursors, apply simple limit
+    if (params.limit !== undefined) {
+      return this.messageRepo.find({
+        where: {
+          threadId: params.threadId,
+          userId: params.userId,
+        },
+        order: { sequence: 'ASC' },
+        take: params.limit,
+      });
+    }
+
+    // Default: return all messages for the thread (no limit, no pagination)
     return this.getThreadMessages(params.threadId, params.userId);
   }
 

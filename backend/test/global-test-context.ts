@@ -53,6 +53,10 @@ async function initializeGlobalApp(): Promise<void> {
 
   console.log('🚀 Initializing global test app (one-time setup)...');
 
+  // Small delay to ensure database is ready after global setup
+  // This helps prevent connection issues when running all tests together
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
   // Create test module
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [AppModule],
@@ -61,7 +65,25 @@ async function initializeGlobalApp(): Promise<void> {
   // Create and initialize app
   globalApp = moduleFixture.createNestApplication();
   globalApp.useGlobalPipes(new ZodValidationPipe());
-  await globalApp.init();
+
+  // Initialize with retry logic for connection issues
+  let initAttempts = 0;
+  const maxInitAttempts = 3;
+  while (initAttempts < maxInitAttempts) {
+    try {
+      await globalApp.init();
+      break;
+    } catch (error) {
+      initAttempts++;
+      if (initAttempts >= maxInitAttempts) {
+        throw error;
+      }
+      console.log(
+        `⏳ App initialization failed, retrying (${initAttempts}/${maxInitAttempts})...`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+  }
 
   // Wait for async module initialization (LangGraph checkpoint tables)
   // Need longer delay to ensure all async operations complete

@@ -12,6 +12,7 @@ import { InterruptHandlerService } from './interrupt-handler.service';
 import { TracingService } from './tracing.service';
 import { HumanMessage } from '@langchain/core/messages';
 import { GuardrailException } from '../graphs/nodes/guardrail.node';
+import { ConversationService } from '../../conversations/services/conversation.service';
 
 describe('OrchestratorService', () => {
   let service: OrchestratorService;
@@ -70,6 +71,13 @@ describe('OrchestratorService', () => {
     extractCitations: jest.fn().mockResolvedValue([]),
   };
 
+  const mockConversationService = {
+    getMessages: jest.fn().mockResolvedValue([]),
+    saveUserMessage: jest.fn(),
+    saveAssistantMessage: jest.fn(),
+    getThreadMessages: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -112,6 +120,10 @@ describe('OrchestratorService', () => {
         {
           provide: 'CitationService',
           useValue: mockCitationService,
+        },
+        {
+          provide: ConversationService,
+          useValue: mockConversationService,
         },
       ],
     }).compile();

@@ -38,7 +38,7 @@
 
     <!-- Conversation Panel (NEW) -->
     <div class="chat-page__conversation">
-      @if (threadId() && isValidThreadId(threadId()!) && !isLoadingChatHistory()) {
+      @if (threadId() && !isLoadingChatHistory()) {
         <app-conversation-panel
           [threadId]="threadId()!"
           [messages]="messages()"

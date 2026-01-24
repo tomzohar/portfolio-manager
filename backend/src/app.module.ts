@@ -21,6 +21,8 @@ function shouldSynchronize(env: string | undefined): boolean {
 function getTypeOrmModuleConfig(
   configService: ConfigService,
 ): TypeOrmModuleOptions {
+  const isTest = configService.get<string>('NODE_ENV') === 'test';
+
   return {
     type: 'postgres',
     host: configService.get<string>('DB_HOST'),
@@ -33,10 +35,17 @@ function getTypeOrmModuleConfig(
     synchronize: shouldSynchronize(configService.get<string>('NODE_ENV')),
     logging: configService.get<string>('NODE_ENV') === 'development',
     // Suppress verbose logs in test environment
-    logger:
-      configService.get<string>('NODE_ENV') === 'test'
-        ? undefined
-        : 'advanced-console',
+    logger: isTest ? undefined : 'advanced-console',
+    // Connection pool configuration for tests
+    ...(isTest && {
+      extra: {
+        max: 10, // Maximum number of connections in the pool
+        connectionTimeoutMillis: 10000, // 10 seconds timeout
+        idleTimeoutMillis: 30000, // 30 seconds idle timeout
+      },
+      retryAttempts: 5, // Number of retry attempts
+      retryDelay: 3000, // Delay between retries (3 seconds)
+    }),
   };
 }
 

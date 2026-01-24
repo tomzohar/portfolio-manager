@@ -13,6 +13,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { PortfolioService } from '../portfolio/portfolio.service';
+import { ConversationService } from '../conversations/services/conversation.service';
 
 describe('AgentsController', () => {
   let controller: AgentsController;
@@ -91,6 +92,13 @@ describe('AgentsController', () => {
     validateUserOwnsPortfolio: jest.fn().mockResolvedValue(true),
   };
 
+  const mockConversationService = {
+    getMessages: jest.fn().mockResolvedValue([]),
+    saveUserMessage: jest.fn(),
+    saveAssistantMessage: jest.fn(),
+    getThreadMessages: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -116,6 +124,10 @@ describe('AgentsController', () => {
         {
           provide: PortfolioService,
           useValue: mockPortfolioService,
+        },
+        {
+          provide: ConversationService,
+          useValue: mockConversationService,
         },
       ],
     })
@@ -210,8 +222,11 @@ describe('AgentsController', () => {
         threadId: 'existing-thread-id',
       };
 
+      const scopedThreadId = `${mockUser.id}:existing-thread-id`;
+      mockStateService.scopeThreadId.mockReturnValue(scopedThreadId);
+
       const mockResult = {
-        threadId: 'user-123:existing-thread-id',
+        threadId: scopedThreadId,
         finalState: {} as any,
         success: true,
       };
@@ -220,13 +235,17 @@ describe('AgentsController', () => {
 
       await controller.runGraph(mockUser, dto);
 
+      expect(mockStateService.scopeThreadId).toHaveBeenCalledWith(
+        mockUser.id,
+        dto.threadId,
+      );
       expect(orchestratorService.runGraph).toHaveBeenCalledWith(
         mockUser.id,
         {
           message: dto.message,
           portfolio: undefined,
         },
-        dto.threadId,
+        scopedThreadId,
       );
     });
 

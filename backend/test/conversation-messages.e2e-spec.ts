@@ -147,7 +147,10 @@ describe('Conversation Messages Persistence (e2e)', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      const messages = messagesResponse.body;
+      const messages = messagesResponse.body as Array<{
+        sequence: number;
+        type: string;
+      }>;
 
       // Verify ordering by sequence
       for (let i = 0; i < messages.length - 1; i++) {
