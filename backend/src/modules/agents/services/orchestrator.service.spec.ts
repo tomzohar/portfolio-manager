@@ -13,6 +13,7 @@ import { TracingService } from './tracing.service';
 import { HumanMessage } from '@langchain/core/messages';
 import { GuardrailException } from '../graphs/nodes/guardrail.node';
 import { ConversationService } from '../../conversations/services/conversation.service';
+import { GeminiLlmService } from './gemini-llm.service';
 
 describe('OrchestratorService', () => {
   let service: OrchestratorService;
@@ -65,6 +66,7 @@ describe('OrchestratorService', () => {
     recordTrace: jest.fn(),
     getTracesByThread: jest.fn().mockResolvedValue([]),
     getTracesByUser: jest.fn().mockResolvedValue([]),
+    getTracesByMessageId: jest.fn().mockResolvedValue([]),
   };
 
   const mockCitationService = {
@@ -74,8 +76,14 @@ describe('OrchestratorService', () => {
   const mockConversationService = {
     getMessages: jest.fn().mockResolvedValue([]),
     saveUserMessage: jest.fn(),
-    saveAssistantMessage: jest.fn(),
+    saveAssistantMessage: jest.fn().mockResolvedValue({ id: 'test-msg-id' }),
+    updateAssistantMessage: jest.fn(),
     getThreadMessages: jest.fn(),
+  };
+
+  const mockGeminiLlmService = {
+    generateContent: jest.fn(),
+    getChatModel: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -124,6 +132,10 @@ describe('OrchestratorService', () => {
         {
           provide: ConversationService,
           useValue: mockConversationService,
+        },
+        {
+          provide: GeminiLlmService,
+          useValue: mockGeminiLlmService,
         },
       ],
     }).compile();

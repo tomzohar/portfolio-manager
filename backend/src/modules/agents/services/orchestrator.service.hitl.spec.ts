@@ -12,6 +12,7 @@ import { StateService } from './state.service';
 import { ToolRegistryService } from './tool-registry.service';
 import { TracingService } from './tracing.service';
 import { ConversationService } from '../../conversations/services/conversation.service';
+import { GeminiLlmService } from './gemini-llm.service';
 
 /**
  * HITL (Human-in-the-Loop) Test Suite for OrchestratorService
@@ -95,13 +96,20 @@ describe('OrchestratorService - HITL (Interrupt & Suspend)', () => {
     recordTrace: jest.fn(),
     getTracesByThread: jest.fn().mockResolvedValue([]),
     getTracesByUser: jest.fn().mockResolvedValue([]),
+    getTracesByMessageId: jest.fn().mockResolvedValue([]),
   };
 
   const mockConversationService = {
     getMessages: jest.fn().mockResolvedValue([]),
     saveUserMessage: jest.fn(),
-    saveAssistantMessage: jest.fn(),
+    saveAssistantMessage: jest.fn().mockResolvedValue({ id: 'test-msg-id' }),
+    updateAssistantMessage: jest.fn(),
     getThreadMessages: jest.fn(),
+  };
+
+  const mockGeminiLlmService = {
+    generateContent: jest.fn(),
+    getChatModel: jest.fn(),
   };
 
   beforeAll(() => {
@@ -156,6 +164,10 @@ describe('OrchestratorService - HITL (Interrupt & Suspend)', () => {
         {
           provide: ConversationService,
           useValue: mockConversationService,
+        },
+        {
+          provide: GeminiLlmService,
+          useValue: mockGeminiLlmService,
         },
       ],
     }).compile();

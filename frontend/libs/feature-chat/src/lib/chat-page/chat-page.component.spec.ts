@@ -35,6 +35,7 @@ describe('ChatPageComponent', () => {
       isGraphActive: signal<boolean>(false),
       connectionStatus: signal<SSEConnectionStatus>(SSEConnectionStatus.DISCONNECTED),
       currentThreadTraces: signal([]),
+      allTraces: signal([]),
       messages: signal([]),
       displayMessages: signal([]),
       loading: signal(false),
