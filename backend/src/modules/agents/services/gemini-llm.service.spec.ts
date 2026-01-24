@@ -1,17 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { GeminiLlmService } from './gemini-llm.service';
+import { LLMModels } from '../types/lll-models.enum';
 
-// Mock @google/generative-ai at module level
-jest.mock('@google/generative-ai', () => ({
-  GoogleGenerativeAI: jest.fn().mockImplementation(() => ({
-    getGenerativeModel: jest.fn().mockReturnValue({
+// Mock @google/genai at module level
+jest.mock('@google/genai', () => ({
+  GoogleGenAI: jest.fn().mockImplementation(() => ({
+    models: {
       generateContent: jest.fn(),
-    }),
+    },
   })),
 }));
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
 describe('GeminiLlmService', () => {
   let service: GeminiLlmService;
@@ -24,11 +25,11 @@ describe('GeminiLlmService', () => {
     // Setup mock for generateContent
     mockGenerateContent = jest.fn();
 
-    // Mock the GoogleGenerativeAI class
-    (GoogleGenerativeAI as jest.Mock).mockImplementation(() => ({
-      getGenerativeModel: jest.fn().mockReturnValue({
+    // Mock the GoogleGenAI class
+    (GoogleGenAI as unknown as jest.Mock).mockImplementation(() => ({
+      models: {
         generateContent: mockGenerateContent,
-      }),
+      },
     }));
 
     const module: TestingModule = await Test.createTestingModule({
@@ -40,7 +41,7 @@ describe('GeminiLlmService', () => {
             get: jest.fn((key: string) => {
               const config = {
                 GEMINI_API_KEY: 'test-api-key',
-                GEMINI_MODEL: 'gemini-2.0-flash-exp',
+                GEMINI_MODEL: LLMModels.GEMINI_FLASH_LATEST,
               };
               return config[key as keyof typeof config];
             }),
@@ -60,13 +61,11 @@ describe('GeminiLlmService', () => {
   describe('generateContent', () => {
     it('should successfully generate content', async () => {
       const mockResponse = {
-        response: {
-          text: () => 'Generated content',
-          usageMetadata: {
-            promptTokenCount: 100,
-            candidatesTokenCount: 50,
-            totalTokenCount: 150,
-          },
+        text: 'Generated content',
+        usageMetadata: {
+          promptTokenCount: 100,
+          candidatesTokenCount: 50,
+          totalTokenCount: 150,
         },
       };
 
@@ -84,29 +83,28 @@ describe('GeminiLlmService', () => {
 
     it('should use custom model when provided', async () => {
       const mockResponse = {
-        response: {
-          text: () => 'Generated content',
-          usageMetadata: {
-            promptTokenCount: 100,
-            candidatesTokenCount: 50,
-            totalTokenCount: 150,
-          },
+        text: 'Generated content',
+        usageMetadata: {
+          promptTokenCount: 100,
+          candidatesTokenCount: 50,
+          totalTokenCount: 150,
         },
       };
 
       mockGenerateContent.mockResolvedValue(mockResponse);
 
-      await service.generateContent('Test prompt', 'gemini-2.0-pro');
+      await service.generateContent('Test prompt', LLMModels.GEMINI_PRO_LATEST);
 
-      expect(mockGenerateContent).toHaveBeenCalledWith('Test prompt');
+      expect(mockGenerateContent).toHaveBeenCalledWith({
+        model: LLMModels.GEMINI_PRO_LATEST,
+        contents: 'Test prompt',
+      });
     });
 
     it('should handle missing usage metadata gracefully', async () => {
       const mockResponse = {
-        response: {
-          text: () => 'Generated content',
-          usageMetadata: undefined,
-        },
+        text: 'Generated content',
+        usageMetadata: undefined,
       };
 
       mockGenerateContent.mockResolvedValue(mockResponse);
@@ -123,13 +121,11 @@ describe('GeminiLlmService', () => {
 
     it('should retry on transient errors', async () => {
       const mockResponse = {
-        response: {
-          text: () => 'Generated content after retry',
-          usageMetadata: {
-            promptTokenCount: 100,
-            candidatesTokenCount: 50,
-            totalTokenCount: 150,
-          },
+        text: 'Generated content after retry',
+        usageMetadata: {
+          promptTokenCount: 100,
+          candidatesTokenCount: 50,
+          totalTokenCount: 150,
         },
       };
 
@@ -182,13 +178,11 @@ describe('GeminiLlmService', () => {
   describe('lazy client initialization', () => {
     it('should initialize client only on first use', async () => {
       const mockResponse = {
-        response: {
-          text: () => 'Content',
-          usageMetadata: {
-            promptTokenCount: 10,
-            candidatesTokenCount: 5,
-            totalTokenCount: 15,
-          },
+        text: 'Content',
+        usageMetadata: {
+          promptTokenCount: 10,
+          candidatesTokenCount: 5,
+          totalTokenCount: 15,
         },
       };
 
@@ -197,14 +191,14 @@ describe('GeminiLlmService', () => {
       // Make first call
       await service.generateContent('Prompt 1');
 
-      const callCountAfterFirst = (GoogleGenerativeAI as jest.Mock).mock.calls
-        .length;
+      const callCountAfterFirst = (GoogleGenAI as unknown as jest.Mock).mock
+        .calls.length;
 
       // Make second call
       await service.generateContent('Prompt 2');
 
       // Client should only be initialized once (reused)
-      expect(GoogleGenerativeAI).toHaveBeenCalledTimes(callCountAfterFirst);
+      expect(GoogleGenAI).toHaveBeenCalledTimes(callCountAfterFirst);
     });
   });
 });

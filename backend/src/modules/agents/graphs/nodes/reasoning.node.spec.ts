@@ -1,4 +1,5 @@
 import { reasoningNode } from './reasoning.node';
+import { LLMModels } from '../../types/lll-models.enum';
 import { CIOState } from '../types';
 import { HumanMessage } from '@langchain/core/messages';
 import { RunnableConfig } from '@langchain/core/runnables';
@@ -43,7 +44,7 @@ describe('reasoningNode', () => {
 
   beforeEach(() => {
     process.env.GEMINI_API_KEY = 'test-api-key';
-    process.env.GEMINI_MODEL = 'gemini-2.0-flash-exp';
+    process.env.GEMINI_MODEL = LLMModels.GEMINI_3_FLASH;
   });
 
   afterEach(() => {

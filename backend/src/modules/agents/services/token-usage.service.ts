@@ -4,7 +4,7 @@ import { Repository, Between, FindOptionsWhere } from 'typeorm';
 import { TokenUsage } from '../entities/token-usage.entity';
 
 export interface RecordUsageDto {
-  modelName: string;
+  modelName: LLMModels;
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
@@ -22,14 +22,20 @@ export interface DateRange {
  * Handles persistence and querying of LLM token usage.
  * Tracks costs per user for billing and monitoring.
  */
+import { LLMModels } from '../types/lll-models.enum';
+import { getDefaultModel } from '../utils/model.utils';
+
 @Injectable()
 export class TokenUsageService {
   private readonly logger = new Logger(TokenUsageService.name);
 
-  // Pricing per 1000 tokens (approximate, based on Gemini pricing)
-  private readonly MODEL_PRICING: Record<string, number> = {
-    'gemini-3-pro': 0.01,
-  };
+  // Cost per 1k tokens (example pricing)
+  private readonly MODEL_PRICING = {
+    [LLMModels.GEMINI_PRO_LATEST]: 0.01,
+    [LLMModels.GEMINI_FLASH_LATEST]: 0.005,
+    [LLMModels.GEMINI_2_5_PRO]: 0.02,
+    [LLMModels.GEMINI_2_5_FLASH]: 0.01,
+  } as const;
 
   constructor(
     @InjectRepository(TokenUsage)
@@ -39,9 +45,18 @@ export class TokenUsageService {
   /**
    * Calculate estimated cost based on model and token count
    */
-  private calculateCost(modelName: string, totalTokens: number): number {
-    const pricePerThousand =
-      this.MODEL_PRICING[modelName] || this.MODEL_PRICING['gemini-3-pro'];
+  private calculateCost(modelName: LLMModels, totalTokens: number): number {
+    const getModelPrice = (modelName: LLMModels): number => {
+      const defaultPrice = this.MODEL_PRICING[modelName] as number;
+      if (!isNaN(defaultPrice)) {
+        return defaultPrice;
+      }
+      const fallback = (this.MODEL_PRICING[getDefaultModel() as LLMModels] ||
+        this.MODEL_PRICING[LLMModels.GEMINI_3_PRO]) as number;
+      return fallback;
+    };
+
+    const pricePerThousand: number = getModelPrice(modelName);
     return (totalTokens / 1000) * pricePerThousand;
   }
 

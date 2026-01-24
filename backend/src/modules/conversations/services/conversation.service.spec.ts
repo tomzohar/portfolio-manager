@@ -5,6 +5,7 @@ import { ConversationMessage } from '../entities/conversation-message.entity';
 import { ConversationMessageType } from '../types/conversation-message-type.enum';
 import { ConversationService } from './conversation.service';
 import { User } from 'src/modules/users/entities/user.entity';
+import { LLMModels } from '../../agents/types/lll-models.enum';
 
 describe('ConversationService', () => {
   let service: ConversationService;
@@ -220,7 +221,7 @@ describe('ConversationService', () => {
       // Arrange
       const paramsWithModel = {
         ...baseParams,
-        modelUsed: 'gemini-2.5-pro',
+        modelUsed: LLMModels.GEMINI_2_5_PRO,
       };
 
       mockRepository.findOne.mockResolvedValue(null);
@@ -250,7 +251,7 @@ describe('ConversationService', () => {
       const result = await service.saveAssistantMessage(paramsWithModel);
 
       // Assert
-      expect(result.metadata?.modelUsed).toBe('gemini-2.5-pro');
+      expect(result.metadata?.modelUsed).toBe(LLMModels.GEMINI_2_5_PRO);
     });
 
     it('should increment sequence correctly after user message', async () => {

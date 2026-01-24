@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TokenUsage } from './token-usage.entity';
+import { LLMModels } from '../types/lll-models.enum';
 
 describe('TokenUsage Entity', () => {
   let repository: Repository<TokenUsage>;
@@ -39,7 +40,7 @@ describe('TokenUsage Entity', () => {
       const userId = '123e4567-e89b-12d3-a456-426614174000';
       const tokenUsageData = {
         userId,
-        modelName: 'gemini-2.0-flash-exp',
+        modelName: LLMModels.GEMINI_FLASH_LATEST,
         promptTokens: 100,
         completionTokens: 50,
         totalTokens: 150,
@@ -63,7 +64,10 @@ describe('TokenUsage Entity', () => {
       const saved = await repository.save(created);
 
       expect(created).toHaveProperty('userId', userId);
-      expect(created).toHaveProperty('modelName', 'gemini-2.0-flash-exp');
+      expect(created).toHaveProperty(
+        'modelName',
+        LLMModels.GEMINI_FLASH_LATEST,
+      );
       expect(created).toHaveProperty('totalTokens', 150);
       expect(saved).toEqual(mockTokenUsage);
     });
@@ -107,7 +111,7 @@ describe('TokenUsage Entity', () => {
         {
           id: '1',
           userId,
-          modelName: 'gemini-2.0-flash-exp',
+          modelName: LLMModels.GEMINI_FLASH_LATEST,
           totalTokens: 150,
           estimatedCost: 0.00015,
           createdAt: new Date(),
