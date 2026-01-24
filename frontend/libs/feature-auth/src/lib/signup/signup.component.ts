@@ -1,4 +1,5 @@
-import { Component, effect, inject, computed } from '@angular/core';
+import { Component, inject, computed, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthFacade } from '@frontend/data-access-auth';
@@ -7,6 +8,7 @@ import { AuthBrandingComponent } from '../components/auth-branding.component';
 
 @Component({
   selector: 'lib-signup',
+  standalone: true,
   imports: [ReactiveFormsModule, RouterLink, InputComponent, ButtonComponent, AuthBrandingComponent],
   templateUrl: './signup.component.html',
   styleUrl: './signup.component.scss',
@@ -14,7 +16,7 @@ import { AuthBrandingComponent } from '../components/auth-branding.component';
 export class SignupComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authFacade = inject(AuthFacade);
-
+  private readonly destroyRef = inject(DestroyRef);
   // Signal-based state
   readonly loading = this.authFacade.loading;
   readonly error = this.authFacade.error;
@@ -36,12 +38,11 @@ export class SignupComponent {
   });
 
   constructor() {
-    // Clear error when form values change
-    effect(() => {
+    this.signupForm.valueChanges.pipe(
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(() => {
       if (this.error()) {
-        this.signupForm.valueChanges.subscribe(() => {
-          this.authFacade.clearError();
-        });
+        this.authFacade.clearError();
       }
     });
   }

@@ -6,18 +6,21 @@
   "tags": [],
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
+      "executor": "@nx/angular:ng-packagr-lite",
       "outputs": [
-        "{options.outputPath}"
+        "{workspaceRoot}/dist/{projectRoot}"
       ],
       "options": {
-        "outputPath": "dist/libs/styles",
-        "main": "libs/styles/src/index.ts",
-        "tsConfig": "libs/styles/tsconfig.lib.json",
-        "assets": [
-          "libs/styles/*.md"
-        ]
-      }
+        "project": "libs/styles/ng-package.json",
+        "tsConfig": "libs/styles/tsconfig.lib.json"
+      },
+      "configurations": {
+        "production": {
+          "tsConfig": "libs/styles/tsconfig.lib.json"
+        },
+        "development": {}
+      },
+      "defaultConfiguration": "production"
     },
     "test": {
       "executor": "@nx/jest:jest",

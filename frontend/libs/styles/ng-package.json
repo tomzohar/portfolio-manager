@@ -1,0 +1,17 @@
+{
+  "$schema": "../../node_modules/ng-packagr/ng-package.schema.json",
+  "dest": "../../dist/libs/styles",
+  "allowedNonPeerDependencies": [
+    "@angular/core",
+    "@angular/forms",
+    "@angular/material",
+    "@angular/common",
+    "@angular/platform-browser",
+    "@angular/router",
+    "@stocks-researcher/types"
+  ],
+  "lib": {
+    "entryFile": "src/index.ts",
+    "styleIncludePaths": ["src/lib"]
+  }
+}
