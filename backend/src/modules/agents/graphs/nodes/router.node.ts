@@ -1,19 +1,9 @@
+import { AIMessage } from '@langchain/core/messages';
 import { CIOState } from '../types';
 import { requiresApproval } from './approval-gate.node';
-import { AIMessage } from '@langchain/core/messages';
 import { Logger } from '@nestjs/common';
 
 const routerLogger = new Logger('Router');
-
-/**
- * Type definition for tool calls structure
- */
-type ToolCallStructure = {
-  id?: string;
-  name: string;
-  args: Record<string, unknown>;
-  type?: string;
-};
 
 /**
  * Type for Gemini content parts
@@ -51,7 +41,7 @@ export function routerNode(state: CIOState): string {
   }
 
   // Check if last message has tool calls (structural check instead of strict instanceof)
-  const potentialAIMessage = lastMessage as any;
+  const potentialAIMessage = lastMessage as AIMessage;
 
   if (
     potentialAIMessage.tool_calls &&
@@ -61,17 +51,9 @@ export function routerNode(state: CIOState): string {
     return 'tool_execution';
   }
 
-  // Fallback: Check additional_kwargs for non-standard format
-  if (
-    lastMessage.additional_kwargs?.tool_calls &&
-    lastMessage.additional_kwargs.tool_calls.length > 0
-  ) {
-    return 'tool_execution';
-  }
-
   // If we just executed tools (last message is ToolMessage), route back to reasoning
   // for observation and synthesis
-  if (lastMessage._getType() === 'tool') {
+  if (lastMessage.type === 'tool') {
     return 'reasoning';
   }
 
@@ -143,15 +125,18 @@ export function reasoningRouter(state: CIOState): string {
   }
 
   const lastMessage = state.messages[state.messages.length - 1];
-  const messageType = lastMessage?._getType();
+  const messageType = lastMessage?.type;
 
   routerLogger.debug(`Reasoning router | Message type: ${messageType}`);
 
   // Check if last message has tool calls (standardized property or kwargs)
   // Use duck typing instead of strict instanceof to avoid issues with package versions or compilation
-  const aiMessage = lastMessage as any;
+  const aiMessage = lastMessage as AIMessage;
 
-  if (lastMessage.constructor.name === 'AIMessage' || lastMessage._getType() === 'ai') {
+  if (
+    lastMessage.constructor.name === 'AIMessage' ||
+    lastMessage.type === 'ai'
+  ) {
     // Try direct property first
     if (aiMessage.tool_calls && aiMessage.tool_calls.length > 0) {
       routerLogger.debug(
@@ -159,28 +144,6 @@ export function reasoningRouter(state: CIOState): string {
       );
       return 'tool_execution';
     }
-
-    // Fallback to kwargs (for checkpointed messages)
-    if (
-      aiMessage.kwargs?.tool_calls &&
-      aiMessage.kwargs.tool_calls.length > 0
-    ) {
-      routerLogger.debug(
-        `Routing to tool_execution | Tool calls (kwargs): ${aiMessage.kwargs.tool_calls.length}`,
-      );
-      return 'tool_execution';
-    }
-  }
-
-  // Fallback: Check additional_kwargs for non-standard format
-  if (
-    lastMessage?.additional_kwargs?.tool_calls &&
-    lastMessage.additional_kwargs.tool_calls.length > 0
-  ) {
-    routerLogger.debug(
-      `Routing to tool_execution | Tool calls (additional_kwargs): ${lastMessage.additional_kwargs.tool_calls.length}`,
-    );
-    return 'tool_execution';
   }
 
   // Check if content is array with functionCall parts (Gemini format)

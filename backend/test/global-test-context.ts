@@ -59,7 +59,6 @@ async function initializeGlobalApp(): Promise<void> {
   // This helps prevent connection issues when running all tests together
   await new Promise((resolve) => setTimeout(resolve, 500));
 
-
   // Create test module
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [AppModule],

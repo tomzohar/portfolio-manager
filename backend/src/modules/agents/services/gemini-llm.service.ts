@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
+import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 
 export interface GeminiUsageMetadata {
@@ -13,12 +13,6 @@ export interface GeminiResponse {
   text: string;
   usage: GeminiUsageMetadata;
 }
-
-type UsageMetadata = {
-  promptTokenCount: number;
-  candidatesTokenCount: number;
-  totalTokenCount: number;
-};
 
 /**
  * GeminiLlmService
@@ -33,7 +27,7 @@ type UsageMetadata = {
 @Injectable()
 export class GeminiLlmService {
   private readonly logger = new Logger(GeminiLlmService.name);
-  private client: GoogleGenerativeAI | null = null;
+  private client: GoogleGenAI | null = null;
   private readonly defaultModel: string;
   private readonly maxRetries = 3;
   private readonly retryDelays = [1000, 2000, 4000]; // Exponential backoff in ms
@@ -49,7 +43,7 @@ export class GeminiLlmService {
    * Lazy initialization of Gemini client
    * Only creates client when first needed, not at service instantiation
    */
-  private getClient(): GoogleGenerativeAI {
+  private getClient(): GoogleGenAI {
     if (!this.client) {
       const apiKey = this.configService.get<string>('GEMINI_API_KEY');
 
@@ -60,29 +54,17 @@ export class GeminiLlmService {
       }
 
       this.logger.debug('Initializing Gemini API client');
-      this.client = new GoogleGenerativeAI(apiKey);
+      this.client = new GoogleGenAI({ apiKey });
     }
 
     return this.client;
   }
 
   /**
-   * Get a generative model instance
-   */
-  private getModel(modelName?: string): GenerativeModel {
-    const client = this.getClient();
-    const model = modelName || this.defaultModel;
-
-    return client.getGenerativeModel({ model });
-  }
-
-  /**
    * Extract usage metadata from Gemini response
    */
-  private extractUsage(response: {
-    usageMetadata: UsageMetadata;
-  }): GeminiUsageMetadata {
-    const { usageMetadata } = response;
+  private extractUsage(response: GenerateContentResponse): GeminiUsageMetadata {
+    const usageMetadata = response.usageMetadata;
     if (!usageMetadata) {
       this.logger.warn('No usage metadata in Gemini response');
       return {
@@ -114,24 +96,36 @@ export class GeminiLlmService {
     this.logger.log(`Generating content with model: ${modelToUse}`);
 
     let lastError: Error | null = null;
+    const client = this.getClient();
 
     for (let attempt = 0; attempt < this.maxRetries; attempt++) {
       try {
-        const geminiModel = this.getModel(modelToUse);
-        const result = await geminiModel.generateContent(prompt);
-        const response = result.response;
+        const result = await client.models.generateContent({
+          model: modelToUse,
+          contents: prompt,
+        });
 
-        const text = response.text();
-        const usage = this.extractUsage(
-          response as { usageMetadata: UsageMetadata },
-        );
+        // In the new SDK, result is the response itself generally, or has a response property?
+        // Checking doc: "const response = await ai.models.generateContent(...); console.log(response.text);"
+        // So 'result' IS the response.
+        const response = result;
+
+        const text = response.text;
+        // Check if text is null or undefined (possible if filtered?)
+        if (text === null || text === undefined) {
+          // Handle case where text is missing, maybe due to safety.
+          // But type says string?
+          // "response.text: string | null" usually.
+        }
+
+        const usage = this.extractUsage(response);
 
         this.logger.debug(
           `Gemini API call successful. Tokens: ${usage.totalTokens} ` +
-          `(prompt: ${usage.promptTokens}, completion: ${usage.completionTokens})`,
+            `(prompt: ${usage.promptTokens}, completion: ${usage.completionTokens})`,
         );
 
-        return { text, usage };
+        return { text: text || '', usage };
       } catch (error) {
         lastError = error as Error;
         this.logger.warn(
@@ -160,11 +154,13 @@ export class GeminiLlmService {
    * Get a LangChain-compatible ChatModel instance
    * This allows sharing the configured LLM instance with LangGraph nodes
    */
-  getChatModel(options: {
-    streaming?: boolean;
-    temperature?: number;
-    maxOutputTokens?: number;
-  } = {}): ChatGoogleGenerativeAI {
+  getChatModel(
+    options: {
+      streaming?: boolean;
+      temperature?: number;
+      maxOutputTokens?: number;
+    } = {},
+  ): ChatGoogleGenerativeAI {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
     if (!apiKey) {
       throw new Error('GEMINI_API_KEY not configured');

@@ -1,9 +1,10 @@
 import { RunnableConfig } from '@langchain/core/runnables';
 import { AIMessage } from '@langchain/core/messages';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
-import { DynamicStructuredTool } from '@langchain/core/tools';
 import { CIOState, StateUpdate } from '../types';
 import { buildReasoningPrompt } from '../../prompts';
+import { GeminiLlmService } from '../../services/gemini-llm.service';
+import { ToolRegistryService } from '../../services/tool-registry.service';
 
 /**
  * Reasoning Node
@@ -26,14 +27,14 @@ export async function reasoningNode(
   try {
     // Get the API key from environment
     // Check for injected service (e.g. for testing)
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const geminiService = config.configurable?.geminiLlmService;
 
-    let llm;
+    const geminiService = config.configurable
+      ?.geminiLlmService as GeminiLlmService;
+
+    let llm: ChatGoogleGenerativeAI;
 
     if (geminiService) {
       // Use the injected service to get the model
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
       llm = geminiService.getChatModel({
         streaming: true,
         temperature: 0.2,
@@ -64,10 +65,9 @@ export async function reasoningNode(
     }
 
     // Get tools from registry (passed via config)
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const toolRegistry = config.configurable?.toolRegistry;
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-    const tools = (toolRegistry?.getTools() || []) as DynamicStructuredTool[];
+    const toolRegistry = config.configurable
+      ?.toolRegistry as ToolRegistryService;
+    const tools = toolRegistry?.getTools() || [];
 
     // Bind tools to LLM for agentic tool calling
     const llmWithTools = tools.length > 0 ? llm.bindTools(tools) : llm;
@@ -90,6 +90,7 @@ export async function reasoningNode(
 
     // Invoke LLM with streaming and tools
     // The config.callbacks from OrchestratorService will automatically handle token events
+
     const response = await llmWithTools.invoke(prompt, {
       callbacks: config.callbacks, // Pass through callbacks for tracing
     });
