@@ -1360,4 +1360,49 @@ describe('PortfolioService', () => {
       ).rejects.toThrow('Invalid portfolio ID format');
     });
   });
+  describe('getPortfolios', () => {
+    it('should return all portfolios for user when no IDs provided', async () => {
+      const portfolios = [mockPortfolio];
+      portfolioRepository.find.mockResolvedValue(portfolios);
+
+      const result = await service.getPortfolios(mockUserId);
+
+      expect(result).toEqual(portfolios);
+      expect(portfolioRepository.find).toHaveBeenCalledWith({
+        where: { user: { id: mockUserId } },
+      });
+    });
+
+    it('should return specific portfolios for user when IDs provided', async () => {
+      const portfolioIds = [mockPortfolioId];
+      const portfolios = [mockPortfolio];
+
+      // Mock find to return only the requested portfolio
+      portfolioRepository.find.mockResolvedValue(portfolios);
+
+      const result = await service.getPortfolios(mockUserId, portfolioIds);
+
+      expect(result).toEqual(portfolios);
+      expect(portfolioRepository.find).toHaveBeenCalledWith({
+        where: {
+          user: { id: mockUserId },
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          id: expect.any(Object), // Complex In() matcher, simplifying for unit test check
+        },
+      });
+    });
+
+    it('should handle empty ID list by returning all portfolios (spec decision)', async () => {
+      // Requirement: "If portfolioIds is undefined or empty, return all portfolios for the user."
+      const portfolios = [mockPortfolio];
+      portfolioRepository.find.mockResolvedValue(portfolios);
+
+      const result = await service.getPortfolios(mockUserId, []);
+
+      expect(result).toEqual(portfolios);
+      expect(portfolioRepository.find).toHaveBeenCalledWith({
+        where: { user: { id: mockUserId } },
+      });
+    });
+  });
 });

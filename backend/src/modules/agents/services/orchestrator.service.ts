@@ -87,7 +87,7 @@ export class OrchestratorService {
     @Optional()
     @Inject(CitationService)
     private readonly citationService?: CitationService,
-  ) {}
+  ) { }
 
   // ============================================================================
   // Public API
@@ -360,6 +360,7 @@ export class OrchestratorService {
     const config: GraphExecutionConfig = {
       configurable: {
         thread_id: threadId,
+        userId, // Add userId to configurable for tools to access
         toolRegistry: this.toolRegistry, // Provide tool registry for agentic tool calling
         performanceService: this.performanceService,
         portfolioService: this.portfolioService,

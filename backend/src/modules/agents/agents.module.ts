@@ -14,6 +14,7 @@ import { ConversationService } from '../conversations/services/conversation.serv
 import { PerformanceModule } from '../performance';
 import { PortfolioModule } from '../portfolio/portfolio.module';
 import { PortfolioService } from '../portfolio/portfolio.service';
+import { TransactionsService } from '../portfolio/transactions.service';
 import { UsersModule } from '../users/users.module';
 import { AgentsController } from './agents.controller';
 import { ReasoningTrace } from './entities/reasoning-trace.entity';
@@ -29,6 +30,7 @@ import { TracingService } from './services/tracing.service';
 import { createMacroAnalystTool } from './tools/macro-analyst.tool';
 import { createRiskManagerTool } from './tools/risk-manager.tool';
 import { createSearchHistoryTool } from './tools/search-history.tool';
+import { createSearchPortfoliosTool } from './tools/search-portfolios.tool';
 import { createTechnicalAnalystTool } from './tools/technical-analyst.tool';
 import { getCurrentTimeTool } from './tools/time.tool';
 
@@ -76,6 +78,7 @@ export class AgentsModule {
     private readonly newsService: NewsService,
     private readonly geminiService: GeminiLlmService,
     private readonly portfolioService: PortfolioService,
+    private readonly transactionsService: TransactionsService,
     private readonly conversationService: ConversationService, // Injected
   ) {
     this.registerDefaultTools();
@@ -117,5 +120,12 @@ export class AgentsModule {
       createSearchHistoryTool(this.conversationService),
     );
     this.logger.log('Registered search_history tool');
+    this.toolRegistry.registerTool(
+      createSearchPortfoliosTool(
+        this.portfolioService,
+        this.transactionsService,
+      ),
+    );
+    this.logger.log('Registered search_portfolios tool');
   }
 }

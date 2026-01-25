@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Repository, In } from 'typeorm';
 import { Portfolio } from './entities/portfolio.entity';
 import { Asset } from './entities/asset.entity';
 import {
@@ -594,6 +594,7 @@ export class PortfolioService {
         ticker: position.ticker,
         quantity: position.quantity,
         avgCostBasis: position.avgCostBasis,
+        // currentPrice missing/undefined -> fallback to cost basis in DTO
       });
     });
   }
@@ -661,5 +662,84 @@ export class PortfolioService {
     }
 
     return portfolio;
+  }
+
+  /**
+   * Get filtered portfolios for a user (bulk fetch)
+   * If portfolioIds is provided and non-empty, returns only those portfolios (ownership enforced).
+   * If portfolioIds is empty or undefined, returns all portfolios for the user.
+   */
+  async getPortfolios(
+    userId: string,
+    portfolioIds?: string[],
+  ): Promise<Portfolio[]> {
+    if (portfolioIds && portfolioIds.length > 0) {
+      return this.portfolioRepository.find({
+        where: {
+          user: { id: userId },
+          id: In(portfolioIds),
+        },
+      });
+    }
+
+    return this.portfolioRepository.find({
+      where: { user: { id: userId } },
+    });
+  }
+
+  /**
+   * Get assets for multiple portfolios (bulk fetch)
+   * Efficiently fetches assets and enriches them with market data
+   * Returns a map of portfolioId -> EnrichedAssetDto[]
+   */
+  async getAssetsForPortfolios(
+    portfolioIds: string[],
+    userId: string,
+  ): Promise<Record<Portfolio['id'], EnrichedAssetDto[]>> {
+    if (!portfolioIds || portfolioIds.length === 0) {
+      return {};
+    }
+
+    // Fetch portfolios with assets relation
+    const portfolios = await this.portfolioRepository.find({
+      where: {
+        id: In(portfolioIds),
+        user: { id: userId },
+      },
+      relations: ['assets'],
+    });
+
+    const result: Record<string, EnrichedAssetDto[]> = {};
+    const allAssets: Asset[] = [];
+    const assetToPortfolioId = new Map<string, string>(); // Asset ID -> Portfolio ID
+
+    // Collect all assets and map IDs before flattening
+    for (const portfolio of portfolios) {
+      result[portfolio.id] = []; // Initialize empty array
+      if (portfolio.assets && portfolio.assets.length > 0) {
+        for (const asset of portfolio.assets) {
+          allAssets.push(asset);
+          assetToPortfolioId.set(asset.id, portfolio.id);
+        }
+      }
+    }
+
+    if (allAssets.length === 0) {
+      return result;
+    }
+
+    // Bulk enrich all assets
+    const enrichedAssets = await this.enrichAssetsWithMarketData(allAssets);
+
+    // Group back by portfolio using the robust ID map
+    for (const enrichedAsset of enrichedAssets) {
+      // EnrichedAssetDto.id is copied from Asset.id
+      const portfolioId = assetToPortfolioId.get(enrichedAsset.id);
+      if (portfolioId && result[portfolioId]) {
+        result[portfolioId].push(enrichedAsset);
+      }
+    }
+
+    return result;
   }
 }
