@@ -44,6 +44,7 @@ describe('Accessibility Tests - US-001-T5', () => {
         connectSSE: jest.fn(),
         disconnectSSE: jest.fn(),
         loadConversationMessages: jest.fn(),
+        loadConversation: jest.fn(),
       };
 
       await TestBed.configureTestingModule({
@@ -120,6 +121,7 @@ describe('Accessibility Tests - US-001-T5', () => {
         connectSSE: jest.fn(),
         disconnectSSE: jest.fn(),
         loadConversationMessages: jest.fn(),
+        loadConversation: jest.fn(),
       };
 
       await TestBed.configureTestingModule({
@@ -297,6 +299,7 @@ describe('Accessibility Tests - US-001-T5', () => {
         connectSSE: jest.fn(),
         disconnectSSE: jest.fn(),
         loadConversationMessages: jest.fn(),
+        loadConversation: jest.fn(),
       };
 
       await TestBed.configureTestingModule({

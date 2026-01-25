@@ -517,4 +517,82 @@ export class ChatEffects {
       })
     )
   );
+
+  /**
+   * Effect: Persist trace settings
+   *
+   * Triggered by: toggleShowTraces, updateChatConfig
+   *
+   * Flow:
+   * 1. Get current showTraces state
+   * 2. Call API to update conversation config
+   * 3. Dispatch chatConfigUpdated on success
+   * 4. Dispatch chatConfigUpdateFailed on error
+   */
+  persistTraceSettings$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(ChatActions.toggleShowTraces, ChatActions.updateChatConfig),
+      withLatestFrom(
+        this.store.select((state: any) => state.chat.showTraces),
+        this.store.select((state: any) => state.chat.currentThreadId)
+      ),
+      filter(([, , threadId]) => !!threadId),
+      switchMap(([, showTraces, threadId]) =>
+        this.conversationApi
+          .updateConversationConfig(threadId, { showTraces })
+          .pipe(
+            map(() =>
+              ChatActions.chatConfigUpdated({ config: { showTraces } })
+            ),
+            catchError((error) =>
+              of(
+                ChatActions.chatConfigUpdateFailed({
+                  error: error.message || 'Failed to update settings',
+                })
+              )
+            )
+          )
+      )
+    )
+  );
+
+  /**
+   * Effect: Load conversation details (including config)
+   *
+   * Triggered by: loadConversation
+   *
+   * Flow:
+   * 1. Call API to fetch conversation
+   * 2. Dispatch conversationLoaded
+   * 3. Dispatch loadConversationMessages (chaining)
+   */
+  loadConversation$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(ChatActions.loadConversation),
+      switchMap(({ threadId }) =>
+        this.conversationApi.getConversation(threadId).pipe(
+          switchMap((conversation) => [
+            ChatActions.conversationLoaded({ conversation }),
+            ChatActions.loadConversationMessages({ threadId }),
+          ]),
+          catchError((error) => {
+            if (error.status === 404) {
+              // If not found, maybe it's a new conversation or invalid
+              // For now just error
+              return of(
+                ChatActions.conversationLoadFailed({
+                  error: 'Conversation not found',
+                })
+              );
+            }
+            return of(
+              ChatActions.conversationLoadFailed({
+                error: error.message || 'Failed to load conversation',
+              })
+            );
+          })
+        )
+      )
+    )
+  );
 }

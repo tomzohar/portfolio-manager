@@ -1,7 +1,12 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { JwtModule } from '@nestjs/jwt';
 import { ConversationMessage } from './entities/conversation-message.entity';
+import { Conversation } from './entities/conversation.entity';
 import { ConversationService } from './services/conversation.service';
+import { ConversationsController } from './conversations.controller';
+import { AuthModule } from '../auth/auth.module';
+import { UsersModule } from '../users/users.module';
 
 /**
  * Conversations Module
@@ -21,7 +26,13 @@ import { ConversationService } from './services/conversation.service';
  * as specified in Chat_Message_Persistence.md.
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([ConversationMessage])],
+  imports: [
+    TypeOrmModule.forFeature([ConversationMessage, Conversation]),
+    JwtModule,
+    forwardRef(() => AuthModule),
+    forwardRef(() => UsersModule),
+  ],
+  controllers: [ConversationsController],
   providers: [ConversationService],
   exports: [ConversationService],
 })

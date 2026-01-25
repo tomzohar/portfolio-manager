@@ -8,6 +8,8 @@ import {
   MessageType,
   UserMessage,
   AssistantMessage,
+  Conversation,
+  ConversationConfig,
 } from '@stocks-researcher/types';
 
 /**
@@ -141,5 +143,31 @@ export class ConversationApiService {
           isOptimistic: false,
         } as UserMessage;
     }
+  }
+
+  /**
+   * Fetches conversation details including configuration.
+   *
+   * Endpoint: GET /api/conversations/:threadId
+   */
+  getConversation(threadId: string): Observable<Conversation> {
+    return this.http.get<Conversation>(
+      `${this.apiUrl}/api/conversations/${threadId}`
+    );
+  }
+
+  /**
+   * Updates conversation configuration.
+   *
+   * Endpoint: PATCH /api/conversations/:threadId/config
+   */
+  updateConversationConfig(
+    threadId: string,
+    config: ConversationConfig
+  ): Observable<boolean> {
+    return this.http.patch<boolean>(
+      `${this.apiUrl}/api/conversations/${threadId}/config`,
+      config
+    );
   }
 }

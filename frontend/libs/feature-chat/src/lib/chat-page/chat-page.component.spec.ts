@@ -49,6 +49,7 @@ describe('ChatPageComponent', () => {
       toggleMessageTraces: jest.fn(),
       toggleTraceExpansion: jest.fn(),
       loadConversationMessages: jest.fn(),
+      loadConversation: jest.fn(),
     };
 
     // Mock Router
@@ -155,13 +156,13 @@ describe('ChatPageComponent', () => {
     it('should load conversation when threadId is in backend format', () => {
       mockActivatedRoute.paramMap = of(createParamMap('user-1:thread-456'));
       initComponent();
-      expect(mockChatFacade.loadConversationMessages).toHaveBeenCalledWith('user-1:thread-456');
+      expect(mockChatFacade.loadConversation).toHaveBeenCalledWith('user-1:thread-456');
     });
 
     it('should NOT load conversation for frontend-generated threadIds', () => {
       mockActivatedRoute.paramMap = of(createParamMap('thread-123'));
       initComponent();
-      expect(mockChatFacade.loadConversationMessages).not.toHaveBeenCalled();
+      expect(mockChatFacade.loadConversation).not.toHaveBeenCalled();
     });
 
     it('should show loading state when loading chat history', () => {

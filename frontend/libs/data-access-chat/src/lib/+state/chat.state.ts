@@ -74,5 +74,5 @@ export const initialChatState: ChatState = tracesAdapter.getInitialState({
   loadingTracesByMessageId: new Set<string>(),
   loading: false,
   error: null,
-  showTraces: true,
+  showTraces: false,
 });

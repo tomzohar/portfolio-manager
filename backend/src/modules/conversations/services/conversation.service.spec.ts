@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Logger } from '@nestjs/common';
 import { ConversationMessage } from '../entities/conversation-message.entity';
+import { Conversation } from '../entities/conversation.entity';
 import { ConversationMessageType } from '../types/conversation-message-type.enum';
 import { ConversationService } from './conversation.service';
 import { User } from 'src/modules/users/entities/user.entity';
@@ -34,6 +35,10 @@ describe('ConversationService', () => {
         ConversationService,
         {
           provide: getRepositoryToken(ConversationMessage),
+          useValue: mockRepository,
+        },
+        {
+          provide: getRepositoryToken(Conversation),
           useValue: mockRepository,
         },
       ],

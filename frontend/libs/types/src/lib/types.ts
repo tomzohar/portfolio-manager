@@ -480,3 +480,14 @@ export interface MenuConfig {
   cssClass?: string;
   ariaLabel?: string;
 }
+export interface ConversationConfig {
+    showTraces?: boolean;
+}
+
+export interface Conversation {
+    id: string; // matches threadId
+    userId: string;
+    config: ConversationConfig;
+    createdAt: string;
+    updatedAt: string;
+}
