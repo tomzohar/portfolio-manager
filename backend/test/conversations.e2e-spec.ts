@@ -65,7 +65,7 @@ describe('Conversation Configuration (e2e)', () => {
       })
       .expect(200);
 
-    expect(updateResponse.body).toBe(true); // Response is now boolean true on success
+    expect(updateResponse.text).toBe('true');
 
     // Verify persistence
     const convResponse = await request(app.getHttpServer())
