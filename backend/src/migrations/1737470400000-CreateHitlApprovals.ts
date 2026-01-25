@@ -1,10 +1,4 @@
-import {
-  MigrationInterface,
-  QueryRunner,
-  Table,
-  TableIndex,
-  TableForeignKey,
-} from 'typeorm';
+import { MigrationInterface, QueryRunner, Table } from 'typeorm';
 
 /**
  * Migration: Create HITL Approvals Table for US-003
@@ -96,57 +90,48 @@ export class CreateHitlApprovals1737470400000 implements MigrationInterface {
       true,
     );
 
-    // Add CHECK constraint for status values
+    // Add CHECK constraint for status values safely
+    // Add CHECK constraint safely
     await queryRunner.query(`
-      ALTER TABLE hitl_approvals
-      ADD CONSTRAINT chk_hitl_approvals_status
-      CHECK (status IN ('pending', 'approved', 'rejected', 'expired'))
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'chk_hitl_approvals_status') THEN
+          ALTER TABLE hitl_approvals
+          ADD CONSTRAINT chk_hitl_approvals_status
+          CHECK (status IN ('pending', 'approved', 'rejected', 'expired'));
+        END IF;
+      END $$;
     `);
 
-    // Create foreign key to users (ON DELETE CASCADE)
-    await queryRunner.createForeignKey(
-      'hitl_approvals',
-      new TableForeignKey({
-        columnNames: ['user_id'],
-        referencedColumnNames: ['id'],
-        referencedTableName: 'users',
-        onDelete: 'CASCADE',
-        name: 'FK_hitl_approvals_user',
-      }),
-    );
-
-    // Create index on thread_id for efficient queries
-    await queryRunner.createIndex(
-      'hitl_approvals',
-      new TableIndex({
-        name: 'IDX_hitl_approvals_thread_id',
-        columnNames: ['thread_id'],
-      }),
-    );
-
-    // Create index on user_id for security filtering
-    await queryRunner.createIndex(
-      'hitl_approvals',
-      new TableIndex({
-        name: 'IDX_hitl_approvals_user_id',
-        columnNames: ['user_id'],
-      }),
-    );
-
-    // Create index on status for filtering pending approvals
-    await queryRunner.createIndex(
-      'hitl_approvals',
-      new TableIndex({
-        name: 'IDX_hitl_approvals_status',
-        columnNames: ['status'],
-      }),
-    );
-
-    // Create partial index on expires_at for pending approvals only
+    // Create FK safely
     await queryRunner.query(`
-      CREATE INDEX IDX_hitl_approvals_expires_at
-      ON hitl_approvals(expires_at)
-      WHERE status = 'pending'
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'FK_hitl_approvals_user') THEN
+          ALTER TABLE "hitl_approvals" 
+          ADD CONSTRAINT "FK_hitl_approvals_user" 
+          FOREIGN KEY ("user_id") 
+          REFERENCES "users"("id") 
+          ON DELETE CASCADE;
+        END IF;
+      END $$;
+    `);
+
+    // Create indexes safely
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_hitl_approvals_thread_id" ON "hitl_approvals" ("thread_id");
+    `);
+
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_hitl_approvals_user_id" ON "hitl_approvals" ("user_id");
+    `);
+
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_hitl_approvals_status" ON "hitl_approvals" ("status");
+    `);
+
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_hitl_approvals_expires_at" ON "hitl_approvals" ("expires_at") WHERE status = 'pending';
     `);
   }
 

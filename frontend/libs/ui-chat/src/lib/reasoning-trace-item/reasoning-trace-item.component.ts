@@ -1,5 +1,5 @@
 import { Component, input, output, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, SlicePipe } from '@angular/common';
 import { trigger, style, transition, animate } from '@angular/animations';
 import { ReasoningTrace } from '@stocks-researcher/types';
 import {
@@ -44,6 +44,7 @@ import {
     IconComponent,
     ButtonComponent,
     TagPillComponent,
+    SlicePipe,
   ],
   animations: [
     trigger('expandCollapse', [
@@ -91,7 +92,7 @@ import {
 
       <div class="trace-content">
         <div class="trace-reasoning">
-          {{ trace().reasoning }}
+          {{ trace().reasoning  | slice: 0:100}}
         </div>
 
         @if (isExpanded()) {
@@ -175,8 +176,9 @@ export class ReasoningTraceItemComponent {
    * Compute button config for expand/collapse button
    */
   expandButtonConfig = computed((): ButtonConfig => ({
-    label: this.isExpanded() ? 'Collapse' : 'Expand',
-    variant: 'icon',
+    label: '',
+    variant: 'stroked',
+    size: 'xs',
     icon: this.isExpanded() ? 'expand_less' : 'expand_more',
     ariaLabel: this.isExpanded() ? 'Collapse trace' : 'Expand trace',
   }));

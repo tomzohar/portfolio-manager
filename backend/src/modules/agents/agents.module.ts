@@ -1,34 +1,36 @@
-import { Module, forwardRef, Logger } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { forwardRef, Logger, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
-import { AgentsController } from './agents.controller';
-import { TokenUsage } from './entities/token-usage.entity';
-import { ReasoningTrace } from './entities/reasoning-trace.entity';
-import { GeminiLlmService } from './services/gemini-llm.service';
-import { TokenUsageService } from './services/token-usage.service';
-import { TracingService } from './services/tracing.service';
-import { StateService } from './services/state.service';
-import { ToolRegistryService } from './services/tool-registry.service';
-import { OrchestratorService } from './services/orchestrator.service';
-import { GraphExecutorService } from './services/graph-executor.service';
-import { InterruptHandlerService } from './services/interrupt-handler.service';
-import { getCurrentTimeTool } from './tools/time.tool';
-import { createTechnicalAnalystTool } from './tools/technical-analyst.tool';
-import { createRiskManagerTool } from './tools/risk-manager.tool';
-import { createMacroAnalystTool } from './tools/macro-analyst.tool';
-import { AuthModule } from '../auth/auth.module';
-import { UsersModule } from '../users/users.module';
-import { AssetsModule } from '../assets/assets.module';
-import { PortfolioModule } from '../portfolio/portfolio.module';
-import { PerformanceModule } from '../performance/performance.module';
-import { CitationsModule } from '../citations/citations.module';
-import { PolygonApiService } from '../assets/services/polygon-api.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AssetsModule } from '../assets';
 import { FredService } from '../assets/services/fred.service';
 import { NewsService } from '../assets/services/news.service';
-import { PortfolioService } from '../portfolio/portfolio.service';
+import { PolygonApiService } from '../assets/services/polygon-api.service';
+import { AuthModule } from '../auth/auth.module';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { ConversationsModule } from '../conversations/conversations.module';
+import { CitationsModule } from '../citations/citations.module';
+import { ConversationsModule } from '../conversations';
+import { ConversationService } from '../conversations/services/conversation.service';
+import { PerformanceModule } from '../performance';
+import { PortfolioModule } from '../portfolio/portfolio.module';
+import { PortfolioService } from '../portfolio/portfolio.service';
+import { UsersModule } from '../users/users.module';
+import { AgentsController } from './agents.controller';
+import { ReasoningTrace } from './entities/reasoning-trace.entity';
+import { TokenUsage } from './entities/token-usage.entity';
+import { GeminiLlmService } from './services/gemini-llm.service';
+import { GraphExecutorService } from './services/graph-executor.service';
+import { InterruptHandlerService } from './services/interrupt-handler.service';
+import { OrchestratorService } from './services/orchestrator.service';
+import { StateService } from './services/state.service';
+import { TokenUsageService } from './services/token-usage.service';
+import { ToolRegistryService } from './services/tool-registry.service';
+import { TracingService } from './services/tracing.service';
+import { createMacroAnalystTool } from './tools/macro-analyst.tool';
+import { createRiskManagerTool } from './tools/risk-manager.tool';
+import { createSearchHistoryTool } from './tools/search-history.tool';
+import { createTechnicalAnalystTool } from './tools/technical-analyst.tool';
+import { getCurrentTimeTool } from './tools/time.tool';
 
 @Module({
   imports: [
@@ -53,7 +55,7 @@ import { ConversationsModule } from '../conversations/conversations.module';
     GraphExecutorService,
     InterruptHandlerService,
     OrchestratorService,
-    JwtAuthGuard, // Provide JwtAuthGuard locally
+    JwtAuthGuard,
   ],
   exports: [
     OrchestratorService,
@@ -74,6 +76,7 @@ export class AgentsModule {
     private readonly newsService: NewsService,
     private readonly geminiService: GeminiLlmService,
     private readonly portfolioService: PortfolioService,
+    private readonly conversationService: ConversationService, // Injected
   ) {
     this.registerDefaultTools();
   }
@@ -110,5 +113,9 @@ export class AgentsModule {
       createRiskManagerTool(this.portfolioService, this.polygonService),
     );
     this.logger.log('Registered risk_manager tool');
+    this.toolRegistry.registerTool(
+      createSearchHistoryTool(this.conversationService),
+    );
+    this.logger.log('Registered search_history tool');
   }
 }

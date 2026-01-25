@@ -17,6 +17,7 @@ import { approvalGateNode } from './nodes/approval-gate.node';
 import { guardrailNode } from './nodes/guardrail.node';
 import { reasoningNode } from './nodes/reasoning.node';
 import { toolExecutionNode } from './nodes/tool-execution.node';
+import { summarizationNode } from './nodes/summarization.node'; // Added
 import { StateService } from '../services/state.service';
 import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
 import { Timeframe } from '../../performance/types/timeframe.types';
@@ -50,37 +51,17 @@ const CIOStateAnnotation = Annotation.Root({
 
 /**
  * Build the CIO Graph
- *
- * Phase 3+ graph with HITL support, guardrails, streaming reasoning, and tool calling:
- * START -> guardrail -> router -> (reasoning <-> tool_execution OR performance_attribution OR observer OR approval_gate OR hitl_test) -> End -> END
- *
- * ReAct Pattern Flow (Reasoning-Action-Observation):
- * 1. reasoning node: LLM decides to call tools
- * 2. router: Detects tool_calls, routes to tool_execution
- * 3. tool_execution: Executes tools, returns ToolMessages
- * 4. router: Detects ToolMessages, routes back to reasoning
- * 5. reasoning node: Observes tool results, synthesizes response
- * 6. router: Routes to end when no more tool calls
- *
- * Key Features:
- * - Guardrail enforces iteration and tool call limits
- * - Approval gate triggers HITL for high-stakes decisions
- * - Reasoning node uses streaming LLM with tool calling
- * - Tool execution supports parallel tool calls
- *
- * @param stateService - StateService for checkpoint persistence
- * @returns Compiled graph ready for execution
+ * ...
  */
 export function buildCIOGraph(stateService: StateService) {
   const enableHitlTest = process.env.ENABLE_HITL_TEST_NODE === 'true';
   const enableApprovalGate = process.env.ENABLE_APPROVAL_GATE === 'true';
 
   // Create the state graph with routing logic
-  // Use any for workflow construction to handle conditional nodes/edges
-  // while maintaining the complex generic types of StateGraph
   /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
   let workflow = new StateGraph(CIOStateAnnotation)
     .addNode('guardrail', guardrailNode)
+    .addNode('summarization', summarizationNode) // Add summarization node
     .addNode('reasoning', reasoningNode)
     .addNode('tool_execution', toolExecutionNode)
     .addNode('performance_attribution', performanceAttributionNode) as any;
@@ -98,7 +79,9 @@ export function buildCIOGraph(stateService: StateService) {
   workflow = workflow
     .addNode('end', endNode)
     .addEdge('__start__', 'guardrail')
-    .addConditionalEdges('guardrail', routerNode, {
+    .addEdge('guardrail', 'summarization') // Guardrail -> Summarization
+    .addConditionalEdges('summarization', routerNode, {
+      // Summarization -> Router
       performance_attribution: 'performance_attribution',
       reasoning: 'reasoning',
       tool_execution: 'tool_execution',
@@ -114,7 +97,7 @@ export function buildCIOGraph(stateService: StateService) {
       reasoning: 'reasoning',
       end: 'end',
     })
-    .addEdge('performance_attribution', 'end');
+    .addEdge('performance_attribution', 'end'); // Fix: performance_attribution -> end
 
   // Add edge for approval gate node only if enabled
   if (enableApprovalGate) {

@@ -70,6 +70,16 @@ export class ConversationMessage {
   @Column({ type: 'jsonb', nullable: true })
   metadata: ConversationMessageMetadata | null;
 
+  // Generated tsvector for Full Text Search
+  @Column({
+    type: 'tsvector',
+    select: false,
+    insert: false,
+    update: false,
+    nullable: true,
+  })
+  search_vector: any;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

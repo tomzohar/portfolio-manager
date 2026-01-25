@@ -2,15 +2,15 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class AddMessageIdToReasoningTrace1769254970438 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Add messageId column to reasoning_traces table
+    // Add messageId column to reasoning_traces table safely
     await queryRunner.query(`
             ALTER TABLE "reasoning_traces" 
-            ADD COLUMN "messageId" uuid
+            ADD COLUMN IF NOT EXISTS "messageId" uuid
         `);
 
-    // Add index on messageId for efficient querying
+    // Add index on messageId for efficient querying safely
     await queryRunner.query(`
-            CREATE INDEX "IDX_reasoning_traces_messageId" 
+            CREATE INDEX IF NOT EXISTS "IDX_reasoning_traces_messageId" 
             ON "reasoning_traces" ("messageId")
         `);
   }

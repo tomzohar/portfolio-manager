@@ -1,11 +1,16 @@
-import { RunnableConfig } from '@langchain/core/runnables';
-import { AIMessage } from '@langchain/core/messages';
+import {
+  AIMessage,
+  SystemMessage,
+  BaseMessage,
+  ToolMessage,
+} from '@langchain/core/messages';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { CIOState, StateUpdate } from '../types';
 import { buildReasoningPrompt } from '../../prompts';
 import { GeminiLlmService } from '../../services/gemini-llm.service';
 import { ToolRegistryService } from '../../services/tool-registry.service';
 import { getDefaultModel } from '../../utils/model.utils';
+import { RunnableConfig } from '@langchain/core/runnables';
 
 /**
  * Reasoning Node
@@ -21,82 +26,162 @@ import { getDefaultModel } from '../../utils/model.utils';
  * - SSE endpoint receives real-time token events
  * - Returns AIMessage with potential tool_calls in additional_kwargs
  */
+// Helper to initialize LLM
+function initializeLLM(config: RunnableConfig): ChatGoogleGenerativeAI {
+  const geminiService = config.configurable
+    ?.geminiLlmService as GeminiLlmService;
+
+  if (geminiService) {
+    return geminiService.getChatModel({
+      streaming: true,
+      temperature: 0.2,
+      maxOutputTokens: 2048,
+    });
+  }
+
+  // Manual fallback
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
+
+  return new ChatGoogleGenerativeAI({
+    apiKey,
+    model: getDefaultModel(),
+    temperature: 0.2,
+    maxOutputTokens: 2048,
+    streaming: true,
+  });
+}
+
+/**
+ * Sanitize messages for Google Gemini
+ * Ensures all ToolMessages have a 'name' field, which is required by the API.
+ * Infers name from preceding AIMessage tool calls if possible, or uses fallback.
+ */
+function sanitizeMessages(messages: BaseMessage[]): BaseMessage[] {
+  const toolCallNames = new Map<string, string>();
+
+  // First pass: Index tool calls from AIMessages to find names
+  for (const msg of messages) {
+    if (
+      msg instanceof AIMessage &&
+      msg.tool_calls &&
+      msg.tool_calls.length > 0
+    ) {
+      for (const tc of msg.tool_calls) {
+        if (tc.id) toolCallNames.set(tc.id, tc.name);
+      }
+    }
+  }
+
+  // Second pass: Fix ToolMessages missing names
+  return messages.map((msg) => {
+    if (msg instanceof ToolMessage && !msg.name) {
+      const name = toolCallNames.get(msg.tool_call_id) || 'unknown_tool';
+      const message = msg as ToolMessage;
+      return new ToolMessage({
+        content: message.content,
+        tool_call_id: message.tool_call_id,
+        name: name,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        artifact: message?.artifact,
+        status: message.status,
+      });
+    }
+    return msg;
+  });
+}
+
+// Helper to construct history with sliding window
+async function constructHistory(
+  state: CIOState,
+  tools: any[],
+  geminiService: GeminiLlmService | undefined,
+): Promise<BaseMessage[]> {
+  // 1. Build System Message
+  const systemPromptContent = buildReasoningPrompt(
+    state.portfolio,
+    state.userId,
+    tools,
+    state.threadId,
+  );
+  const systemMessage = new SystemMessage(systemPromptContent);
+
+  // 2. Identify messages to include
+  const allMessages = state.messages;
+  const lastMessage = allMessages[allMessages.length - 1];
+
+  // Helper to count tokens
+  const count = async (msg: string | BaseMessage) => {
+    const content =
+      typeof msg === 'string'
+        ? msg
+        : typeof msg.content === 'string'
+          ? msg.content
+          : JSON.stringify(msg.content);
+
+    if (geminiService) {
+      const metadata = await geminiService.countTokens(content);
+      return metadata.totalTokens;
+    }
+    // Fallback estimation (char/4)
+    return Math.ceil(content.length / 4);
+  };
+
+  let currentTokens = 0;
+  const TOKEN_LIMIT = 20000;
+
+  currentTokens += await count(systemPromptContent);
+  currentTokens += await count(lastMessage);
+
+  // 3. Select history messages (reverse chronological)
+  const historyMessages: BaseMessage[] = [];
+
+  // Iterate from second-to-last msg down to 0
+  for (let i = allMessages.length - 2; i >= 0; i--) {
+    const msg = allMessages[i];
+    const tokens = await count(msg);
+
+    if (currentTokens + tokens > TOKEN_LIMIT) {
+      break;
+    }
+
+    currentTokens += tokens;
+    historyMessages.unshift(msg);
+  }
+
+  return [systemMessage, ...historyMessages, lastMessage];
+}
+
+/**
+ * Reasoning Node
+ */
 export async function reasoningNode(
   state: CIOState,
   config: RunnableConfig,
 ): Promise<StateUpdate> {
   try {
-    // Get the API key from environment
-    // Check for injected service (e.g. for testing)
-
+    const bucketLLM = initializeLLM(config);
     const geminiService = config.configurable
       ?.geminiLlmService as GeminiLlmService;
 
-    let llm: ChatGoogleGenerativeAI;
-
-    if (geminiService) {
-      // Use the injected service to get the model
-      llm = geminiService.getChatModel({
-        streaming: true,
-        temperature: 0.2,
-        maxOutputTokens: 2048,
-      });
-    } else {
-      // Fallback to manual instantiation if service not provided
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        return {
-          errors: ['GEMINI_API_KEY not configured'],
-          messages: [
-            new AIMessage(
-              'Sorry, I cannot generate a response at this time due to missing configuration.',
-            ),
-          ],
-        };
-      }
-
-      // Initialize LLM with streaming enabled
-      llm = new ChatGoogleGenerativeAI({
-        apiKey,
-        model: getDefaultModel(),
-        temperature: 0.2, // Lower temperature for more deterministic behavior (greetings, help queries)
-        maxOutputTokens: 2048, // Increased for longer responses
-        streaming: true, // CRITICAL: Enables token-by-token streaming
-      });
-    }
-
-    // Get tools from registry (passed via config)
+    // Get tools
     const toolRegistry = config.configurable
       ?.toolRegistry as ToolRegistryService;
     const tools = toolRegistry?.getTools() || [];
+    const llmWithTools =
+      tools.length > 0 ? bucketLLM.bindTools(tools) : bucketLLM;
 
-    // Bind tools to LLM for agentic tool calling
-    const llmWithTools = tools.length > 0 ? llm.bindTools(tools) : llm;
+    // Construct prompt with history
+    const rawMessages = await constructHistory(state, tools, geminiService);
 
-    // Get the last user message
-    const lastMessage = state.messages[state.messages.length - 1];
-    const userQuery =
-      typeof lastMessage.content === 'string'
-        ? lastMessage.content
-        : JSON.stringify(lastMessage.content);
+    // Sanitize messages to ensure ToolMessages have names (required by Gemini)
+    const finalMessages = sanitizeMessages(rawMessages);
 
-    // Build prompt using external prompt template
-    // Includes portfolio context, userId, and dynamically formatted tools
-    const prompt = buildReasoningPrompt(
-      userQuery,
-      state.portfolio,
-      state.userId,
-      tools, // Pass tools for dynamic formatting
-    );
-
-    // Invoke LLM with streaming and tools
-    // The config.callbacks from OrchestratorService will automatically handle token events
-
-    const response = await llmWithTools.invoke(prompt, {
-      callbacks: config.callbacks, // Pass through callbacks for tracing
+    // Invoke LLM
+    const response = await llmWithTools.invoke(finalMessages, {
+      callbacks: config.callbacks,
     });
 
-    // Return AIMessage as-is to preserve tool_calls in additional_kwargs
     return {
       messages: [response],
     };
