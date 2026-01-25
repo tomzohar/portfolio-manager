@@ -87,7 +87,7 @@ export class OrchestratorService {
     @Optional()
     @Inject(CitationService)
     private readonly citationService?: CitationService,
-  ) { }
+  ) {}
 
   // ============================================================================
   // Public API
