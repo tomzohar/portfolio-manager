@@ -93,6 +93,7 @@ export function buildReasoningPrompt(
   portfolio?: PortfolioData,
   userId?: string,
   tools?: DynamicStructuredTool[],
+  threadId?: string,
 ): string {
   // Remove {{userQuery}} placeholder from base prompt as it is now passed as a message
   let prompt = CIO_REASONING_PROMPT.replace(
@@ -132,6 +133,12 @@ export function buildReasoningPrompt(
   } else {
     prompt = prompt.replace('{{portfolioContext}}', '');
   }
+
+  // Add search_history context
+  const searchContext = `
+**IMPORTANT for search_history tool:** Use userId="${userId}" and threadId="${threadId}" when calling the search_history tool. These values are provided here - do NOT ask the user for them.
+`;
+  prompt += searchContext;
 
   return prompt;
 }

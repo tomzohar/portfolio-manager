@@ -4,6 +4,7 @@
 
 .trace-item {
   transition: box-shadow var(--transition-base);
+  border-bottom: 1px solid var(--color-border-subtle);
 
   &:hover {
     box-shadow: var(--shadow-md);
@@ -15,6 +16,7 @@
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  padding-top: var(--spacing-sm);
 }
 
 .trace-title {
@@ -87,6 +89,7 @@
 .trace-reasoning {
   line-height: var(--line-height-normal);
   color: var(--color-text-primary);
+  padding-bottom: var(--spacing-sm);
 }
 
 .trace-details {

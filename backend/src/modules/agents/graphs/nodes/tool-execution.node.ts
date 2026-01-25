@@ -257,12 +257,10 @@ function createToolNotFoundMessage(toolCall: ToolCallStructure): ToolMessage {
       error: `Tool '${toolCall.name}' not found in registry`,
     }),
     tool_call_id: toolCall.id || 'unknown',
+    name: toolCall.name,
   });
 }
 
-/**
- * Create error ToolMessage for invalid arguments
- */
 function createInvalidArgsMessage(toolCall: ToolCallStructure): ToolMessage {
   const errorValue = toolCall.args.__parse_error;
   const parseError =
@@ -273,6 +271,7 @@ function createInvalidArgsMessage(toolCall: ToolCallStructure): ToolMessage {
       error: `Failed to parse tool arguments: ${parseError}`,
     }),
     tool_call_id: toolCall.id || 'unknown',
+    name: toolCall.name,
   });
 }
 
@@ -283,9 +282,6 @@ function formatToolResult(result: unknown): string {
   return typeof result === 'string' ? result : JSON.stringify(result);
 }
 
-/**
- * Create ToolMessage for successful execution
- */
 function createSuccessMessage(
   toolCall: ToolCallStructure,
   result: unknown,
@@ -299,12 +295,10 @@ function createSuccessMessage(
   return new ToolMessage({
     content: formatToolResult(result),
     tool_call_id: toolCall.id || 'unknown',
+    name: toolCall.name,
   });
 }
 
-/**
- * Create ToolMessage for failed execution
- */
 function createErrorMessage(
   toolCall: ToolCallStructure,
   error: unknown,
@@ -320,6 +314,7 @@ function createErrorMessage(
       error: `Tool execution failed: ${errorMessage}`,
     }),
     tool_call_id: toolCall.id || 'unknown',
+    name: toolCall.name,
   });
 }
 
@@ -398,7 +393,7 @@ async function executeToolCalls(
   if (failureCount > 0) {
     toolExecutionLogger.warn(
       `Completed ${results.length} tool(s) in ${totalDuration}ms | ` +
-        `Success: ${successCount}, Failed: ${failureCount}`,
+      `Success: ${successCount}, Failed: ${failureCount}`,
     );
   } else {
     toolExecutionLogger.log(

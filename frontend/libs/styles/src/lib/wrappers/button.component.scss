@@ -2,6 +2,11 @@
 
 :host {
   display: inline-block;
+
+  .mat-mdc-outlined-button>.mat-icon {
+    margin-right: 0;
+    margin-left: 0;
+  }
 }
 
 .full-width {
@@ -70,8 +75,6 @@
 // Ensure icons and text are aligned properly
 button {
   mat-icon {
-    margin-right: $spacing-xs;
-    
     &:last-child {
       margin-right: 0;
       margin-left: $spacing-xs;

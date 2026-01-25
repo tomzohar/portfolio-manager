@@ -176,8 +176,9 @@ export class ReasoningTraceItemComponent {
    * Compute button config for expand/collapse button
    */
   expandButtonConfig = computed((): ButtonConfig => ({
-    label: this.isExpanded() ? 'Collapse' : 'Expand',
-    variant: 'icon',
+    label: '',
+    variant: 'stroked',
+    size: 'xs',
     icon: this.isExpanded() ? 'expand_less' : 'expand_more',
     ariaLabel: this.isExpanded() ? 'Collapse trace' : 'Expand trace',
   }));

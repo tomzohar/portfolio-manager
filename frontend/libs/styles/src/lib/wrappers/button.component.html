@@ -51,7 +51,9 @@
     @if (showIconLeft()) {
       <mat-icon>{{ config().icon }}</mat-icon>
     }
-    {{ config().label }}
+    @if (config().label) { 
+      {{ config().label }}
+    }
     @if (showIconRight()) {
       <mat-icon>{{ config().icon }}</mat-icon>
     }
