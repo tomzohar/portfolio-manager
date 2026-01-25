@@ -32,6 +32,8 @@
 .messages-list {
   display: flex;
   flex-direction: column;
+  max-width: var(--chat-width);
+  margin: 0 auto;
 }
 
 .empty-conversation {
