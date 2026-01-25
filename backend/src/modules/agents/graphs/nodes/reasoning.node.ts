@@ -62,7 +62,11 @@ function sanitizeMessages(messages: BaseMessage[]): BaseMessage[] {
 
   // First pass: Index tool calls from AIMessages to find names
   for (const msg of messages) {
-    if (msg instanceof AIMessage && msg.tool_calls && msg.tool_calls.length > 0) {
+    if (
+      msg instanceof AIMessage &&
+      msg.tool_calls &&
+      msg.tool_calls.length > 0
+    ) {
       for (const tc of msg.tool_calls) {
         if (tc.id) toolCallNames.set(tc.id, tc.name);
       }
@@ -73,12 +77,14 @@ function sanitizeMessages(messages: BaseMessage[]): BaseMessage[] {
   return messages.map((msg) => {
     if (msg instanceof ToolMessage && !msg.name) {
       const name = toolCallNames.get(msg.tool_call_id) || 'unknown_tool';
+      const message = msg as ToolMessage;
       return new ToolMessage({
-        content: msg.content,
-        tool_call_id: msg.tool_call_id,
+        content: message.content,
+        tool_call_id: message.tool_call_id,
         name: name,
-        artifact: msg.artifact,
-        status: msg.status,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        artifact: message?.artifact,
+        status: message.status,
       });
     }
     return msg;
