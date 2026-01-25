@@ -36,6 +36,9 @@ export interface ChatState extends EntityState<ReasoningTrace> {
   // Loading State
   loading: boolean;
   error: string | null;
+
+  // Settings
+  showTraces: boolean;
 }
 
 /**
@@ -71,4 +74,5 @@ export const initialChatState: ChatState = tracesAdapter.getInitialState({
   loadingTracesByMessageId: new Set<string>(),
   loading: false,
   error: null,
+  showTraces: true,
 });

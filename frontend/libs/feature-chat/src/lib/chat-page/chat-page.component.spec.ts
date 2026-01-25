@@ -41,6 +41,7 @@ describe('ChatPageComponent', () => {
       loading: signal(false),
       error: signal(null),
       expandedMessageIds: signal([]),
+      showTraces: signal(true),
       connectSSE: jest.fn(),
       disconnectSSE: jest.fn(),
       resetState: jest.fn(),

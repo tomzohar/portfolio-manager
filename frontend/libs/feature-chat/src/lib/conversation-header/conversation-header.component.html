@@ -23,9 +23,9 @@
       class="new-conversation-button"
     />
     
-    <lib-button
-      [config]="settingsButtonConfig()"
-      (clicked)="handleSettings()"
+    <lib-action-menu
+      [config]="settingsMenuConfig()"
+      (itemSelected)="handleSettingsAction($event)"
       class="settings-button"
     />
   </div>

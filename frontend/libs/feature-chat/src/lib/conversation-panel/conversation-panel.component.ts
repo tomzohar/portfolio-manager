@@ -76,6 +76,11 @@ export class ConversationPanelComponent {
   isGraphExecuting = input<boolean>(false);
 
   /**
+   * Whether reasoning traces should be visible
+   */
+  showTraces = input.required<boolean>();
+
+  /**
    * Type guard for user messages
    */
   isUserMessage = isUserMessage;

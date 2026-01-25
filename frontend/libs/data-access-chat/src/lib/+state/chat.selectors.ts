@@ -301,3 +301,11 @@ export const selectAreTracesLoadingForMessage = (messageId: string) => createSel
   selectLoadingTracesByMessageId,
   (loadingIds) => loadingIds.has(messageId)
 );
+
+/**
+ * Select whether to show reasoning traces
+ */
+export const selectShowTraces = createSelector(
+  selectChatState,
+  (state) => state.showTraces
+);

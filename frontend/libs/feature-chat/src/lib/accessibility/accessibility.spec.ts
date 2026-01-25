@@ -39,6 +39,7 @@ describe('Accessibility Tests - US-001-T5', () => {
         error: signal(null),
         messages: signal([]),
         displayMessages: signal([]),
+        showTraces: signal(true),
         resetState: jest.fn(),
         connectSSE: jest.fn(),
         disconnectSSE: jest.fn(),
@@ -114,6 +115,7 @@ describe('Accessibility Tests - US-001-T5', () => {
         error: signal(null),
         messages: signal([]),
         displayMessages: signal([]),
+        showTraces: signal(true),
         resetState: jest.fn(),
         connectSSE: jest.fn(),
         disconnectSSE: jest.fn(),
@@ -237,6 +239,7 @@ describe('Accessibility Tests - US-001-T5', () => {
 
       fixture = TestBed.createComponent(ConversationHeaderComponent);
       component = fixture.componentInstance;
+      fixture.componentRef.setInput('showTraces', true);
       fixture.detectChanges();
     });
 
@@ -253,7 +256,7 @@ describe('Accessibility Tests - US-001-T5', () => {
     it('should have aria-labels on action buttons', () => {
       // Buttons should have proper ARIA labels
       const newChatConfig = component.newConversationButtonConfig();
-      const settingsConfig = component.settingsButtonConfig();
+      const settingsConfig = component.settingsMenuConfig().button;
 
       expect(newChatConfig.ariaLabel).toBeTruthy();
       expect(settingsConfig.ariaLabel).toBeTruthy();
@@ -289,6 +292,7 @@ describe('Accessibility Tests - US-001-T5', () => {
         error: signal(null),
         messages: signal([]),
         displayMessages: signal([]),
+        showTraces: signal(true),
         resetState: jest.fn(),
         connectSSE: jest.fn(),
         disconnectSSE: jest.fn(),

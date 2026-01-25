@@ -11,7 +11,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs/operators';
 import { ChatFacade } from '@stocks-researcher/data-access-chat';
-import { ReasoningTrace } from '@stocks-researcher/types';
+import { ReasoningTrace, MenuItem } from '@stocks-researcher/types';
 import { MessageInputComponent } from '../message-input/message-input.component';
 import { ConversationHeaderComponent } from '../conversation-header/conversation-header.component';
 import { ConversationPanelComponent } from '../conversation-panel/conversation-panel.component';
@@ -153,6 +153,11 @@ export class ChatPageComponent implements OnDestroy {
   traces = this.facade.allTraces;
 
   /**
+   * Whether reasoning traces should be visible
+   */
+  showTraces = this.facade.showTraces;
+
+  /**
    * Conversation messages (user + AI)
    * NOTE: Using displayMessages instead of messages for optimistic UI updates
    * displayMessages combines confirmed messages with pending optimistic messages
@@ -272,6 +277,17 @@ export class ChatPageComponent implements OnDestroy {
    * Handle settings button click
    */
   handleSettings(): void {
-    // TODO: Implement settings dialog
+    // Legacy - can be removed if ActionMenu handles everything
+  }
+
+  /**
+   * Handle action from settings menu
+   * 
+   * @param item - The selected menu item
+   */
+  handleSettingsAction(item: MenuItem): void {
+    if (item.id === 'toggle-traces') {
+      this.facade.toggleShowTraces();
+    }
   }
 }

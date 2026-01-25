@@ -4,6 +4,9 @@ import {
   ButtonComponent,
   IconComponent,
   ButtonConfig,
+  ActionMenuComponent,
+  ActionMenuConfig,
+  MenuItem,
 } from '@stocks-researcher/styles';
 
 /**
@@ -35,7 +38,7 @@ import {
 @Component({
   selector: 'app-conversation-header',
   standalone: true,
-  imports: [CommonModule, ButtonComponent, IconComponent],
+  imports: [CommonModule, ButtonComponent, IconComponent, ActionMenuComponent],
   templateUrl: './conversation-header.component.html',
   styleUrls: ['./conversation-header.component.scss'],
 })
@@ -55,12 +58,22 @@ export class ConversationHeaderComponent {
   title = input<string | null>(null);
 
   /**
+   * Whether reasoning traces are currently visible
+   */
+  showTraces = input.required<boolean>();
+
+  /**
    * Emitted when user clicks new conversation button
    */
   newConversation = output<void>();
 
   /**
-   * Emitted when user clicks settings button
+   * Emitted when a settings menu item is selected
+   */
+  settingsAction = output<MenuItem>();
+
+  /**
+   * Emitted when user clicks settings button (legacy, if needed)
    */
   settingsClick = output<void>();
 
@@ -105,13 +118,25 @@ export class ConversationHeaderComponent {
   }));
 
   /**
-   * Settings button configuration
+   * Settings action menu configuration
    */
-  settingsButtonConfig = computed((): ButtonConfig => ({
-    label: '',
-    variant: 'icon',
-    icon: 'settings',
-    ariaLabel: 'Open conversation settings',
+  settingsMenuConfig = computed((): ActionMenuConfig => ({
+    button: {
+      label: '',
+      variant: 'icon',
+      icon: 'settings',
+      ariaLabel: 'Open conversation settings',
+    },
+    menu: {
+      items: [
+        {
+          id: 'toggle-traces',
+          label: this.showTraces() ? 'Hide Traces' : 'Show Traces',
+          icon: this.showTraces() ? 'visibility_off' : 'visibility',
+        },
+      ],
+      ariaLabel: 'Conversation settings menu',
+    },
   }));
 
   // ========================================
@@ -126,7 +151,14 @@ export class ConversationHeaderComponent {
   }
 
   /**
-   * Handle settings button click
+   * Handle settings menu item selection
+   */
+  handleSettingsAction(item: MenuItem): void {
+    this.settingsAction.emit(item);
+  }
+
+  /**
+   * Handle settings button click (legacy)
    */
   handleSettings(): void {
     this.settingsClick.emit();

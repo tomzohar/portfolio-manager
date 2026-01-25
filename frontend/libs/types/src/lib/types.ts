@@ -457,3 +457,26 @@ export interface BackendConversationMessage {
   metadata?: ConversationMessageMetadata | null;
   createdAt: string; // ISO timestamp
 }
+// =========================================
+// UI & Layout Types
+// =========================================
+
+/**
+ * Menu item configuration
+ */
+export interface MenuItem {
+  id: string;
+  label: string;
+  icon?: string;
+  disabled?: boolean;
+  divider?: boolean;
+}
+
+/**
+ * Configuration for menu rendering
+ */
+export interface MenuConfig {
+  items: MenuItem[];
+  cssClass?: string;
+  ariaLabel?: string;
+}

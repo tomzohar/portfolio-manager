@@ -141,5 +141,10 @@ export const ChatActions = createActionGroup({
      * Failed to load traces for message
      */
     'Traces For Message Load Failed': props<{ messageId: string; error: string }>(),
+
+    /**
+     * User toggled show traces visibility
+     */
+    'Toggle Show Traces': emptyProps(),
   },
 });

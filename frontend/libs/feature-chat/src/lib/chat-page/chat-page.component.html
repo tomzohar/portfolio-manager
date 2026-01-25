@@ -3,8 +3,9 @@
   <app-conversation-header
     [threadId]="threadId()"
     [title]="conversationTitle()"
+    [showTraces]="showTraces()"
     (newConversation)="handleNewConversation()"
-    (settingsClick)="handleSettings()"
+    (settingsAction)="handleSettingsAction($event)"
     class="chat-page__header"
   />
 
@@ -43,6 +44,7 @@
           [threadId]="threadId()!"
           [messages]="messages()"
           [traces]="traces()"
+          [showTraces]="showTraces()"
           [isLoading]="loading()"
           [isGraphExecuting]="isGraphActive()"
         />

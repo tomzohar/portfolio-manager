@@ -20,6 +20,7 @@ import {
   selectIsMessageExpanded,
   selectDisplayMessages,
   selectAreTracesLoadingForMessage,
+  selectShowTraces,
 } from './+state/chat.selectors';
 import { ReasoningTrace, SSEConnectionStatus, ConversationMessage, PendingSentMessage } from '@stocks-researcher/types';
 
@@ -174,6 +175,12 @@ export class ChatFacade {
   readonly expandedMessageIds: Signal<string[]> =
     this.store.selectSignal(selectExpandedMessageIds);
 
+  /**
+   * Whether reasoning traces should be visible
+   */
+  readonly showTraces: Signal<boolean> =
+    this.store.selectSignal(selectShowTraces);
+
   // ========================================
   // Action Dispatch Methods
   // ========================================
@@ -320,5 +327,12 @@ export class ChatFacade {
    */
   isTraceExpanded(traceId: string): Signal<boolean> {
     return this.store.selectSignal(selectIsTraceExpanded(traceId));
+  }
+
+  /**
+   * Toggle visibility of reasoning traces globally.
+   */
+  toggleShowTraces(): void {
+    this.store.dispatch(ChatActions.toggleShowTraces());
   }
 }

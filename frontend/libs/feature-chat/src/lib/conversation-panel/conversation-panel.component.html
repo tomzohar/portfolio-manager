@@ -15,10 +15,11 @@
           <app-ai-message
             [message]="message"
             [showTraces]="isMessageTracesExpanded(message.id)"
+            [isTracesFeatureEnabled]="showTraces()"
             (toggleTraces)="handleToggleMessageTraces(message.id)"
           />
           
-          @if (isMessageTracesExpanded(message.id)) {
+          @if (showTraces() && isMessageTracesExpanded(message.id)) {
             <div class="traces-section">
               @if (isLoadingTraces(message.id)) {
                 <div class="traces-loading">

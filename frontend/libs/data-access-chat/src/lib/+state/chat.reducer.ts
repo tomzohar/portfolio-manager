@@ -290,6 +290,11 @@ export const chatReducer = createReducer(
     };
   }),
 
+  on(ChatActions.toggleShowTraces, (state) => ({
+    ...state,
+    showTraces: !state.showTraces,
+  })),
+
   // ========================================
   // Reset
   // ========================================

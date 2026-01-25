@@ -49,7 +49,7 @@ import { ButtonComponent, IconComponent, ButtonConfig } from '@stocks-researcher
           <pre class="formatted-response">{{ message()?.content }}</pre>
         }
       </div>
-      @if (!isLoading() && hasTraces()) {
+      @if (!isLoading() && hasTraces() && isTracesFeatureEnabled()) {
         <div class="trace-toggle">
           <lib-button
             [config]="toggleButtonConfig()"
@@ -77,6 +77,11 @@ export class AIMessageComponent {
    * Whether traces are currently shown
    */
   showTraces = input<boolean>(false);
+
+  /**
+   * Whether the traces feature is globally enabled
+   */
+  isTracesFeatureEnabled = input<boolean>(true);
 
   /**
    * Emitted when user toggles trace visibility
