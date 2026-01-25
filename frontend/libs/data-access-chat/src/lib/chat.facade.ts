@@ -22,7 +22,7 @@ import {
   selectAreTracesLoadingForMessage,
   selectShowTraces,
 } from './+state/chat.selectors';
-import { ReasoningTrace, SSEConnectionStatus, ConversationMessage, PendingSentMessage } from '@stocks-researcher/types';
+import { ReasoningTrace, SSEConnectionStatus, ConversationMessage, PendingSentMessage, ConversationConfig } from '@stocks-researcher/types';
 
 /**
  * ChatFacade
@@ -327,6 +327,24 @@ export class ChatFacade {
    */
   isTraceExpanded(traceId: string): Signal<boolean> {
     return this.store.selectSignal(selectIsTraceExpanded(traceId));
+  }
+
+  /**
+   * Load conversation details (including configuration).
+   * 
+   * @param threadId - The thread ID to load
+   */
+  loadConversation(threadId: string): void {
+    this.store.dispatch(ChatActions.loadConversation({ threadId }));
+  }
+
+  /**
+   * Update chat configuration.
+   * 
+   * @param config - Configuration updates
+   */
+  updateChatConfig(config: ConversationConfig): void {
+    this.store.dispatch(ChatActions.updateChatConfig({ config }));
   }
 
   /**

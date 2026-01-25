@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import { ReasoningTrace, SSEConnectionStatus, SSEEvent, ConversationMessage } from '@stocks-researcher/types';
+import { ReasoningTrace, SSEConnectionStatus, SSEEvent, ConversationMessage, ConversationConfig, Conversation } from '@stocks-researcher/types';
 
 /**
  * Chat Feature Actions
@@ -146,5 +146,35 @@ export const ChatActions = createActionGroup({
      * User toggled show traces visibility
      */
     'Toggle Show Traces': emptyProps(),
+
+    /**
+     * Update chat configuration (optimistic)
+     */
+    'Update Chat Config': props<{ config: Partial<ConversationConfig> }>(),
+
+    /**
+     * Chat configuration updated successfully on backend
+     */
+    'Chat Config Updated': props<{ config: ConversationConfig }>(),
+
+    /**
+     * Failed to update chat configuration
+     */
+    'Chat Config Update Failed': props<{ error: string }>(),
+
+    /**
+     * Load conversation details (including config)
+     */
+    'Load Conversation': props<{ threadId: string }>(),
+
+    /**
+     * Conversation loaded successfully
+     */
+    'Conversation Loaded': props<{ conversation: Conversation }>(),
+
+    /**
+     * Failed to load conversation
+     */
+    'Conversation Load Failed': props<{ error: string }>(),
   },
 });

@@ -88,7 +88,7 @@ export class ChatPageComponent implements OnDestroy {
 
     // Validate threadId format before loading
     if (currentThreadId && isValidThreadId(currentThreadId)) {
-      this.facade.loadConversationMessages(currentThreadId);
+      this.facade.loadConversation(currentThreadId);
     }
 
   });

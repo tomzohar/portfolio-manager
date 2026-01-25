@@ -1,7 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConversationMessage } from '../entities/conversation-message.entity';
+import {
+  Conversation,
+  ConversationConfig,
+} from '../entities/conversation.entity';
 import { ConversationMessageType } from '../types/conversation-message-type.enum';
 import { ConversationMessageMetadata } from '../types/conversation-message-metadata.interface';
 
@@ -67,6 +71,8 @@ export class ConversationService {
   constructor(
     @InjectRepository(ConversationMessage)
     private readonly messageRepo: Repository<ConversationMessage>,
+    @InjectRepository(Conversation)
+    private readonly conversationRepo: Repository<Conversation>,
   ) {}
 
   /**
@@ -81,6 +87,9 @@ export class ConversationService {
     params: SaveUserMessageParams,
   ): Promise<ConversationMessage> {
     const sequence = await this.getNextSequence(params.threadId);
+
+    // Ensure conversation entity exists so we can store config/metadata
+    await this.ensureConversationExists(params.threadId, params.userId);
 
     const message = this.messageRepo.create({
       threadId: params.threadId,
@@ -337,6 +346,65 @@ export class ConversationService {
         .take(limit)
         .getMany()
     );
+  }
+
+  /**
+   * Ensure a conversation exists for the thread.
+   */
+  async ensureConversationExists(
+    threadId: string,
+    userId: string,
+  ): Promise<Conversation> {
+    let conversation = await this.conversationRepo.findOne({
+      where: { id: threadId },
+    });
+
+    if (!conversation) {
+      conversation = this.conversationRepo.create({
+        id: threadId,
+        userId,
+        config: {},
+      });
+      await this.conversationRepo.save(conversation);
+    }
+
+    return conversation;
+  }
+
+  /**
+   * Get conversation details including configuration.
+   */
+  async getConversation(
+    threadId: string,
+    userId: string,
+  ): Promise<Conversation> {
+    const conversation = await this.conversationRepo.findOne({
+      where: { id: threadId, userId },
+    });
+
+    if (!conversation) {
+      throw new NotFoundException(`Conversation ${threadId} not found`);
+    }
+
+    return conversation;
+  }
+
+  /**
+   * Update conversation configuration.
+   */
+  async updateConfiguration(
+    threadId: string,
+    userId: string,
+    config: ConversationConfig,
+  ): Promise<Conversation> {
+    const conversation = await this.getConversation(threadId, userId);
+
+    conversation.config = {
+      ...conversation.config,
+      ...config,
+    };
+
+    return this.conversationRepo.save(conversation);
   }
 
   /**

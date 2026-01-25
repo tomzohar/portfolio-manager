@@ -295,6 +295,31 @@ export const chatReducer = createReducer(
     showTraces: !state.showTraces,
   })),
 
+  on(ChatActions.conversationLoaded, (state, { conversation }) => ({
+    ...state,
+    // Use backend config if available, otherwise keep default (or previous)
+    showTraces: conversation.config?.showTraces ?? state.showTraces,
+  })),
+
+  on(ChatActions.updateChatConfig, (state, { config }) => ({
+    ...state,
+    // Optimistic update
+    showTraces: config.showTraces !== undefined ? config.showTraces : state.showTraces,
+  })),
+
+  on(ChatActions.chatConfigUpdated, (state, { config }) => ({
+    ...state,
+    // Confirmed update from backend
+    showTraces: config.showTraces !== undefined ? config.showTraces : state.showTraces,
+  })),
+
+  on(ChatActions.chatConfigUpdateFailed, (state, { error }) => ({
+    ...state,
+    error,
+    // Note: Revert logic could be complex without history. 
+    // For simple toggles, user can just toggle again.
+  })),
+
   // ========================================
   // Reset
   // ========================================
