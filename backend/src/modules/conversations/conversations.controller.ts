@@ -52,14 +52,14 @@ export class ConversationsController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Updated conversation',
-    type: Conversation,
+    description: 'Update success',
+    type: Boolean,
   })
   async updateConfiguration(
     @CurrentUser() user: User,
     @Param('threadId') threadId: string,
     @Body() config: UpdateConversationConfigDto,
-  ): Promise<Conversation> {
+  ): Promise<boolean> {
     return this.conversationService.updateConfiguration(
       threadId,
       user.id,

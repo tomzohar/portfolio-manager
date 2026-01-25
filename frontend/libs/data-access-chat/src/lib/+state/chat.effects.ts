@@ -541,8 +541,8 @@ export class ChatEffects {
         this.conversationApi
           .updateConversationConfig(threadId, { showTraces })
           .pipe(
-            map((conversation) =>
-              ChatActions.chatConfigUpdated({ config: conversation.config })
+            map(() =>
+              ChatActions.chatConfigUpdated({ config: { showTraces } })
             ),
             catchError((error) =>
               of(

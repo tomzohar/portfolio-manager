@@ -164,8 +164,8 @@ export class ConversationApiService {
   updateConversationConfig(
     threadId: string,
     config: ConversationConfig
-  ): Observable<Conversation> {
-    return this.http.patch<Conversation>(
+  ): Observable<boolean> {
+    return this.http.patch<boolean>(
       `${this.apiUrl}/api/conversations/${threadId}/config`,
       config
     );

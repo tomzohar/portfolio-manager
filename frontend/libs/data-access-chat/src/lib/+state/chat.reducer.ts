@@ -295,6 +295,14 @@ export const chatReducer = createReducer(
     showTraces: !state.showTraces,
   })),
 
+  on(ChatActions.loadConversation, (state, { threadId }) => ({
+    ...state,
+    currentThreadId: threadId,
+    // Note: showTraces is not updated here, waiting for conversationLoaded with backend config
+    loading: true,
+    error: null,
+  })),
+
   on(ChatActions.conversationLoaded, (state, { conversation }) => ({
     ...state,
     // Use backend config if available, otherwise keep default (or previous)

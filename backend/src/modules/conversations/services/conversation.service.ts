@@ -396,15 +396,9 @@ export class ConversationService {
     threadId: string,
     userId: string,
     config: ConversationConfig,
-  ): Promise<Conversation> {
-    const conversation = await this.getConversation(threadId, userId);
-
-    conversation.config = {
-      ...conversation.config,
-      ...config,
-    };
-
-    return this.conversationRepo.save(conversation);
+  ): Promise<boolean> {
+    await this.conversationRepo.update({ id: threadId, userId }, { config });
+    return true;
   }
 
   /**
