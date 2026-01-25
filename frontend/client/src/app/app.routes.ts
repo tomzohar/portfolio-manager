@@ -18,49 +18,55 @@ export const appRoutes: Route[] = [
     pathMatch: 'full',
   },
   {
-    path: 'portfolios',
-    canActivate: [authGuard],
-    data: { 
-      title: 'Portfolios',
-      icon: 'chart-bars' as BrandIconName
-    } satisfies RouteData,
-    loadComponent: () =>
-      import('@frontend/portfolios-page-feature').then(
-        (m) => m.PortfoliosPageComponent
-      ),
-  },
-  {
-    path: 'dashboard',
-    canActivate: [authGuard],
-    data: { 
-      title: 'Portfolio',
-      icon: 'chart-bars' as BrandIconName
-    } satisfies RouteData,
-    loadComponent: () =>
-      import('@frontend/feature-dashboard').then(
-        (m) => m.FeatureDashboardComponent
-      ),
+    path: '',
+    loadComponent: () => import('./main-shell.component').then(m => m.MainShellComponent),
     children: [
       {
-        path: '',
-        redirectTo: 'overview',
-        pathMatch: 'full',
-      },
-      {
-        path: 'overview',
+        path: 'portfolios',
+        canActivate: [authGuard],
+        data: {
+          title: 'Portfolios',
+          icon: 'chart-bars' as BrandIconName
+        } satisfies RouteData,
         loadComponent: () =>
-          import('@frontend/feature-dashboard').then(
-            (m) => m.DashboardOverviewComponent
+          import('@frontend/portfolios-page-feature').then(
+            (m) => m.PortfoliosPageComponent
           ),
       },
       {
-        path: 'performance',
+        path: 'dashboard',
+        canActivate: [authGuard],
+        data: {
+          title: 'Portfolio',
+          icon: 'chart-bars' as BrandIconName
+        } satisfies RouteData,
         loadComponent: () =>
           import('@frontend/feature-dashboard').then(
-            (m) => m.DashboardPerformanceComponent
+            (m) => m.FeatureDashboardComponent
           ),
+        children: [
+          {
+            path: '',
+            redirectTo: 'overview',
+            pathMatch: 'full',
+          },
+          {
+            path: 'overview',
+            loadComponent: () =>
+              import('@frontend/feature-dashboard').then(
+                (m) => m.DashboardOverviewComponent
+              ),
+          },
+          {
+            path: 'performance',
+            loadComponent: () =>
+              import('@frontend/feature-dashboard').then(
+                (m) => m.DashboardPerformanceComponent
+              ),
+          },
+        ],
       },
-    ],
+    ]
   },
   {
     path: 'chat',
