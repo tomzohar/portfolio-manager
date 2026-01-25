@@ -1,10 +1,4 @@
-import {
-  MigrationInterface,
-  QueryRunner,
-  Table,
-  TableIndex,
-  TableForeignKey,
-} from 'typeorm';
+import { MigrationInterface, QueryRunner, Table } from 'typeorm';
 
 /**
  * Migration: Create Conversation Messages Table
@@ -79,61 +73,49 @@ export class CreateConversationMessages1737471600000 implements MigrationInterfa
       true,
     );
 
-    // Add CHECK constraint for type values
+    // Add CHECK constraint safely
+    // Add CHECK constraint safely
     await queryRunner.query(`
-      ALTER TABLE conversation_messages
-      ADD CONSTRAINT chk_conversation_messages_type
-      CHECK (type IN ('user', 'assistant', 'system'))
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'chk_conversation_messages_type') THEN
+          ALTER TABLE conversation_messages
+          ADD CONSTRAINT chk_conversation_messages_type
+          CHECK (type IN ('user', 'assistant', 'system'));
+        END IF;
+      END $$;
     `);
 
-    // Create foreign key to users (ON DELETE CASCADE)
-    await queryRunner.createForeignKey(
-      'conversation_messages',
-      new TableForeignKey({
-        columnNames: ['user_id'],
-        referencedColumnNames: ['id'],
-        referencedTableName: 'users',
-        onDelete: 'CASCADE',
-        name: 'FK_conversation_messages_user',
-      }),
-    );
+    // Create foreign key to users (ON DELETE CASCADE) safely
+    await queryRunner.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'FK_conversation_messages_user') THEN
+          ALTER TABLE "conversation_messages" 
+          ADD CONSTRAINT "FK_conversation_messages_user" 
+          FOREIGN KEY ("user_id") 
+          REFERENCES "users"("id") 
+          ON DELETE CASCADE;
+        END IF;
+      END $$;
+    `);
 
-    // Create composite unique index on thread_id + sequence for ordering integrity
-    await queryRunner.createIndex(
-      'conversation_messages',
-      new TableIndex({
-        name: 'IDX_conversation_messages_thread_sequence',
-        columnNames: ['thread_id', 'sequence'],
-        isUnique: true,
-      }),
-    );
+    // Create indexes safely
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_conversation_messages_thread_sequence" ON "conversation_messages" ("thread_id", "sequence");
+    `);
 
-    // Create index on thread_id for efficient thread queries
-    await queryRunner.createIndex(
-      'conversation_messages',
-      new TableIndex({
-        name: 'IDX_conversation_messages_thread_id',
-        columnNames: ['thread_id'],
-      }),
-    );
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_conversation_messages_thread_id" ON "conversation_messages" ("thread_id");
+    `);
 
-    // Create composite index on thread_id + created_at for chronological queries
-    await queryRunner.createIndex(
-      'conversation_messages',
-      new TableIndex({
-        name: 'IDX_conversation_messages_thread_created',
-        columnNames: ['thread_id', 'created_at'],
-      }),
-    );
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_conversation_messages_thread_created" ON "conversation_messages" ("thread_id", "created_at");
+    `);
 
-    // Create index on user_id for security filtering
-    await queryRunner.createIndex(
-      'conversation_messages',
-      new TableIndex({
-        name: 'IDX_conversation_messages_user_id',
-        columnNames: ['user_id'],
-      }),
-    );
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_conversation_messages_user_id" ON "conversation_messages" ("user_id");
+    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

@@ -14,8 +14,8 @@ import { CitationsModule } from './modules/citations/citations.module';
 import { ApprovalsModule } from './modules/approvals/approvals.module';
 import { ConversationsModule } from './modules/conversations/conversations.module';
 
-function shouldSynchronize(env: string | undefined): boolean {
-  return env === 'development' || env === 'test';
+function shouldSynchronize(): boolean {
+  return false;
 }
 
 function getTypeOrmModuleConfig(
@@ -32,7 +32,7 @@ function getTypeOrmModuleConfig(
     database: configService.get<string>('DB_DATABASE'),
     entities: [],
     autoLoadEntities: true,
-    synchronize: shouldSynchronize(configService.get<string>('NODE_ENV')),
+    synchronize: shouldSynchronize(),
     logging: configService.get<string>('NODE_ENV') === 'development',
     // Suppress verbose logs in test environment
     logger: isTest ? undefined : 'advanced-console',

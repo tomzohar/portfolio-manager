@@ -204,6 +204,7 @@ describe('ConversationService', () => {
           createdAt: new Date(),
           updatedAt: new Date(),
         } as User,
+        search_vector: null,
       };
 
       mockRepository.create.mockReturnValue(mockMessage);
@@ -242,6 +243,7 @@ describe('ConversationService', () => {
           createdAt: new Date(),
           updatedAt: new Date(),
         } as User,
+        search_vector: null,
       };
 
       mockRepository.create.mockReturnValue(mockMessage);
@@ -272,6 +274,7 @@ describe('ConversationService', () => {
           createdAt: new Date(),
           updatedAt: new Date(),
         } as User,
+        search_vector: null,
       };
 
       mockRepository.create.mockReturnValue(mockMessage);
@@ -306,6 +309,7 @@ describe('ConversationService', () => {
           createdAt: new Date(),
           updatedAt: new Date(),
         } as User,
+        search_vector: null,
       };
 
       mockRepository.create.mockReturnValue(mockMessage);

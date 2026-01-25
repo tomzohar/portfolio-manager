@@ -21,14 +21,20 @@ export class MakeReasoningTraceMessageIdOptional1737719900000 implements Migrati
       `ALTER TABLE "reasoning_traces" DROP CONSTRAINT IF EXISTS "FK_9a1233eca6df41752cc5e6cb9b1"`,
     );
 
-    // Recreate the foreign key with ON DELETE SET NULL (optional)
-    await queryRunner.query(
-      `ALTER TABLE "reasoning_traces" 
-       ADD CONSTRAINT "FK_reasoning_traces_message_id" 
-       FOREIGN KEY ("messageId") 
-       REFERENCES "conversation_messages"("id") 
-       ON DELETE SET NULL`,
-    );
+    // Recreate the foreign key with ON DELETE SET NULL (optional) safely
+    // Recreate the foreign key with ON DELETE SET NULL (optional) safely
+    await queryRunner.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'FK_reasoning_traces_message_id') THEN
+          ALTER TABLE "reasoning_traces" 
+          ADD CONSTRAINT "FK_reasoning_traces_message_id" 
+          FOREIGN KEY ("messageId") 
+          REFERENCES "conversation_messages"("id") 
+          ON DELETE SET NULL;
+        END IF;
+      END $$;
+    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

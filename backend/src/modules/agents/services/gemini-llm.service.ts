@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { getDefaultModel } from '../utils/model.utils';
+import { LLMModels } from '../types/lll-models.enum';
 
 export interface GeminiUsageMetadata {
   promptTokens: number;
@@ -161,6 +162,7 @@ export class GeminiLlmService {
       streaming?: boolean;
       temperature?: number;
       maxOutputTokens?: number;
+      model?: LLMModels;
     } = {},
   ): ChatGoogleGenerativeAI {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
@@ -173,11 +175,45 @@ export class GeminiLlmService {
     // but we reuse the API key and model config.
     return new ChatGoogleGenerativeAI({
       apiKey,
-      model: this.defaultModel,
+      model: options.model ?? this.defaultModel,
       temperature: options.temperature ?? 0.7,
       maxOutputTokens: options.maxOutputTokens ?? 1024,
       streaming: options.streaming ?? false,
     });
+  }
+
+  /**
+   * Count tokens in a prompt
+   *
+   * @param contents - The text or parts to count tokens for
+   * @param model - Optional model override
+   * @returns Token count metadata
+   */
+  async countTokens(
+    contents: string | any[],
+    model?: string,
+  ): Promise<GeminiUsageMetadata> {
+    const modelToUse = model || this.defaultModel;
+    const client = this.getClient();
+
+    try {
+      const response = await client.models.countTokens({
+        model: modelToUse,
+        contents: typeof contents === 'string' ? contents : contents, // SDK handles both
+      });
+
+      return {
+        promptTokens: 0, // Not applicable for countTokens
+        completionTokens: 0, // Not applicable
+        totalTokens: response.totalTokens || 0,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to count tokens: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      // Fallback or rethrow? Rethrowing so caller knows
+      throw error;
+    }
   }
 
   /**

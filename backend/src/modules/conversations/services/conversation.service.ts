@@ -36,6 +36,14 @@ export interface PaginatedMessagesResult {
   hasMore: boolean;
 }
 
+/** Parameters for searching messages */
+export interface SearchMessagesParams {
+  threadId: string;
+  userId: string;
+  query: string;
+  limit?: number;
+}
+
 /**
  * ConversationService
  *
@@ -301,6 +309,34 @@ export class ConversationService {
   async deleteThreadMessages(threadId: string): Promise<void> {
     await this.messageRepo.delete({ threadId });
     this.logger.debug(`Deleted all messages for thread: ${threadId}`);
+  }
+
+  /**
+   * Search messages in a thread for specific content.
+   *
+   * @param params - Search parameters (threadId, query, etc.)
+   * @returns Array of matching messages
+   */
+  async searchMessages(
+    params: SearchMessagesParams,
+  ): Promise<ConversationMessage[]> {
+    const limit = params.limit || 5;
+
+    return (
+      this.messageRepo
+        .createQueryBuilder('msg')
+        .where('msg.threadId = :threadId', { threadId: params.threadId })
+        .andWhere('msg.userId = :userId', { userId: params.userId })
+        // Use Full Text Search with plainto_tsquery for natural language search
+        .andWhere('msg.search_vector @@ plainto_tsquery(:query)', {
+          query: params.query,
+        })
+        // Rank by relevance (ts_rank), then recency
+        .orderBy('ts_rank(msg.search_vector, plainto_tsquery(:query))', 'DESC')
+        .addOrderBy('msg.created_at', 'DESC')
+        .take(limit)
+        .getMany()
+    );
   }
 
   /**

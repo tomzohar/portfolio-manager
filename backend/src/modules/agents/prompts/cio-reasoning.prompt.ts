@@ -82,21 +82,23 @@ export interface PortfolioData {
 }
 
 /**
- * Build the reasoning prompt with user query, portfolio context, userId, and tools
+ * Build the reasoning (system) prompt with portfolio context, userId, and tools
  *
- * @param userQuery - The user's question or request
  * @param portfolio - Optional portfolio data for context
  * @param userId - User ID for tool calls that require it
  * @param tools - Optional array of tools to dynamically format
- * @returns Formatted prompt ready for LLM invocation
+ * @returns Formatted system prompt ready for LLM invocation
  */
 export function buildReasoningPrompt(
-  userQuery: string,
   portfolio?: PortfolioData,
   userId?: string,
   tools?: DynamicStructuredTool[],
 ): string {
-  let prompt = CIO_REASONING_PROMPT.replace('{{userQuery}}', userQuery);
+  // Remove {{userQuery}} placeholder from base prompt as it is now passed as a message
+  let prompt = CIO_REASONING_PROMPT.replace(
+    'User Query: {{userQuery}}',
+    '',
+  ).trim();
 
   // Add dynamically formatted tools section
   if (tools) {

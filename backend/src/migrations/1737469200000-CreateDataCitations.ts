@@ -1,10 +1,4 @@
-import {
-  MigrationInterface,
-  QueryRunner,
-  Table,
-  TableIndex,
-  TableForeignKey,
-} from 'typeorm';
+import { MigrationInterface, QueryRunner, Table } from 'typeorm';
 
 /**
  * Migration: Create Data Citations Table for US-002
@@ -90,65 +84,49 @@ export class CreateDataCitations1737469200000 implements MigrationInterface {
       true,
     );
 
-    // Create foreign key to reasoning_traces (ON DELETE CASCADE)
-    await queryRunner.createForeignKey(
-      'data_citations',
-      new TableForeignKey({
-        columnNames: ['reasoning_trace_id'],
-        referencedColumnNames: ['id'],
-        referencedTableName: 'reasoning_traces',
-        onDelete: 'CASCADE',
-        name: 'FK_data_citations_reasoning_trace',
-      }),
-    );
+    // Create foreign keys safely using DO blocks
+    await queryRunner.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'FK_data_citations_reasoning_trace') THEN
+          ALTER TABLE "data_citations" 
+          ADD CONSTRAINT "FK_data_citations_reasoning_trace" 
+          FOREIGN KEY ("reasoning_trace_id") 
+          REFERENCES "reasoning_traces"("id") 
+          ON DELETE CASCADE;
+        END IF;
+      END $$;
+    `);
 
-    // Create foreign key to users (ON DELETE CASCADE)
-    await queryRunner.createForeignKey(
-      'data_citations',
-      new TableForeignKey({
-        columnNames: ['user_id'],
-        referencedColumnNames: ['id'],
-        referencedTableName: 'users',
-        onDelete: 'CASCADE',
-        name: 'FK_data_citations_user',
-      }),
-    );
+    await queryRunner.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'FK_data_citations_user') THEN
+          ALTER TABLE "data_citations" 
+          ADD CONSTRAINT "FK_data_citations_user" 
+          FOREIGN KEY ("user_id") 
+          REFERENCES "users"("id") 
+          ON DELETE CASCADE;
+        END IF;
+      END $$;
+    `);
 
-    // Create index on thread_id for efficient queries
-    await queryRunner.createIndex(
-      'data_citations',
-      new TableIndex({
-        name: 'IDX_data_citations_thread_id',
-        columnNames: ['thread_id'],
-      }),
-    );
+    // Create indexes safely using IF NOT EXISTS
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_data_citations_thread_id" ON "data_citations" ("thread_id");
+    `);
 
-    // Create index on user_id for security filtering
-    await queryRunner.createIndex(
-      'data_citations',
-      new TableIndex({
-        name: 'IDX_data_citations_user_id',
-        columnNames: ['user_id'],
-      }),
-    );
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_data_citations_user_id" ON "data_citations" ("user_id");
+    `);
 
-    // Create index on reasoning_trace_id for joins
-    await queryRunner.createIndex(
-      'data_citations',
-      new TableIndex({
-        name: 'IDX_data_citations_trace_id',
-        columnNames: ['reasoning_trace_id'],
-      }),
-    );
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_data_citations_trace_id" ON "data_citations" ("reasoning_trace_id");
+    `);
 
-    // Create composite index on (source_type, source_identifier) for source lookups
-    await queryRunner.createIndex(
-      'data_citations',
-      new TableIndex({
-        name: 'IDX_data_citations_source',
-        columnNames: ['source_type', 'source_identifier'],
-      }),
-    );
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_data_citations_source" ON "data_citations" ("source_type", "source_identifier");
+    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
