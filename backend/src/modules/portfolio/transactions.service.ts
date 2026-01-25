@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Between, FindOptionsWhere, Repository } from 'typeorm';
+import { Between, FindOptionsWhere, Repository, In } from 'typeorm';
 import {
   CreateTransactionDto,
   GetTransactionsQueryDto,
@@ -385,5 +385,49 @@ export class TransactionsService {
       portfolioId,
       transactionDate,
     } as HistoricalTransactionEvent);
+  }
+
+  /**
+   * Get transactions for multiple portfolios (bulk fetch)
+   * Efficiently fetches transactions for given portfolios
+   * Returns a map of portfolioId -> TransactionResponseDto[]
+   */
+  async getTransactionsForPortfolios(
+    portfolioIds: string[],
+    userId: string,
+  ): Promise<Record<Portfolio['id'], TransactionResponseDto[]>> {
+    if (!portfolioIds || portfolioIds.length === 0) {
+      return {};
+    }
+
+    // Verify ownership indirectly by including user check in query is tricky because relation is on Portfolio
+    // Better: Fetch transactions where portfolio.id IN ids AND portfolio.user.id = userId
+    const transactions = await this.transactionRepository.find({
+      where: {
+        portfolio: {
+          id: In(portfolioIds),
+          user: { id: userId },
+        },
+      },
+      order: { transactionDate: 'DESC', createdAt: 'DESC' },
+      relations: ['portfolio'], // Load portfolio to access ID for grouping
+    });
+
+    const result: Record<Portfolio['id'], TransactionResponseDto[]> = {};
+
+    // Initialize arrays for requested IDs to ensure empty arrays are returned for portfolios with no transactions
+    for (const id of portfolioIds) {
+      result[id] = [];
+    }
+
+    for (const transaction of transactions) {
+      const pid = transaction.portfolio.id;
+      if (!result[pid]) {
+        result[pid] = [];
+      }
+      result[pid].push(new TransactionResponseDto(transaction));
+    }
+
+    return result;
   }
 }

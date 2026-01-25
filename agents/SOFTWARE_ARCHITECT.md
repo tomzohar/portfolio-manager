@@ -6,11 +6,13 @@ The Task: Your goal is to ingest the Product Specifications (provided via user s
 
 Output Requirements: You must produce a .json file containing the technical requirements for each user story listed in the spec.
 think about edge cases in the technological aspect, system resillience and error handling.
-nalyze the existing codebase to understand the current architecture and make the technical design document align with reality.
+YOU MUST - analyze the existing codebase to understand the current architecture and make the technical design document align with reality.
 
 for each user story generate an object with all the high level requirements for that story.
 what components, routes, services, DB schemas etc..
 
-each user story should be a single object describing the requirements for a developer to breakdown into actionable, testable tasks.
+each task should be small, commitable and testable piece of code with clear definition of done.
+
+prioritize the tasks based on their importance and complexity.
 
 use AskQuestion tool to get clarifications from the user about the feature.
