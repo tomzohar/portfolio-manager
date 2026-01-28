@@ -11,12 +11,14 @@ import {
   BollingerBands,
   ATR,
   ADX,
+  VWAP,
+  OBV,
 } from 'technicalindicators';
 
 /**
  * Technical Analyst Tool
  *
- * Calculates technical indicators (RSI, MACD, SMA, EMA, BBands, ATR, ADX)
+ * Calculates technical indicators (RSI, MACD, SMA, EMA, BBands, ATR, ADX, VWAP, OBV)
  * for a ticker using historical OHLCV data from Polygon API.
  *
  * Following TDD principles and NestJS best practices.
@@ -36,6 +38,8 @@ export interface TechnicalIndicators {
   BB_lower: number;
   ATR: number;
   ADX: number;
+  VWAP: number;
+  OBV: number;
   price_vs_SMA50: 'above' | 'below';
   price_vs_SMA200: 'above' | 'below';
 }
@@ -156,7 +160,7 @@ export function createTechnicalAnalystTool(
   return new DynamicStructuredTool({
     name: 'technical_analyst',
     description:
-      'Calculates technical indicators (RSI, MACD, SMA, EMA, BBands, ATR, ADX) for a ticker using 1 year of historical data. ' +
+      'Calculates technical indicators (RSI, MACD, SMA, EMA, BBands, ATR, ADX, VWAP, OBV) for a ticker using 1 year of historical data. ' +
       'Returns comprehensive technical analysis including trend indicators, momentum indicators, and volatility metrics.',
     schema: TechnicalAnalystSchema,
     func: async ({
@@ -216,6 +220,7 @@ export function calculateTechnicalIndicators(
   const closes = bars.map((bar) => bar.close);
   const highs = bars.map((bar) => bar.high);
   const lows = bars.map((bar) => bar.low);
+  const volumes = bars.map((bar) => bar.volume);
 
   // Calculate SMAs
   const sma50Values = SMA.calculate({ period: 50, values: closes });
@@ -274,6 +279,22 @@ export function calculateTechnicalIndicators(
   });
   const adx = adxValues[adxValues.length - 1] as { adx: number } | undefined;
 
+  // Calculate VWAP
+  const vwapValues = VWAP.calculate({
+    high: highs,
+    low: lows,
+    close: closes,
+    volume: volumes,
+  });
+  const vwap = vwapValues[vwapValues.length - 1] ?? 0;
+
+  // Calculate OBV
+  const obvValues = OBV.calculate({
+    close: closes,
+    volume: volumes,
+  });
+  const obv = obvValues[obvValues.length - 1] ?? 0;
+
   // Current price for comparison
   const currentPrice = closes[closes.length - 1] ?? 0;
 
@@ -291,6 +312,8 @@ export function calculateTechnicalIndicators(
     BB_lower: bb?.lower ?? 0,
     ATR: atr,
     ADX: adx?.adx ?? 0,
+    VWAP: vwap,
+    OBV: obv,
     price_vs_SMA50: currentPrice > sma50 ? 'above' : 'below',
     price_vs_SMA200: currentPrice > sma200 ? 'above' : 'below',
   };

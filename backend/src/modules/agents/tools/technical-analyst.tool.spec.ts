@@ -140,6 +140,24 @@ describe('TechnicalAnalystTool', () => {
       expect(resultWithIndicators.indicators.ADX).toBeLessThanOrEqual(100);
     });
 
+    it('should calculate VWAP and OBV', async () => {
+      polygonService.getAggregates.mockReturnValue(of(mockOHLCVData));
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const result = await tool.func({ ticker: 'AAPL' });
+      const parsedResult = JSON.parse(String(result)) as unknown;
+
+      expect(parsedResult).toHaveProperty('indicators');
+      const resultWithIndicators = parsedResult as {
+        indicators: { VWAP: number; OBV: number };
+      };
+      expect(resultWithIndicators.indicators.VWAP).toBeDefined();
+      expect(resultWithIndicators.indicators.OBV).toBeDefined();
+      expect(resultWithIndicators.indicators.VWAP).toBeGreaterThan(0);
+      // OBV can be positive or negative depending on volume flow
+      expect(typeof resultWithIndicators.indicators.OBV).toBe('number');
+    });
+
     it('should calculate EMA 12 and 26', async () => {
       polygonService.getAggregates.mockReturnValue(of(mockOHLCVData));
 
