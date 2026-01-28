@@ -18,6 +18,7 @@ describe('TechnicalAnalystTool', () => {
           provide: PolygonApiService,
           useValue: {
             getAggregates: jest.fn(),
+            getTickerDetails: jest.fn(),
           },
         },
       ],
@@ -25,6 +26,11 @@ describe('TechnicalAnalystTool', () => {
 
     polygonService = module.get(PolygonApiService);
     tool = createTechnicalAnalystTool(polygonService);
+
+    // Default mock behavior
+    polygonService.getTickerDetails.mockReturnValue(
+      of({ name: 'Apple Inc.', locale: 'us', currency_name: 'usd' }),
+    );
   });
 
   describe('calculateIndicators', () => {
@@ -44,6 +50,23 @@ describe('TechnicalAnalystTool', () => {
       expect(resultWithIndicators.indicators.RSI).toBeLessThanOrEqual(100);
       // RSI should be a valid number (not NaN)
       expect(Number.isNaN(resultWithIndicators.indicators.RSI)).toBe(false);
+    });
+
+    it('should include company metadata in result', async () => {
+      polygonService.getAggregates.mockReturnValue(of(mockOHLCVData));
+      polygonService.getTickerDetails.mockReturnValue(
+        of({ name: 'Apple Inc.', locale: 'us', currency_name: 'usd' }),
+      );
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const result = await tool.func({ ticker: 'AAPL' });
+      const parsedResult = JSON.parse(String(result)) as {
+        company_name: string;
+        locale: string;
+      };
+
+      expect(parsedResult.company_name).toBe('Apple Inc.');
+      expect(parsedResult.locale).toBe('us');
     });
 
     it('should calculate MACD correctly with realistic data', async () => {

@@ -203,6 +203,42 @@ export class PolygonApiService {
   }
 
   /**
+   * Get ticker details (v3)
+   * @param ticker - The ticker symbol
+   * @returns Observable of ticker details or null
+   */
+  getTickerDetails(ticker: string): Observable<{
+    name: string;
+    locale: string;
+    currency_name: string;
+  } | null> {
+    this.logger.log(`Fetching details for ticker: ${ticker}`);
+
+    const params = {
+      apiKey: this.apiKey,
+    };
+
+    return this.httpService
+      .get<{
+        results: { name: string; locale: string; currency_name: string };
+      }>(`${this.baseUrl}/reference/tickers/${ticker}`, {
+        params,
+      })
+      .pipe(
+        map((response) => {
+          return response.data.results;
+        }),
+        catchError((error: Error) => {
+          this.logger.error(
+            `Polygon API details error for ${ticker}: ${error.message}`,
+            error.stack,
+          );
+          return of(null);
+        }),
+      );
+  }
+
+  /**
    * Maps Polygon API response to TickerResultDto array
    * @param data - Raw Polygon API response
    * @returns Array of TickerResultDto

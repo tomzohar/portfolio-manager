@@ -50,6 +50,9 @@ export interface TechnicalAnalysisResult {
   current_price?: number;
   data_points?: number;
   error?: string;
+  company_name?: string;
+  currency?: string;
+  locale?: string;
 }
 
 // --- Constants & Schemas ---
@@ -172,15 +175,19 @@ export function createTechnicalAnalystTool(
         const { timespan, multiplier } = mapIntervalToPolygonParams(interval);
         const { from, to } = calculateDateRange(period);
 
-        // Fetch OHLCV data from Polygon
-        const barsObservable = polygonService.getAggregates(
-          ticker,
-          from,
-          to,
-          timespan,
-          multiplier,
-        );
-        const bars = await firstValueFrom(barsObservable);
+        // Fetch Ticker Details and OHLCV data in parallel
+        const [bars, details] = await Promise.all([
+          firstValueFrom(
+            polygonService.getAggregates(
+              ticker,
+              from,
+              to,
+              timespan,
+              multiplier,
+            ),
+          ),
+          firstValueFrom(polygonService.getTickerDetails(ticker)),
+        ]);
 
         // Validate data
         const validationError = validateMarketData(bars, ticker);
@@ -191,6 +198,13 @@ export function createTechnicalAnalystTool(
         // We know bars is safe here because validateMarketData checks for null/empty
 
         const result = performAnalysis(ticker, bars!);
+
+        // Augment result with details
+        if (details) {
+          result.company_name = details.name;
+          result.currency = details.currency_name;
+          result.locale = details.locale;
+        }
 
         return JSON.stringify(result);
       } catch (error: unknown) {
