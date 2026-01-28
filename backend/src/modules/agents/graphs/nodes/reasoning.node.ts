@@ -155,6 +155,7 @@ async function constructHistory(
 /**
  * Reasoning Node
  */
+
 export async function reasoningNode(
   state: CIOState,
   config: RunnableConfig,
@@ -163,6 +164,7 @@ export async function reasoningNode(
     const bucketLLM = initializeLLM(config);
     const geminiService = config.configurable
       ?.geminiLlmService as GeminiLlmService;
+
 
     // Get tools
     const toolRegistry = config.configurable
@@ -186,6 +188,7 @@ export async function reasoningNode(
       messages: [response],
     };
   } catch (error) {
+    console.error('DEBUG: Reasoning Node Error:', error);
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error';
     return {

@@ -66,7 +66,9 @@ export function routerNode(state: CIOState): string {
   const content = (
     typeof messageContent === 'string'
       ? messageContent
-      : JSON.stringify(messageContent)
+      : Array.isArray(messageContent)
+        ? messageContent.map(c => ('text' in c ? c.text : '')).join(' ')
+        : JSON.stringify(messageContent)
   ).toLowerCase();
 
   // Check for approval gate scenarios (only if enabled via environment variable)

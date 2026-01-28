@@ -316,6 +316,45 @@ describe('TechnicalAnalystTool', () => {
     });
   });
 
+  describe('pivot points', () => {
+    it('should calculate Standard Pivot Points correctly', async () => {
+      // Use uniform data for all bars to verify calculation logic independent of potential array sorting issues in the test env
+      const bars = Array(200)
+        .fill(null)
+        .map((_, i) => ({
+          timestamp: new Date(Date.now() + i * 86400000),
+          open: 148,
+          high: 155,
+          low: 145,
+          close: 150, // P = (155+145+150)/3 = 150
+          volume: 1000,
+        }));
+
+      polygonService.getAggregates.mockReturnValue(of(bars));
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const result = await tool.func({ ticker: 'AAPL' });
+      const parsedResult = JSON.parse(String(result)) as {
+        support_resistance: {
+          pivot: number;
+          r1: number;
+          s1: number;
+          r2: number;
+          s2: number;
+        };
+      };
+
+      expect(parsedResult).toHaveProperty('support_resistance');
+      const sr = parsedResult.support_resistance;
+
+      expect(sr.pivot).toBeCloseTo(150, 2);
+      expect(sr.r1).toBeCloseTo(155, 2);
+      expect(sr.s1).toBeCloseTo(145, 2);
+      expect(sr.r2).toBeCloseTo(160, 2);
+      expect(sr.s2).toBeCloseTo(140, 2);
+    });
+  });
+
   describe('interval support', () => {
     it('should use default interval (1d) if not provided', async () => {
       polygonService.getAggregates.mockReturnValue(of(mockOHLCVData));

@@ -44,9 +44,18 @@ export interface TechnicalIndicators {
   price_vs_SMA200: 'above' | 'below';
 }
 
+export interface SupportResistance {
+  pivot: number;
+  r1: number;
+  r2: number;
+  s1: number;
+  s2: number;
+}
+
 export interface TechnicalAnalysisResult {
   ticker: string;
   indicators?: TechnicalIndicators;
+  support_resistance?: SupportResistance;
   current_price?: number;
   data_points?: number;
   error?: string;
@@ -135,6 +144,28 @@ function validateMarketData(
 }
 
 /**
+ * Calculate Standard Pivot Points
+ * P = (H + L + C) / 3
+ * R1 = 2*P - L
+ * S1 = 2*P - H
+ * R2 = P + (H - L)
+ * S2 = P - (H - L)
+ */
+function calculatePivotPoints(
+  high: number,
+  low: number,
+  close: number,
+): SupportResistance {
+  const pivot = (high + low + close) / 3;
+  const r1 = 2 * pivot - low;
+  const s1 = 2 * pivot - high;
+  const r2 = pivot + (high - low);
+  const s2 = pivot - (high - low);
+
+  return { pivot, r1, r2, s1, s2 };
+}
+
+/**
  * Calculates indicators and builds the result object
  */
 function performAnalysis(
@@ -144,9 +175,21 @@ function performAnalysis(
   const indicators = calculateTechnicalIndicators(bars);
   const currentPrice = bars[bars.length - 1]?.close ?? 0;
 
+  const lastBar = bars[bars.length - 1];
+  let supportResistance: SupportResistance | undefined;
+
+  if (lastBar) {
+    supportResistance = calculatePivotPoints(
+      lastBar.high,
+      lastBar.low,
+      lastBar.close,
+    );
+  }
+
   return {
     ticker,
     indicators,
+    support_resistance: supportResistance,
     current_price: currentPrice,
     data_points: bars.length,
   };
