@@ -129,9 +129,12 @@ export function createTechnicalAnalystTool(
       } catch (error: unknown) {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
+
+        // Return error as a tool result so the agent can see it and potentially retry
+        // or apologize to the user.
         const errorResult: TechnicalAnalysisResult = {
           ticker,
-          error: `Failed to analyze ${ticker}: ${errorMessage}`,
+          error: `Error analyzing ${ticker}: ${errorMessage}. Please check the ticker symbol and try again.`,
         };
         return JSON.stringify(errorResult);
       }

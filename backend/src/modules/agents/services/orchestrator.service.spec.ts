@@ -252,9 +252,19 @@ describe('OrchestratorService', () => {
       const userId = '123e4567-e89b-12d3-a456-426614174000';
 
       // Force an error by providing invalid input
-      const input = null as unknown as { message: string };
+      /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+      const graphExecutor = (service as any).graphExecutor;
+      jest
+        .spyOn(graphExecutor, 'invoke')
+        .mockRejectedValue(new Error('Graph execution failed'));
+      /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 
-      await expect(service.runGraph(userId, input)).rejects.toThrow();
+      const input = { message: 'Test' };
+      const result = await service.runGraph(userId, input);
+
+      expect(result.success).toBe(false);
+      expect(result.status).toBe('FAILED');
+      expect(result.error).toBeDefined();
     });
 
     it('should return final report in result', async () => {

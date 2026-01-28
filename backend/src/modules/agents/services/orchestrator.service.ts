@@ -87,7 +87,7 @@ export class OrchestratorService {
     @Optional()
     @Inject(CitationService)
     private readonly citationService?: CitationService,
-  ) {}
+  ) { }
 
   // ============================================================================
   // Public API
@@ -710,13 +710,23 @@ export class OrchestratorService {
       );
     }
 
-    // Log and re-throw other errors
+    // Log the error but return a clean failure result instead of crashing
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown internal error';
+
     this.logger.error(
-      `Graph execution failed for user ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      `Graph execution failed for user ${userId}: ${errorMessage}`,
       error instanceof Error ? error.stack : undefined,
     );
 
-    throw error;
+    // Return a graceful failure result
+    return {
+      threadId,
+      finalState: initialState,
+      success: false,
+      status: 'FAILED', // Caller should check this status
+      error: 'An internal error occurred while processing your request. Please try again later.',
+    };
   }
 
   /**
