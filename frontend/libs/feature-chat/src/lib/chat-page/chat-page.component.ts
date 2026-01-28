@@ -1,21 +1,21 @@
+import { CommonModule } from '@angular/common';
 import {
   Component,
   OnDestroy,
-  inject,
   computed,
   effect,
+  inject,
   signal,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { map } from 'rxjs/operators';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ChatFacade } from '@stocks-researcher/data-access-chat';
-import { ReasoningTrace, MenuItem } from '@stocks-researcher/types';
-import { MessageInputComponent } from '../message-input/message-input.component';
+import { IconComponent, LoaderComponent } from '@stocks-researcher/styles';
+import { MenuItem } from '@stocks-researcher/types';
+import { map } from 'rxjs/operators';
 import { ConversationHeaderComponent } from '../conversation-header/conversation-header.component';
 import { ConversationPanelComponent } from '../conversation-panel/conversation-panel.component';
-import { LoaderComponent, IconComponent } from '@stocks-researcher/styles';
+import { MessageInputComponent } from '../message-input/message-input.component';
 import { isValidThreadId } from '../utils';
 
 /**
@@ -76,12 +76,15 @@ export class ChatPageComponent implements OnDestroy {
   );
 
   /**
-   * Effect: Load conversation messages when threadId exists (backend format only)
+   * Effect: Load conversation config and messages when threadId exists (backend format only)
    * 
-   * This effect watches for threadId changes and automatically loads messages
-   * when a valid backend format threadId is present in the route.
+   * This effect watches for threadId changes and automatically loads conversation config
+   * and messages when a valid backend format threadId is present in the route.
    * 
    * Only loads for backend format threadIds (contains ':'), not frontend-generated ones.
+   * 
+   * Note: We load both conversation config AND messages here for navigating to existing conversations.
+   * For new messages in an active conversation, SSE connection handles message loading.
    */
   private loadMessagesEffect = effect(() => {
     const currentThreadId = this.threadId();
@@ -89,6 +92,7 @@ export class ChatPageComponent implements OnDestroy {
     // Validate threadId format before loading
     if (currentThreadId && isValidThreadId(currentThreadId)) {
       this.facade.loadConversation(currentThreadId);
+      this.facade.loadConversationMessages(currentThreadId);
     }
 
   });
@@ -272,23 +276,6 @@ export class ChatPageComponent implements OnDestroy {
       message: trimmed,
       threadId: isBackendFormat ? routeThreadId : undefined,
     });
-  }
-
-  /**
-   * Handle trace click (if needed in future)
-   * Currently traces are handled within ConversationPanel
-   * 
-   * @param trace - The clicked trace
-   */
-  handleTraceClick(trace: ReasoningTrace): void {
-    // Traces now managed within ConversationPanel
-  }
-
-  /**
-   * Handle settings button click
-   */
-  handleSettings(): void {
-    // Legacy - can be removed if ActionMenu handles everything
   }
 
   /**

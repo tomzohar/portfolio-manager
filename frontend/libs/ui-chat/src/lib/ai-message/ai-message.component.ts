@@ -1,7 +1,7 @@
-import { Component, input, output, computed } from '@angular/core';
+import { Component, input, output, computed, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AssistantMessage } from '@stocks-researcher/types';
-import { ButtonComponent, IconComponent, ButtonConfig } from '@stocks-researcher/styles';
+import { ButtonComponent, IconComponent, ButtonConfig, TypewriterDirective } from '@stocks-researcher/styles';
 
 /**
  * AIMessageComponent
@@ -26,7 +26,7 @@ import { ButtonComponent, IconComponent, ButtonConfig } from '@stocks-researcher
 @Component({
   selector: 'app-ai-message',
   standalone: true,
-  imports: [CommonModule, ButtonComponent, IconComponent],
+  imports: [CommonModule, ButtonComponent, IconComponent, TypewriterDirective],
   template: `
     <div class="ai-message" [class.loading]="isLoading()">
       <div class="message-header">
@@ -46,7 +46,7 @@ import { ButtonComponent, IconComponent, ButtonConfig } from '@stocks-researcher
             <div class="skeleton-line skeleton-line-3"></div>
           </div>
         } @else {
-          <pre class="formatted-response">{{ message()?.content }}</pre>
+          <pre class="formatted-response" [typewriter]="animatedContent()" [speed]="10" [skipAnimation]="shouldSkipAnimation()"></pre>
         }
       </div>
       @if (!isLoading() && hasTraces() && isTracesFeatureEnabled()) {
@@ -87,6 +87,37 @@ export class AIMessageComponent {
    * Emitted when user toggles trace visibility
    */
   toggleTraces = output<void>();
+
+  /**
+   * Content to animate with typewriter effect
+   */
+  animatedContent = signal<string>('');
+
+  /**
+   * Whether to skip the typewriter animation
+   * True for existing messages (loaded on refresh), false for new messages
+   */
+  shouldSkipAnimation = signal<boolean>(true); // Default to true, will be false for new messages
+
+  constructor() {
+    // Watch for loading state changes to trigger animation
+    effect(() => {
+      const loading = this.isLoading();
+      const message = this.message();
+
+      // Determine if animation should be skipped based on message state
+      // New messages (isOptimistic=true) should animate
+      // Existing messages (isOptimistic=false/undefined) should render instantly
+      if (!loading && message?.content) {
+        const shouldAnimate = message.isNew === true;
+        this.shouldSkipAnimation.set(!shouldAnimate);
+        this.animatedContent.set(message.content);
+      } else if (loading) {
+        // Reset when loading
+        this.animatedContent.set('');
+      }
+    });
+  }
 
   /**
    * Formatted timestamp

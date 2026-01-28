@@ -225,9 +225,16 @@ export const chatReducer = createReducer(
       -1
     );
 
+    // Mark new AI messages as optimistic if we were waiting for AI response
+    // This ensures typewriter animation works even when component is recreated
+    const processedMessages = messages.map(msg => {
+      const isNewAiResponse = msg.type === 'assistant' && state.waitingForAIResponse && msg.sequence === maxSequence;
+      return { ...msg, isNew: isNewAiResponse };
+    });
+
     const newState = {
       ...state,
-      messages,
+      messages: processedMessages,
       sentMessages: stillPendingSentMessages,
       nextSequence: maxSequence + 1,
       loading: false,

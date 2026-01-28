@@ -22,6 +22,9 @@ import { ConversationApiService } from '../services/conversation-api.service';
 import { ReasoningTraceApiService } from '../services/reasoning-trace-api.service';
 import { SSEService } from '../services/sse.service';
 import { ChatActions } from './chat.actions';
+import { selectCurrentThreadId } from './chat.selectors';
+
+const EMPTY_ACTION = { type: '' } satisfies { type: '' };
 
 /**
  * Chat Effects
@@ -238,28 +241,6 @@ export class ChatEffects {
   );
 
   /**
-   * Effect: Load conversation messages after SSE connection
-   *
-   * Triggered by: sseConnected action
-   *
-   * Flow:
-   * 1. Wait for sseConnected
-   * 2. Dispatch loadConversationMessages for the thread
-   *
-   * This is part of the new Chat Message Persistence feature.
-   * Uses the dedicated conversation messages API endpoint for
-   * reliable message persistence across page reloads.
-   *
-   * @see Chat_Message_Persistence.md for architecture details
-   */
-  loadMessagesOnConnect$ = createEffect(() =>
-    this.actions$.pipe(
-      ofType(ChatActions.sSEConnected, ChatActions.graphComplete),
-      map(({ threadId }) => ChatActions.loadConversationMessages({ threadId }))
-    )
-  );
-
-  /**
    * Effect: Load conversation messages from API
    *
    * Triggered by: loadConversationMessages action
@@ -371,8 +352,8 @@ export class ChatEffects {
   sendMessage$ = createEffect(() =>
     this.actions$.pipe(
       ofType(ChatActions.sendMessage),
-      switchMap(({ message, threadId, portfolioId }) =>
-        this.traceApi
+      switchMap(({ message, threadId, portfolioId }) => {
+        return this.traceApi
           .sendMessage({ message, threadId, portfolio: portfolioId })
           .pipe(
             map((result) => {
@@ -389,27 +370,33 @@ export class ChatEffects {
               )
             )
           )
+      }
       )
     )
   );
 
-  /**
-   * After message sent successfully, ensure SSE is connected
-   *
-   * Only connects if not already connected to the same threadId.
-   * This prevents disconnecting and reconnecting SSE unnecessarily,
-   * which would cause us to miss graph.complete events from previous messages.
-   */
-  connectAfterMessageSent$ = createEffect(() =>
+  connectSSEAfterSendMessage$ = createEffect(() =>
     this.actions$.pipe(
       ofType(ChatActions.sendMessageSuccess),
-      // Use pairwise to compare previous and current threadId
-      // This allows us to detect threadId changes even after reducer updates
-      withLatestFrom(this.store.select((state) => state.chat.sseStatus)),
-      // Always connect SSE after sending a message to ensure we receive graph.complete events
-      // The SSEService will handle reusing existing connections if threadId hasn't changed
+      withLatestFrom(this.store.select(selectCurrentThreadId).pipe(filter((threadId) => !!threadId))),
+      map(([_, currentThreadId]) => {
+        const threadId = currentThreadId;
+        console.log({ threadId });
+        if (threadId) {
+          console.log('Sending connect request')
+          return ChatActions.connectSSE({ threadId: currentThreadId });
+        }
+        return EMPTY_ACTION;
+      })
+    )
+  );
+
+  fetchMessagesAfterSendMessageSuccess$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(ChatActions.sendMessageSuccess),
+      withLatestFrom(this.store.select(selectCurrentThreadId)),
       map(([{ threadId }]) => {
-        return ChatActions.connectSSE({ threadId });
+        return ChatActions.loadConversationMessages({ threadId });
       })
     )
   );
@@ -564,21 +551,20 @@ export class ChatEffects {
    * Flow:
    * 1. Call API to fetch conversation
    * 2. Dispatch conversationLoaded
-   * 3. Dispatch loadConversationMessages (chaining)
+   * 
+   * Note: This effect only loads conversation config (like showTraces).
+   * Messages should be loaded explicitly by the caller if needed.
+   * This prevents duplicate message fetching when SSE connection already loaded messages.
    */
   loadConversation$ = createEffect(() =>
     this.actions$.pipe(
       ofType(ChatActions.loadConversation),
       switchMap(({ threadId }) =>
         this.conversationApi.getConversation(threadId).pipe(
-          switchMap((conversation) => [
-            ChatActions.conversationLoaded({ conversation }),
-            ChatActions.loadConversationMessages({ threadId }),
-          ]),
+          map((conversation) => ChatActions.conversationLoaded({ conversation })),
           catchError((error) => {
             if (error.status === 404) {
               // If not found, maybe it's a new conversation or invalid
-              // For now just error
               return of(
                 ChatActions.conversationLoadFailed({
                   error: 'Conversation not found',

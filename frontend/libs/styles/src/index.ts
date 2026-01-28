@@ -38,6 +38,7 @@ export * from './lib/types/tabs-config';
 
 // Directives
 export * from './lib/directives/fill-available-height.directive';
+export * from './lib/directives/typewriter.directive';
 
 // Icon constants
 export * from './lib/constants/material-icons';

@@ -266,24 +266,28 @@ export const selectDisplayMessages = createSelector(
     }
 
     // Sort by sequence first (primary), then timestamp (secondary)
-    return displayMessages.sort((a, b) => {
-      // If both have sequence numbers, use them for guaranteed ordering
-      if (a.sequence !== undefined && b.sequence !== undefined) {
-        return a.sequence - b.sequence;
-      }
-
-      // Fallback to timestamp comparison
-      const timeA = typeof a.timestamp === 'string'
-        ? new Date(a.timestamp).getTime()
-        : a.timestamp.getTime();
-      const timeB = typeof b.timestamp === 'string'
-        ? new Date(b.timestamp).getTime()
-        : b.timestamp.getTime();
-
-      return timeA - timeB;
-    });
+    return sortChatMessages(displayMessages);
   }
 );
+
+const sortChatMessages = (messages: ConversationMessage[]) => {
+  return [...messages].sort((a, b) => {
+    // If both have sequence numbers, use them for guaranteed ordering
+    if (a.sequence !== undefined && b.sequence !== undefined) {
+      return a.sequence - b.sequence;
+    }
+
+    // Fallback to timestamp comparison
+    const timeA = typeof a.timestamp === 'string'
+      ? new Date(a.timestamp).getTime()
+      : a.timestamp.getTime();
+    const timeB = typeof b.timestamp === 'string'
+      ? new Date(b.timestamp).getTime()
+      : b.timestamp.getTime();
+
+    return timeA - timeB;
+  });
+}
 
 /**
  * Select traces for a specific message (lazy loading)

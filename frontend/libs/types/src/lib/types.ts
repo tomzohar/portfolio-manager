@@ -377,8 +377,8 @@ export interface UserMessage extends BaseMessage {
 export interface AssistantMessage extends BaseMessage {
   type: MessageType.ASSISTANT;
   traceIds?: string[]; // Links to reasoning traces
-  isOptimistic?: boolean; // Flag for streaming messages not yet complete
   isLoading?: boolean; // Flag for loading placeholder (thinking...)
+  isNew?: boolean; // Flag for new messages to indicate for UI effects
 }
 
 /**
