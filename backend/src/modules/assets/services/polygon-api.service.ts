@@ -151,9 +151,10 @@ export class PolygonApiService {
     from: string,
     to: string,
     timespan: string = 'day',
+    multiplier: number = 1,
   ): Observable<OHLCVBar[] | null> {
     this.logger.log(
-      `Fetching aggregates for ${ticker} from ${from} to ${to} (${timespan})`,
+      `Fetching aggregates for ${ticker} from ${from} to ${to} (${multiplier}${timespan})`,
     );
 
     const params = {
@@ -165,7 +166,7 @@ export class PolygonApiService {
 
     return this.httpService
       .get<PolygonAggregatesResponse>(
-        `${this.baseUrl.replace('/v3', '/v2')}/aggs/ticker/${ticker}/range/1/${timespan}/${from}/${to}`,
+        `${this.baseUrl.replace('/v3', '/v2')}/aggs/ticker/${ticker}/range/${multiplier}/${timespan}/${from}/${to}`,
         { params },
       )
       .pipe(

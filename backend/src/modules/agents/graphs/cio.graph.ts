@@ -18,6 +18,7 @@ import { guardrailNode } from './nodes/guardrail.node';
 import { reasoningNode } from './nodes/reasoning.node';
 import { toolExecutionNode } from './nodes/tool-execution.node';
 import { summarizationNode } from './nodes/summarization.node'; // Added
+import { errorNode } from './nodes/error.node'; // Added error node
 import { StateService } from '../services/state.service';
 import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
 import { Timeframe } from '../../performance/types/timeframe.types';
@@ -61,10 +62,11 @@ export function buildCIOGraph(stateService: StateService) {
   /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
   let workflow = new StateGraph(CIOStateAnnotation)
     .addNode('guardrail', guardrailNode)
-    .addNode('summarization', summarizationNode) // Add summarization node
+    .addNode('summarization', summarizationNode)
     .addNode('reasoning', reasoningNode)
     .addNode('tool_execution', toolExecutionNode)
-    .addNode('performance_attribution', performanceAttributionNode) as any;
+    .addNode('performance_attribution', performanceAttributionNode)
+    .addNode('error_handler', errorNode) as any; // Add error handler node
 
   // Add approval gate node if enabled (production HITL)
   if (enableApprovalGate) {
@@ -86,18 +88,22 @@ export function buildCIOGraph(stateService: StateService) {
       reasoning: 'reasoning',
       tool_execution: 'tool_execution',
       end: 'end',
+      error: 'error_handler', // Route explicit errors
       ...(enableApprovalGate ? { approval_gate: 'approval_gate' } : {}),
       ...(enableHitlTest ? { hitl_test: 'hitl_test' } : {}),
     })
     .addConditionalEdges('reasoning', reasoningRouter, {
       tool_execution: 'tool_execution',
       end: 'end',
+      error: 'error_handler', // Route failures from reasoning
     })
     .addConditionalEdges('tool_execution', toolExecutionRouter, {
       reasoning: 'reasoning',
       end: 'end',
+      error: 'error_handler', // Route failures from tools
     })
-    .addEdge('performance_attribution', 'end'); // Fix: performance_attribution -> end
+    .addEdge('error_handler', 'end') // Error handler -> End
+    .addEdge('performance_attribution', 'end');
 
   // Add edge for approval gate node only if enabled
   if (enableApprovalGate) {

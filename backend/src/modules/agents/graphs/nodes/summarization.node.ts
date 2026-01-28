@@ -38,8 +38,16 @@ export async function summarizationNode(
         typeof msg.content === 'string'
           ? msg.content
           : JSON.stringify(msg.content);
-      const meta = await geminiService.countTokens(content);
-      totalTokens += meta.totalTokens;
+      let tokens = 0;
+      // Safety check: ensure countTokens exists (fix for E2E tests where it might vary)
+      if (typeof geminiService.countTokens === 'function') {
+        const meta = await geminiService.countTokens(content);
+        tokens = meta.totalTokens;
+      } else {
+        // Fallback estimation: ~4 chars per token
+        tokens = Math.ceil(content.length / 4);
+      }
+      totalTokens += tokens;
     }
 
     if (totalTokens < SUMMARY_THRESHOLD) {

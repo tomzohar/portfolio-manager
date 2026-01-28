@@ -723,6 +723,92 @@ describe('PolygonApiService', () => {
       });
     });
 
+    it('should call Polygon API with correct parameters for 1 hour interval', (done) => {
+      const mockAggregatesResponse = {
+        ticker: 'AAPL',
+        queryCount: 1,
+        resultsCount: 1,
+        adjusted: true,
+        results: [],
+        status: 'OK',
+        request_id: 'test-request-id',
+      };
+
+      const mockAxiosResponse: AxiosResponse = {
+        data: mockAggregatesResponse,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as AxiosResponse['config'],
+      };
+
+      const getSpy = jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(of(mockAxiosResponse));
+
+      service.getAggregates(mockTicker, fromDate, toDate, 'hour', 1).subscribe({
+        next: () => {
+          expect(getSpy).toHaveBeenCalledWith(
+            'https://api.polygon.io/v2/aggs/ticker/AAPL/range/1/hour/2024-01-01/2024-12-31',
+            {
+              params: {
+                adjusted: 'true',
+                sort: 'asc',
+                limit: '50000',
+                apiKey: mockApiKey,
+              },
+            },
+          );
+          done();
+        },
+        error: done.fail,
+      });
+    });
+
+    it('should call Polygon API with correct parameters for 15 minute interval', (done) => {
+      const mockAggregatesResponse = {
+        ticker: 'AAPL',
+        queryCount: 1,
+        resultsCount: 1,
+        adjusted: true,
+        results: [],
+        status: 'OK',
+        request_id: 'test-request-id',
+      };
+
+      const mockAxiosResponse: AxiosResponse = {
+        data: mockAggregatesResponse,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as AxiosResponse['config'],
+      };
+
+      const getSpy = jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(of(mockAxiosResponse));
+
+      service
+        .getAggregates(mockTicker, fromDate, toDate, 'minute', 15)
+        .subscribe({
+          next: () => {
+            expect(getSpy).toHaveBeenCalledWith(
+              'https://api.polygon.io/v2/aggs/ticker/AAPL/range/15/minute/2024-01-01/2024-12-31',
+              {
+                params: {
+                  adjusted: 'true',
+                  sort: 'asc',
+                  limit: '50000',
+                  apiKey: mockApiKey,
+                },
+              },
+            );
+            done();
+          },
+          error: done.fail,
+        });
+    });
+
     it('should return null when no results are returned', (done) => {
       const mockAggregatesResponse = {
         ticker: 'INVALID',
