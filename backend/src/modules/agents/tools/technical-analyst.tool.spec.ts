@@ -329,6 +329,7 @@ describe('TechnicalAnalystTool', () => {
         expect.any(String),
         'day',
         1,
+        'desc',
       );
     });
 
@@ -344,6 +345,7 @@ describe('TechnicalAnalystTool', () => {
         expect.any(String),
         'minute',
         15,
+        'desc',
       );
     });
 
@@ -359,6 +361,7 @@ describe('TechnicalAnalystTool', () => {
         expect.any(String),
         'hour',
         1,
+        'desc',
       );
     });
 
@@ -374,6 +377,7 @@ describe('TechnicalAnalystTool', () => {
         expect.any(String),
         'week',
         1,
+        'desc',
       );
     });
   });

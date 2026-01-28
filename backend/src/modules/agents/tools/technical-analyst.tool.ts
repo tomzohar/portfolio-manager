@@ -53,6 +53,7 @@ export interface TechnicalAnalysisResult {
   company_name?: string;
   currency?: string;
   locale?: string;
+  last_updated?: string;
 }
 
 // --- Constants & Schemas ---
@@ -176,7 +177,7 @@ export function createTechnicalAnalystTool(
         const { from, to } = calculateDateRange(period);
 
         // Fetch Ticker Details and OHLCV data in parallel
-        const [bars, details] = await Promise.all([
+        const [barsDesc, details] = await Promise.all([
           firstValueFrom(
             polygonService.getAggregates(
               ticker,
@@ -184,10 +185,14 @@ export function createTechnicalAnalystTool(
               to,
               timespan,
               multiplier,
+              'desc', // Fetch newest first to ensure we get recent data
             ),
           ),
           firstValueFrom(polygonService.getTickerDetails(ticker)),
         ]);
+
+        // Reverse bars to be in ascending order (Oldest -> Newest) for technical indicators
+        const bars = barsDesc ? [...barsDesc].reverse() : null;
 
         // Validate data
         const validationError = validateMarketData(bars, ticker);
@@ -204,6 +209,10 @@ export function createTechnicalAnalystTool(
           result.company_name = details.name;
           result.currency = details.currency_name;
           result.locale = details.locale;
+        }
+
+        if (bars && bars.length > 0) {
+          result.last_updated = bars[bars.length - 1].timestamp.toISOString();
         }
 
         return JSON.stringify(result);

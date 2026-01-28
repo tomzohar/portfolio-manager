@@ -152,6 +152,7 @@ export class PolygonApiService {
     to: string,
     timespan: string = 'day',
     multiplier: number = 1,
+    sort: 'asc' | 'desc' = 'asc',
   ): Observable<OHLCVBar[] | null> {
     this.logger.log(
       `Fetching aggregates for ${ticker} from ${from} to ${to} (${multiplier}${timespan})`,
@@ -159,7 +160,7 @@ export class PolygonApiService {
 
     const params = {
       adjusted: 'true', // Use adjusted prices (accounts for splits/dividends)
-      sort: 'asc', // Sort by timestamp ascending
+      sort: sort, // Sort order
       limit: '50000', // Maximum limit to get all data
       apiKey: this.apiKey,
     };
