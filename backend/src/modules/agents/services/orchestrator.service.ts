@@ -87,7 +87,7 @@ export class OrchestratorService {
     @Optional()
     @Inject(CitationService)
     private readonly citationService?: CitationService,
-  ) { }
+  ) {}
 
   // ============================================================================
   // Public API
@@ -725,7 +725,8 @@ export class OrchestratorService {
       finalState: initialState,
       success: false,
       status: 'FAILED', // Caller should check this status
-      error: 'An internal error occurred while processing your request. Please try again later.',
+      error:
+        'An internal error occurred while processing your request. Please try again later.',
     };
   }
 
