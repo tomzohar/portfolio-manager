@@ -203,8 +203,19 @@ export class ChatPageComponent implements OnDestroy {
 
   /**
    * Whether we're loading chat history for an existing conversation
+   * This should only show on initial load, not when sending messages
    */
-  isLoadingChatHistory = this.facade.loading;
+  isLoadingChatHistory = computed(() => {
+    const loading = this.loading();
+    const hasMessages = this.messages().length > 0;
+    const waitingForAI = this.facade.waitingForAIResponse();
+
+    // Only show loading spinner if:
+    // - We're loading AND
+    // - We have no messages yet AND
+    // - We're not just waiting for an AI response
+    return loading && !hasMessages && !waitingForAI;
+  });
 
   // ========================================
   // Lifecycle

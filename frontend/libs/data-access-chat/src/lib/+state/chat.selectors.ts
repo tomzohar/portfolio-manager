@@ -1,6 +1,6 @@
 import { createFeatureSelector, createSelector } from '@ngrx/store';
 import { ChatState, tracesAdapter } from './chat.state';
-import { ConversationMessage, UserMessage, MessageType } from '@stocks-researcher/types';
+import { ConversationMessage, UserMessage, AssistantMessage, MessageType } from '@stocks-researcher/types';
 
 /**
  * Feature key for Chat state slice
@@ -205,12 +205,21 @@ export const selectIsMessageExpanded = (messageId: string) => createSelector(
 );
 
 /**
+ * Select whether we're waiting for an AI response
+ */
+export const selectWaitingForAIResponse = createSelector(
+  selectChatState,
+  (state) => state.waitingForAIResponse
+);
+
+/**
  * Select display messages combining extracted messages with optimistic pending messages
  * 
  * This selector implements optimistic UI updates:
  * 1. Shows all extracted messages from traces (confirmed by backend)
  * 2. Appends optimistic user messages for pending sends (from sentMessages)
- * 3. Sorts all messages chronologically by timestamp
+ * 3. Adds AI loading placeholder when waiting for response
+ * 4. Sorts all messages chronologically by timestamp
  * 
  * Optimistic messages have:
  * - Temporary ID: `optimistic-{timestamp}-{index}`
@@ -228,7 +237,8 @@ export const selectIsMessageExpanded = (messageId: string) => createSelector(
 export const selectDisplayMessages = createSelector(
   selectMessages,
   selectSentMessages,
-  (extractedMessages, sentMessages) => {
+  selectWaitingForAIResponse,
+  (extractedMessages, sentMessages, waitingForAI) => {
     const displayMessages: ConversationMessage[] = [...extractedMessages];
     // Add optimistic messages with preserved metadata
     sentMessages.forEach((pendingMsg) => {
@@ -242,6 +252,19 @@ export const selectDisplayMessages = createSelector(
       };
       displayMessages.push(optimisticMessage);
     });
+
+    // Add AI loading placeholder if waiting for response
+    if (waitingForAI && sentMessages.length > 0) {
+      const aiPlaceholder: AssistantMessage = {
+        id: 'ai-loading-placeholder',
+        type: MessageType.ASSISTANT,
+        content: '', // Empty content, will show loading UI
+        timestamp: new Date().toISOString(),
+        isLoading: true, // Flag to indicate this is a loading placeholder
+      };
+      displayMessages.push(aiPlaceholder);
+    }
+
     // Sort by sequence first (primary), then timestamp (secondary)
     return displayMessages.sort((a, b) => {
       // If both have sequence numbers, use them for guaranteed ordering

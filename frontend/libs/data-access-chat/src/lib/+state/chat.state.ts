@@ -39,6 +39,9 @@ export interface ChatState extends EntityState<ReasoningTrace> {
 
   // Settings
   showTraces: boolean;
+
+  // AI Response Loading State
+  waitingForAIResponse: boolean;
 }
 
 /**
@@ -75,4 +78,5 @@ export const initialChatState: ChatState = tracesAdapter.getInitialState({
   loading: false,
   error: null,
   showTraces: false,
+  waitingForAIResponse: false,
 });

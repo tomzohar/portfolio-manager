@@ -145,6 +145,7 @@ export const chatReducer = createReducer(
       nextSequence: state.nextSequence + 1, // Increment for next message
       graphExecuting: true,
       loading: true,
+      waitingForAIResponse: true, // Set waiting for AI response
       error: null,
     };
   }),
@@ -161,6 +162,7 @@ export const chatReducer = createReducer(
     ...state,
     graphExecuting: false,  // Stop executing on error
     loading: false,
+    waitingForAIResponse: false, // Clear waiting state on error
     error,
   })),
 
@@ -229,6 +231,7 @@ export const chatReducer = createReducer(
       sentMessages: stillPendingSentMessages,
       nextSequence: maxSequence + 1,
       loading: false,
+      waitingForAIResponse: false, // Clear waiting state when messages loaded
       error: null,
     };
 

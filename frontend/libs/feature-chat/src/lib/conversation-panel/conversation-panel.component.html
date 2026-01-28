@@ -4,7 +4,7 @@
       <p class="empty-title">No messages yet</p>
       <p class="empty-hint">Send a message to start the conversation</p>
     </div>
-  } @else if (messages().length > 0 || isGraphExecuting()) {
+  } @else if (messages().length > 0) {
     <div class="messages-list">
       @for (message of messages(); track trackByMessageId($index, message)) {
         @if (isUserMessage(message)) {
@@ -14,12 +14,13 @@
         @if (isAssistantMessage(message)) {
           <app-ai-message
             [message]="message"
+            [isLoading]="message.isLoading || false"
             [showTraces]="isMessageTracesExpanded(message.id)"
             [isTracesFeatureEnabled]="showTraces()"
             (toggleTraces)="handleToggleMessageTraces(message.id)"
           />
           
-          @if (showTraces() && isMessageTracesExpanded(message.id)) {
+          @if (showTraces() && isMessageTracesExpanded(message.id) && !message.isLoading) {
             <div class="traces-section">
               @if (isLoadingTraces(message.id)) {
                 <div class="traces-loading">
@@ -39,11 +40,6 @@
             </div>
           }
         }
-      }
-      
-      <!-- Loading skeleton for AI response while graph is executing -->
-      @if (isGraphExecuting()) {
-        <app-ai-message [isLoading]="true" />
       }
     </div>
   }

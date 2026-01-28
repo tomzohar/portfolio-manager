@@ -378,6 +378,7 @@ export interface AssistantMessage extends BaseMessage {
   type: MessageType.ASSISTANT;
   traceIds?: string[]; // Links to reasoning traces
   isOptimistic?: boolean; // Flag for streaming messages not yet complete
+  isLoading?: boolean; // Flag for loading placeholder (thinking...)
 }
 
 /**
@@ -481,13 +482,13 @@ export interface MenuConfig {
   ariaLabel?: string;
 }
 export interface ConversationConfig {
-    showTraces?: boolean;
+  showTraces?: boolean;
 }
 
 export interface Conversation {
-    id: string; // matches threadId
-    userId: string;
-    config: ConversationConfig;
-    createdAt: string;
-    updatedAt: string;
+  id: string; // matches threadId
+  userId: string;
+  config: ConversationConfig;
+  createdAt: string;
+  updatedAt: string;
 }

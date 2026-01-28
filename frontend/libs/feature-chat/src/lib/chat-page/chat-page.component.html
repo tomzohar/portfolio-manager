@@ -39,9 +39,9 @@
 
     <!-- Conversation Panel (NEW) -->
     <div class="chat-page__conversation">
-      @if (threadId() && !isLoadingChatHistory()) {
+      @if ((threadId() || messages().length > 0) && !isLoadingChatHistory()) {
         <app-conversation-panel
-          [threadId]="threadId()!"
+          [threadId]="threadId() || 'pending'"
           [messages]="messages()"
           [traces]="traces()"
           [showTraces]="showTraces()"

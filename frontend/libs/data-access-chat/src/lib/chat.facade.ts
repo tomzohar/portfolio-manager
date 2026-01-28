@@ -21,6 +21,7 @@ import {
   selectDisplayMessages,
   selectAreTracesLoadingForMessage,
   selectShowTraces,
+  selectWaitingForAIResponse,
 } from './+state/chat.selectors';
 import { ReasoningTrace, SSEConnectionStatus, ConversationMessage, PendingSentMessage, ConversationConfig } from '@stocks-researcher/types';
 
@@ -42,18 +43,18 @@ import { ReasoningTrace, SSEConnectionStatus, ConversationMessage, PendingSentMe
  * 
  * @example
  * ```typescript
- * export class ChatComponent {
- *   private facade = inject(ChatFacade);
- * 
+  * export class ChatComponent {
+  *   private facade = inject(ChatFacade);
+  * 
  *   traces = this.facade.currentThreadTraces;
- *   connectionStatus = this.facade.connectionStatus;
+ * connectionStatus = this.facade.connectionStatus;
  * 
- *   ngOnInit() {
- *     this.facade.connectSSE('thread-id-123');
+ * ngOnInit() {
+ * this.facade.connectSSE('thread-id-123');
  *   }
  *   
- *   ngOnDestroy() {
- *     this.facade.disconnectSSE();
+ * ngOnDestroy() {
+ * this.facade.disconnectSSE();
  *   }
  * }
  * ```
@@ -157,12 +158,12 @@ export class ChatFacade {
    * 
    * @example
    * ```typescript
-   * // In component
+  * // In component
    * displayMessages = this.facade.displayMessages;
    * 
    * // In template
    * @for (message of displayMessages(); track message.id) {
-   *   <app-message [message]="message" />
+   * <app-message[message]="message" />
    * }
    * ```
    */
@@ -180,6 +181,12 @@ export class ChatFacade {
    */
   readonly showTraces: Signal<boolean> =
     this.store.selectSignal(selectShowTraces);
+
+  /**
+   * Whether we're waiting for an AI response
+   */
+  readonly waitingForAIResponse: Signal<boolean> =
+    this.store.selectSignal(selectWaitingForAIResponse);
 
   // ========================================
   // Action Dispatch Methods
