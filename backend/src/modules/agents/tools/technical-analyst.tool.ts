@@ -48,6 +48,102 @@ export interface TechnicalAnalysisResult {
   error?: string;
 }
 
+// --- Constants & Schemas ---
+
+export const TechnicalAnalystSchema = z.object({
+  ticker: z
+    .string()
+    .toUpperCase()
+    .describe('Stock ticker symbol (e.g., AAPL, MSFT)'),
+  period: z
+    .number()
+    .optional()
+    .default(252)
+    .describe('Number of trading days to analyze (default: 252 = 1 year)'),
+  interval: z
+    .enum(['15m', '1h', '1d', '1wk'])
+    .optional()
+    .default('1d')
+    .describe('Timeframe for analysis (default: 1d)'),
+});
+
+export type TechnicalAnalystInput = z.infer<typeof TechnicalAnalystSchema>;
+
+// --- Helper Functions ---
+
+/**
+ * Maps the tool interval input to Polygon API compatible parameters
+ */
+function mapIntervalToPolygonParams(
+  interval: TechnicalAnalystInput['interval'],
+): { timespan: string; multiplier: number } {
+  switch (interval) {
+    case '15m':
+      return { timespan: 'minute', multiplier: 15 };
+    case '1h':
+      return { timespan: 'hour', multiplier: 1 };
+    case '1wk':
+      return { timespan: 'week', multiplier: 1 };
+    case '1d':
+    default:
+      return { timespan: 'day', multiplier: 1 };
+  }
+}
+
+/**
+ * Calculates the start and end dates for the historical data fetch
+ */
+function calculateDateRange(period: number): { from: string; to: string } {
+  const toDate = new Date();
+  const fromDate = new Date();
+  // Adjust lookback period based on interval roughly
+  fromDate.setDate(fromDate.getDate() - Math.ceil(period * 1.5)); // Fetch extra for indicator calculation
+
+  const fromStr = fromDate.toISOString().split('T')[0] ?? '';
+  const toStr = toDate.toISOString().split('T')[0] ?? '';
+
+  return { from: fromStr, to: toStr };
+}
+
+/**
+ * Validates the fetched data for minimum requirements
+ */
+function validateMarketData(
+  bars: OHLCVBar[] | null,
+  ticker: string,
+): { error: string } | null {
+  if (!bars || bars.length === 0) {
+    return { error: `No data available for ticker ${ticker}` };
+  }
+
+  // Check if we have enough data for SMA200
+  if (bars.length < 200) {
+    return {
+      error: `Insufficient data for ${ticker}. Need at least 200 days, got ${bars.length} days.`,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Calculates indicators and builds the result object
+ */
+function performAnalysis(
+  ticker: string,
+  bars: OHLCVBar[],
+): TechnicalAnalysisResult {
+  const indicators = calculateTechnicalIndicators(bars);
+  const currentPrice = bars[bars.length - 1]?.close ?? 0;
+
+  return {
+    ticker,
+    indicators,
+    current_price: currentPrice,
+    data_points: bars.length,
+  };
+}
+
 /**
  * Create the Technical Analyst Tool
  *
@@ -62,76 +158,41 @@ export function createTechnicalAnalystTool(
     description:
       'Calculates technical indicators (RSI, MACD, SMA, EMA, BBands, ATR, ADX) for a ticker using 1 year of historical data. ' +
       'Returns comprehensive technical analysis including trend indicators, momentum indicators, and volatility metrics.',
-    schema: z.object({
-      ticker: z
-        .string()
-        .toUpperCase()
-        .describe('Stock ticker symbol (e.g., AAPL, MSFT)'),
-      period: z
-        .number()
-        .optional()
-        .default(252)
-        .describe('Number of trading days to analyze (default: 252 = 1 year)'),
-    }),
+    schema: TechnicalAnalystSchema,
     func: async ({
       ticker,
       period = 252,
-    }: {
-      ticker: string;
-      period?: number;
-    }) => {
+      interval = '1d',
+    }: TechnicalAnalystInput) => {
       try {
-        // Calculate date range
-        const toDate = new Date();
-        const fromDate = new Date();
-        fromDate.setDate(fromDate.getDate() - Math.ceil(period * 1.5)); // Fetch extra for indicator calculation
-
-        const fromStr = fromDate.toISOString().split('T')[0] ?? '';
-        const toStr = toDate.toISOString().split('T')[0] ?? '';
+        const { timespan, multiplier } = mapIntervalToPolygonParams(interval);
+        const { from, to } = calculateDateRange(period);
 
         // Fetch OHLCV data from Polygon
         const barsObservable = polygonService.getAggregates(
           ticker,
-          fromStr,
-          toStr,
+          from,
+          to,
+          timespan,
+          multiplier,
         );
         const bars = await firstValueFrom(barsObservable);
 
-        if (!bars || bars.length === 0) {
-          const errorResult: TechnicalAnalysisResult = {
-            ticker,
-            error: `No data available for ticker ${ticker}`,
-          };
-          return JSON.stringify(errorResult);
+        // Validate data
+        const validationError = validateMarketData(bars, ticker);
+        if (validationError) {
+          return JSON.stringify(validationError);
         }
 
-        // Check if we have enough data for SMA200
-        if (bars.length < 200) {
-          const insufficientDataResult: TechnicalAnalysisResult = {
-            ticker,
-            error: `Insufficient data for ${ticker}. Need at least 200 days, got ${bars.length} days.`,
-          };
-          return JSON.stringify(insufficientDataResult);
-        }
+        // We know bars is safe here because validateMarketData checks for null/empty
 
-        // Calculate indicators
-        const indicators = calculateTechnicalIndicators(bars);
-        const currentPrice = bars[bars.length - 1]?.close ?? 0;
-
-        const result: TechnicalAnalysisResult = {
-          ticker,
-          indicators,
-          current_price: currentPrice,
-          data_points: bars.length,
-        };
+        const result = performAnalysis(ticker, bars!);
 
         return JSON.stringify(result);
       } catch (error: unknown) {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
 
-        // Return error as a tool result so the agent can see it and potentially retry
-        // or apologize to the user.
         const errorResult: TechnicalAnalysisResult = {
           ticker,
           error: `Error analyzing ${ticker}: ${errorMessage}. Please check the ticker symbol and try again.`,
@@ -148,7 +209,9 @@ export function createTechnicalAnalystTool(
  * @param bars - Array of OHLCV bars
  * @returns TechnicalIndicators object with all calculated values
  */
-function calculateTechnicalIndicators(bars: OHLCVBar[]): TechnicalIndicators {
+export function calculateTechnicalIndicators(
+  bars: OHLCVBar[],
+): TechnicalIndicators {
   // Extract price arrays
   const closes = bars.map((bar) => bar.close);
   const highs = bars.map((bar) => bar.high);

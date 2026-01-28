@@ -274,6 +274,68 @@ describe('TechnicalAnalystTool', () => {
       });
     });
   });
+
+  describe('interval support', () => {
+    it('should use default interval (1d) if not provided', async () => {
+      polygonService.getAggregates.mockReturnValue(of(mockOHLCVData));
+
+      await tool.func({ ticker: 'AAPL' });
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(polygonService.getAggregates).toHaveBeenCalledWith(
+        'AAPL',
+        expect.any(String),
+        expect.any(String),
+        'day',
+        1,
+      );
+    });
+
+    it('should map "15m" interval to 15 minute timespan', async () => {
+      polygonService.getAggregates.mockReturnValue(of(mockOHLCVData));
+
+      await tool.func({ ticker: 'AAPL', interval: '15m' });
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(polygonService.getAggregates).toHaveBeenCalledWith(
+        'AAPL',
+        expect.any(String),
+        expect.any(String),
+        'minute',
+        15,
+      );
+    });
+
+    it('should map "1h" interval to 1 hour timespan', async () => {
+      polygonService.getAggregates.mockReturnValue(of(mockOHLCVData));
+
+      await tool.func({ ticker: 'AAPL', interval: '1h' });
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(polygonService.getAggregates).toHaveBeenCalledWith(
+        'AAPL',
+        expect.any(String),
+        expect.any(String),
+        'hour',
+        1,
+      );
+    });
+
+    it('should map "1wk" interval to 1 week timespan', async () => {
+      polygonService.getAggregates.mockReturnValue(of(mockOHLCVData));
+
+      await tool.func({ ticker: 'AAPL', interval: '1wk' });
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(polygonService.getAggregates).toHaveBeenCalledWith(
+        'AAPL',
+        expect.any(String),
+        expect.any(String),
+        'week',
+        1,
+      );
+    });
+  });
 });
 
 /**
