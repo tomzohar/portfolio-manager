@@ -32,6 +32,7 @@ import { createRiskManagerTool } from './tools/risk-manager.tool';
 import { createSearchHistoryTool } from './tools/search-history.tool';
 import { createSearchPortfoliosTool } from './tools/search-portfolios.tool';
 import { createTechnicalAnalystTool } from './tools/technical-analyst.tool';
+import { createFundamentalAnalystTool } from './tools/fundamental-analyst.tool';
 import { getCurrentTimeTool } from './tools/time.tool';
 
 @Module({
@@ -127,5 +128,9 @@ export class AgentsModule {
       ),
     );
     this.logger.log('Registered search_portfolios tool');
+    this.toolRegistry.registerTool(
+      createFundamentalAnalystTool(this.polygonService),
+    );
+    this.logger.log('Registered fundamental_analyst tool');
   }
 }

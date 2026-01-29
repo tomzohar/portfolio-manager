@@ -9,6 +9,7 @@ import {
   PolygonPreviousCloseResponse,
   PolygonAggregatesResponse,
   OHLCVBar,
+  PolygonFinancialsResponse,
 } from '../types/polygon-api.types';
 
 @Injectable()
@@ -204,10 +205,51 @@ export class PolygonApiService {
   }
 
   /**
-   * Get ticker details (v3)
+   * Get financials for a ticker
    * @param ticker - The ticker symbol
-   * @returns Observable of ticker details or null
+   * @param limit - Number of results to return (default: 1)
+   * @param timeframe - Timeframe of the financials (annual, quarterly, ttm)
+   * @param sort - Sort order (asc, desc)
+   * @returns Observable of financials data or null on error
    */
+  getFinancials(
+    ticker: string,
+    limit: number = 1,
+    timeframe: 'annual' | 'quarterly' | 'ttm' = 'ttm',
+    sort: 'asc' | 'desc' = 'desc',
+  ): Observable<PolygonFinancialsResponse | null> {
+    this.logger.log(`Fetching financials for ticker: ${ticker}`);
+
+    const params = {
+      ticker,
+      limit,
+      timeframe,
+      sort,
+      apiKey: this.apiKey,
+    };
+
+    return this.httpService
+      .get<PolygonFinancialsResponse>(
+        `${this.baseUrl.replace('/v3', '/vX')}/reference/financials`,
+        { params },
+      )
+      .pipe(
+        map((response) => {
+          this.logger.log(
+            `Successfully fetched financials for ${ticker} (${response.data.count} results)`,
+          );
+          return response.data;
+        }),
+        catchError((error: Error) => {
+          this.logger.error(
+            `Polygon API financials error for ${ticker}: ${error.message}`,
+            error.stack,
+          );
+          return of(null);
+        }),
+      );
+  }
+
   getTickerDetails(ticker: string): Observable<{
     name: string;
     locale: string;
