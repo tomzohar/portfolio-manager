@@ -224,7 +224,8 @@ export class PolygonApiService {
       ticker,
       limit,
       timeframe,
-      sort,
+      sort: 'filing_date',
+      order: sort,
       apiKey: this.apiKey,
     };
 

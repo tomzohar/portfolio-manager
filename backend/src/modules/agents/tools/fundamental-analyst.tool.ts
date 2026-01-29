@@ -3,7 +3,10 @@ import { z } from 'zod';
 import { firstValueFrom } from 'rxjs';
 import { PolygonApiService } from '../../assets/services/polygon-api.service';
 import { FundamentalAnalysisResult } from '../types/fundamental-analyst.types';
-import { StockFinancial } from '../../assets/types/polygon-api.types';
+import {
+  PolygonSnapshotResponse,
+  StockFinancial,
+} from '../../assets/types/polygon-api.types';
 
 export const FundamentalAnalystSchema = z.object({
   ticker: z
@@ -58,7 +61,7 @@ export function createFundamentalAnalystTool(
           details?.name,
           period,
           report,
-          snapshot?.ticker.day.c,
+          snapshot,
         );
 
         return JSON.stringify(result);
@@ -88,8 +91,9 @@ function formatResults(
   companyName: string | undefined,
   period: string,
   report: StockFinancial,
-  currentPrice?: number,
+  snapshot?: PolygonSnapshotResponse | null,
 ): FundamentalAnalysisResult {
+  const currentPrice = extractPrice(snapshot);
   const getIncome = (m: string) => getValue(report, 'income_statement', m);
   const getBalance = (m: string) => getValue(report, 'balance_sheet', m);
   const getCashFlow = (m: string) =>
@@ -130,7 +134,9 @@ function formatResults(
   // Valuation
   const eps = getIncome('basic_earnings_per_share');
   const peRatio = eps && currentPrice ? currentPrice / eps : null;
-  const shares = getBalance('basic_common_shares_outstanding');
+  const shares =
+    getBalance('basic_common_shares_outstanding') ||
+    getIncome('basic_average_shares');
   const marketCap = shares && currentPrice ? shares * currentPrice : null;
 
   return {
@@ -163,4 +169,18 @@ function formatResults(
     fiscal_period: `${report.fiscal_period} ${report.fiscal_year}`,
     last_updated: new Date().toISOString(),
   };
+}
+
+function extractPrice(
+  snapshot?: PolygonSnapshotResponse | null,
+): number | undefined {
+  if (!snapshot?.ticker) return undefined;
+
+  const { day, prevDay } = snapshot.ticker;
+
+  // Try current day price, then previous day price
+  if (day?.c && day.c > 0) return day.c;
+  if (prevDay?.c && prevDay.c > 0) return prevDay.c;
+
+  return undefined;
 }

@@ -203,4 +203,92 @@ describe('FundamentalAnalystTool', () => {
     expect(parsedResult.valuation.pe_ratio).toBeNull();
     expect(parsedResult.valuation.market_cap).toBeNull();
   });
+
+  it('should fallback to previous day price if today price is 0', async () => {
+    const mockSnapshot = {
+      ticker: {
+        day: { c: 0 },
+        prevDay: { c: 150 },
+      },
+    };
+
+    const mockFinancials = {
+      results: [
+        {
+          company_name: 'Fallback Price Co',
+          financials: {
+            income_statement: {
+              basic_earnings_per_share: { value: 10 },
+            },
+            balance_sheet: {
+              basic_common_shares_outstanding: { value: 1000 },
+            },
+          },
+        },
+      ],
+      status: 'OK',
+      count: 1,
+    } as unknown as PolygonFinancialsResponse;
+
+    polygonService.getFinancials.mockReturnValue(of(mockFinancials));
+    polygonService.getTickerDetails.mockReturnValue(
+      of({ name: 'Fallback Price Co' } as any as {
+        name: string;
+        locale: string;
+        currency_name: string;
+      }),
+    );
+    polygonService.getTickerSnapshot.mockReturnValue(
+      of(mockSnapshot as any as PolygonSnapshotResponse),
+    );
+
+    const result = (await tool.invoke({ ticker: 'FALLBACK' })) as string;
+    const parsedResult = JSON.parse(result) as FundamentalAnalysisResult;
+
+    // 150 (prevDay) / 10 (eps) = 15
+    expect(parsedResult.valuation.pe_ratio).toBe(15);
+  });
+
+  it('should fallback to average shares if common shares outstanding is missing', async () => {
+    const mockSnapshot = {
+      ticker: { day: { c: 100 } },
+    };
+
+    const mockFinancials = {
+      results: [
+        {
+          company_name: 'Fallback Shares Co',
+          financials: {
+            income_statement: {
+              basic_average_shares: { value: 5000 },
+            },
+            balance_sheet: {
+              // basic_common_shares_outstanding is missing
+              equity: { value: 100000 },
+            },
+          },
+        },
+      ],
+      status: 'OK',
+      count: 1,
+    } as unknown as PolygonFinancialsResponse;
+
+    polygonService.getFinancials.mockReturnValue(of(mockFinancials));
+    polygonService.getTickerDetails.mockReturnValue(
+      of({ name: 'Fallback Shares Co' } as any as {
+        name: string;
+        locale: string;
+        currency_name: string;
+      }),
+    );
+    polygonService.getTickerSnapshot.mockReturnValue(
+      of(mockSnapshot as any as PolygonSnapshotResponse),
+    );
+
+    const result = (await tool.invoke({ ticker: 'SHARES' })) as string;
+    const parsedResult = JSON.parse(result) as FundamentalAnalysisResult;
+
+    // 5000 (avg shares) * 100 (price) = 500,000
+    expect(parsedResult.valuation.market_cap).toBe(500000);
+  });
 });

@@ -988,7 +988,8 @@ describe('PolygonApiService', () => {
                 ticker: mockTicker,
                 limit: 1, // Expect number 1, not string '1'
                 timeframe: 'ttm',
-                sort: 'desc',
+                sort: 'filing_date',
+                order: 'desc',
                 apiKey: mockApiKey,
               }),
             }),
