@@ -1,0 +1,11 @@
+@if (hasBackdrop && isOpen) {
+  <div class="sidebar-backdrop" (click)="onBackdropClick()"></div>
+}
+
+<div class="sidebar-container">
+  <ng-content select="app-sidebar-header"></ng-content>
+  <ng-content select="app-sidebar-content"></ng-content>
+  <!-- Allow direct content if no wrappers used -->
+  <ng-content></ng-content>
+  <ng-content select="app-sidebar-footer"></ng-content>
+</div>
