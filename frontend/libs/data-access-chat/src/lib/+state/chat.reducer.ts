@@ -339,6 +339,29 @@ export const chatReducer = createReducer(
   })),
 
   // ========================================
+  // Conversation History
+  // ========================================
+
+  on(ChatActions.loadConversations, (state) => ({
+    ...state,
+    loading: true,
+    error: null,
+  })),
+
+  on(ChatActions.loadConversationsSuccess, (state, { conversations }) => ({
+    ...state,
+    conversations,
+    loading: false,
+    error: null,
+  })),
+
+  on(ChatActions.loadConversationsFailure, (state, { error }) => ({
+    ...state,
+    loading: false,
+    error,
+  })),
+
+  // ========================================
   // Reset
   // ========================================
 

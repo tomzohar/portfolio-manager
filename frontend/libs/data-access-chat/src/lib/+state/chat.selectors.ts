@@ -336,3 +336,11 @@ export const selectShowTraces = createSelector(
   selectChatState,
   (state) => state.showTraces
 );
+
+/**
+ * Select conversation history list
+ */
+export const selectConversations = createSelector(
+  selectChatState,
+  (state) => state.conversations
+);

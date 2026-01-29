@@ -22,6 +22,7 @@ import {
   selectAreTracesLoadingForMessage,
   selectShowTraces,
   selectWaitingForAIResponse,
+  selectConversations,
 } from './+state/chat.selectors';
 import { ReasoningTrace, SSEConnectionStatus, ConversationMessage, PendingSentMessage, ConversationConfig } from '@stocks-researcher/types';
 
@@ -187,6 +188,11 @@ export class ChatFacade {
    */
   readonly waitingForAIResponse: Signal<boolean> =
     this.store.selectSignal(selectWaitingForAIResponse);
+
+  /**
+   * List of all conversations for history
+   */
+  readonly conversations = this.store.selectSignal(selectConversations);
 
   // ========================================
   // Action Dispatch Methods
@@ -359,5 +365,14 @@ export class ChatFacade {
    */
   toggleShowTraces(): void {
     this.store.dispatch(ChatActions.toggleShowTraces());
+  }
+
+  /**
+   * Load list of all conversations for history
+   * 
+   * @param limit - Optional limit on number of conversations
+   */
+  loadConversations(limit?: number): void {
+    this.store.dispatch(ChatActions.loadConversations({ limit }));
   }
 }

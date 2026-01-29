@@ -18,9 +18,23 @@
 }
 
 .sidebar-recent-section {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0; // Crucial for flex child to shrink/scroll
   
   &.sidebar-hide-on-collapsed {
     padding: 0;
+  }
+
+  h3 {
+    margin: var(--spacing-md) var(--spacing-sm);
+    flex-shrink: 0;
+  }
+  
+  app-chat-history-list {
+    flex: 1;
+    overflow-y: auto;
   }
 }

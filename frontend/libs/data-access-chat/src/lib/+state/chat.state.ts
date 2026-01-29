@@ -1,5 +1,5 @@
 import { EntityState, EntityAdapter, createEntityAdapter } from '@ngrx/entity';
-import { ReasoningTrace, SSEConnectionStatus, ConversationMessage, PendingSentMessage } from '@stocks-researcher/types';
+import { ReasoningTrace, SSEConnectionStatus, ConversationMessage, PendingSentMessage, Conversation } from '@stocks-researcher/types';
 
 /**
  * Chat State Interface
@@ -32,6 +32,9 @@ export interface ChatState extends EntityState<ReasoningTrace> {
   expandedMessageIds: string[]; // Which AI messages have traces expanded
   loadedMessageIds: Set<string>; // Which messages have had their traces loaded
   loadingTracesByMessageId: Set<string>; // Which messages are currently loading traces
+
+  // Conversation History
+  conversations: Conversation[];
 
   // Loading State
   loading: boolean;
@@ -75,6 +78,7 @@ export const initialChatState: ChatState = tracesAdapter.getInitialState({
   expandedMessageIds: [],
   loadedMessageIds: new Set<string>(),
   loadingTracesByMessageId: new Set<string>(),
+  conversations: [],
   loading: false,
   error: null,
   showTraces: false,

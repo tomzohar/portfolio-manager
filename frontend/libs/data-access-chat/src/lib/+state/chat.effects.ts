@@ -581,4 +581,27 @@ export class ChatEffects {
       )
     )
   );
+
+  /**
+   * Effect: Load all conversations for history
+   */
+  loadConversations$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(ChatActions.loadConversations),
+      switchMap(({ limit }) =>
+        this.conversationApi.getConversations(limit).pipe(
+          map((conversations) =>
+            ChatActions.loadConversationsSuccess({ conversations })
+          ),
+          catchError((error) =>
+            of(
+              ChatActions.loadConversationsFailure({
+                error: error.message || 'Failed to load conversation history',
+              })
+            )
+          )
+        )
+      )
+    )
+  );
 }

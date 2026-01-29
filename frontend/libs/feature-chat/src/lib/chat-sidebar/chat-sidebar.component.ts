@@ -1,5 +1,6 @@
-import { Component, ViewEncapsulation, model, output } from '@angular/core';
+import { Component, ViewEncapsulation, model, output, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import {
   SidebarComponent,
   SidebarContentComponent,
@@ -7,6 +8,8 @@ import {
   SidebarSectionComponent
 } from '@frontend/ui-sidebar';
 import { ButtonComponent, ButtonConfig, IconComponent } from '@stocks-researcher/styles';
+import { ChatFacade } from '@stocks-researcher/data-access-chat';
+import { ChatHistoryListComponent } from '@stocks-researcher/ui-chat';
 
 /**
  * ChatSidebarComponent
@@ -24,14 +27,20 @@ import { ButtonComponent, ButtonConfig, IconComponent } from '@stocks-researcher
     SidebarFooterComponent,
     SidebarSectionComponent,
     ButtonComponent,
-    IconComponent
+    IconComponent,
+    ChatHistoryListComponent
   ],
   templateUrl: './chat-sidebar.component.html',
   styleUrls: ['./chat-sidebar.component.scss'],
   encapsulation: ViewEncapsulation.Emulated
 })
-export class ChatSidebarComponent {
+export class ChatSidebarComponent implements OnInit {
+  private readonly facade = inject(ChatFacade);
+  private readonly router = inject(Router);
+
   isOpen = model(true);
+  currentThreadId = this.facade.currentThreadId;
+  conversations = this.facade.conversations;
 
   newConversation = output<void>();
 
@@ -47,4 +56,16 @@ export class ChatSidebarComponent {
     size: 'md',
     variant: 'icon',
   };
+
+  ngOnInit(): void {
+    // Initial load of conversation history
+    this.facade.loadConversations(30);
+  }
+
+  /**
+   * Navigate to a selected conversation thread
+   */
+  onConversationSelected(threadId: string): void {
+    this.router.navigate(['/chat', threadId]);
+  }
 }

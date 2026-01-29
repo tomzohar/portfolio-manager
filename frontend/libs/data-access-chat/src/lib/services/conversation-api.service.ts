@@ -96,6 +96,25 @@ export class ConversationApiService {
   }
 
   /**
+   * Fetches all conversations for the authenticated user.
+   *
+   * Endpoint: GET /api/conversations
+   *
+   * @param limit - Optional limit on number of conversations
+   * @returns Observable of Conversation array
+   */
+  getConversations(limit?: number): Observable<Conversation[]> {
+    let params = new HttpParams();
+    if (limit !== undefined) {
+      params = params.set('limit', limit.toString());
+    }
+
+    return this.http.get<Conversation[]>(`${this.apiUrl}/api/conversations`, {
+      params,
+    });
+  }
+
+  /**
    * Transforms a backend message to frontend ConversationMessage type.
    *
    * Maps backend type strings to MessageType enum and structures

@@ -73,7 +73,7 @@ export class ConversationService {
     private readonly messageRepo: Repository<ConversationMessage>,
     @InjectRepository(Conversation)
     private readonly conversationRepo: Repository<Conversation>,
-  ) {}
+  ) { }
 
   /**
    * Save user message when conversation starts.
@@ -399,6 +399,30 @@ export class ConversationService {
   ): Promise<boolean> {
     await this.conversationRepo.update({ id: threadId, userId }, { config });
     return true;
+  }
+
+  /**
+   * Get all conversations for a user.
+   *
+   * @param userId - The user ID to get conversations for
+   * @param limit - Optional limit on number of conversations
+   * @returns Array of conversations (ID only)
+   */
+  async findAllConversations(
+    userId: string,
+    limit?: number,
+  ): Promise<Conversation[]> {
+    const query: any = {
+      where: { userId },
+      order: { createdAt: 'DESC' },
+      select: ['id'],
+    };
+
+    if (limit) {
+      query.take = limit;
+    }
+
+    return this.conversationRepo.find(query);
   }
 
   /**

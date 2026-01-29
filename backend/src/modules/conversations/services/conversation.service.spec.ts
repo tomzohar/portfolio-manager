@@ -684,4 +684,50 @@ describe('ConversationService', () => {
       });
     });
   });
+
+  describe('findAllConversations', () => {
+    const userId = 'user-123';
+
+    it('should return all conversations for a user ordered by createdAt DESC', async () => {
+      // Arrange
+      const mockConversations = [
+        { id: 'thread-1', userId, createdAt: new Date() },
+        { id: 'thread-2', userId, createdAt: new Date() },
+      ] as Conversation[];
+
+      mockRepository.find.mockResolvedValue(mockConversations);
+
+      // Act
+      const result = await service.findAllConversations(userId);
+
+      // Assert
+      expect(mockRepository.find).toHaveBeenCalledWith({
+        where: { userId },
+        order: { createdAt: 'DESC' },
+        select: ['id'],
+      });
+      expect(result).toEqual(mockConversations);
+    });
+
+    it('should apply limit if provided', async () => {
+      // Arrange
+      const mockConversations = [
+        { id: 'thread-1', userId, createdAt: new Date() },
+      ] as Conversation[];
+
+      mockRepository.find.mockResolvedValue(mockConversations);
+
+      // Act
+      const result = await service.findAllConversations(userId, 5);
+
+      // Assert
+      expect(mockRepository.find).toHaveBeenCalledWith({
+        where: { userId },
+        order: { createdAt: 'DESC' },
+        select: ['id'],
+        take: 5,
+      });
+      expect(result).toEqual(mockConversations);
+    });
+  });
 });

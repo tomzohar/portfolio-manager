@@ -78,6 +78,7 @@ export class ChatPageComponent implements OnDestroy {
     if (currentThreadId && isValidThreadId(currentThreadId)) {
       this.facade.loadConversation(currentThreadId);
       this.facade.loadConversationMessages(currentThreadId);
+      this.facade.loadConversations(30); // Refresh history to ensure sidebar is in sync
     }
 
   });

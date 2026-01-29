@@ -9,7 +9,11 @@
     <lib-sidebar-section class="sidebar-recent-section">
       @if (isOpen()) {
         <h3 class="sidebar-hide-on-collapsed">History</h3>
-        <p class="no-chats-placeholder sidebar-hide-on-collapsed">No recent chats</p>
+        <app-chat-history-list 
+          [conversations]="conversations()"
+          [activeThreadId]="currentThreadId()"
+          (conversationSelected)="onConversationSelected($event)"
+        />
       } @else {
         <lib-icon name="history" [size]="24" class="sidebar-rail-icon" />
       }

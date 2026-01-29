@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Body, Param, UseGuards, Query } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -11,6 +11,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { ConversationService } from './services/conversation.service';
 import { UpdateConversationConfigDto } from './dto/update-conversation-config.dto';
+import { GetConversationsDto } from './dto/get-conversations.dto';
 import { Conversation } from './entities/conversation.entity';
 
 @ApiTags('conversations')
@@ -18,7 +19,23 @@ import { Conversation } from './entities/conversation.entity';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class ConversationsController {
-  constructor(private readonly conversationService: ConversationService) {}
+  constructor(private readonly conversationService: ConversationService) { }
+
+  @Get()
+  @ApiOperation({
+    summary: 'Get all conversations',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of conversations',
+    type: [Conversation],
+  })
+  async getConversations(
+    @CurrentUser() user: User,
+    @Query() query: GetConversationsDto,
+  ): Promise<Conversation[]> {
+    return this.conversationService.findAllConversations(user.id, query.limit);
+  }
 
   @Get(':threadId')
   @ApiOperation({

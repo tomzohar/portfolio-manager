@@ -176,5 +176,20 @@ export const ChatActions = createActionGroup({
      * Failed to load conversation
      */
     'Conversation Load Failed': props<{ error: string }>(),
+
+    /**
+     * Load list of all conversations for history
+     */
+    'Load Conversations': props<{ limit?: number }>(),
+
+    /**
+     * Conversations list loaded successfully
+     */
+    'Load Conversations Success': props<{ conversations: Conversation[] }>(),
+
+    /**
+     * Failed to load conversations list
+     */
+    'Load Conversations Failure': props<{ error: string }>(),
   },
 });
