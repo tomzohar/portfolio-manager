@@ -76,8 +76,10 @@ describe('StockScreenerTool', () => {
 
   it('should filter by sector using FMP screener', async () => {
     const input = { sector: 'Technology', limit: 5 };
-    const resultJson = (await tool.func(input)) as string;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const resultJson = await tool.func(input);
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const result = JSON.parse(resultJson) as ScreenerResult;
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -90,9 +92,10 @@ describe('StockScreenerTool', () => {
 
   it('should filter by fundamental metrics (PE) via enrichment', async () => {
     const input = { sector: 'Technology', peMax: 30 }; // AAPL PE is 25.5, should pass
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const resultJson = await tool.func(input);
 
-    const resultJson = (await tool.func(input)) as string;
-
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const result = JSON.parse(resultJson) as ScreenerResult;
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
