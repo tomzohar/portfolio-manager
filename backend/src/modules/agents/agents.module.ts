@@ -17,7 +17,9 @@ import { PortfolioService } from '../portfolio/portfolio.service';
 import { TransactionsService } from '../portfolio/transactions.service';
 import { UsersModule } from '../users/users.module';
 import { FinnhubApiService } from '../assets/services/finnhub-api.service';
+import { FmpApiService } from '../assets/services/fmp-api.service';
 import { AgentsController } from './agents.controller';
+import { createStockScreenerTool } from './tools/stock-screener.tool';
 import { ReasoningTrace } from './entities/reasoning-trace.entity';
 import { TokenUsage } from './entities/token-usage.entity';
 import { GeminiLlmService } from './services/gemini-llm.service';
@@ -84,6 +86,7 @@ export class AgentsModule {
     private readonly fredService: FredService,
     private readonly newsService: NewsService,
     private readonly finnhubService: FinnhubApiService, // New service injected
+    private readonly fmpService: FmpApiService, // Injected FMP Service
     private readonly geminiService: GeminiLlmService,
     private readonly portfolioService: PortfolioService,
     private readonly transactionsService: TransactionsService,
@@ -148,5 +151,9 @@ export class AgentsModule {
       createNewsSentimentTool(this.polygonService, this.grokService),
     );
     this.logger.log('Registered news_sentiment_scanner tool');
+    this.toolRegistry.registerTool(
+      createStockScreenerTool(this.fmpService, this.polygonService),
+    );
+    this.logger.log('Registered stock_screener tool');
   }
 }
