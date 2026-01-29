@@ -1,0 +1,231 @@
+{
+  "featureName": "Earnings Calendar Tool",
+  "description": "Provides visibility into upcoming and past earnings announcements, enabling the agent to warn users about high-volatility events and time recommendations appropriately. Prevents recommending trades immediately before major earnings reports that could cause unexpected price swings.",
+  
+  "feasibility": {
+    "status": "FULLY SUPPORTED",
+    "apiSupport": "Polygon.io provides comprehensive earnings calendar data via Corporate Events API",
+    "requiredEndpoints": [
+      "GET /vX/reference/corporate-events - Earnings announcements with dates, EPS, revenue, analyst estimates, surprise metrics"
+    ],
+    "capabilities": [
+      "Historical and upcoming earnings announcements",
+      "Actual vs estimated EPS and revenue (for past earnings)",
+      "Earnings surprise metrics",
+      "Fiscal period and confirmation status",
+      "Multi-ticker lookup and date range queries"
+    ],
+    "limitations": "Some smaller companies may not have confirmed earnings dates until close to the event"
+  },
+
+  "userStories": [
+    "User asks 'Should I buy NVDA?' and agent checks earnings calendar, finds earnings in 2 days, and warns: 'NVDA reports earnings in 2 days. Consider waiting for earnings clarity before entering position.'",
+    "User inquires 'When is AAPL's next earnings?' and receives exact date, time (if available), and analyst consensus estimates",
+    "User asks 'Show me stocks reporting earnings this week' and receives calendar of upcoming earnings with dates and expected times",
+    "User wants to know 'How did TSLA perform vs expectations last quarter?' and receives historical earnings data showing actual vs estimated EPS and revenue with surprise percentages"
+  ],
+
+  "userFlow": [
+    "User logs in and navigates to chat",
+    "User asks earnings-related question (e.g., 'When is MSFT earnings?') OR user asks for stock recommendation triggering automatic earnings check",
+    "Agent orchestrator determines earnings_calendar tool is needed",
+    "Agent calls earnings_calendar with ticker and optional date range",
+    "Tool fetches earnings data from Polygon Corporate Events API",
+    "Tool structures response with upcoming and recent past earnings",
+    "Agent receives earnings data with proper citations",
+    "Agent integrates earnings timing into recommendation (e.g., 'Wait until after earnings' vs 'Safe window, no earnings for 6 weeks')",
+    "User receives contextual advice considering earnings volatility risk",
+    "User can click citations to see detailed earnings data sources"
+  ],
+
+  "edgeCases": [
+    "Ticker has no confirmed earnings date (common for small companies or early in quarter)",
+    "Earnings date changed after initial confirmation (companies sometimes delay)",
+    "User asks about ticker that recently reported earnings but not yet confirmed next date",
+    "Multiple earnings events in query range (quarterly + annual)",
+    "After-hours earnings (need to clarify 'AMC' vs 'BMO' - after market close vs before market open)",
+    "Estimated earnings date vs confirmed earnings date (different confidence levels)",
+    "API returns no earnings data for ticker (may be new listing or no coverage)",
+    "User in different timezone - need to clarify earnings time in user's local time"
+  ],
+
+  "toolSchema": {
+    "name": "earnings_calendar",
+    "description": "Fetches upcoming and historical earnings announcements for tickers. Returns earnings dates, times, actual vs estimated EPS/revenue, and surprise metrics. Critical for timing investment decisions around high-volatility events.",
+    "parameters": {
+      "ticker": {
+        "type": "string",
+        "description": "Stock ticker symbol (e.g., AAPL, MSFT). Use '*' or omit to get calendar for multiple stocks",
+        "required": false
+      },
+      "from_date": {
+        "type": "string",
+        "description": "Start date for earnings calendar (YYYY-MM-DD). Default: today",
+        "format": "date",
+        "optional": true
+      },
+      "to_date": {
+        "type": "string",
+        "description": "End date for earnings calendar (YYYY-MM-DD). Default: 90 days from today",
+        "format": "date",
+        "optional": true
+      },
+      "include_historical": {
+        "type": "boolean",
+        "description": "Include past earnings with actual vs estimated data (default: true)",
+        "default": true
+      }
+    }
+  },
+
+  "outputStructure": {
+    "ticker": "string | undefined (if multi-ticker query)",
+    "company_name": "string | undefined",
+    "upcoming_earnings": [
+      {
+        "earnings_date": "string (YYYY-MM-DD)",
+        "earnings_time": "string | null (e.g., 'AMC' = after market close, 'BMO' = before market open)",
+        "confirmed": "boolean (true if confirmed, false if estimated)",
+        "fiscal_quarter": "string (e.g., 'Q4 2024')",
+        "fiscal_year": "number",
+        "analyst_estimates": {
+          "eps_consensus": "number | null",
+          "revenue_consensus": "number | null",
+          "num_analysts": "number | null"
+        },
+        "days_until_earnings": "number"
+      }
+    ],
+    "recent_earnings": [
+      {
+        "earnings_date": "string (YYYY-MM-DD)",
+        "fiscal_quarter": "string",
+        "fiscal_year": "number",
+        "actual": {
+          "eps": "number | null",
+          "revenue": "number | null"
+        },
+        "estimated": {
+          "eps": "number | null",
+          "revenue": "number | null"
+        },
+        "surprise": {
+          "eps_surprise": "number | null (actual - estimated)",
+          "eps_surprise_percent": "number | null",
+          "revenue_surprise": "number | null",
+          "revenue_surprise_percent": "number | null"
+        },
+        "days_since_earnings": "number"
+      }
+    ],
+    "calendar_summary": {
+      "next_earnings_in_days": "number | null",
+      "last_earnings_days_ago": "number | null",
+      "earnings_risk_level": "low | medium | high (based on proximity to next earnings)"
+    },
+    "last_updated": "string (ISO date)",
+    "error": "string | undefined"
+  },
+
+  "state": {
+    "description": "Tool is stateless. Each invocation fetches fresh earnings data from Polygon API.",
+    "caching": "Consider caching earnings calendar data for 4-6 hours as earnings dates don't change frequently",
+    "proactiveChecking": "When any other tool analyzes a ticker, earnings_calendar should be automatically called to check proximity to earnings (as guardrail)"
+  },
+
+  "confidence": {
+    "highConfidence": "Confirmed earnings date available for upcoming earnings, or complete actual vs estimated data for recent earnings",
+    "mediumConfidence": "Estimated earnings date available but not confirmed, or partial data for recent earnings",
+    "lowConfidence": "No earnings date information available (next earnings TBD)",
+    "refuseToAnswer": "Ticker not found or no earnings data exists. Agent should explain this may be due to company being too small, private, or newly listed."
+  },
+
+  "guardrails": {
+    "validationRules": [
+      "Date range should not exceed 365 days (performance consideration)",
+      "If earnings within 3 days, agent MUST warn user about high volatility risk",
+      "If earnings within 7 days, agent should mention timing in any recommendation",
+      "Clearly differentiate between confirmed vs estimated earnings dates"
+    ],
+    "recommendationLogic": {
+      "earnings_in_0_to_2_days": "Recommend AVOIDING new positions - 'High earnings volatility risk'",
+      "earnings_in_3_to_7_days": "CAUTION - 'Earnings approaching, consider waiting for clarity'",
+      "earnings_in_8_to_30_days": "NEUTRAL - Mention earnings are coming but reasonable window",
+      "earnings_30_plus_days_out": "LOW RISK - Safe window for trading recommendations"
+    },
+    "errorHandling": [
+      "No earnings data: Return message explaining lack of confirmed earnings date",
+      "API timeout: Retry once, fall back to 'Unable to confirm earnings timing - proceed with caution'",
+      "Invalid ticker: Clear error with suggestion to verify ticker symbol",
+      "Date parsing error: Validate dates before API call"
+    ]
+  },
+
+  "citations": {
+    "source": "Polygon.io Corporate Events API",
+    "structure": {
+      "source_type": "EARNINGS_DATA",
+      "provider": "Polygon.io",
+      "endpoint": "Corporate Events endpoint URL",
+      "earnings_date": "ISO date of earnings",
+      "fiscal_period": "Fiscal quarter/year",
+      "data_type": "confirmed | estimated",
+      "as_of_date": "When citation was generated (important for estimated dates which may change)"
+    },
+    "citationDisplay": "Each earnings event should be citeable. User can verify earnings date and analyst estimates."
+  },
+
+  "integrationPoints": {
+    "requiredServices": [
+      "PolygonApiService - Extend with getEarningsCalendar() and getCorporateEvents() methods",
+      "CitationService - Track earnings data citations"
+    ],
+    "newServiceNeeded": false,
+    "automaticIntegration": "IMPORTANT: Earnings check should be automatically triggered when technical_analyst or fundamental_analyst tools are called, to proactively warn about earnings risk",
+    "toolRegistration": "Register in agents.module.ts as earnings_calendar"
+  },
+
+  "testingStrategy": {
+    "unitTests": [
+      "Test days_until_earnings calculation",
+      "Test surprise percentage calculation (actual vs estimated)",
+      "Test earnings risk level determination logic",
+      "Test confirmed vs estimated date handling"
+    ],
+    "integrationTests": [
+      "Test real API call for ticker with known upcoming earnings (use major company like AAPL during earnings season)",
+      "Test historical earnings fetch with actual vs estimated data",
+      "Test multi-ticker calendar query",
+      "Verify citation creation for earnings events"
+    ],
+    "e2eTests": [
+      "User asks 'When is TSLA earnings?' and receives accurate date and time",
+      "User asks 'Should I buy NVDA?' within 2 days of earnings and receives warning about volatility risk",
+      "User asks 'How did AAPL do vs expectations last quarter?' and receives surprise metrics",
+      "Verify automatic earnings check triggers when using other analysis tools"
+    ]
+  },
+
+  "priority": "HIGH",
+  "estimatedEffort": "2-3 days",
+  "dependencies": [
+    "Polygon API subscription must include access to Corporate Events endpoints (may require paid tier)",
+    "Agent orchestration logic needs update to automatically call earnings_calendar for risk checking"
+  ],
+
+  "futureEnhancements": [
+    "Earnings whispers (unofficial estimates from alternative sources)",
+    "Post-earnings analysis: stock reaction to earnings beat/miss",
+    "Earnings transcript summaries (requires integration with earnings call APIs)",
+    "Alert user 24 hours before portfolio holdings' earnings",
+    "Historical earnings pattern analysis (e.g., 'AAPL typically beats estimates by 5%')",
+    "Guidance updates tracking (companies raising/lowering future earnings guidance)"
+  ],
+
+  "businessValue": {
+    "riskManagement": "Prevents users from entering positions immediately before high-volatility events",
+    "userTrust": "Shows agent is sophisticated enough to consider event risk, not just chart patterns",
+    "differentiation": "Many basic analysis tools ignore earnings timing - this is a professional-grade feature",
+    "legalProtection": "Warning users about upcoming earnings reduces liability for volatile price movements"
+  }
+}

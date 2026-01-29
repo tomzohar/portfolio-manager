@@ -1,0 +1,165 @@
+{
+  "project": "Fundamental Analyst Agent",
+  "version": "1.0.0",
+  "status": "DRAFT",
+  "definitions": {
+    "endpoints": {
+      "financials": "/vX/reference/financials"
+    },
+    "types": {
+      "FinancialPeriod": ["quarterly", "annual", "ttm"]
+    }
+  },
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Polygon API Financials Support",
+      "asA": "Developer",
+      "iWantTo": "fetch financial data from Polygon API",
+      "soThat": "I can access income statements and balance sheets",
+      "technicalTasks": [
+        {
+          "id": "TASK-001-01",
+          "component": "AssetsModule",
+          "file": "backend/src/modules/assets/types/polygon-api.types.ts",
+          "title": "Define Polygon Financials Types",
+          "description": "Add TypeScript interfaces for `PolygonFinancialsResponse` and `StockFinancial` matching the /vX/reference/financials endpoint structure.",
+          "acceptanceCriteria": [
+            "Interfaces created for response wrapper",
+            "Interfaces created for Financials (income_statement, balance_sheet, cash_flow, comprehensive_income)",
+            "Interfaces created for company metadata in response"
+          ],
+          "complexity": "Low",
+          "estimatedTime": "30m"
+        },
+        {
+          "id": "TASK-001-02",
+          "component": "AssetsModule",
+          "file": "backend/src/modules/assets/services/polygon-api.service.ts",
+          "title": "Implement getFinancials Method",
+          "description": "Add `getFinancials` method to `PolygonApiService`. Should accept `ticker`, `limit` (default 1), `timeframe` (annual/quarterly/ttm), and `sort` (date desc).",
+          "acceptanceCriteria": [
+            "Method signature: `getFinancials(ticker, limit?, timeframe?, sort?)`",
+            "Constructs correct URL: `/vX/reference/financials`",
+            "Handles 404/Empty results gracefully",
+            "Returns Observable<PolygonFinancialsResponse>"
+          ],
+          "complexity": "Medium",
+          "estimatedTime": "1h"
+        }
+      ]
+    },
+    {
+      "id": "US-002",
+      "title": "Fundamental Analyst Tool Scaffold",
+      "asA": "Agent Orchestrator",
+      "iWantTo": "have a registered fundamental_analyst tool",
+      "soThat": "I can route user queries about company fundamentals",
+      "technicalTasks": [
+        {
+          "id": "TASK-002-01",
+          "component": "AgentsModule",
+          "file": "backend/src/modules/agents/tools/fundamental-analyst.tool.ts",
+          "title": "Create Tool Class and Schema",
+          "description": "Create `fundamental-analyst.tool.ts`. Define Zod schema with `ticker` and `period` input. implement `createFundamentalAnalystTool` factory function.",
+          "acceptanceCriteria": [
+            "Tool name: 'fundamental_analyst'",
+            "Schema: ticker (string), period (enum: quarterly, annual, ttm)",
+            "Factory function returns DynamicStructuredTool"
+          ],
+          "complexity": "Low",
+          "estimatedTime": "30m"
+        },
+        {
+          "id": "TASK-002-02",
+          "component": "AgentsModule",
+          "file": "backend/src/modules/agents/agents.module.ts",
+          "title": "Register Tool in Module",
+          "description": "Import `createFundamentalAnalystTool` and add it to the providers/exports of `AgentsModule` (or wherever tools are aggregated).",
+          "acceptanceCriteria": [
+            "Tool is injectable",
+            "Available for the Agent to use"
+          ],
+          "complexity": "Low",
+          "estimatedTime": "15m"
+        }
+      ]
+    },
+    {
+      "id": "US-003",
+      "title": "Fundamental Analysis Logic",
+      "asA": "Investor",
+      "iWantTo": "see calculated ratios and metrics",
+      "soThat": "I can assess the company's value",
+      "technicalTasks": [
+        {
+          "id": "TASK-003-01",
+          "component": "AgentsModule",
+          "file": "backend/src/modules/agents/tools/fundamental-analyst.tool.ts",
+          "title": "Implement Data Fetching & Error Handling",
+          "description": "Inside the tool's `func`, call `polygonService.getFinancials`. Handle errors (invalid ticker, no data). Call `getTickerDetails` for company name.",
+          "acceptanceCriteria": [
+            "Fetches financials and details in parallel",
+            "Handles empty results with readable error",
+            "Handles API errors"
+          ],
+          "complexity": "Medium",
+          "estimatedTime": "1h"
+        },
+        {
+          "id": "TASK-003-02",
+          "component": "AgentsModule",
+          "file": "backend/src/modules/agents/tools/fundamental-analyst.tool.ts",
+          "title": "Implement Metric Extraction & Calculation",
+          "description": "Extract raw values (revenues, net income, assets, liabilities) from the response. Calculate derived metrics if not present (margins, growth if multiple periods fetched). Map to `FundamentalAnalysisResult` interface.",
+          "acceptanceCriteria": [
+            "Extracts Valuation: Market Cap, P/E (needs price - fetch snapshot if needed)",
+            "Extracts Profitability: ROE, ROA, Margins",
+            "Extracts Health: Current Ratio, Debt/Equity",
+            "Structures response according to output schema"
+          ],
+          "complexity": "High",
+          "estimatedTime": "2h"
+        }
+      ]
+    },
+    {
+      "id": "US-004",
+      "title": "Verification & Integration",
+      "asA": "QA Engineer",
+      "iWantTo": "ensure the tool produces accurate data",
+      "soThat": "users get reliable advice",
+      "technicalTasks": [
+        {
+          "id": "TASK-004-01",
+          "component": "AgentsModule",
+          "file": "backend/src/modules/agents/tools/fundamental-analyst.tool.spec.ts",
+          "title": "Unit Tests for Tool",
+          "description": "Write unit tests mocking PolygonResponse. Verify calculations and schema matching. Test edge cases (missing fields).",
+          "acceptanceCriteria": [
+            "Test: Valid AAPL response",
+            "Test: Missing fields handling",
+            "Test: API Error propagation",
+            "Test: Invalid Ticker"
+          ],
+          "complexity": "Medium",
+          "estimatedTime": "1h"
+        }
+      ]
+    }
+  ],
+  "edgeCases": [
+    {
+      "scenario": "Missing Financial Metrics",
+      "handling": "Return null/undefined for specific fields but return partial object. Allow 'Partial Data' state."
+    },
+    {
+      "scenario": "Private/OTC Companies",
+      "handling": "Return explicit 'Fundamental data not available for this ticker' error."
+    },
+    {
+      "scenario": "P/E Calculation without Price",
+      "handling": "If P/E provided by API, use it. If not, fetch Ticker Snapshot to get current price and calculate P/E manually (Price / EPS)."
+    }
+  ]
+}

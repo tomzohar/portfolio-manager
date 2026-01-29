@@ -1,0 +1,199 @@
+{
+  "featureName": "News & Sentiment Scanner Tool",
+  "description": "Provides context to price movements by fetching recent news headlines, analyst upgrades/downgrades, and sentiment scores for specific tickers. Answers the 'why' behind chart movements, enabling the agent to provide nuanced recommendations that consider both technical signals and market narrative.",
+  
+  "feasibility": {
+    "status": "FULLY SUPPORTED",
+    "apiSupport": "Polygon.io Stock News API with LLM-powered sentiment analysis",
+    "requiredEndpoints": [
+      "GET /v2/reference/news - Ticker news with sentiment scores and structured data extraction"
+    ],
+    "capabilities": [
+      "Real-time and historical news articles",
+      "Per-company sentiment analysis (bullish/bearish/neutral)",
+      "Ticker extraction and association",
+      "Article metadata (title, snippet, publisher, publishedUtc)"
+    ],
+    "limitations": "Sentiment analysis accuracy depends on LLM model quality. Some older articles may not have sentiment scores."
+  },
+
+  "userStories": [
+    "User asks 'Why did NVDA drop 10% today?' and receives recent news showing CEO resignation or disappointing earnings, with bearish sentiment score",
+    "User asks 'Should I buy the dip on TSLA?' and agent provides technical oversold signal combined with news sentiment showing the drop was due to temporary supply chain issue (not fundamental problem)",
+    "User inquires 'What's the news on AAPL?' and receives summary of recent headlines with sentiment breakdown (3 bullish, 2 neutral, 1 bearish) and highlights from each article",
+    "User asks 'Is the market overreacting to AMZN earnings?' and agent combines earnings news sentiment with technical indicators to provide informed opinion"
+  ],
+
+  "userFlow": [
+    "User logs in and navigates to chat page",
+    "User asks question requiring news context (e.g., 'Why is MSFT down?', 'Latest news on GOOGL')",
+    "Agent orchestrator determines news_sentiment_scanner tool is needed",
+    "Agent calls news_sentiment_scanner with ticker symbol and optional time range",
+    "Tool fetches recent news articles from Polygon API (last 7 days by default)",
+    "Tool extracts sentiment scores and structures response with article summaries",
+    "Agent receives news data with sentiment analysis and citations",
+    "Agent synthesizes news sentiment with technical/fundamental analysis if applicable",
+    "User receives contextualized answer explaining price movement with supporting news evidence",
+    "User can click citations to read full articles"
+  ],
+
+  "edgeCases": [
+    "Ticker has no recent news (small cap or low media coverage)",
+    "News is available but sentiment analysis failed or returned neutral for all articles",
+    "Multiple major news events on same day (earnings + acquisition announcement)",
+    "False positive: News mentions ticker but is about different company with similar name",
+    "API rate limit exceeded during high usage",
+    "User asks about delisted or invalid ticker",
+    "Breaking news event - sentiment may lag actual price impact by minutes/hours",
+    "News is paywalled - only headline/snippet available, limiting context"
+  ],
+
+  "toolSchema": {
+    "name": "news_sentiment_scanner",
+    "description": "Fetches recent news articles and analyst reports for a ticker with sentiment analysis (bullish/bearish/neutral). Provides context for price movements and helps identify market narrative. Returns structured news data with sentiment scores and article summaries.",
+    "parameters": {
+      "ticker": {
+        "type": "string",
+        "description": "Stock ticker symbol (e.g., AAPL, MSFT)",
+        "required": true
+      },
+      "days": {
+        "type": "number",
+        "description": "Number of days to look back for news (default: 7, max: 30)",
+        "default": 7,
+        "min": 1,
+        "max": 30
+      },
+      "limit": {
+        "type": "number",
+        "description": "Maximum number of articles to return (default: 10, max: 50)",
+        "default": 10,
+        "min": 1,
+        "max": 50
+      }
+    }
+  },
+
+  "outputStructure": {
+    "ticker": "string",
+    "company_name": "string",
+    "news_count": "number",
+    "sentiment_summary": {
+      "overall": "bullish | bearish | neutral",
+      "confidence": "number (0.0-1.0)",
+      "bullish_count": "number",
+      "bearish_count": "number",
+      "neutral_count": "number"
+    },
+    "articles": [
+      {
+        "title": "string",
+        "snippet": "string",
+        "publisher": "string",
+        "published_utc": "string (ISO date)",
+        "article_url": "string",
+        "sentiment": "bullish | bearish | neutral",
+        "sentiment_score": "number (-1.0 to 1.0, where -1 is very bearish, 1 is very bullish)",
+        "keywords": "string[] (e.g., ['earnings', 'acquisition', 'lawsuit'])"
+      }
+    ],
+    "date_range": {
+      "from": "string (ISO date)",
+      "to": "string (ISO date)"
+    },
+    "last_updated": "string (ISO date)",
+    "error": "string | undefined"
+  },
+
+  "state": {
+    "description": "Tool is stateless. Each invocation fetches fresh news data from Polygon API. No user data stored.",
+    "caching": "Consider caching news data for 15-30 minutes to reduce API calls, as news doesn't change that frequently"
+  },
+
+  "confidence": {
+    "highConfidence": "5+ recent articles available with clear sentiment consensus (>70% of articles agree on bullish/bearish direction)",
+    "mediumConfidence": "2-4 articles available or mixed sentiment (no clear consensus)",
+    "lowConfidence": "Only 1 article or all articles are neutral/unclear sentiment",
+    "refuseToAnswer": "No news available for ticker in requested time range. Agent should acknowledge lack of news and suggest this means either quiet period or low media coverage."
+  },
+
+  "guardrails": {
+    "validationRules": [
+      "Ticker must be valid stock symbol",
+      "Date range must be reasonable (max 30 days lookback)",
+      "Sentiment scores must be validated and normalized to -1.0 to 1.0 range",
+      "Each article must include citation with source URL and publish timestamp",
+      "Filter out spam/low-quality sources if identified"
+    ],
+    "errorHandling": [
+      "Invalid ticker: Return clear error suggesting user verify ticker symbol",
+      "No news found: Return message explaining ticker has no recent news coverage",
+      "API timeout: Retry once with shorter time range, then return graceful error",
+      "Sentiment extraction failed: Return articles without sentiment scores and note limitation"
+    ],
+    "contentSafety": [
+      "Do not make investment recommendations based solely on sentiment - always note that news should be combined with other analyses",
+      "Flag if all news is from single source (potential bias)",
+      "Warn if news is older than expected (e.g., user asks about 'today's news' but latest article is 3 days old)"
+    ]
+  },
+
+  "citations": {
+    "source": "Polygon.io Ticker News API",
+    "structure": {
+      "source_type": "NEWS_ARTICLE",
+      "provider": "Polygon.io",
+      "article_url": "Direct link to news article",
+      "publisher": "News source name",
+      "published_utc": "ISO date of publication",
+      "sentiment_provider": "Polygon.io LLM Sentiment Analysis"
+    },
+    "citationDisplay": "Each news article should be individually citeable. User can click citation to read full article on publisher's website."
+  },
+
+  "integrationPoints": {
+    "requiredServices": [
+      "PolygonApiService - Extend with getTickerNews() method",
+      "CitationService - Track news article citations with URLs"
+    ],
+    "newServiceNeeded": false,
+    "existingService": "Note: NewsService already exists but uses different news API. Evaluate if we should migrate to Polygon News API for consistency or keep both.",
+    "toolRegistration": "Register in agents.module.ts as news_sentiment_scanner"
+  },
+
+  "testingStrategy": {
+    "unitTests": [
+      "Test sentiment aggregation logic (calculating overall sentiment from individual articles)",
+      "Test date range calculation and validation",
+      "Test error handling for tickers with no news",
+      "Test sentiment score normalization"
+    ],
+    "integrationTests": [
+      "Test real API call to Polygon for ticker with known recent news (e.g., AAPL during earnings week)",
+      "Test citation creation for news articles",
+      "Verify output structure matches schema",
+      "Test caching mechanism if implemented"
+    ],
+    "e2eTests": [
+      "User asks 'Why did TSLA fall today?' and receives recent bearish news with sentiment analysis",
+      "User asks 'Latest news on NVDA' and receives structured news summary with sentiment breakdown",
+      "User provides ticker with no news and receives appropriate message",
+      "Verify citations are clickable and link to actual articles"
+    ]
+  },
+
+  "priority": "HIGH",
+  "estimatedEffort": "2-4 days",
+  "dependencies": [
+    "Polygon API subscription must include access to News endpoints",
+    "Decide whether to migrate from existing NewsService or run both in parallel",
+    "May want to add news sentiment to citations display UI for richer context"
+  ],
+
+  "futureEnhancements": [
+    "Analyst upgrades/downgrades detection (separate Polygon endpoint)",
+    "Social media sentiment integration (Twitter/Reddit for retail sentiment)",
+    "News impact scoring (correlate news with price movement magnitude)",
+    "Alert user if major news breaks during active chat session"
+  ]
+}

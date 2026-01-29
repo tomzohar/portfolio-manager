@@ -1,0 +1,57 @@
+{
+  "feature": "Enhanced Technical Analyst",
+  "userStory": [
+    "As a Day Trader, I want to request technical analysis on shorter timeframes (15m, 1h) to identify intraday entry points.",
+    "As a Swing Trader, I want to know if a price breakout is supported by volume (VWAP, OBV) to avoid fake-outs.",
+    "As a Portfolio Manager, I want to see automated Support & Resistance levels to objectively set stop-loss and take-profit orders.",
+    "As a Technical Analyst, I want the system to automatically detect candlestick patterns (Hammer, Doji) to spot potential trend reversals.",
+    "As a Sector Analyst, I want to compare a stock's relative strength against the market (SPY) to identify leaders vs laggards."
+  ],
+  "userFlow": [
+    "User asks: 'Analyze NVDA chart on the 1-hour timeframe'",
+    "System tool identifies 'NVDA' and interval '1h' (requires logic updates to support non-daily)",
+    "System fetches 1-hour OHLCV data from Polygon API (requires updating `PolygonApiService` to support time multipliers)",
+    "System calculates indicators (plus new VWAP, OBV)",
+    "System identifies candlestick patterns (Hammer, Engulfing)",
+    "System identifies Pivot Points and key Support/Resistance levels",
+    "System fetches SPY data for the same period and calculates Comparative Relative Strength",
+    "System returns a JSON payload with all new metrics",
+    "Agent interprets the data: 'NVDA is forming a Bullish Hammer on the 1h chart at the $120 support level with high relative volume...'"
+  ],
+  "technicalRequirements": [
+    {
+      "component": "PolygonApiService",
+      "requirement": "Refactor `getAggregates` to accept `timespan` (minute, hour, day) and `multiplier` (1, 5, 15) arguments to support 15m, 1h intervals."
+    },
+    {
+      "component": "TechnicalAnalystTool",
+      "requirement": "Update schema to accept `interval` enum ('15m', '1h', '1d', '1wk'). Map these to Polygon multiplier/timespan."
+    },
+    {
+      "component": "TechnicalAnalystTool",
+      "requirement": "Integrate VWAP and OBV from `technicalindicators` library."
+    },
+    {
+      "component": "TechnicalAnalystTool",
+      "requirement": "Implement Pivot Point calculation (High+Low+Close)/3 and standard S1/S2/R1/R2 formulas."
+    },
+    {
+      "component": "TechnicalAnalystTool",
+      "requirement": "Integrate Candlestick detection (Doji, Hammer, Engulfing) using `technicalindicators`."
+    },
+    {
+      "component": "TechnicalAnalystTool",
+      "requirement": "Implement relative strength fetch: When analyzing Ticker X, also fetch SPY (cached preferred) and calculate ratio array."
+    }
+  ],
+  "edgeCases": [
+    "User requests 15m data for a stock with low liquidity (might have empty bars)",
+    "User requests a timeframe that exceeds Polygon's historical data limits for that granularity (e.g., 15m data for 5 years ago)",
+    "Polygon API rate limits reached due to double-fetching (Target + SPY)",
+    "Stock is recently IPO'd and doesn't have enough data for 200 SMA or weekly candles",
+    "Market is closed (weekend/holiday) - ensure analysis reflects 'last closing session' clearly"
+  ],
+  "state": "The tool is stateless, but the output suggests caching SPY data (market benchmark) to avoid redundant API calls during the same session.",
+  "confidence": "Refuse interval analysis if data points are < 50 for the requested period. Warn if volume is extremely low (illiquid).",
+  "guardrails": "Default to 'Daily' if interval is ambiguous. If Pivot Points are too close to current price (<0.5%), treat as 'testing level' rather than distinct support/resistance."
+}

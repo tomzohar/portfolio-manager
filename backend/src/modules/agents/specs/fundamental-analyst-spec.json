@@ -1,0 +1,176 @@
+{
+  "featureName": "Fundamental Analyst Tool",
+  "description": "Analyzes the financial health of a company by fetching key fundamental metrics including P/E ratio, revenue growth, free cash flow, debt-to-equity, profit margins, and other valuation/profitability indicators. Enables the agent to combine technical and fundamental analysis for stronger investment recommendations.",
+  
+  "feasibility": {
+    "status": "FULLY SUPPORTED",
+    "apiSupport": "Polygon.io Financials API provides comprehensive fundamental data via dedicated endpoints",
+    "requiredEndpoints": [
+      "GET /vX/reference/financials - Income statements (revenue, margins, expenses, net income)",
+      "GET /vX/reference/financials/ratios - Financial ratios (P/E, P/S, EV/EBITDA, ROE, ROA, Current Ratio, Debt/Equity, FCF, Market Cap)"
+    ],
+    "limitations": "Primarily covers US market. Some smaller companies may have limited fundamental data coverage."
+  },
+
+  "userStories": [
+    "User asks 'Is AAPL a good buy?' and receives a response combining technical signals (RSI, MACD) with fundamental analysis (P/E ratio, revenue growth, profit margins) for a holistic recommendation",
+    "User asks 'Analyze TSLA fundamentals' and receives detailed financial health metrics including profitability ratios, valuation metrics, and growth indicators",
+    "User compares two stocks and the agent provides fundamental comparison highlighting which company has better financial health based on debt levels, profitability, and growth metrics",
+    "User asks 'Find me undervalued tech stocks' and the agent uses the fundamental analyst to filter stocks with low P/E ratios combined with strong revenue growth"
+  ],
+
+  "userFlow": [
+    "User logs in using email and password",
+    "User navigates to chat page",
+    "User selects or creates a conversation",
+    "User asks a question requiring fundamental analysis (e.g., 'Is IREN a buy?', 'Analyze NVDA fundamentals')",
+    "Agent orchestrator determines fundamental_analyst tool is needed",
+    "Agent calls fundamental_analyst tool with ticker symbol",
+    "Tool fetches financial ratios and income statement data from Polygon API",
+    "Tool calculates key metrics and structures the response",
+    "Agent receives fundamental analysis data with proper citations",
+    "Agent synthesizes fundamental data with other analyses (technical, macro) if applicable",
+    "User receives comprehensive investment recommendation with both technical and fundamental reasoning",
+    "User can click citations to verify data sources"
+  ],
+
+  "edgeCases": [
+    "Ticker symbol is invalid or not found in Polygon database",
+    "Company is too small or private - fundamental data not available",
+    "Recent IPO with limited historical financial data (< 1 year of financials)",
+    "API rate limit exceeded during high usage periods",
+    "Fundamental data is outdated (last earnings report was > 3 months ago)",
+    "Non-US ticker provided but Polygon primarily covers US market",
+    "User compares stocks from different industries where ratios aren't directly comparable (e.g., tech vs banking P/E ratios)"
+  ],
+
+  "toolSchema": {
+    "name": "fundamental_analyst",
+    "description": "Analyzes fundamental financial health of a company including valuation ratios (P/E, P/S, EV/EBITDA), profitability metrics (ROE, ROA, Profit Margins), liquidity (Current Ratio), leverage (Debt/Equity), and growth indicators (Revenue Growth, Free Cash Flow). Returns comprehensive fundamental analysis to complement technical indicators.",
+    "parameters": {
+      "ticker": {
+        "type": "string",
+        "description": "Stock ticker symbol (e.g., AAPL, MSFT)",
+        "required": true
+      },
+      "period": {
+        "type": "string",
+        "description": "Financial period to analyze: 'quarterly', 'annual', or 'ttm' (trailing twelve months)",
+        "enum": ["quarterly", "annual", "ttm"],
+        "default": "ttm"
+      }
+    }
+  },
+
+  "outputStructure": {
+    "ticker": "string",
+    "company_name": "string",
+    "valuation": {
+      "pe_ratio": "number | null",
+      "ps_ratio": "number | null",
+      "pb_ratio": "number | null",
+      "ev_to_ebitda": "number | null",
+      "market_cap": "number | null"
+    },
+    "profitability": {
+      "roe": "number | null (Return on Equity %)",
+      "roa": "number | null (Return on Assets %)",
+      "net_margin": "number | null (%)",
+      "operating_margin": "number | null (%)",
+      "gross_margin": "number | null (%)"
+    },
+    "financial_health": {
+      "current_ratio": "number | null",
+      "debt_to_equity": "number | null",
+      "free_cash_flow": "number | null"
+    },
+    "growth": {
+      "revenue_growth_yoy": "number | null (%)",
+      "earnings_growth_yoy": "number | null (%)"
+    },
+    "period": "string (quarterly/annual/ttm)",
+    "fiscal_period": "string (e.g., 'Q4 2024')",
+    "last_updated": "string (ISO date)",
+    "error": "string | undefined"
+  },
+
+  "state": {
+    "description": "Tool is stateless. Each invocation fetches fresh fundamental data from Polygon API. No user data is stored by this tool.",
+    "caching": "Consider implementing caching layer to reduce API calls for same ticker within short time window (e.g., 1 hour cache)"
+  },
+
+  "confidence": {
+    "highConfidence": "All key metrics available (P/E, revenue growth, margins, debt ratios) and data is recent (< 90 days old)",
+    "mediumConfidence": "Some metrics missing but core valuation and profitability data available",
+    "lowConfidence": "More than 50% of metrics unavailable or data is stale (> 6 months old)",
+    "refuseToAnswer": "Ticker not found, company is private, or fundamental data completely unavailable. Tool should return error message guiding user to try different ticker."
+  },
+
+  "guardrails": {
+    "validationRules": [
+      "Ticker must be valid US stock symbol",
+      "API response must be validated before returning to agent",
+      "Null values should be explicitly handled and communicated in response",
+      "All financial metrics must include proper citations with source URL and data timestamp"
+    ],
+    "errorHandling": [
+      "Invalid ticker: Return clear error message suggesting user verify ticker symbol",
+      "No data available: Explain that fundamental data is not available for this ticker (may be too small, private, or non-US)",
+      "API timeout: Retry once, then return graceful error message",
+      "Partial data: Return available metrics with clear indication of which metrics are missing"
+    ],
+    "rateRecovery": [
+      "Implement exponential backoff for API rate limit errors",
+      "Queue requests if rate limit hit",
+      "Inform user if data fetch is delayed due to rate limits"
+    ]
+  },
+
+  "citations": {
+    "source": "Polygon.io Financials API",
+    "structure": {
+      "source_type": "API",
+      "provider": "Polygon.io",
+      "endpoint": "Reference endpoint URL (e.g., /v2/reference/financials/AAPL/ratios)",
+      "timestamp": "ISO date of data point",
+      "fiscal_period": "Fiscal period of the data (Q4 2024, FY 2024, TTM)"
+    },
+    "citationDisplay": "Each metric should be citeable individually. User should be able to click citation to see source data and timestamp."
+  },
+
+  "integrationPoints": {
+    "requiredServices": [
+      "PolygonApiService - Extend with new methods for financial ratios and income statements",
+      "CitationService - Track and store fundamental data citations"
+    ],
+    "newServiceNeeded": false,
+    "toolRegistration": "Register in agents.module.ts alongside existing technical_analyst and macro_analyst tools"
+  },
+
+  "testingStrategy": {
+    "unitTests": [
+      "Test fundamental analysis calculation with mock Polygon API responses",
+      "Test error handling for invalid tickers",
+      "Test null value handling for missing metrics",
+      "Test period parameter parsing (quarterly/annual/ttm)"
+    ],
+    "integrationTests": [
+      "Test real API call to Polygon for known ticker (AAPL)",
+      "Test citation creation and storage",
+      "Verify data structure matches schema"
+    ],
+    "e2eTests": [
+      "User asks 'Analyze AAPL fundamentals' and receives complete fundamental analysis",
+      "User asks 'Is TSLA overvalued?' and agent uses fundamental_analyst tool to compare P/E ratio against industry average",
+      "User provides invalid ticker and receives clear error message"
+    ]
+  },
+
+  "priority": "HIGH",
+  "estimatedEffort": "3-5 days",
+  "dependencies": [
+    "Polygon API subscription must include access to Financials endpoints",
+    "PolygonApiService needs extension for new endpoints",
+    "May need to add industry average data for comparative analysis (future enhancement)"
+  ]
+}
