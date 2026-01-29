@@ -6,7 +6,7 @@ import { GrokLlmService } from './grok-llm.service';
 // Mock AI SDK
 const mockGenerateText = jest.fn();
 jest.mock('ai', () => ({
-    generateText: (args: any) => mockGenerateText(args),
+    generateText: (args: unknown) => mockGenerateText(args) as Promise<unknown>,
 }));
 
 const mockXaiModel = jest.fn();
@@ -16,13 +16,14 @@ const mockWebSearch = jest.fn();
 
 jest.mock('@ai-sdk/xai', () => ({
     createXai: jest.fn().mockImplementation(() => {
-        const provider = (modelId: string) => mockXaiModel(modelId);
-        (provider as any).responses = mockXaiResponses;
-        (provider as any).tools = {
-            xSearch: mockXaiSearch,
-            webSearch: mockWebSearch,
-        };
-        return provider;
+        const provider = (modelId: string) => mockXaiModel(modelId) as unknown;
+        return Object.assign(provider, {
+            responses: mockXaiResponses,
+            tools: {
+                xSearch: mockXaiSearch,
+                webSearch: mockWebSearch,
+            },
+        });
     }),
 }));
 

@@ -3,8 +3,8 @@ import { GrokSentimentResponse } from '../types/news-sentiment.types';
 
 /**
  * News Sentiment Analysis Prompt
- * 
- * Used to analyze news articles for a specific ticker and produce 
+ *
+ * Used to analyze news articles for a specific ticker and produce
  * structured sentiment data.
  */
 export const NEWS_SENTIMENT_PROMPT = `You are a Senior Market Analyst specializing in news sentiment analysis.
@@ -40,21 +40,20 @@ Guidelines:
  * @returns Formatted prompt string
  */
 export function buildSentimentPrompt(
-    ticker: string,
-    articles: PolygonNewsArticle[],
-    currentDate: string,
+  ticker: string,
+  articles: PolygonNewsArticle[],
+  currentDate: string,
 ): string {
-    const articlesList = articles
-        .map(
-            (a, i) =>
-                `${i + 1}. [${a.publisher.name}] ${a.title}\n   Published: ${a.published_utc}\n   ${a.description || 'No description'}`,
-        )
-        .join('\n\n');
+  const articlesList = articles
+    .map(
+      (a, i) =>
+        `${i + 1}. [${a.publisher.name}] ${a.title}\n   Published: ${a.published_utc}\n   ${a.description || 'No description'}`,
+    )
+    .join('\n\n');
 
-    return NEWS_SENTIMENT_PROMPT
-        .replace('{{currentDate}}', currentDate)
-        .replace('{{ticker}}', ticker)
-        .replace('{{articlesList}}', articlesList);
+  return NEWS_SENTIMENT_PROMPT.replace('{{currentDate}}', currentDate)
+    .replace('{{ticker}}', ticker)
+    .replace('{{articlesList}}', articlesList);
 }
 
 /**
@@ -62,38 +61,40 @@ export function buildSentimentPrompt(
  * @param responseText - Raw LLM response
  * @returns Parsed GrokSentimentResponse or null on failure
  */
-export function parseGrokResponse(responseText: string): GrokSentimentResponse | null {
-    try {
-        let cleanText = responseText.trim();
+export function parseGrokResponse(
+  responseText: string,
+): GrokSentimentResponse | null {
+  try {
+    let cleanText = responseText.trim();
 
-        // Remove markdown code blocks if present
-        if (cleanText.includes('```json')) {
-            cleanText = cleanText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-        } else if (cleanText.includes('```')) {
-            cleanText = cleanText.replace(/```\n?/g, '');
-        }
-
-        const parsed = JSON.parse(cleanText.trim()) as GrokSentimentResponse;
-
-        // Validate required fields
-        if (
-            !parsed.overall_sentiment ||
-            !['bullish', 'bearish', 'neutral'].includes(parsed.overall_sentiment)
-        ) {
-            parsed.overall_sentiment = 'neutral';
-        }
-
-        if (
-            typeof parsed.confidence !== 'number' ||
-            parsed.confidence < 0 ||
-            parsed.confidence > 1
-        ) {
-            parsed.confidence = 0.5;
-        }
-
-        return parsed;
-    } catch (error) {
-        console.warn('Failed to parse Grok sentiment response:', error);
-        return null;
+    // Remove markdown code blocks if present
+    if (cleanText.includes('```json')) {
+      cleanText = cleanText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+    } else if (cleanText.includes('```')) {
+      cleanText = cleanText.replace(/```\n?/g, '');
     }
+
+    const parsed = JSON.parse(cleanText.trim()) as GrokSentimentResponse;
+
+    // Validate required fields
+    if (
+      !parsed.overall_sentiment ||
+      !['bullish', 'bearish', 'neutral'].includes(parsed.overall_sentiment)
+    ) {
+      parsed.overall_sentiment = 'neutral';
+    }
+
+    if (
+      typeof parsed.confidence !== 'number' ||
+      parsed.confidence < 0 ||
+      parsed.confidence > 1
+    ) {
+      parsed.confidence = 0.5;
+    }
+
+    return parsed;
+  } catch (error) {
+    console.warn('Failed to parse Grok sentiment response:', error);
+    return null;
+  }
 }
