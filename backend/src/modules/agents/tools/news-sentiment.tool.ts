@@ -9,7 +9,12 @@ import {
     ArticleSentiment,
     GrokSentimentResponse,
     Sentiment,
+    XSentimentSummary,
 } from '../types/news-sentiment.types';
+import {
+    buildSentimentPrompt,
+    parseGrokResponse,
+} from '../prompts';
 
 /**
  * News Sentiment Scanner Tool
@@ -63,91 +68,7 @@ export function calculateDateRange(days: number): { from: string; to: string } {
     return { from: fromStr, to };
 }
 
-/**
- * Build sentiment analysis prompt for Grok
- * @param ticker - Stock ticker symbol
- * @param articles - Array of news articles
- * @param currentDate - Current date for context
- * @returns Formatted prompt string
- */
-function buildSentimentPrompt(
-    ticker: string,
-    articles: PolygonNewsArticle[],
-    currentDate: string,
-): string {
-    const articlesList = articles
-        .map(
-            (a, i) =>
-                `${i + 1}. [${a.publisher.name}] ${a.title}\n   Published: ${a.published_utc}\n   ${a.description || 'No description'}`,
-        )
-        .join('\n\n');
 
-    return `You are a Senior Market Analyst specializing in news sentiment analysis.
-
-Today's date is ${currentDate}. Analyze the following news articles for stock ticker ${ticker}.
-
-NEWS ARTICLES:
-${articlesList}
-
-Provide your analysis in JSON format ONLY (no markdown code blocks):
-{
-  "article_sentiments": [
-    { "title": "Article title", "sentiment": "bullish|bearish|neutral", "score": -1.0 to 1.0 }
-  ],
-  "overall_sentiment": "bullish|bearish|neutral",
-  "confidence": 0.0-1.0,
-  "recommendation": "Brief 1-2 sentence investment context",
-  "key_narratives": ["narrative1", "narrative2"],
-  "risk_factors": ["risk1", "risk2"]
-}
-
-Guidelines:
-- Score range: -1.0 (very bearish) to 1.0 (very bullish), 0 is neutral
-- Be objective and data-driven
-- Confidence reflects how clear the sentiment signal is
-- Keep recommendation concise and actionable`;
-}
-
-/**
- * Parse Grok's sentiment response
- * @param responseText - Raw LLM response
- * @returns Parsed GrokSentimentResponse or null on failure
- */
-function parseGrokResponse(responseText: string): GrokSentimentResponse | null {
-    try {
-        let cleanText = responseText.trim();
-
-        // Remove markdown code blocks if present
-        if (cleanText.includes('```json')) {
-            cleanText = cleanText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-        } else if (cleanText.includes('```')) {
-            cleanText = cleanText.replace(/```\n?/g, '');
-        }
-
-        const parsed = JSON.parse(cleanText.trim()) as GrokSentimentResponse;
-
-        // Validate required fields
-        if (
-            !parsed.overall_sentiment ||
-            !['bullish', 'bearish', 'neutral'].includes(parsed.overall_sentiment)
-        ) {
-            parsed.overall_sentiment = 'neutral';
-        }
-
-        if (
-            typeof parsed.confidence !== 'number' ||
-            parsed.confidence < 0 ||
-            parsed.confidence > 1
-        ) {
-            parsed.confidence = 0.5;
-        }
-
-        return parsed;
-    } catch (error) {
-        console.warn('Failed to parse Grok sentiment response:', error);
-        return null;
-    }
-}
 
 /**
  * Validate and normalize sentiment value
@@ -218,7 +139,7 @@ export function createNewsSentimentTool(
     return new DynamicStructuredTool({
         name: 'news_sentiment_scanner',
         description:
-            'Fetches recent news articles for a ticker and analyzes sentiment (bullish/bearish/neutral). ' +
+            'Fetches recent news articles and social sentiment from X for a ticker and analyzes sentiment. ' +
             'Provides context for price movements and helps identify market narrative. ' +
             'Use when user asks about news, why a stock moved, or wants sentiment analysis.',
         schema: NewsSentimentSchema,
@@ -244,12 +165,25 @@ export function createNewsSentimentTool(
                     // Continue without company name
                 }
 
-                // 2. Fetch news articles
-                const articles = await firstValueFrom(
-                    polygonService.getTickerNews(ticker, limit, dateRange.from),
-                ) as PolygonNewsArticle[];
+                // 2. Fetch data (News and X Sentiment concurrently)
+                const [articles, xData] = await Promise.all([
+                    firstValueFrom(
+                        polygonService.getTickerNews(ticker, limit, dateRange.from),
+                    ).catch(() => [] as PolygonNewsArticle[]),
+                    grokService.generateWithXSearch(
+                        `Analyze the current market sentiment and conversation on X (Twitter) for stock ticker $${ticker} between ${dateRange.from} and ${dateRange.to}. 
+                         Provide a concise summary of the prevailing moods, key discussion points, and overall sentiment (bullish, bearish, or neutral).`,
+                        {
+                            fromDate: dateRange.from,
+                            toDate: dateRange.to
+                        }
+                    ).catch(() => null)
+                ]);
 
-                if (!articles || articles.length === 0) {
+                // Fallback for types
+                const newsArticles = (articles || []) as PolygonNewsArticle[];
+
+                if (newsArticles.length === 0 && !xData) {
                     const noNewsResult: NewsSentimentOutput = {
                         ticker,
                         company_name: companyName,
@@ -263,9 +197,9 @@ export function createNewsSentimentTool(
                         },
                         articles: [],
                         combined_analysis: {
-                            recommendation: `No recent news found for ${ticker} in the last ${days} days. This could indicate a quiet period or low media coverage.`,
+                            recommendation: `No recent news or X social activity found for ${ticker} in the last ${days} days.`,
                             key_narratives: [],
-                            risk_factors: ['No recent news available for analysis'],
+                            risk_factors: ['No recent data available for analysis'],
                         },
                         date_range: dateRange,
                         last_updated: currentDate,
@@ -273,22 +207,25 @@ export function createNewsSentimentTool(
                     return JSON.stringify(noNewsResult);
                 }
 
-                // 3. Analyze sentiment with Grok
-                const prompt = buildSentimentPrompt(ticker, articles as PolygonNewsArticle[], currentDate);
+                // 3. Analyze sentiment with Grok (only if we have articles)
                 let grokResponse: GrokSentimentResponse | null = null;
-
-                try {
-                    const llmResult = await grokService.generateContent(prompt);
-                    grokResponse = parseGrokResponse(llmResult.text);
-                } catch (error) {
-                    console.warn(
-                        'Grok sentiment analysis failed, using basic analysis:',
-                        error,
-                    );
+                if (newsArticles.length > 0) {
+                    const prompt = buildSentimentPrompt(ticker, newsArticles, currentDate);
+                    try {
+                        const llmResult = await grokService.generateContent(prompt);
+                        if (llmResult?.text) {
+                            grokResponse = parseGrokResponse(llmResult.text);
+                        }
+                    } catch (error) {
+                        console.warn(
+                            'Grok sentiment analysis failed, using basic analysis:',
+                            error,
+                        );
+                    }
                 }
 
                 // 4. Build article sentiments
-                const articleSentiments: ArticleSentiment[] = (articles as PolygonNewsArticle[]).map(
+                const articleSentiments: ArticleSentiment[] = newsArticles.map(
                     (article, index) => {
                         const grokArticle = grokResponse?.article_sentiments?.[index];
 
@@ -318,18 +255,35 @@ export function createNewsSentimentTool(
                 const combinedAnalysis = {
                     recommendation:
                         grokResponse?.recommendation ||
-                        `Analyzed ${(articles as PolygonNewsArticle[])?.length} recent news articles for ${ticker}.`,
+                        `Analyzed ${newsArticles.length} recent news articles for ${ticker}.`,
                     key_narratives: grokResponse?.key_narratives || [],
                     risk_factors: grokResponse?.risk_factors || [],
                 };
+
+                // 6.5 Prepare X sentiment summary
+                let xSentiment: XSentimentSummary | undefined;
+                if (xData) {
+                    // Extract overall sentiment from X text
+                    const xTextLower = xData.text.toLowerCase();
+                    let xOverall: Sentiment = 'neutral';
+                    if (xTextLower.includes('bullish')) xOverall = 'bullish';
+                    else if (xTextLower.includes('bearish')) xOverall = 'bearish';
+
+                    xSentiment = {
+                        overall: xOverall,
+                        summary: xData.text,
+                        sources: xData.sources,
+                    };
+                }
 
                 // 7. Build final result
                 const result: NewsSentimentOutput = {
                     ticker,
                     company_name: companyName,
-                    news_count: (articles as PolygonNewsArticle[])?.length || 0,
+                    news_count: newsArticles.length,
                     sentiment_summary: sentimentSummary,
                     articles: articleSentiments,
+                    x_sentiment: xSentiment,
                     combined_analysis: combinedAnalysis,
                     date_range: dateRange,
                     last_updated: currentDate,

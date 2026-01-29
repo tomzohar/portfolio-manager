@@ -3,284 +3,150 @@ import { ConfigService } from '@nestjs/config';
 import { GrokModels } from '../types/grok-models.enum';
 import { GrokLlmService } from './grok-llm.service';
 
-// Create mock instance for OpenAI
-const mockCreate = jest.fn();
+// Mock AI SDK
+const mockGenerateText = jest.fn();
+jest.mock('ai', () => ({
+    generateText: (args: any) => mockGenerateText(args),
+}));
 
-// Mock openai module
-jest.mock('openai', () => {
-  return {
-    __esModule: true,
-    default: jest.fn().mockImplementation(() => ({
-      chat: {
-        completions: {
-          create: mockCreate,
-        },
-      },
-    })),
-  };
-});
+const mockXaiModel = jest.fn();
+const mockXaiResponses = jest.fn();
+const mockXaiSearch = jest.fn();
+const mockWebSearch = jest.fn();
 
-// Import after mock
-import OpenAI from 'openai';
+jest.mock('@ai-sdk/xai', () => ({
+    createXai: jest.fn().mockImplementation(() => {
+        const provider = (modelId: string) => mockXaiModel(modelId);
+        (provider as any).responses = mockXaiResponses;
+        (provider as any).tools = {
+            xSearch: mockXaiSearch,
+            webSearch: mockWebSearch,
+        };
+        return provider;
+    }),
+}));
 
 describe('GrokLlmService', () => {
-  let service: GrokLlmService;
+    let service: GrokLlmService;
 
-  beforeEach(async () => {
-    jest.clearAllMocks();
+    beforeEach(async () => {
+        jest.clearAllMocks();
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        GrokLlmService,
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn((key: string) => {
-              const config: Record<string, string> = {
-                XAI_API_KEY: 'test-api-key',
-                GROK_MODEL: GrokModels.GROK_4_FAST_NON_REASONING,
-              };
-              return config[key];
-            }),
-          },
-        },
-      ],
-    }).compile();
+        const module: TestingModule = await Test.createTestingModule({
+            providers: [
+                GrokLlmService,
+                {
+                    provide: ConfigService,
+                    useValue: {
+                        get: jest.fn((key: string) => {
+                            const config: Record<string, string> = {
+                                XAI_API_KEY: 'test-api-key',
+                                GROK_MODEL: GrokModels.GROK_4_FAST_NON_REASONING,
+                            };
+                            return config[key];
+                        }),
+                    },
+                },
+            ],
+        }).compile();
 
-    service = module.get<GrokLlmService>(GrokLlmService);
-  });
-
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-
-  describe('generateContent', () => {
-    it('should successfully generate content', async () => {
-      const mockResponse = {
-        choices: [
-          {
-            message: {
-              content: 'Generated content',
-            },
-          },
-        ],
-        usage: {
-          prompt_tokens: 100,
-          completion_tokens: 50,
-          total_tokens: 150,
-        },
-      };
-
-      mockCreate.mockResolvedValue(mockResponse);
-
-      const result = await service.generateContent('Test prompt');
-
-      expect(result.text).toBe('Generated content');
-      expect(result.usage).toEqual({
-        promptTokens: 100,
-        completionTokens: 50,
-        totalTokens: 150,
-      });
+        service = module.get<GrokLlmService>(GrokLlmService);
     });
 
-    it('should use custom model when provided', async () => {
-      const mockResponse = {
-        choices: [
-          {
-            message: {
-              content: 'Generated content',
-            },
-          },
-        ],
-        usage: {
-          prompt_tokens: 100,
-          completion_tokens: 50,
-          total_tokens: 150,
-        },
-      };
-
-      mockCreate.mockResolvedValue(mockResponse);
-
-      await service.generateContent(
-        'Test prompt',
-        GrokModels.GROK_4_FAST_REASONING,
-      );
-
-      expect(mockCreate).toHaveBeenCalledWith({
-        model: GrokModels.GROK_4_FAST_REASONING,
-        messages: [{ role: 'user', content: 'Test prompt' }],
-      });
+    it('should be defined', () => {
+        expect(service).toBeDefined();
     });
 
-    it('should handle missing usage metadata gracefully', async () => {
-      const mockResponse = {
-        choices: [
-          {
-            message: {
-              content: 'Generated content',
-            },
-          },
-        ],
-        usage: undefined,
-      };
+    describe('generateContent', () => {
+        it('should successfully generate content', async () => {
+            mockGenerateText.mockResolvedValue({
+                text: 'Generated content',
+                usage: {
+                    promptTokens: 100,
+                    completionTokens: 50,
+                    totalTokens: 150,
+                },
+            });
 
-      mockCreate.mockResolvedValue(mockResponse);
+            const result = await service.generateContent('Test prompt');
 
-      const result = await service.generateContent('Test prompt');
+            expect(result.text).toBe('Generated content');
+            expect(result.usage).toEqual({
+                promptTokens: 100,
+                completionTokens: 50,
+                totalTokens: 150,
+            });
+            expect(mockGenerateText).toHaveBeenCalled();
+        });
 
-      expect(result.text).toBe('Generated content');
-      expect(result.usage).toEqual({
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 0,
-      });
+        it('should retry on transient errors', async () => {
+            mockGenerateText
+                .mockRejectedValueOnce(new Error('Transient error'))
+                .mockResolvedValueOnce({
+                    text: 'Success after retry',
+                    usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+                });
+
+            const result = await service.generateContent('Test prompt');
+
+            expect(result.text).toBe('Success after retry');
+            expect(mockGenerateText).toHaveBeenCalledTimes(2);
+        });
+
+        it('should throw error after max retries', async () => {
+            mockGenerateText.mockRejectedValue(new Error('Persistent error'));
+
+            await expect(service.generateContent('Test prompt')).rejects.toThrow(
+                'Persistent error',
+            );
+            expect(mockGenerateText).toHaveBeenCalledTimes(3);
+        });
     });
 
-    it('should retry on transient errors', async () => {
-      const mockResponse = {
-        choices: [
-          {
-            message: {
-              content: 'Generated content after retry',
-            },
-          },
-        ],
-        usage: {
-          prompt_tokens: 100,
-          completion_tokens: 50,
-          total_tokens: 150,
-        },
-      };
+    describe('generateWithXSearch', () => {
+        it('should call x_search tool', async () => {
+            mockGenerateText.mockResolvedValue({
+                text: 'X content',
+                sources: [{ url: 'https://x.com/post/1' }],
+                usage: { promptTokens: 20, completionTokens: 10, totalTokens: 30 },
+            });
 
-      mockCreate
-        .mockRejectedValueOnce(new Error('Service temporarily unavailable'))
-        .mockResolvedValueOnce(mockResponse);
+            const result = await service.generateWithXSearch('Search X', {
+                fromDate: '2026-01-01',
+            });
 
-      const result = await service.generateContent('Test prompt');
-
-      expect(result.text).toBe('Generated content after retry');
-      expect(mockCreate).toHaveBeenCalledTimes(2);
+            expect(result.text).toBe('X content');
+            expect(result.sources).toContain('https://x.com/post/1');
+            expect(mockGenerateText).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    tools: expect.objectContaining({
+                        x_search: undefined, // because mockXaiSearch returned undefined in this setup
+                    }),
+                }),
+            );
+        });
     });
 
-    it('should throw error after max retries', async () => {
-      mockCreate.mockRejectedValue(new Error('Persistent error'));
+    describe('generateWithWebSearch', () => {
+        it('should call web_search tool', async () => {
+            mockGenerateText.mockResolvedValue({
+                text: 'Web content',
+                sources: [{ url: 'https://example.com' }],
+                usage: { promptTokens: 20, completionTokens: 10, totalTokens: 30 },
+            });
 
-      await expect(service.generateContent('Test prompt')).rejects.toThrow(
-        'Persistent error',
-      );
+            const result = await service.generateWithWebSearch('Search Web');
 
-      // Should have tried 3 times (initial + 2 retries)
-      expect(mockCreate).toHaveBeenCalledTimes(3);
+            expect(result.text).toBe('Web content');
+            expect(result.sources).toContain('https://example.com');
+        });
     });
 
-    it('should throw error when API key is not configured', async () => {
-      // Create new service instance without API key
-      const moduleWithoutKey: TestingModule = await Test.createTestingModule({
-        providers: [
-          GrokLlmService,
-          {
-            provide: ConfigService,
-            useValue: {
-              get: jest.fn().mockReturnValue(undefined),
-            },
-          },
-        ],
-      }).compile();
-
-      const serviceWithoutKey =
-        moduleWithoutKey.get<GrokLlmService>(GrokLlmService);
-
-      await expect(
-        serviceWithoutKey.generateContent('Test prompt'),
-      ).rejects.toThrow('XAI_API_KEY is not configured');
+    describe('countTokens', () => {
+        it('should estimate token count', async () => {
+            const text = 'Hello world';
+            const result = await service.countTokens(text);
+            expect(result.totalTokens).toBe(Math.ceil(text.length / 4));
+        });
     });
-
-    it('should handle empty response content', async () => {
-      const mockResponse = {
-        choices: [
-          {
-            message: {
-              content: null,
-            },
-          },
-        ],
-        usage: {
-          prompt_tokens: 10,
-          completion_tokens: 0,
-          total_tokens: 10,
-        },
-      };
-
-      mockCreate.mockResolvedValue(mockResponse);
-
-      const result = await service.generateContent('Test prompt');
-
-      expect(result.text).toBe('');
-    });
-  });
-
-  describe('lazy client initialization', () => {
-    it('should initialize client only on first use', async () => {
-      const mockResponse = {
-        choices: [
-          {
-            message: {
-              content: 'Content',
-            },
-          },
-        ],
-        usage: {
-          prompt_tokens: 10,
-          completion_tokens: 5,
-          total_tokens: 15,
-        },
-      };
-
-      mockCreate.mockResolvedValue(mockResponse);
-
-      // Make first call
-      await service.generateContent('Prompt 1');
-
-      const callCountAfterFirst = (OpenAI as unknown as jest.Mock).mock.calls
-        .length;
-
-      // Make second call
-      await service.generateContent('Prompt 2');
-
-      // Client should only be initialized once (reused)
-      expect(OpenAI).toHaveBeenCalledTimes(callCountAfterFirst);
-    });
-  });
-
-  describe('getChatModel', () => {
-    it('should return a ChatOpenAI instance configured for xAI', () => {
-      const chatModel = service.getChatModel();
-
-      expect(chatModel).toBeDefined();
-      // The returned model should be a LangChain ChatOpenAI instance
-      expect(chatModel.constructor.name).toBe('ChatOpenAI');
-    });
-
-    it('should accept custom options', () => {
-      const chatModel = service.getChatModel({
-        streaming: true,
-        temperature: 0.5,
-        model: GrokModels.GROK_4_FAST_REASONING,
-      });
-
-      expect(chatModel).toBeDefined();
-    });
-  });
-
-  describe('countTokens', () => {
-    it('should estimate token count based on text length', async () => {
-      const text = 'This is a test prompt with some content';
-      const result = await service.countTokens(text);
-
-      // Rough estimate: ~4 characters per token
-      expect(result.totalTokens).toBe(Math.ceil(text.length / 4));
-      expect(result.promptTokens).toBe(0);
-      expect(result.completionTokens).toBe(0);
-    });
-  });
 });

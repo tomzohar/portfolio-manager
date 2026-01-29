@@ -18,4 +18,10 @@ export {
   buildReasoningPrompt,
 } from './cio-reasoning.prompt';
 
+export {
+  NEWS_SENTIMENT_PROMPT,
+  buildSentimentPrompt,
+  parseGrokResponse,
+} from './news-sentiment.prompt';
+
 export { formatTool, formatToolsSection } from './tool-formatter.util';
