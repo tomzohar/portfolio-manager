@@ -7,11 +7,24 @@ import { AssetsService } from './assets.service';
 import { PolygonApiService } from './services/polygon-api.service';
 import { FredService } from './services/fred.service';
 import { NewsService } from './services/news.service';
+import { FinnhubApiService } from './services/finnhub-api.service';
 
 @Module({
   imports: [HttpModule, JwtModule, UsersModule],
   controllers: [AssetsController],
-  providers: [AssetsService, PolygonApiService, FredService, NewsService],
-  exports: [AssetsService, PolygonApiService, FredService, NewsService],
+  providers: [
+    AssetsService,
+    PolygonApiService,
+    FredService,
+    NewsService,
+    FinnhubApiService,
+  ],
+  exports: [
+    AssetsService,
+    PolygonApiService,
+    FredService,
+    NewsService,
+    FinnhubApiService,
+  ],
 })
 export class AssetsModule {}

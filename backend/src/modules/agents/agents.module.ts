@@ -16,6 +16,7 @@ import { PortfolioModule } from '../portfolio/portfolio.module';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { TransactionsService } from '../portfolio/transactions.service';
 import { UsersModule } from '../users/users.module';
+import { FinnhubApiService } from '../assets/services/finnhub-api.service';
 import { AgentsController } from './agents.controller';
 import { ReasoningTrace } from './entities/reasoning-trace.entity';
 import { TokenUsage } from './entities/token-usage.entity';
@@ -33,6 +34,7 @@ import { createSearchHistoryTool } from './tools/search-history.tool';
 import { createSearchPortfoliosTool } from './tools/search-portfolios.tool';
 import { createTechnicalAnalystTool } from './tools/technical-analyst.tool';
 import { createFundamentalAnalystTool } from './tools/fundamental-analyst.tool';
+import { createEarningsCalendarTool } from './tools/earnings-calendar.tool';
 import { getCurrentTimeTool } from './tools/time.tool';
 
 @Module({
@@ -77,6 +79,7 @@ export class AgentsModule {
     private readonly polygonService: PolygonApiService,
     private readonly fredService: FredService,
     private readonly newsService: NewsService,
+    private readonly finnhubService: FinnhubApiService, // New service injected
     private readonly geminiService: GeminiLlmService,
     private readonly portfolioService: PortfolioService,
     private readonly transactionsService: TransactionsService,
@@ -132,5 +135,9 @@ export class AgentsModule {
       createFundamentalAnalystTool(this.polygonService),
     );
     this.logger.log('Registered fundamental_analyst tool');
+    this.toolRegistry.registerTool(
+      createEarningsCalendarTool(this.finnhubService),
+    );
+    this.logger.log('Registered earnings_calendar tool');
   }
 }
