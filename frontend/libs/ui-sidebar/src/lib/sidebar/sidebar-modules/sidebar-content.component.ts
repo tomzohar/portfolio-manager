@@ -2,11 +2,11 @@ import { Component, ChangeDetectionStrategy, ViewEncapsulation } from '@angular/
 import { CommonModule } from '@angular/common';
 
 @Component({
-    selector: 'app-sidebar-content',
-    standalone: true,
-    imports: [CommonModule],
-    template: `<ng-content></ng-content>`,
-    styles: [`
+  selector: 'lib-sidebar-content',
+  standalone: true,
+  imports: [CommonModule],
+  template: `<ng-content></ng-content>`,
+  styles: [`
     :host {
       display: block;
       flex: 1;
@@ -27,7 +27,7 @@ import { CommonModule } from '@angular/common';
       }
     }
   `],
-    encapsulation: ViewEncapsulation.None,
-    changeDetection: ChangeDetectionStrategy.OnPush,
+  encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SidebarContentComponent { }

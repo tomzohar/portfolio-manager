@@ -9,17 +9,19 @@ import { SidebarFooterComponent } from './sidebar-modules/sidebar-footer.compone
 
 @Component({
     template: `
-    <app-sidebar 
+    <lib-sidebar 
       [(isOpen)]="isOpen"
       [position]="position"
       [mode]="mode"
       [hasBackdrop]="hasBackdrop"
       [width]="width"
+      [collapsible]="collapsible"
+      [collapsedWidth]="collapsedWidth"
     >
-      <app-sidebar-header>Header Content</app-sidebar-header>
-      <app-sidebar-content>Main Content</app-sidebar-content>
-      <app-sidebar-footer>Footer Content</app-sidebar-footer>
-    </app-sidebar>
+      <lib-sidebar-header>Header Content</lib-sidebar-header>
+      <lib-sidebar-content>Main Content</lib-sidebar-content>
+      <lib-sidebar-footer>Footer Content</lib-sidebar-footer>
+    </lib-sidebar>
   `,
     imports: [
         SidebarComponent,
@@ -37,6 +39,8 @@ class TestHostComponent {
     mode: SidebarMode = 'side';
     hasBackdrop = false;
     width = '280px';
+    collapsible = false;
+    collapsedWidth = '64px';
 }
 
 describe('SidebarComponent', () => {
@@ -131,7 +135,7 @@ describe('SidebarComponent', () => {
             hostComponent.mode = 'over';
             fixture.detectChanges();
 
-            const spy = jest.spyOn(sidebarComponent.isOpenChange, 'emit');
+            const spy = jest.spyOn(sidebarComponent.isOpen, 'set');
 
             const sidebarDebugEl = fixture.debugElement.query(By.directive(SidebarComponent));
             const backdrop = sidebarDebugEl.query(By.css('.sidebar-backdrop'));
@@ -150,7 +154,7 @@ describe('SidebarComponent', () => {
             hostComponent.isOpen = true;
             fixture.detectChanges();
 
-            const spy = jest.spyOn(sidebarComponent.isOpenChange, 'emit');
+            const spy = jest.spyOn(sidebarComponent.isOpen, 'set');
 
             const sidebarDebugEl = fixture.debugElement.query(By.directive(SidebarComponent));
             const backdrop = sidebarDebugEl.query(By.css('.sidebar-backdrop'));
@@ -170,7 +174,7 @@ describe('SidebarComponent', () => {
             hostComponent.isOpen = true;
             fixture.detectChanges();
 
-            const spy = jest.spyOn(sidebarComponent.isOpenChange, 'emit');
+            const spy = jest.spyOn(sidebarComponent.isOpen, 'set');
 
             sidebarComponent.toggle();
             fixture.detectChanges();
@@ -189,7 +193,7 @@ describe('SidebarComponent', () => {
             hostComponent.isOpen = true;
             fixture.detectChanges();
 
-            const spy = jest.spyOn(sidebarComponent.isOpenChange, 'emit');
+            const spy = jest.spyOn(sidebarComponent.isOpen, 'set');
 
             sidebarComponent.close();
             fixture.detectChanges();
@@ -208,6 +212,54 @@ describe('SidebarComponent', () => {
             expect(sidebarElement.textContent).toContain('Header Content');
             expect(sidebarElement.textContent).toContain('Main Content');
             expect(sidebarElement.textContent).toContain('Footer Content');
+        });
+    });
+
+    describe('Rail Mode (Collapsible)', () => {
+        it('should apply collapsible class when input is true', () => {
+            hostComponent.collapsible = true;
+            fixture.detectChanges();
+            const element = fixture.debugElement.query(By.directive(SidebarComponent)).nativeElement;
+            expect(element.classList.contains('app-sidebar--collapsible')).toBe(true);
+        });
+
+        it('should set collapsedWidth style variable', () => {
+            hostComponent.collapsible = true;
+            hostComponent.collapsedWidth = '80px';
+            fixture.detectChanges();
+            const element = fixture.debugElement.query(By.directive(SidebarComponent)).nativeElement;
+            expect(element.style.getPropertyValue('--sidebar-collapsed-width')).toBe('80px');
+        });
+
+        it('should show toggle button when collapsible is true', () => {
+            hostComponent.collapsible = true;
+            fixture.detectChanges();
+            const toggleBtn = fixture.debugElement.query(By.css('.sidebar-toggle'));
+            expect(toggleBtn).toBeTruthy();
+        });
+
+        it('should hide toggle button when collapsible is false', () => {
+            hostComponent.collapsible = false;
+            fixture.detectChanges();
+            const toggleBtn = fixture.debugElement.query(By.css('.sidebar-toggle'));
+            expect(toggleBtn).toBeFalsy();
+        });
+
+        it('should toggle sidebar when clicking toggle button', () => {
+            hostComponent.collapsible = true;
+            hostComponent.isOpen = true;
+            fixture.detectChanges();
+
+            const toggleBtn = fixture.debugElement.query(By.css('.sidebar-toggle'));
+            toggleBtn.triggerEventHandler('click', null);
+            fixture.detectChanges();
+
+            expect(hostComponent.isOpen).toBe(false);
+
+            toggleBtn.triggerEventHandler('click', null);
+            fixture.detectChanges();
+
+            expect(hostComponent.isOpen).toBe(true);
         });
     });
 });

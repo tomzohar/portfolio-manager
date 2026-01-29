@@ -6,10 +6,10 @@
 
 .chat-page {
   display: flex;
-  flex-direction: column;
+  flex-direction: row; // Sidebar + Content
   height: 100%;
   background-color: var(--color-bg-primary);
-  padding-bottom: var(--spacing-xl);
+  overflow: hidden; // Contain scrollbars
 }
 
 .chat-page__header {

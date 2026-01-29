@@ -1,11 +1,20 @@
-@if (hasBackdrop && isOpen) {
-  <div class="sidebar-backdrop" (click)="onBackdropClick()"></div>
+@if (hasBackdrop() && isOpen()) {
+  <div class="sidebar-backdrop" role="button" tabindex="0" (click)="onBackdropClick()"></div>
 }
 
 <div class="sidebar-container">
-  <ng-content select="app-sidebar-header"></ng-content>
-  <ng-content select="app-sidebar-content"></ng-content>
+  @if (collapsible()) {
+    <lib-button 
+      class="sidebar-toggle" 
+      [config]="collapseSideBarButtonConfig()" 
+      (click)="toggle()" 
+      [attr.aria-label]="isOpen() ? 'Collapse sidebar' : 'Expand sidebar'"
+    />
+  }
+
+  <ng-content select="lib-sidebar-header"></ng-content>
+  <ng-content select="lib-sidebar-content"></ng-content>
   <!-- Allow direct content if no wrappers used -->
   <ng-content></ng-content>
-  <ng-content select="app-sidebar-footer"></ng-content>
+  <ng-content select="lib-sidebar-footer"></ng-content>
 </div>

@@ -1,14 +1,13 @@
-import { Component, ChangeDetectionStrategy, ViewEncapsulation, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ChangeDetectionStrategy, ViewEncapsulation, input } from '@angular/core';
 
 @Component({
-  selector: 'app-sidebar-section',
+  selector: 'lib-sidebar-section',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   template: `
-    @if (label) {
+    @if (label()) {
       <div class="sidebar-section-header">
-        <span class="label">{{ label }}</span>
+        <span class="label">{{ label() }}</span>
       </div>
     }
     <div class="sidebar-section-content">
@@ -38,5 +37,5 @@ import { CommonModule } from '@angular/common';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SidebarSectionComponent {
-  @Input() label?: string;
+  label = input<string>();
 }

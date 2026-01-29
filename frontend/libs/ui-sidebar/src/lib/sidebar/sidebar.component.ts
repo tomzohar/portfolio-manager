@@ -1,70 +1,75 @@
 import {
     Component,
-    Input,
-    Output,
-    EventEmitter,
-    ChangeDetectionStrategy
+    ChangeDetectionStrategy,
+    input,
+    computed,
+    model
 } from '@angular/core';
-import { SidebarHeaderComponent } from './sidebar-modules/sidebar-header.component';
-import { SidebarContentComponent } from './sidebar-modules/sidebar-content.component';
-import { SidebarFooterComponent } from './sidebar-modules/sidebar-footer.component';
-import { SidebarSectionComponent } from './sidebar-modules/sidebar-section.component';
+import { CommonModule } from '@angular/common';
+import { ButtonComponent, ButtonConfig } from '@stocks-researcher/styles';
 
 export type SidebarPosition = 'start' | 'end' | 'left' | 'right';
 export type SidebarMode = 'over' | 'side' | 'push';
 
 @Component({
-    selector: 'app-sidebar',
+    selector: 'lib-sidebar',
     standalone: true,
-    imports: [
-        SidebarHeaderComponent,
-        SidebarContentComponent,
-        SidebarFooterComponent,
-        SidebarSectionComponent
-    ],
+    imports: [CommonModule, ButtonComponent],
     templateUrl: './sidebar.component.html',
     styleUrl: './sidebar.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: {
         'class': 'app-sidebar',
-        '[class.app-sidebar--open]': 'isOpen',
-        '[class.app-sidebar--closed]': '!isOpen',
-        '[class.app-sidebar--start]': 'isStart',
-        '[class.app-sidebar--end]': '!isStart',
-        '[class.app-sidebar--over]': 'mode === "over"',
-        '[class.app-sidebar--side]': 'mode === "side"',
-        '[class.app-sidebar--push]': 'mode === "push"',
-        '[class.app-sidebar--backdrop]': 'hasBackdrop',
-        '[style.--sidebar-width]': 'width'
+        '[class.app-sidebar--open]': 'isOpen()',
+        '[class.app-sidebar--collapsible]': 'collapsible()',
+        '[class.app-sidebar--closed]': '!isOpen()',
+        '[class.app-sidebar--start]': 'isStart()',
+        '[class.app-sidebar--end]': '!isStart()',
+        '[class.app-sidebar--over]': 'mode() === "over"',
+        '[class.app-sidebar--side]': 'mode() === "side"',
+        '[class.app-sidebar--push]': 'mode() === "push"',
+        '[class.app-sidebar--backdrop]': 'hasBackdrop()',
+        '[style.--sidebar-width]': 'width()',
+        '[style.--sidebar-collapsed-width]': 'collapsedWidth()'
     }
 })
 export class SidebarComponent {
-    @Input() isOpen = true;
-    @Input() position: SidebarPosition = 'start';
-    @Input() mode: SidebarMode = 'side';
-    @Input() width = '280px';
-    @Input() hasBackdrop = false;
+    isOpen = model(true);
+    position = input<SidebarPosition>('start');
+    mode = input<SidebarMode>('side');
+    width = input('280px');
+    hasBackdrop = input(false);
 
-    @Output() isOpenChange = new EventEmitter<boolean>();
+    /** Whether the sidebar can be collapsed into a rail/mini-bar instead of hiding completely */
+    collapsible = input<boolean>(false);
 
-    get isStart(): boolean {
-        return this.position === 'start' || this.position === 'left';
-    }
+    /** Width when collapsed (if collapsible is true) */
+    collapsedWidth = input<string>('64px');
+
+    collapseSideBarButtonConfig = computed(() => {
+        return {
+            label: '',
+            variant: 'icon',
+            icon: this.isOpen() ? 'chevron_left' : 'chevron_right',
+            size: 'md',
+            color: 'primary'
+        } as ButtonConfig;
+    })
+
+    isStart = computed(() => this.position() === 'start' || this.position() === 'left');
 
     toggle() {
-        this.isOpen = !this.isOpen;
-        this.isOpenChange.emit(this.isOpen);
+        this.isOpen.set(!this.isOpen());
     }
 
     close() {
-        if (this.isOpen) {
-            this.isOpen = false;
-            this.isOpenChange.emit(this.isOpen);
+        if (this.isOpen()) {
+            this.isOpen.set(false);
         }
     }
 
     onBackdropClick() {
-        if (this.mode === 'over' || (this.mode === 'push' && this.hasBackdrop)) {
+        if (this.mode() === 'over' || (this.mode() === 'push' && this.hasBackdrop())) {
             this.close();
         }
     }

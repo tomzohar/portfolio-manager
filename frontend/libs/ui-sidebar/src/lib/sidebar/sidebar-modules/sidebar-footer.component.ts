@@ -2,11 +2,11 @@ import { Component, ChangeDetectionStrategy, ViewEncapsulation } from '@angular/
 import { CommonModule } from '@angular/common';
 
 @Component({
-    selector: 'app-sidebar-footer',
-    standalone: true,
-    imports: [CommonModule],
-    template: `<ng-content></ng-content>`,
-    styles: [`
+  selector: 'lib-sidebar-footer',
+  standalone: true,
+  imports: [CommonModule],
+  template: `<ng-content></ng-content>`,
+  styles: [`
     :host {
       display: block;
       padding: var(--spacing-md, 12px);
@@ -14,7 +14,7 @@ import { CommonModule } from '@angular/common';
       background-color: var(--color-bg-elevated);
     }
   `],
-    encapsulation: ViewEncapsulation.None,
-    changeDetection: ChangeDetectionStrategy.OnPush,
+  encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SidebarFooterComponent { }

@@ -1,68 +1,68 @@
 <div class="chat-page">
-  <!-- Header -->
-  <app-conversation-header
-    [threadId]="threadId()"
-    [title]="conversationTitle()"
-    [showTraces]="showTraces()"
+  <app-chat-sidebar 
+    [isOpen]="sidebarOpen()" 
+    (isOpenChange)="sidebarOpen.set($event)"
     (newConversation)="handleNewConversation()"
-    (settingsAction)="handleSettingsAction($event)"
-    class="chat-page__header"
   />
 
-  <!-- Main Content Area -->
-  <div class="chat-page__content">
-    <!-- Error Banner -->
-    @if (error()) {
-      <div class="chat-page__error-banner">
-        <div class="error-content">
-          <lib-icon name="error" [size]="20" class="error-icon" />
-          <span class="error-message">{{ error() }}</span>
-        </div>
-      </div>
-    }
+  <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;">
+    <app-conversation-header
+      [threadId]="threadId()"
+      [title]="conversationTitle()"
+      [showTraces]="showTraces()"
+      (newConversation)="handleNewConversation()"
+      (settingsAction)="handleSettingsAction($event)"
+      class="chat-page__header"
+    />
 
-    <!-- Loading Chat History -->
-    @if (isLoadingChatHistory()) {
-      <div class="chat-page__loading-history">
-        <lib-loader [config]="{ size: 'md' }" />
-        <span class="loading-text">Loading conversation history...</span>
-      </div>
-    }
-
-    <!-- Sending Indicator -->
-    @if (loading() && messages().length === 0 && !isLoadingChatHistory()) {
-      <div class="chat-page__sending">
-        <lib-loader [config]="{ size: 'sm' }" />
-        <span class="sending-text">Sending message and starting analysis...</span>
-      </div>
-    }
-
-    <!-- Conversation Panel (NEW) -->
-    <div class="chat-page__conversation">
-      @if ((threadId() || messages().length > 0) && !isLoadingChatHistory()) {
-        <app-conversation-panel
-          [threadId]="threadId() || 'pending'"
-          [messages]="messages()"
-          [traces]="traces()"
-          [showTraces]="showTraces()"
-          [isLoading]="loading()"
-          [isGraphExecuting]="isGraphActive()"
-        />
-      } @else if (!isLoadingChatHistory()) {
-        <div class="chat-page__empty">
-          <p class="empty-title">Welcome to AI Chat</p>
-          <p class="empty-hint">Initializing conversation...</p>
+    <div class="chat-page__content">
+      @if (error()) {
+        <div class="chat-page__error-banner">
+          <div class="error-content">
+            <lib-icon name="error" [size]="20" class="error-icon" />
+            <span class="error-message">{{ error() }}</span>
+          </div>
         </div>
       }
-    </div>
-  </div>
+      @if (isLoadingChatHistory()) {
+        <div class="chat-page__loading-history">
+          <lib-loader [config]="{ size: 'md' }" />
+          <span class="loading-text">Loading conversation history...</span>
+        </div>
+      }
 
-  <!-- Message Input (Bottom) -->
-  <div class="chat-page__input-area">
-    <app-message-input
-      [disabled]="isMessageInputDisabled()"
-      [maxLength]="2000"
-      (messageSend)="handleMessageSend($event)"
-    />
+      @if (loading() && messages().length === 0 && !isLoadingChatHistory()) {
+        <div class="chat-page__sending">
+          <lib-loader [config]="{ size: 'sm' }" />
+          <span class="sending-text">Sending message and starting analysis...</span>
+        </div>
+      }
+
+      <div class="chat-page__conversation">
+        @if ((threadId() || messages().length > 0) && !isLoadingChatHistory()) {
+          <app-conversation-panel
+            [threadId]="threadId() || 'pending'"
+            [messages]="messages()"
+            [traces]="traces()"
+            [showTraces]="showTraces()"
+            [isLoading]="loading()"
+            [isGraphExecuting]="isGraphActive()"
+          />
+        } @else if (!isLoadingChatHistory()) {
+          <div class="chat-page__empty">
+            <p class="empty-title">Welcome to AI Chat</p>
+            <p class="empty-hint">Initializing conversation...</p>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="chat-page__input-area">
+      <app-message-input
+        [disabled]="isMessageInputDisabled()"
+        [maxLength]="2000"
+        (messageSend)="handleMessageSend($event)"
+      />
+    </div>
   </div>
 </div>
