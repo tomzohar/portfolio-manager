@@ -152,6 +152,7 @@ export class PolygonApiService {
     to: string,
     timespan: string = 'day',
     multiplier: number = 1,
+    sort: 'asc' | 'desc' = 'asc',
   ): Observable<OHLCVBar[] | null> {
     this.logger.log(
       `Fetching aggregates for ${ticker} from ${from} to ${to} (${multiplier}${timespan})`,
@@ -159,7 +160,7 @@ export class PolygonApiService {
 
     const params = {
       adjusted: 'true', // Use adjusted prices (accounts for splits/dividends)
-      sort: 'asc', // Sort by timestamp ascending
+      sort: sort, // Sort order
       limit: '50000', // Maximum limit to get all data
       apiKey: this.apiKey,
     };
@@ -195,6 +196,42 @@ export class PolygonApiService {
         catchError((error: Error) => {
           this.logger.error(
             `Polygon API aggregates error for ${ticker}: ${error.message}`,
+            error.stack,
+          );
+          return of(null);
+        }),
+      );
+  }
+
+  /**
+   * Get ticker details (v3)
+   * @param ticker - The ticker symbol
+   * @returns Observable of ticker details or null
+   */
+  getTickerDetails(ticker: string): Observable<{
+    name: string;
+    locale: string;
+    currency_name: string;
+  } | null> {
+    this.logger.log(`Fetching details for ticker: ${ticker}`);
+
+    const params = {
+      apiKey: this.apiKey,
+    };
+
+    return this.httpService
+      .get<{
+        results: { name: string; locale: string; currency_name: string };
+      }>(`${this.baseUrl}/reference/tickers/${ticker}`, {
+        params,
+      })
+      .pipe(
+        map((response) => {
+          return response.data.results;
+        }),
+        catchError((error: Error) => {
+          this.logger.error(
+            `Polygon API details error for ${ticker}: ${error.message}`,
             error.stack,
           );
           return of(null);

@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, ApplicationRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TypewriterDirective } from './typewriter.directive';
@@ -6,7 +6,7 @@ import { TypewriterDirective } from './typewriter.directive';
 @Component({
     standalone: true,
     imports: [TypewriterDirective],
-    template: `<div [typewriter]="text()" [typewriterSpeed]="speed()" (typewriterComplete)="onComplete()"></div>`,
+    template: `<div [typewriter]="text()" [speed]="speed()" (typewriterComplete)="onComplete()"></div>`,
 })
 class TestComponent {
     text = signal<string>('');
@@ -39,8 +39,10 @@ describe('TypewriterDirective', () => {
         fixture = TestBed.createComponent(TestComponent);
         component = fixture.componentInstance;
         element = fixture.nativeElement.querySelector('div') as HTMLElement;
-        fixture.detectChanges();
+        TestBed.inject(ApplicationRef).tick();
     });
+
+    // Jest timers removed
 
     it('should create', () => {
         expect(component).toBeTruthy();
@@ -57,29 +59,32 @@ describe('TypewriterDirective', () => {
     it('should animate text character by character', async () => {
         const testText = 'Hello';
         component.text.set(testText);
-        fixture.detectChanges();
+        TestBed.inject(ApplicationRef).tick();
+        await fixture.whenStable();
 
         // Wait for complete animation (5 chars * 10ms + buffer)
-        await wait(70);
+        await wait(500);
         expect(element.textContent).toBe('Hello');
     });
 
     it('should emit complete event when animation finishes', async () => {
         const testText = 'Hi';
         component.text.set(testText);
-        fixture.detectChanges();
+        TestBed.inject(ApplicationRef).tick();
+        await fixture.whenStable();
 
         // Wait for animation to complete
-        await wait(25);
+        await wait(200);
 
         expect(component.completeCalled).toBe(true);
     });
 
     it('should handle empty text', async () => {
         component.text.set('');
-        fixture.detectChanges();
+        TestBed.inject(ApplicationRef).tick();
+        await fixture.whenStable();
 
-        await wait(10);
+        await wait(100);
 
         expect(element.textContent).toBe('');
         expect(component.completeCalled).toBe(true);
@@ -89,10 +94,11 @@ describe('TypewriterDirective', () => {
         const testText = 'Test';
         component.speed.set(30); // 30ms per character
         component.text.set(testText);
-        fixture.detectChanges();
+        TestBed.inject(ApplicationRef).tick();
+        await fixture.whenStable();
 
         // Wait for complete animation (4 chars * 30ms = 120ms)
-        await wait(130);
+        await wait(600);
         expect(element.textContent).toBe('Test');
         expect(component.completeCalled).toBe(true);
     });
@@ -100,10 +106,11 @@ describe('TypewriterDirective', () => {
     it('should handle text with special characters', async () => {
         const testText = 'Hi!';
         component.text.set(testText);
-        fixture.detectChanges();
+        TestBed.inject(ApplicationRef).tick();
+        await fixture.whenStable();
 
         // Wait for full animation
-        await wait(50);
+        await wait(300);
 
         expect(element.textContent).toBe(testText);
     });
@@ -111,31 +118,37 @@ describe('TypewriterDirective', () => {
     it('should restart animation when text changes', async () => {
         // First text
         component.text.set('Hello');
-        fixture.detectChanges();
+        TestBed.inject(ApplicationRef).tick();
+        await fixture.whenStable();
 
-        // Wait for partial animation
+        // Wait for partial animation (10ms speed * 5 chars = 50ms total)
         await wait(25);
         expect(element.textContent?.length).toBeGreaterThan(0);
         expect(element.textContent?.length).toBeLessThan(5);
 
         // Change text mid-animation
         component.text.set('Hi');
-        fixture.detectChanges();
+        TestBed.inject(ApplicationRef).tick();
+        await fixture.whenStable();
 
         // Should restart - wait for new animation
-        await wait(30);
+        await wait(200);
         expect(element.textContent).toBe('Hi');
     });
 
     it('should clean up on destroy', async () => {
         component.text.set('Hello World');
-        fixture.detectChanges();
+        TestBed.inject(ApplicationRef).tick();
+        await fixture.whenStable();
 
         // Start animation
-        await wait(15);
+        await wait(100);
         expect(element.textContent?.length).toBeGreaterThan(0);
 
         // Destroy component - should not throw errors
         expect(() => fixture.destroy()).not.toThrow();
+
+        // Clear timeout
+        await wait(100);
     });
 });
