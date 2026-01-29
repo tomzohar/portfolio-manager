@@ -9,6 +9,9 @@ import {
   PolygonPreviousCloseResponse,
   PolygonAggregatesResponse,
   OHLCVBar,
+  PolygonFinancialsResponse,
+  PolygonTickerDetailsResponse,
+  TickerDetails,
 } from '../types/polygon-api.types';
 
 @Injectable()
@@ -204,15 +207,58 @@ export class PolygonApiService {
   }
 
   /**
+   * Get financials for a ticker
+   * @param ticker - The ticker symbol
+   * @param limit - Number of results to return (default: 1)
+   * @param timeframe - Timeframe of the financials (annual, quarterly, ttm)
+   * @param sort - Sort order (asc, desc)
+   * @returns Observable of financials data or null on error
+   */
+  getFinancials(
+    ticker: string,
+    limit: number = 1,
+    timeframe: 'annual' | 'quarterly' | 'ttm' = 'ttm',
+    sort: 'asc' | 'desc' = 'desc',
+  ): Observable<PolygonFinancialsResponse | null> {
+    this.logger.log(`Fetching financials for ticker: ${ticker}`);
+
+    const params = {
+      ticker,
+      limit,
+      timeframe,
+      sort: 'filing_date',
+      order: sort,
+      apiKey: this.apiKey,
+    };
+
+    return this.httpService
+      .get<PolygonFinancialsResponse>(
+        `${this.baseUrl.replace('/v3', '/vX')}/reference/financials`,
+        { params },
+      )
+      .pipe(
+        map((response) => {
+          this.logger.log(
+            `Successfully fetched financials for ${ticker} (${response.data.count} results)`,
+          );
+          return response.data;
+        }),
+        catchError((error: Error) => {
+          this.logger.error(
+            `Polygon API financials error for ${ticker}: ${error.message}`,
+            error.stack,
+          );
+          return of(null);
+        }),
+      );
+  }
+
+  /**
    * Get ticker details (v3)
    * @param ticker - The ticker symbol
    * @returns Observable of ticker details or null
    */
-  getTickerDetails(ticker: string): Observable<{
-    name: string;
-    locale: string;
-    currency_name: string;
-  } | null> {
+  getTickerDetails(ticker: string): Observable<TickerDetails | null> {
     this.logger.log(`Fetching details for ticker: ${ticker}`);
 
     const params = {
@@ -220,11 +266,12 @@ export class PolygonApiService {
     };
 
     return this.httpService
-      .get<{
-        results: { name: string; locale: string; currency_name: string };
-      }>(`${this.baseUrl}/reference/tickers/${ticker}`, {
-        params,
-      })
+      .get<PolygonTickerDetailsResponse>(
+        `${this.baseUrl}/reference/tickers/${ticker}`,
+        {
+          params,
+        },
+      )
       .pipe(
         map((response) => {
           return response.data.results;

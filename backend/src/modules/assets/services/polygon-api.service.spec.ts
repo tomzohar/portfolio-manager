@@ -5,7 +5,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AxiosError, AxiosResponse } from 'axios';
 import { of, throwError } from 'rxjs';
 import { PolygonApiService } from './polygon-api.service';
-import { PolygonTickerResponse } from '../types/polygon-api.types';
+import {
+  PolygonTickerResponse,
+  PolygonFinancialsResponse,
+} from '../types/polygon-api.types';
 
 describe('PolygonApiService', () => {
   let service: PolygonApiService;
@@ -905,6 +908,111 @@ describe('PolygonApiService', () => {
           done();
         },
         error: done.fail,
+      });
+    });
+  });
+
+  describe('getFinancials', () => {
+    const mockTicker = 'AAPL';
+
+    it('should successfully fetch financials data', (done) => {
+      const mockFinancialsResponse = {
+        results: [
+          {
+            cik: '12345',
+            financials: {
+              income_statement: {
+                revenues: {
+                  value: 1000000,
+                  unit: 'USD',
+                  label: 'Total Revenue',
+                  order: 100,
+                },
+              },
+            },
+            fiscal_period: 'Q1',
+            fiscal_year: '2023',
+          },
+        ],
+        status: 'OK',
+        request_id: 'test-request-id',
+        count: 1,
+      };
+
+      const mockAxiosResponse: AxiosResponse = {
+        data: mockFinancialsResponse,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as AxiosResponse['config'],
+      };
+
+      jest.spyOn(httpService, 'get').mockReturnValue(of(mockAxiosResponse));
+
+      service.getFinancials(mockTicker).subscribe({
+        next: (result: PolygonFinancialsResponse) => {
+          expect(result).toEqual(mockFinancialsResponse);
+          done();
+        },
+        error: done.fail,
+      });
+    });
+
+    it('should call Polygon API with correct defaults (limit=1, timeframe=ttm, sort=desc)', (done) => {
+      const mockFinancialsResponse = {
+        results: [],
+        status: 'OK',
+        request_id: '123',
+        count: 0,
+      };
+
+      const mockAxiosResponse: AxiosResponse = {
+        data: mockFinancialsResponse,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as AxiosResponse['config'],
+      };
+
+      const getSpy = jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(of(mockAxiosResponse));
+
+      service.getFinancials(mockTicker).subscribe({
+        next: () => {
+          expect(getSpy).toHaveBeenCalledWith(
+            'https://api.polygon.io/vX/reference/financials',
+            expect.objectContaining({
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+              params: expect.objectContaining({
+                ticker: mockTicker,
+                limit: 1, // Expect number 1, not string '1'
+                timeframe: 'ttm',
+                sort: 'filing_date',
+                order: 'desc',
+                apiKey: mockApiKey,
+              }),
+            }),
+          );
+          done();
+        },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        error: (err: unknown) => done.fail(err as Error),
+      });
+    });
+
+    it('should return null on API error', (done) => {
+      jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(throwError(() => new Error('API Error')));
+
+      service.getFinancials(mockTicker).subscribe({
+        next: (result: PolygonFinancialsResponse | null) => {
+          expect(result).toBeNull();
+          done();
+        },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        error: (err: any) => done.fail(err as Error),
       });
     });
   });
