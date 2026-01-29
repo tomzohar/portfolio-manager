@@ -21,6 +21,7 @@ import { AgentsController } from './agents.controller';
 import { ReasoningTrace } from './entities/reasoning-trace.entity';
 import { TokenUsage } from './entities/token-usage.entity';
 import { GeminiLlmService } from './services/gemini-llm.service';
+import { GrokLlmService } from './services/grok-llm.service';
 import { GraphExecutorService } from './services/graph-executor.service';
 import { InterruptHandlerService } from './services/interrupt-handler.service';
 import { OrchestratorService } from './services/orchestrator.service';
@@ -53,6 +54,7 @@ import { getCurrentTimeTool } from './tools/time.tool';
   controllers: [AgentsController],
   providers: [
     GeminiLlmService,
+    GrokLlmService,
     TokenUsageService,
     TracingService,
     StateService,
@@ -65,6 +67,7 @@ import { getCurrentTimeTool } from './tools/time.tool';
   exports: [
     OrchestratorService,
     GeminiLlmService,
+    GrokLlmService,
     TokenUsageService,
     TracingService,
     StateService,

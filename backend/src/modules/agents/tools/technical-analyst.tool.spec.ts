@@ -51,7 +51,15 @@ describe('TechnicalAnalystTool', () => {
 
     // Default mock behavior
     polygonService.getTickerDetails.mockReturnValue(
-      of({ name: 'Apple Inc.', locale: 'us', currency_name: 'usd' }),
+      of({
+        ticker: 'AAPL',
+        name: 'Apple Inc.',
+        market: 'stocks',
+        locale: 'us',
+        type: 'CS',
+        active: true,
+        currency_name: 'usd',
+      }),
     );
   });
 
@@ -76,7 +84,15 @@ describe('TechnicalAnalystTool', () => {
     it('should include company metadata in result', async () => {
       polygonService.getAggregates.mockReturnValue(of(mockOHLCVData));
       polygonService.getTickerDetails.mockReturnValue(
-        of({ name: 'Apple Inc.', locale: 'us', currency_name: 'usd' }),
+        of({
+          ticker: 'AAPL',
+          name: 'Apple Inc.',
+          market: 'stocks',
+          locale: 'us',
+          type: 'CS',
+          active: true,
+          currency_name: 'usd',
+        }),
       );
 
       const result = await tool.func({ ticker: 'AAPL' });
