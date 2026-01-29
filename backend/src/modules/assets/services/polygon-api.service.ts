@@ -250,7 +250,7 @@ export class PolygonApiService {
       );
   }
 
-  /** 
+  /**
    * Get ticker details (v3)
    * @param ticker - The ticker symbol
    * @returns Observable of ticker details or null
