@@ -6,9 +6,17 @@
   collapsedWidth="64px"
 >
   <lib-sidebar-content>
-    <lib-sidebar-section class="sidebar-recent-section">
+    <lib-sidebar-section class="sidebar-new-chat-section">
+        @if (isOpen()) {
+      <lib-button 
+        class="new-chat-btn"
+        [config]="newChatButtonConfig" 
+        (click)="newConversation.emit()" 
+      />
+    }
+    </lib-sidebar-section>
+    <lib-sidebar-section [label]="'Chats'" class="sidebar-recent-section">
       @if (isOpen()) {
-        <h3 class="sidebar-hide-on-collapsed">History</h3>
         <app-chat-history-list 
           [conversations]="conversations()"
           [activeThreadId]="currentThreadId()"
@@ -17,15 +25,6 @@
       } @else {
         <lib-icon name="history" [size]="24" class="sidebar-rail-icon" />
       }
-    </lib-sidebar-section>
-    <lib-sidebar-section>
-        @if (isOpen()) {
-      <lib-button 
-        class="new-chat-btn"
-        [config]="newChatButtonConfig" 
-        (click)="newConversation.emit()" 
-      />
-    }
     </lib-sidebar-section>
   </lib-sidebar-content>
   <lib-sidebar-footer>

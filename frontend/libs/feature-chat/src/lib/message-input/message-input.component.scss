@@ -6,8 +6,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
-  background-color: var(--color-bg-card);
+  background-color: var(--color-bg-elevated);
   border-radius: var(--radius-lg);
+  padding: var(--spacing-xl)
 }
 
 .message-input__container {
@@ -117,14 +118,14 @@
 // Responsive Design
 // ========================================
 
-@media (width <= 768px) {
+@media (width <=768px) {
   .message-input__textarea {
     min-height: 60px;
     font-size: var(--font-size-xs);
   }
 }
 
-@media (width <= 480px) {
+@media (width <=480px) {
   .message-input {
     padding: var(--spacing-sm);
   }

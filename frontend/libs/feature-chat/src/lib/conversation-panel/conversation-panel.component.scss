@@ -7,6 +7,7 @@
   height: 100%;
   overflow: hidden auto;
   padding: var(--spacing-base);
+  padding-bottom: 200px; // leave room for input box
   scroll-behavior: smooth;
 
   // Custom scrollbar
@@ -32,7 +33,8 @@
 .messages-list {
   display: flex;
   flex-direction: column;
-  max-width: var(--chat-width);
+  max-width: var(--chat-max-width);
+  min-width: var(--chat-min-width);
   margin: 0 auto;
 }
 
@@ -86,11 +88,12 @@
   margin-top: var(--spacing-lg);
   margin-bottom: var(--spacing-lg);
 }
+
 // ========================================
 // Responsive Design
 // ========================================
 
-@media (width <= 768px) {
+@media (width <=768px) {
   .conversation-panel {
     padding: var(--spacing-md);
   }
@@ -101,7 +104,7 @@
   }
 }
 
-@media (width <= 480px) {
+@media (width <=480px) {
   .conversation-panel {
     padding: var(--spacing-sm);
   }

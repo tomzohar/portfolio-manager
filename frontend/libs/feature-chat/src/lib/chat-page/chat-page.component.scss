@@ -1,7 +1,8 @@
 :host {
   display: block;
   height: 100%;
-  --chat-width: 850px;
+  --chat-max-width: 850px;
+  --chat-min-width: 680px;
 }
 
 .chat-page {
@@ -114,20 +115,19 @@
 }
 
 .chat-page__input-area {
-  flex-shrink: 0;
-  padding: var(--spacing-sm);
-  background-color: var(--color-bg-secondary);
   border-top: 1px solid var(--color-border-primary);
   border-radius: var(--radius-lg);
-  width: var(--chat-width);
-  margin: 0 auto;
+  width: var(--chat-min-width);
+  position: absolute;
+  bottom: var(--spacing-lg);
+  left: calc(50% - calc(var(--chat-min-width) / 2));
 }
 
 // ========================================
 // Responsive Design
 // ========================================
 
-@media (width <= 768px) {
+@media (width <=768px) {
   .chat-page__trace-panel {
     padding: var(--spacing-md);
   }
@@ -137,7 +137,7 @@
   }
 }
 
-@media (width <= 480px) {
+@media (width <=480px) {
   .chat-page__trace-panel {
     padding: var(--spacing-sm);
   }

@@ -1,0 +1,40 @@
+<mat-list [class]="listClasses()" [attr.role]="config().clickable ? 'listbox' : 'list'">
+  @for (item of config().items; track trackByFn($index, item)) {
+    <mat-list-item
+      class="list-item"
+      [disabled]="item.disabled"
+      [class.selected]="item.selected"
+      [class.clickable]="config().clickable"
+      (click)="onItemClick(item)"
+    >
+      <!-- Item Start (Icon or Image) -->
+      @if (item.icon) {
+        <lib-icon class="list-item__icon" [size]="16" name="{{ item.icon }}" matListItemIcon></lib-icon>
+      } @else if (item.imageUrl) {
+        <img matListItemAvatar [src]="item.imageUrl" [alt]="item.label" />
+      }
+
+      <!-- Item Content -->
+      <span matListItemTitle class="list-item__title">{{ item.label }}</span>
+      @if (item.subLabel) {
+        <span matListItemLine class="list-item__sub-label">{{ item.subLabel }}</span>
+      }
+
+      <!-- Item End (Actions) -->
+      @if (item.actions && item.actions.length > 0) {
+        <div matListItemMeta class="item-actions">
+          @for (action of item.actions; track action.id) {
+            <lib-button
+              [config]="action"
+              (clicked)="onActionClick($event, item, action.id)"
+            />
+          }
+        </div>
+      }
+    </mat-list-item>
+
+    @if (config().showDividers && !$last) {
+      <mat-divider></mat-divider>
+    }
+  }
+</mat-list>

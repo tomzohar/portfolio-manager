@@ -1,19 +1,9 @@
 @if (conversations().length > 0) {
-  @for (conversation of conversations(); track conversation.id) {
-    <a 
-      class="history-item" 
-      [class.active]="activeThreadId() === conversation.id"
-      (click)="onSelect(conversation.id)"
-    >
-      <div class="item-icon ai-icon">
-        <lib-icon name="chat_bubble_outline"></lib-icon>
-      </div>
-      <div class="item-content">
-        <span class="item-id">{{ conversation.id }}</span>
-        <span class="item-date">{{ conversation.createdAt | date: 'MMM d, h:mm a' }}</span>
-      </div>
-    </a>
-  }
+  <lib-list
+    class="chats-list"
+    [config]="listConfig()"
+    (itemClicked)="onSelect($event)"
+  />
 } @else {
   <div class="empty-state">
     <span class="material-icons-outlined empty-icon">history</span>

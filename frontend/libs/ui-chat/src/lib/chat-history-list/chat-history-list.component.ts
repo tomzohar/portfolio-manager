@@ -1,7 +1,12 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output, computed, inject } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { Conversation } from '@stocks-researcher/types';
-import { IconComponent } from '@stocks-researcher/styles';
+import { ListComponent, ListConfig, ListItem } from '@stocks-researcher/styles';
+
+function transformDate(): (date: string) => string {
+    const datePipe = inject(DatePipe);
+    return (date: string) => datePipe.transform(date, 'MMM d, h:mm a') || '';
+}
 
 /**
  * ChatHistoryListComponent
@@ -17,10 +22,11 @@ import { IconComponent } from '@stocks-researcher/styles';
 @Component({
     selector: 'app-chat-history-list',
     standalone: true,
-    imports: [CommonModule, DatePipe, IconComponent],
+    imports: [CommonModule, ListComponent],
     templateUrl: './chat-history-list.component.html',
     styleUrl: './chat-history-list.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
+    providers: [DatePipe]
 })
 export class ChatHistoryListComponent {
     /** List of conversations to display */
@@ -32,7 +38,27 @@ export class ChatHistoryListComponent {
     /** Emitted when user clicks a conversation */
     conversationSelected = output<string>();
 
-    onSelect(id: string): void {
-        this.conversationSelected.emit(id);
+    /** Configuration for the generic list component */
+    listConfig = computed<ListConfig>(() => ({
+        items: this.listItems(),
+        size: 'sm',
+        clickable: true,
+    }));
+
+    transformDate = transformDate();
+
+    /** Map conversations to generic ListItem format */
+    listItems = computed<ListItem[]>(() => {
+        return this.conversations().map(conv => ({
+            id: conv.id,
+            label: conv.id,
+            subLabel: this.transformDate(conv.createdAt) || '',
+            icon: 'chat_bubble_outline',
+            selected: this.activeThreadId() === conv.id
+        }));
+    });
+
+    onSelect(item: ListItem): void {
+        this.conversationSelected.emit(item.id.toString());
     }
 }

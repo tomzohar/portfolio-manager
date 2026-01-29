@@ -46,8 +46,12 @@ export class ChatSidebarComponent implements OnInit {
 
   newChatButtonConfig: ButtonConfig = {
     label: 'New Chat',
+    icon: 'add_comment',
+    iconPosition: 'left',
     size: 'md',
+    color: 'accent',
     fullWidth: true,
+    cssClass: 'new-chat-btn'
   };
 
   collapseSideBarButtonConfig: ButtonConfig = {

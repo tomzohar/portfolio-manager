@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, Signal, signal, WritableSignal } from '@angular/core';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ActivatedRoute, Router, ParamMap } from '@angular/router';
 import { ChatFacade } from '@stocks-researcher/data-access-chat';
@@ -24,7 +24,7 @@ function createParamMap(threadId: string | null): ParamMap {
 describe('ChatPageComponent', () => {
   let component: ChatPageComponent;
   let fixture: ComponentFixture<ChatPageComponent>;
-  let mockChatFacade: any;
+  let mockChatFacade: Record<keyof ChatFacade, ReturnType<typeof signal> | jest.Mock>;
   let mockRouter: any;
   let mockActivatedRoute: any;
 
@@ -43,6 +43,7 @@ describe('ChatPageComponent', () => {
       expandedMessageIds: signal([]),
       showTraces: signal(true),
       waitingForAIResponse: signal(false),
+      conversations: signal([]),
       connectSSE: jest.fn(),
       disconnectSSE: jest.fn(),
       resetState: jest.fn(),
@@ -51,7 +52,8 @@ describe('ChatPageComponent', () => {
       toggleTraceExpansion: jest.fn(),
       loadConversationMessages: jest.fn(),
       loadConversation: jest.fn(),
-    };
+      loadConversations: jest.fn(),
+    } as unknown as Record<keyof ChatFacade, ReturnType<typeof signal> | jest.Mock>;
 
     // Mock Router
     mockRouter = {
@@ -132,13 +134,13 @@ describe('ChatPageComponent', () => {
 
   describe('Component Integration', () => {
     it('should calculate isMessageInputDisabled based on graph state', () => {
-      mockChatFacade.isGraphActive.set(true);
+      (mockChatFacade.isGraphActive as WritableSignal<boolean>).set(true);
       initComponent();
       expect(component.isMessageInputDisabled()).toBe(true);
     });
 
     it('should enable input when graph not active', () => {
-      mockChatFacade.isGraphActive.set(false);
+      (mockChatFacade.isGraphActive as WritableSignal<boolean>).set(false);
       initComponent();
       expect(component.isMessageInputDisabled()).toBe(false);
     });
@@ -168,7 +170,7 @@ describe('ChatPageComponent', () => {
 
     it('should show loading state when loading chat history', () => {
       mockActivatedRoute.paramMap = of(createParamMap('user-1:thread-456'));
-      mockChatFacade.loading.set(true);
+      (mockChatFacade.loading as WritableSignal<boolean>).set(true);
       initComponent();
       expect(component.isLoadingChatHistory()).toBe(true);
     });
@@ -177,13 +179,13 @@ describe('ChatPageComponent', () => {
   describe('Navigate to ThreadId on Graph Complete', () => {
     it('should navigate to threadId route when graph completes and route has no threadId', () => {
       mockActivatedRoute.paramMap = of(createParamMap(null));
-      mockChatFacade.isGraphActive.set(true);
-      mockChatFacade.currentThreadId.set('user-1:thread-456');
+      (mockChatFacade.isGraphActive as WritableSignal<boolean>).set(true);
+      (mockChatFacade.currentThreadId as WritableSignal<string>).set('user-1:thread-456');
 
       initComponent(); // was active
 
       // Transition to inactive
-      mockChatFacade.isGraphActive.set(false);
+      (mockChatFacade.isGraphActive as WritableSignal<boolean>).set(false);
       fixture.detectChanges();
 
       expect(mockRouter.navigate).toHaveBeenCalledWith(

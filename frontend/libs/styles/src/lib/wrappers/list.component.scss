@@ -1,0 +1,85 @@
+@use 'scss' as *;
+
+.lib-list {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+
+  .mat-mdc-list-item {
+    max-height: 32px;
+
+    &.clickable {
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+
+      &:hover:not(.mdc-list-item--disabled) {
+        background-color: var(--color-surface-hover, rgba(0, 0, 0, 0.04));
+      }
+    }
+
+    &.selected {
+      background-color: var(--color-primary-light, rgba(var(--color-primary-rgb), 0.08));
+    }
+
+    &:hover {
+
+      .mdc-list-item__content,
+      .list-item__icon,
+      .list-item__title,
+      .list-item__sub-label,
+      .list-item__sub-label {
+        color: var(--color-ai-primary);
+      }
+    }
+
+    .mdc-list-item__start {
+      margin-left: 0;
+      margin-right: var(--spacing-sm, 8px);
+    }
+  }
+
+  .item-actions {
+    display: flex;
+    gap: var(--spacing-xs, 4px);
+    align-items: center;
+  }
+
+  /* Sizes */
+  &.size-xs {
+    --mdc-list-list-item-label-text-size: 12px;
+    --mdc-list-list-item-supporting-text-size: 10px;
+    --mdc-list-list-item-container-height: 40px;
+    --mdc-list-list-item-leading-icon-size: 16px;
+  }
+
+  &.size-sm {
+    --mdc-list-list-item-label-text-size: 14px;
+    --mdc-list-list-item-supporting-text-size: 12px;
+    --mdc-list-list-item-container-height: 48px;
+    --mdc-list-list-item-leading-icon-size: 18px;
+  }
+
+  &.size-md {
+    --mdc-list-list-item-label-text-size: 16px;
+    --mdc-list-list-item-supporting-text-size: 14px;
+    --mdc-list-list-item-container-height: 56px;
+    --mdc-list-list-item-leading-icon-size: 24px;
+  }
+
+  &.size-lg {
+    --mdc-list-list-item-label-text-size: 18px;
+    --mdc-list-list-item-supporting-text-size: 16px;
+    --mdc-list-list-item-container-height: 72px;
+    --mdc-list-list-item-leading-icon-size: 32px;
+  }
+
+  .mdc-list-item__content,
+  .list-item__icon,
+  .list-item__title,
+  .list-item__sub-label,
+  .list-item__sub-label {
+    color: inherit;
+
+  }
+}

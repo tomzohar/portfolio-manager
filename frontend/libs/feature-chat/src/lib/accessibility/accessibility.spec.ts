@@ -124,6 +124,7 @@ describe('Accessibility Tests - US-001-T5', () => {
         disconnectSSE: jest.fn(),
         loadConversationMessages: jest.fn(),
         loadConversation: jest.fn(),
+        loadConversations: jest.fn(),
       };
 
       await TestBed.configureTestingModule({

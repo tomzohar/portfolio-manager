@@ -21,6 +21,7 @@ export * from './lib/wrappers/loading-page.component';
 export * from './lib/wrappers/page-header.component';
 export * from './lib/wrappers/radio-button-group/radio-button-group.component';
 export * from './lib/wrappers/tabs/tabs.component';
+export * from './lib/wrappers/list.component';
 
 // Types
 export * from './lib/types/button-config';
@@ -35,6 +36,8 @@ export * from './lib/types/loading-page-config';
 export * from './lib/types/design-tokens';
 export * from './lib/types/page-header-config';
 export * from './lib/types/tabs-config';
+export * from './lib/types/list-config';
+export * from './lib/types/list-item';
 
 // Directives
 export * from './lib/directives/fill-available-height.directive';

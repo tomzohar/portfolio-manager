@@ -20,11 +20,6 @@ import { Component, ChangeDetectionStrategy, ViewEncapsulation, input } from '@a
       margin-bottom: var(--spacing-lg, 20px);
     }
     
-    .sidebar-section-header {
-      padding: 0 var(--spacing-xs, 4px) var(--spacing-sm, 8px);
-      margin-bottom: var(--spacing-xs, 4px);
-    }
-    
     .label {
       font-size: var(--font-size-xs, 12px);
       font-weight: var(--font-weight-medium, 500);

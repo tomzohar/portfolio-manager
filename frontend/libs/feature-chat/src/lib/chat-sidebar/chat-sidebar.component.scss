@@ -1,6 +1,16 @@
 :host {
   display: block;
   height: 100%;
+
+  app-chat-history-list {
+    max-height: 600px;
+    overflow-y: auto;
+  }
+
+  ::ng-deep .new-chat-btn>button>mat-icon {
+    position: absolute;
+    left: var(--spacing-md);
+  }
 }
 
 .no-chats-placeholder {
@@ -17,13 +27,18 @@
   color: var(--color-text-tertiary);
 }
 
+.sidebar-new-chat-section {
+  display: block;
+  margin-top: var(--spacing-xl);
+}
+
 .sidebar-recent-section {
   display: flex;
   flex-direction: column;
   flex: 1;
-  overflow: hidden;
   min-height: 0; // Crucial for flex child to shrink/scroll
-  
+  margin-top: var(--spacing-xl);
+
   &.sidebar-hide-on-collapsed {
     padding: 0;
   }
@@ -32,7 +47,7 @@
     margin: var(--spacing-md) var(--spacing-sm);
     flex-shrink: 0;
   }
-  
+
   app-chat-history-list {
     flex: 1;
     overflow-y: auto;
