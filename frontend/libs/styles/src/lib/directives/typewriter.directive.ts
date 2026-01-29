@@ -63,7 +63,7 @@ export class TypewriterDirective implements OnDestroy {
     /**
      * Current animation timeout ID for cleanup
      */
-    private animationTimeoutId: number | null = null;
+    private animationTimeoutId: any = null;
 
     /**
      * Current character index being animated
@@ -95,12 +95,12 @@ export class TypewriterDirective implements OnDestroy {
 
         // If skip animation, render all at once
         if (this.skipAnimation()) {
-            element.innerText = text;
+            element.textContent = text;
             this.typewriterComplete.emit();
             return;
         }
 
-        element.innerText = '';
+        element.textContent = '';
 
         // Handle empty text
         if (!text || text.length === 0) {
@@ -121,11 +121,11 @@ export class TypewriterDirective implements OnDestroy {
 
         if (this.currentIndex < text.length) {
             // Add next character
-            element.innerText = text.substring(0, this.currentIndex + 1);
+            element.textContent = text.substring(0, this.currentIndex + 1);
             this.currentIndex++;
 
             // Schedule next character
-            this.animationTimeoutId = window.setTimeout(() => {
+            this.animationTimeoutId = setTimeout(() => {
                 this.animateNextCharacter(text);
             }, speed);
         } else {
@@ -139,7 +139,7 @@ export class TypewriterDirective implements OnDestroy {
      */
     private cleanup(): void {
         if (this.animationTimeoutId !== null) {
-            window.clearTimeout(this.animationTimeoutId);
+            clearTimeout(this.animationTimeoutId);
             this.animationTimeoutId = null;
         }
     }

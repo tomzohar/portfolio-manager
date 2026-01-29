@@ -23,7 +23,7 @@ import {
 describe('ChatSelectors', () => {
   describe('selectDisplayMessages', () => {
     it('should return empty array when no messages and no pending messages', () => {
-      const result = selectDisplayMessages.projector([], []);
+      const result = selectDisplayMessages.projector([], [], false);
 
       expect(result).toEqual([]);
     });
@@ -45,7 +45,7 @@ describe('ChatSelectors', () => {
         } as AssistantMessage,
       ];
 
-      const result = selectDisplayMessages.projector(extractedMessages, []);
+      const result = selectDisplayMessages.projector(extractedMessages, [], false);
 
       expect(result).toEqual(extractedMessages);
       expect(result.length).toBe(2);
@@ -60,7 +60,7 @@ describe('ChatSelectors', () => {
         sequence: 2,
       }];
 
-      const result = selectDisplayMessages.projector([], sentMessages);
+      const result = selectDisplayMessages.projector([], sentMessages, false);
 
       expect(result.length).toBe(1);
       expect(result[0].type).toBe(MessageType.USER);
@@ -97,7 +97,8 @@ describe('ChatSelectors', () => {
 
       const result = selectDisplayMessages.projector(
         extractedMessages,
-        sentMessages
+        sentMessages,
+        false
       );
 
       expect(result.length).toBe(4); // 2 extracted + 2 optimistic
@@ -136,7 +137,8 @@ describe('ChatSelectors', () => {
 
       const result = selectDisplayMessages.projector(
         extractedMessages,
-        sentMessages
+        sentMessages,
+        false
       );
 
       // Should be sorted by sequence number
@@ -156,13 +158,13 @@ describe('ChatSelectors', () => {
         { content: 'Message 3', timestamp: '2024-01-01T10:00:10Z', sequence: 2 },
       ];
 
-      const result = selectDisplayMessages.projector([], sentMessages);
+      const result = selectDisplayMessages.projector([], sentMessages, false);
 
       expect(result.length).toBe(3);
-      
+
       const ids = result.map(msg => msg.id);
       const uniqueIds = new Set(ids);
-      
+
       expect(uniqueIds.size).toBe(3); // All IDs should be unique
       expect(ids[0]).toBe('optimistic-0');
       expect(ids[1]).toBe('optimistic-1');
@@ -188,7 +190,8 @@ describe('ChatSelectors', () => {
 
       const result = selectDisplayMessages.projector(
         extractedMessages,
-        []
+        [],
+        false
       );
 
       expect(result.length).toBe(2);
@@ -207,7 +210,7 @@ describe('ChatSelectors', () => {
         } as UserMessage,
       ];
 
-      const result = selectDisplayMessages.projector(extractedMessages, []);
+      const result = selectDisplayMessages.projector(extractedMessages, [], false);
 
       expect((result[0] as UserMessage).isOptimistic).toBeUndefined();
     });
@@ -220,7 +223,7 @@ describe('ChatSelectors', () => {
         { content: 'Another valid', timestamp: '2024-01-01T10:00:15Z', sequence: 3 },
       ];
 
-      const result = selectDisplayMessages.projector([], sentMessages);
+      const result = selectDisplayMessages.projector([], sentMessages, false);
 
       // Should create optimistic messages for all entries (filtering not selector's responsibility)
       expect(result.length).toBe(4);
@@ -234,7 +237,7 @@ describe('ChatSelectors', () => {
         sequence: 0,
       }];
 
-      const result = selectDisplayMessages.projector([], sentMessages);
+      const result = selectDisplayMessages.projector([], sentMessages, false);
 
       expect(result[0].timestamp).toBe(capturedTimestamp);
     });
@@ -258,7 +261,7 @@ describe('ChatSelectors', () => {
         } as AssistantMessage,
       ];
 
-      const result = selectDisplayMessages.projector(extractedMessages, []);
+      const result = selectDisplayMessages.projector(extractedMessages, [], false);
 
       // Should sort by sequence, not timestamp
       expect(result[0].sequence).toBe(0);
