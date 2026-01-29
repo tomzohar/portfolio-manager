@@ -9,8 +9,12 @@
   }
 }
 
-.full-width {
+:host.full-width {
   width: 100%;
+  
+  button {
+    width: 100%;
+  }
 }
 
 // Ghost variant - no hover effects

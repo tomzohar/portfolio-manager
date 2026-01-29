@@ -1,0 +1,34 @@
+<lib-sidebar 
+  [isOpen]="isOpen()" 
+  (isOpenChange)="isOpen.set($event)" 
+  position="start"
+  [collapsible]="true"
+  collapsedWidth="64px"
+>
+  <lib-sidebar-content>
+    <lib-sidebar-section class="sidebar-recent-section">
+      @if (isOpen()) {
+        <h3 class="sidebar-hide-on-collapsed">History</h3>
+        <p class="no-chats-placeholder sidebar-hide-on-collapsed">No recent chats</p>
+      } @else {
+        <lib-icon name="history" [size]="24" class="sidebar-rail-icon" />
+      }
+    </lib-sidebar-section>
+    <lib-sidebar-section>
+        @if (isOpen()) {
+      <lib-button 
+        class="new-chat-btn"
+        [config]="newChatButtonConfig" 
+        (click)="newConversation.emit()" 
+      />
+    }
+    </lib-sidebar-section>
+  </lib-sidebar-content>
+  <lib-sidebar-footer>
+    @if (!isOpen()) {
+      <lib-button 
+        [config]="collapseSideBarButtonConfig" 
+      />
+    }
+  </lib-sidebar-footer>
+</lib-sidebar>

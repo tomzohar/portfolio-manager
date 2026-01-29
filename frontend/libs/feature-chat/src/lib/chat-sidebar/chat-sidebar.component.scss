@@ -1,0 +1,26 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.no-chats-placeholder {
+  padding: 12px;
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+}
+
+.sidebar-rail-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.sidebar-recent-section {
+  display: block;
+  
+  &.sidebar-hide-on-collapsed {
+    padding: 0;
+  }
+}

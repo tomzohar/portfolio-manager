@@ -17,35 +17,13 @@ import { ConversationHeaderComponent } from '../conversation-header/conversation
 import { ConversationPanelComponent } from '../conversation-panel/conversation-panel.component';
 import { MessageInputComponent } from '../message-input/message-input.component';
 import { isValidThreadId } from '../utils';
+import { ChatSidebarComponent } from '../chat-sidebar/chat-sidebar.component';
 
 /**
  * ChatPageComponent
  *
  * Main container component for the chat page.
- *
- * Responsibilities:
- * - Manage threadId from route params
- * - Integrate ConversationPanelComponent (messages + traces)
- * - Integrate MessageInputComponent
- * - Integrate ConversationHeaderComponent
- * - Handle message sending
- * - Handle new conversation creation
- * - Manage page lifecycle
- *
- * Design Pattern: Container (Smart) Component
- * - Connects to state via ChatFacade
- * - Manages routing
- * - Orchestrates child components
- *
- * @example
- * Router configuration:
- * ```typescript
- * {
- *   path: 'chat/:threadId',
- *   component: ChatPageComponent,
- *   canActivate: [authGuard]
- * }
- * ```
+ * ...
  */
 @Component({
   selector: 'app-chat-page',
@@ -57,6 +35,7 @@ import { isValidThreadId } from '../utils';
     ConversationHeaderComponent,
     LoaderComponent,
     IconComponent,
+    ChatSidebarComponent,
   ],
   templateUrl: './chat-page.component.html',
   styleUrls: ['./chat-page.component.scss'],
@@ -65,6 +44,12 @@ export class ChatPageComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly facade = inject(ChatFacade);
+
+  sidebarOpen = signal(true);
+
+  toggleSidebar() {
+    this.sidebarOpen.update((v) => !v);
+  }
 
   /**
    * Thread ID from route parameters
