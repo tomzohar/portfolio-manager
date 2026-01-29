@@ -318,6 +318,60 @@ function createErrorMessage(
   });
 }
 
+import { EarningsCalendarResult } from '../../tools/earnings-calendar.tool';
+
+/**
+ * Check for imminent earnings risk for technical/fundamental analysis tools
+ */
+async function checkEarningsRisk(
+  toolCall: ToolCallStructure,
+  toolRegistry: ToolRegistry,
+): Promise<string | null> {
+  const monitoredTools = ['technical_analyst', 'fundamental_analyst'];
+  if (!monitoredTools.includes(toolCall.name)) {
+    return null;
+  }
+
+  // Extract ticker from various possible arg names
+  const ticker = (toolCall.args.ticker ||
+    toolCall.args.symbol ||
+    toolCall.args.stock) as string;
+
+  if (!ticker || typeof ticker !== 'string') {
+    return null;
+  }
+
+  try {
+    const earningsTool = toolRegistry.getTool('earnings_calendar');
+    if (!earningsTool) {
+      return null;
+    }
+
+    // Check earnings for the next 7 days
+    const resultStr = (await earningsTool.invoke({
+      symbol: ticker,
+      days_ahead: 7,
+    })) as string;
+
+    const result = JSON.parse(resultStr) as EarningsCalendarResult;
+
+    if (result.upcoming_earnings && result.upcoming_earnings.length > 0) {
+      const next = result.upcoming_earnings[0];
+      return (
+        `\n\n> [!CAUTION]\n` +
+        `> **PROACTIVE RISK WARNING**: ${ticker} has an upcoming earnings report on **${next.date}** (${next.hour}).\n` +
+        `> This tool result may be impacted by extreme volatility or fundamental shifts following the report.`
+      );
+    }
+  } catch (error) {
+    toolExecutionLogger.debug(
+      `Failed to perform proactive earnings check for ${ticker}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
+  }
+
+  return null;
+}
+
 /**
  * Execute a single tool call
  */
@@ -384,6 +438,24 @@ async function executeToolCalls(
   const results = await Promise.all(
     toolCalls.map((toolCall) => executeSingleTool(toolCall, toolRegistry)),
   );
+
+  // Proactive check: Add earnings warnings to technical/fundamental analysis results
+  await Promise.all(
+    results.map(async (r, index) => {
+      if (r.success) {
+        const warning = await checkEarningsRisk(toolCalls[index], toolRegistry);
+        if (warning) {
+          // Append warning to the existing content
+          const originalContent =
+            typeof r.message.content === 'string'
+              ? r.message.content
+              : JSON.stringify(r.message.content);
+          r.message.content = originalContent + warning;
+        }
+      }
+    }),
+  );
+
   const totalDuration = Date.now() - startTime;
 
   // Log summary

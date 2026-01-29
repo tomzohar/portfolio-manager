@@ -433,4 +433,129 @@ describe('toolExecutionNode', () => {
       expect(result.errors?.[0]).toContain('ToolRegistry not available');
     });
   });
+
+  describe('Proactive Earnings Warning', () => {
+    it('should inject warning when technical_analyst is called and earnings are imminent', async () => {
+      // Mock technical_analyst tool
+      const mockTechTool = new DynamicStructuredTool({
+        name: 'technical_analyst',
+        description: 'Tech analysis',
+        schema: z.object({ ticker: z.string() }),
+        func: async ({ ticker }) => {
+          return Promise.resolve(
+            JSON.stringify({ ticker, analysis: 'Bullish' }),
+          );
+        },
+      });
+
+      // Mock earnings_calendar tool with imminent earnings
+      const mockEarningsTool = new DynamicStructuredTool({
+        name: 'earnings_calendar',
+        description: 'Earnings cal',
+        schema: z.object({ symbol: z.string(), days_ahead: z.number() }),
+        func: async () => {
+          return Promise.resolve(
+            JSON.stringify({
+              upcoming_earnings: [{ date: '2026-01-30', hour: 'AMC' }],
+            }),
+          );
+        },
+      });
+
+      mockToolRegistry.getTool.mockImplementation((name) => {
+        if (name === 'technical_analyst') return mockTechTool;
+        if (name === 'earnings_calendar') return mockEarningsTool;
+        return null;
+      });
+
+      const state: CIOState = {
+        userId: 'test-user',
+        threadId: 'test-thread',
+        messages: [
+          new AIMessage({
+            content: '',
+            additional_kwargs: {
+              tool_calls: [
+                {
+                  id: 'call_tech',
+                  type: 'function',
+                  function: {
+                    name: 'technical_analyst',
+                    arguments: JSON.stringify({ ticker: 'AAPL' }),
+                  },
+                },
+              ],
+            },
+          }),
+        ],
+        errors: [],
+        iteration: 1,
+        maxIterations: 10,
+      };
+
+      const result = await toolExecutionNode(state, mockConfig);
+
+      const toolMessage = result.messages?.[0] as ToolMessage;
+      expect(toolMessage.content).toContain('PROACTIVE RISK WARNING');
+      expect(toolMessage.content).toContain('2026-01-30');
+    });
+
+    it('should NOT inject warning when no earnings are imminent', async () => {
+      const mockTechTool = new DynamicStructuredTool({
+        name: 'technical_analyst',
+        description: 'Tech analysis',
+        schema: z.object({ ticker: z.string() }),
+        func: async ({ ticker }) => {
+          return Promise.resolve(
+            JSON.stringify({ ticker, analysis: 'Bullish' }),
+          );
+        },
+      });
+
+      const mockEarningsTool = new DynamicStructuredTool({
+        name: 'earnings_calendar',
+        description: 'Earnings cal',
+        schema: z.object({ symbol: z.string(), days_ahead: z.number() }),
+        func: async () => {
+          return Promise.resolve(JSON.stringify({ upcoming_earnings: [] }));
+        },
+      });
+
+      mockToolRegistry.getTool.mockImplementation((name) => {
+        if (name === 'technical_analyst') return mockTechTool;
+        if (name === 'earnings_calendar') return mockEarningsTool;
+        return null;
+      });
+
+      const state: CIOState = {
+        userId: 'test-user',
+        threadId: 'test-thread',
+        messages: [
+          new AIMessage({
+            content: '',
+            additional_kwargs: {
+              tool_calls: [
+                {
+                  id: 'call_tech',
+                  type: 'function',
+                  function: {
+                    name: 'technical_analyst',
+                    arguments: JSON.stringify({ ticker: 'AAPL' }),
+                  },
+                },
+              ],
+            },
+          }),
+        ],
+        errors: [],
+        iteration: 1,
+        maxIterations: 10,
+      };
+
+      const result = await toolExecutionNode(state, mockConfig);
+
+      const toolMessage = result.messages?.[0] as ToolMessage;
+      expect(toolMessage.content).not.toContain('PROACTIVE RISK WARNING');
+    });
+  });
 });
