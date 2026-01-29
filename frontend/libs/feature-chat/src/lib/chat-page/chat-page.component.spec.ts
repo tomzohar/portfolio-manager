@@ -42,6 +42,7 @@ describe('ChatPageComponent', () => {
       error: signal(null),
       expandedMessageIds: signal([]),
       showTraces: signal(true),
+      waitingForAIResponse: signal(false),
       connectSSE: jest.fn(),
       disconnectSSE: jest.fn(),
       resetState: jest.fn(),
