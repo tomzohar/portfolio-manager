@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindManyOptions, Repository } from 'typeorm';
 import { ConversationMessage } from '../entities/conversation-message.entity';
 import {
   Conversation,
@@ -412,7 +412,7 @@ export class ConversationService {
     userId: string,
     limit?: number,
   ): Promise<Conversation[]> {
-    const query: any = {
+    const query: FindManyOptions<Conversation> = {
       where: { userId },
       order: { createdAt: 'DESC' },
       select: ['id'],

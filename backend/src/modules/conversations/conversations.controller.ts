@@ -1,4 +1,12 @@
-import { Controller, Get, Patch, Body, Param, UseGuards, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Body,
+  Param,
+  UseGuards,
+  Query,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -19,7 +27,7 @@ import { Conversation } from './entities/conversation.entity';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class ConversationsController {
-  constructor(private readonly conversationService: ConversationService) { }
+  constructor(private readonly conversationService: ConversationService) {}
 
   @Get()
   @ApiOperation({
