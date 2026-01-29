@@ -67,7 +67,7 @@ export function routerNode(state: CIOState): string {
     typeof messageContent === 'string'
       ? messageContent
       : Array.isArray(messageContent)
-        ? messageContent.map(c => ('text' in c ? c.text : '')).join(' ')
+        ? messageContent.map((c) => ('text' in c ? c.text : '')).join(' ')
         : JSON.stringify(messageContent)
   ).toLowerCase();
 

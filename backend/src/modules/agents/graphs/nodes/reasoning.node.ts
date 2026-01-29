@@ -165,7 +165,6 @@ export async function reasoningNode(
     const geminiService = config.configurable
       ?.geminiLlmService as GeminiLlmService;
 
-
     // Get tools
     const toolRegistry = config.configurable
       ?.toolRegistry as ToolRegistryService;

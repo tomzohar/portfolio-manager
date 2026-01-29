@@ -13,6 +13,10 @@ import {
   ADX,
   VWAP,
   OBV,
+  doji,
+  hammerpattern,
+  bullishengulfingpattern,
+  bearishengulfingpattern,
 } from 'technicalindicators';
 
 /**
@@ -52,10 +56,22 @@ export interface SupportResistance {
   s2: number;
 }
 
+export interface RelativeStrength {
+  vs_market: 'outperform' | 'underperform';
+  correlation: number;
+}
+
+export interface CandlestickPattern {
+  name: string;
+  signal: 'bullish' | 'bearish' | 'neutral';
+}
+
 export interface TechnicalAnalysisResult {
   ticker: string;
   indicators?: TechnicalIndicators;
   support_resistance?: SupportResistance;
+  relative_strength?: RelativeStrength;
+  candlestick_patterns?: CandlestickPattern[];
   current_price?: number;
   data_points?: number;
   error?: string;
@@ -166,6 +182,115 @@ function calculatePivotPoints(
 }
 
 /**
+ * Detects candlestick patterns on the latest data
+ */
+function detectCandlestickPatterns(bars: OHLCVBar[]): CandlestickPattern[] {
+  // We need at least 5 bars for recent patterns
+  if (bars.length < 5) return [];
+
+  // Take the last 5 bars for pattern detection
+  const recentBars = bars.slice(-5);
+  const open = recentBars.map((b) => b.open);
+  const high = recentBars.map((b) => b.high);
+  const low = recentBars.map((b) => b.low);
+  const close = recentBars.map((b) => b.close);
+
+  const input = { open, high, low, close };
+  const patterns: CandlestickPattern[] = [];
+
+  // 1. Doji - neutral pattern indicating indecision
+  if (doji(input)) {
+    patterns.push({ name: 'Doji', signal: 'neutral' });
+  }
+
+  // 2. Hammer - bullish reversal pattern
+  if (hammerpattern(input)) {
+    patterns.push({ name: 'Hammer', signal: 'bullish' });
+  }
+
+  // 3. Bullish Engulfing
+  if (bullishengulfingpattern(input)) {
+    patterns.push({ name: 'Bullish Engulfing', signal: 'bullish' });
+  }
+
+  // 4. Bearish Engulfing
+  if (bearishengulfingpattern(input)) {
+    patterns.push({ name: 'Bearish Engulfing', signal: 'bearish' });
+  }
+
+  return patterns;
+}
+
+/**
+ * Calculates Pearson Correlation Coefficient
+ * @param x Array of numbers
+ * @param y Array of numbers
+ */
+export function calculateCorrelation(x: number[], y: number[]): number {
+  const n = Math.min(x.length, y.length);
+  if (n === 0) return 0;
+
+  const validX = x.slice(-n);
+  const validY = y.slice(-n);
+
+  const sumX = validX.reduce((a, b) => a + b, 0);
+  const sumY = validY.reduce((a, b) => a + b, 0);
+
+  const meanX = sumX / n;
+  const meanY = sumY / n;
+
+  let numerator = 0;
+  let denomX = 0;
+  let denomY = 0;
+
+  for (let i = 0; i < n; i++) {
+    const diffX = validX[i] - meanX;
+    const diffY = validY[i] - meanY;
+    numerator += diffX * diffY;
+    denomX += diffX * diffX;
+    denomY += diffY * diffY;
+  }
+
+  // Avoid division by zero
+  if (denomX === 0 || denomY === 0) return 0;
+
+  return numerator / Math.sqrt(denomX * denomY);
+}
+
+/**
+ * Calculates Relative Strength metrics against a benchmark
+ */
+export function calculateRelativeStrength(
+  target: OHLCVBar[],
+  benchmark: OHLCVBar[],
+): RelativeStrength {
+  // Align data to the intersection of available dates (most recent N bars)
+  const n = Math.min(target.length, benchmark.length);
+
+  const targetSlice = target.slice(-n);
+  const benchmarkSlice = benchmark.slice(-n);
+
+  const targetCloses = targetSlice.map((b) => b.close);
+  const benchmarkCloses = benchmarkSlice.map((b) => b.close);
+
+  const correlation = calculateCorrelation(targetCloses, benchmarkCloses);
+
+  // Performance calculation: (Last - First) / First
+  // Protect against empty arrays, though n > 0 check handled largely by slice logic behaving well on empty
+  if (n < 2) {
+    return { vs_market: 'underperform', correlation: 0 };
+  }
+
+  const targetPerf = (targetCloses[n - 1] - targetCloses[0]) / targetCloses[0];
+  const benchmarkPerf =
+    (benchmarkCloses[n - 1] - benchmarkCloses[0]) / benchmarkCloses[0];
+
+  const vs_market = targetPerf > benchmarkPerf ? 'outperform' : 'underperform';
+
+  return { vs_market, correlation };
+}
+
+/**
  * Calculates indicators and builds the result object
  */
 function performAnalysis(
@@ -186,10 +311,13 @@ function performAnalysis(
     );
   }
 
+  const candlestickPatterns = detectCandlestickPatterns(bars);
+
   return {
     ticker,
     indicators,
     support_resistance: supportResistance,
+    candlestick_patterns: candlestickPatterns,
     current_price: currentPrice,
     data_points: bars.length,
   };
@@ -220,7 +348,7 @@ export function createTechnicalAnalystTool(
         const { from, to } = calculateDateRange(period);
 
         // Fetch Ticker Details and OHLCV data in parallel
-        const [barsDesc, details] = await Promise.all([
+        const [barsDesc, details, spyBarsDesc] = await Promise.all([
           firstValueFrom(
             polygonService.getAggregates(
               ticker,
@@ -232,10 +360,22 @@ export function createTechnicalAnalystTool(
             ),
           ),
           firstValueFrom(polygonService.getTickerDetails(ticker)),
+          // Fetch SPY data concurrently for the same period/interval
+          firstValueFrom(
+            polygonService.getAggregates(
+              'SPY',
+              from,
+              to,
+              timespan, // Use same timespan
+              multiplier, // Use same multiplier
+              'desc',
+            ),
+          ).catch(() => null), // Fail gracefully
         ]);
 
         // Reverse bars to be in ascending order (Oldest -> Newest) for technical indicators
         const bars = barsDesc ? [...barsDesc].reverse() : null;
+        const spyBars = spyBarsDesc ? [...spyBarsDesc].reverse() : null;
 
         // Validate data
         const validationError = validateMarketData(bars, ticker);
@@ -246,6 +386,11 @@ export function createTechnicalAnalystTool(
         // We know bars is safe here because validateMarketData checks for null/empty
 
         const result = performAnalysis(ticker, bars!);
+
+        // Calculate Relative Strength if SPY data is available
+        if (spyBars && spyBars.length > 0) {
+          result.relative_strength = calculateRelativeStrength(bars!, spyBars);
+        }
 
         // Augment result with details
         if (details) {
