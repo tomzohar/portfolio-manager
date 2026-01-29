@@ -41,11 +41,13 @@ describe('Accessibility Tests - US-001-T5', () => {
         displayMessages: signal([]),
         showTraces: signal(true),
         waitingForAIResponse: signal(false),
+        conversations: signal([]),
         resetState: jest.fn(),
         connectSSE: jest.fn(),
         disconnectSSE: jest.fn(),
         loadConversationMessages: jest.fn(),
         loadConversation: jest.fn(),
+        loadConversations: jest.fn(),
       };
 
       await TestBed.configureTestingModule({
@@ -119,6 +121,7 @@ describe('Accessibility Tests - US-001-T5', () => {
         displayMessages: signal([]),
         showTraces: signal(true),
         waitingForAIResponse: signal(false),
+        conversations: signal([]),
         resetState: jest.fn(),
         connectSSE: jest.fn(),
         disconnectSSE: jest.fn(),
@@ -298,11 +301,14 @@ describe('Accessibility Tests - US-001-T5', () => {
         messages: signal([]),
         displayMessages: signal([]),
         showTraces: signal(true),
+        waitingForAIResponse: signal(false),
+        conversations: signal([]),
         resetState: jest.fn(),
         connectSSE: jest.fn(),
         disconnectSSE: jest.fn(),
         loadConversationMessages: jest.fn(),
         loadConversation: jest.fn(),
+        loadConversations: jest.fn(),
       };
 
       await TestBed.configureTestingModule({

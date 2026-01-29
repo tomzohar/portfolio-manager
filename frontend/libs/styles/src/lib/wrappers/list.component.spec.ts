@@ -50,7 +50,7 @@ describe('ListComponent', () => {
         expect(listItems[0].nativeElement.textContent).toContain('Item 1');
         expect(listItems[0].nativeElement.textContent).toContain('Sublabel 1');
 
-        const icon = listItems[0].query(By.css('mat-icon'));
+        const icon = listItems[0].query(By.css('lib-icon'));
         expect(icon).toBeTruthy();
         expect(icon.nativeElement.textContent).toContain('star');
     });
