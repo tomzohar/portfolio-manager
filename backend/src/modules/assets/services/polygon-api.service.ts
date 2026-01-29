@@ -13,6 +13,10 @@ import {
   PolygonTickerDetailsResponse,
   TickerDetails,
 } from '../types/polygon-api.types';
+import {
+  PolygonNewsArticle,
+  PolygonNewsResponse,
+} from '../types/polygon-news.types';
 
 @Injectable()
 export class PolygonApiService {
@@ -279,6 +283,55 @@ export class PolygonApiService {
         catchError((error: Error) => {
           this.logger.error(
             `Polygon API details error for ${ticker}: ${error.message}`,
+            error.stack,
+          );
+          return of(null);
+        }),
+      );
+  }
+
+  /**
+   * Get news articles for a ticker
+   * @param ticker - The ticker symbol
+   * @param limit - Maximum articles to return (default: 10, max: 50)
+   * @param publishedAfter - ISO date string for articles published after this date
+   * @returns Observable of news articles or null on error
+   */
+  getTickerNews(
+    ticker: string,
+    limit: number = 10,
+    publishedAfter?: string,
+  ): Observable<PolygonNewsArticle[] | null> {
+    this.logger.log(`Fetching news for ticker: ${ticker}`);
+
+    const params: Record<string, string> = {
+      ticker,
+      limit: String(Math.min(limit, 50)),
+      sort: 'published_utc',
+      order: 'desc',
+      apiKey: this.apiKey,
+    };
+
+    if (publishedAfter) {
+      params['published_utc.gte'] = publishedAfter;
+    }
+
+    return this.httpService
+      .get<PolygonNewsResponse>(
+        `${this.baseUrl.replace('/v3', '/v2')}/reference/news`,
+        { params },
+      )
+      .pipe(
+        map((response) => {
+          const articles = response.data.results || [];
+          this.logger.log(
+            `Successfully fetched ${articles.length} news articles for ${ticker}`,
+          );
+          return articles;
+        }),
+        catchError((error: Error) => {
+          this.logger.error(
+            `Polygon API news error for ${ticker}: ${error.message}`,
             error.stack,
           );
           return of(null);
