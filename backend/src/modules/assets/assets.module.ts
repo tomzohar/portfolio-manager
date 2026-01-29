@@ -8,6 +8,7 @@ import { PolygonApiService } from './services/polygon-api.service';
 import { FredService } from './services/fred.service';
 import { NewsService } from './services/news.service';
 import { FinnhubApiService } from './services/finnhub-api.service';
+import { FmpApiService } from './services/fmp-api.service';
 
 @Module({
   imports: [HttpModule, JwtModule, UsersModule],
@@ -18,6 +19,7 @@ import { FinnhubApiService } from './services/finnhub-api.service';
     FredService,
     NewsService,
     FinnhubApiService,
+    FmpApiService,
   ],
   exports: [
     AssetsService,
@@ -25,6 +27,7 @@ import { FinnhubApiService } from './services/finnhub-api.service';
     FredService,
     NewsService,
     FinnhubApiService,
+    FmpApiService,
   ],
 })
 export class AssetsModule {}
