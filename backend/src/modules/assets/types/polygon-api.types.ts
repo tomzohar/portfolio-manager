@@ -1,16 +1,40 @@
 export interface PolygonTickerResponse {
-  results: Array<{
-    ticker: string;
-    name: string;
-    market: string;
-    type: string;
-    active: boolean;
-    // Additional fields omitted for minimal response
-  }>;
+  results: TickerDetails[];
   status: string;
   request_id: string;
   count: number;
   next_url?: string;
+}
+
+export interface PolygonTickerDetailsResponse {
+  results: TickerDetails;
+  status: string;
+  request_id: string;
+}
+
+export interface TickerDetails {
+  ticker: string;
+  name: string;
+  market: string;
+  locale: string;
+  primary_exchange?: string;
+  type: string;
+  active: boolean;
+  currency_name: string;
+  cik?: string;
+  composite_figi?: string;
+  share_class_figi?: string;
+  market_cap?: number;
+  weighted_shares_outstanding?: number;
+  share_class_shares_outstanding?: number;
+  description?: string;
+  homepage_url?: string;
+  total_employees?: number;
+  list_date?: string;
+  branding?: {
+    logo_url?: string;
+    icon_url?: string;
+  };
 }
 
 export interface PolygonSnapshotResponse {

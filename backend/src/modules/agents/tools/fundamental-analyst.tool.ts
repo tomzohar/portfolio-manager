@@ -4,8 +4,10 @@ import { firstValueFrom } from 'rxjs';
 import { PolygonApiService } from '../../assets/services/polygon-api.service';
 import { FundamentalAnalysisResult } from '../types/fundamental-analyst.types';
 import {
+  PolygonFinancialsResponse,
   PolygonSnapshotResponse,
   StockFinancial,
+  TickerDetails,
 } from '../../assets/types/polygon-api.types';
 
 export const FundamentalAnalystSchema = z.object({
@@ -35,7 +37,7 @@ export function createFundamentalAnalystTool(
     func: async ({ ticker, period }: FundamentalAnalystInput) => {
       try {
         const [financialsResponse, details, snapshot] = await Promise.all([
-          firstValueFrom(polygonService.getFinancials(ticker, 1, period)),
+          firstValueFrom(polygonService.getFinancials(ticker, 2, period)),
           firstValueFrom(polygonService.getTickerDetails(ticker)).catch(
             () => null,
           ),
@@ -55,13 +57,16 @@ export function createFundamentalAnalystTool(
           });
         }
 
-        const report = financialsResponse.results[0];
+        const currentReport = financialsResponse.results[0];
+        const previousReport = financialsResponse.results[1];
+
         const result = formatResults(
           ticker,
-          details?.name,
+          details,
           period,
-          report,
+          currentReport,
           snapshot,
+          previousReport,
         );
 
         return JSON.stringify(result);
@@ -88,10 +93,11 @@ function getValue(
 
 function formatResults(
   ticker: string,
-  companyName: string | undefined,
+  details: TickerDetails | null | undefined,
   period: string,
   report: StockFinancial,
   snapshot?: PolygonSnapshotResponse | null,
+  previousReport?: StockFinancial,
 ): FundamentalAnalysisResult {
   const currentPrice = extractPrice(snapshot);
   const getIncome = (m: string) => getValue(report, 'income_statement', m);
@@ -134,19 +140,66 @@ function formatResults(
   // Valuation
   const eps = getIncome('basic_earnings_per_share');
   const peRatio = eps && currentPrice ? currentPrice / eps : null;
+  // Use weighted shares from details (most accurate) or fall back to financials
   const shares =
+    details?.weighted_shares_outstanding ||
+    getBalance('weighted_average_shares_outstanding_basic') ||
     getBalance('basic_common_shares_outstanding') ||
     getIncome('basic_average_shares');
-  const marketCap = shares && currentPrice ? shares * currentPrice : null;
+
+  // Use market cap from details (primary) or calculate it
+  const marketCap =
+    details?.market_cap ||
+    (shares && currentPrice ? shares * currentPrice : null);
+
+  // EV/EBITDA components
+  const debt = getBalance('long_term_debt') || 0;
+  const cash =
+    getBalance('cash') || getBalance('cash_and_cash_equivalents') || 0;
+  const da =
+    getValue(
+      report,
+      'cash_flow_statement',
+      'depreciation_depletion_and_amortization',
+    ) ||
+    getValue(report, 'cash_flow_statement', 'depreciation_and_amortization') ||
+    0;
+  const ebitda = operatingIncome !== null ? operatingIncome + da : null;
+  const ev = marketCap !== null ? marketCap + debt - cash : null;
+  const evToEbitda = ev !== null && ebitda && ebitda > 0 ? ev / ebitda : null;
+
+  // Growth calculation (YoY)
+  let revenueGrowth: number | null = null;
+  let earningsGrowth: number | null = null;
+
+  if (previousReport) {
+    const prevRevenues = getValue(
+      previousReport,
+      'income_statement',
+      'revenues',
+    );
+    const prevNetIncome = getValue(
+      previousReport,
+      'income_statement',
+      'net_income_loss',
+    );
+
+    if (revenues && prevRevenues) {
+      revenueGrowth = ((revenues - prevRevenues) / prevRevenues) * 100;
+    }
+    if (netIncome && prevNetIncome) {
+      earningsGrowth = ((netIncome - prevNetIncome) / prevNetIncome) * 100;
+    }
+  }
 
   return {
     ticker,
-    company_name: companyName || report.company_name || ticker,
+    company_name: details?.name || report.company_name || ticker,
     valuation: {
       pe_ratio: peRatio,
       ps_ratio: revenues && marketCap ? marketCap / revenues : null,
       pb_ratio: equity && marketCap ? marketCap / equity : null,
-      ev_to_ebitda: null,
+      ev_to_ebitda: evToEbitda,
       market_cap: marketCap,
     },
     profitability: {
@@ -162,8 +215,8 @@ function formatResults(
       free_cash_flow: fcf,
     },
     growth: {
-      revenue_growth_yoy: null,
-      earnings_growth_yoy: null,
+      revenue_growth_yoy: revenueGrowth,
+      earnings_growth_yoy: earningsGrowth,
     },
     period,
     fiscal_period: `${report.fiscal_period} ${report.fiscal_year}`,

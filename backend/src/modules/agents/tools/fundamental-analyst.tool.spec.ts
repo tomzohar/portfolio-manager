@@ -35,6 +35,7 @@ describe('FundamentalAnalystTool', () => {
               net_income_loss: { value: 20000000 },
               operating_income_loss: { value: 30000000 },
               gross_profit: { value: 45000000 },
+              basic_earnings_per_share: { value: 1.5 },
             },
             balance_sheet: {
               assets: { value: 500000000 },
@@ -42,22 +43,40 @@ describe('FundamentalAnalystTool', () => {
               liabilities: { value: 300000000 },
               current_assets: { value: 150000000 },
               current_liabilities: { value: 75000000 },
+              long_term_debt: { value: 50000000 },
+              weighted_average_shares_outstanding_basic: { value: 10000000 },
             },
             cash_flow_statement: {
               net_cash_flow_from_operating_activities: { value: 25000000 },
               payments_for_property_plant_and_equipment: { value: 5000000 },
+              depreciation_and_amortization: { value: 5000000 },
+            },
+          },
+        },
+        {
+          company_name: 'Apple Inc.',
+          fiscal_period: 'Q4',
+          fiscal_year: '2022',
+          financials: {
+            income_statement: {
+              revenues: { value: 80000000 },
+              net_income_loss: { value: 15000000 },
             },
           },
         },
       ],
       status: 'OK',
       request_id: 'req1',
-      count: 1,
+      count: 2,
     } as unknown as PolygonFinancialsResponse;
 
     const mockDetails = {
+      ticker: 'AAPL',
       name: 'Apple Inc.',
+      market: 'stocks',
       locale: 'us',
+      type: 'CS',
+      active: true,
       currency_name: 'usd',
     };
 
@@ -91,10 +110,22 @@ describe('FundamentalAnalystTool', () => {
     expect(parsedResult.financial_health.current_ratio).toBe(2); // 150m / 75m
     expect(parsedResult.financial_health.debt_to_equity).toBeCloseTo(1.5, 1); // 300m / 200m
 
+    // Valuation & Growth (New)
+    // Market Cap: 10m shares * 150 price = 1.5B
+    expect(parsedResult.valuation.market_cap).toBe(1500000000);
+    // EV = 1.5B (MCap) + 50M (Debt) - 0 (Cash not provided, default 0) = 1.55B
+    // EBITDA = 30M (OpInc) + 5M (DA) = 35M
+    // EV/EBITDA = 1550 / 35 = 44.285
+    expect(parsedResult.valuation.ev_to_ebitda).toBeCloseTo(44.28, 1);
+    // Revenue Growth: (100 - 80) / 80 = 25%
+    expect(parsedResult.growth.revenue_growth_yoy).toBe(25);
+    // Earnings Growth: (20 - 15) / 15 = 33.33%
+    expect(parsedResult.growth.earnings_growth_yoy).toBeCloseTo(33.33, 1);
+
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(polygonService.getFinancials).toHaveBeenCalledWith(
       'AAPL',
-      1,
+      2,
       'annual',
     );
   });
@@ -109,8 +140,15 @@ describe('FundamentalAnalystTool', () => {
       } as unknown as PolygonFinancialsResponse),
     );
     polygonService.getTickerDetails.mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      of({ name: 'Invalid Ticker', locale: 'us', currency_name: 'usd' } as any),
+      of({
+        ticker: 'INVALID',
+        name: 'Invalid Ticker',
+        market: 'stocks',
+        locale: 'us',
+        type: 'CS',
+        active: true,
+        currency_name: 'usd',
+      } as any),
     );
 
     const result = (await tool.invoke({ ticker: 'INVALID' })) as string;
@@ -146,11 +184,15 @@ describe('FundamentalAnalystTool', () => {
 
     polygonService.getFinancials.mockReturnValue(of(mockPartialFinancials));
     polygonService.getTickerDetails.mockReturnValue(
-      of({ name: 'Partial Co' } as any as {
-        name: string;
-        locale: string;
-        currency_name: string;
-      }),
+      of({
+        ticker: 'PARTIAL',
+        name: 'Partial Co',
+        market: 'stocks',
+        locale: 'us',
+        type: 'CS',
+        active: true,
+        currency_name: 'usd',
+      } as any),
     );
     polygonService.getTickerSnapshot.mockReturnValue(of(null));
 
@@ -189,11 +231,15 @@ describe('FundamentalAnalystTool', () => {
 
     polygonService.getFinancials.mockReturnValue(of(mockFinancials));
     polygonService.getTickerDetails.mockReturnValue(
-      of({ name: 'No Price Co' } as any as {
-        name: string;
-        locale: string;
-        currency_name: string;
-      }),
+      of({
+        ticker: 'NOPRICE',
+        name: 'No Price Co',
+        market: 'stocks',
+        locale: 'us',
+        type: 'CS',
+        active: true,
+        currency_name: 'usd',
+      } as any),
     );
     polygonService.getTickerSnapshot.mockReturnValue(of(null));
 
@@ -232,11 +278,15 @@ describe('FundamentalAnalystTool', () => {
 
     polygonService.getFinancials.mockReturnValue(of(mockFinancials));
     polygonService.getTickerDetails.mockReturnValue(
-      of({ name: 'Fallback Price Co' } as any as {
-        name: string;
-        locale: string;
-        currency_name: string;
-      }),
+      of({
+        ticker: 'FALLBACK',
+        name: 'Fallback Price Co',
+        market: 'stocks',
+        locale: 'us',
+        type: 'CS',
+        active: true,
+        currency_name: 'usd',
+      } as any),
     );
     polygonService.getTickerSnapshot.mockReturnValue(
       of(mockSnapshot as any as PolygonSnapshotResponse),
@@ -275,11 +325,15 @@ describe('FundamentalAnalystTool', () => {
 
     polygonService.getFinancials.mockReturnValue(of(mockFinancials));
     polygonService.getTickerDetails.mockReturnValue(
-      of({ name: 'Fallback Shares Co' } as any as {
-        name: string;
-        locale: string;
-        currency_name: string;
-      }),
+      of({
+        ticker: 'SHARES',
+        name: 'Fallback Shares Co',
+        market: 'stocks',
+        locale: 'us',
+        type: 'CS',
+        active: true,
+        currency_name: 'usd',
+      } as any),
     );
     polygonService.getTickerSnapshot.mockReturnValue(
       of(mockSnapshot as any as PolygonSnapshotResponse),

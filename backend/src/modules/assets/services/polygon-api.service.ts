@@ -10,6 +10,8 @@ import {
   PolygonAggregatesResponse,
   OHLCVBar,
   PolygonFinancialsResponse,
+  PolygonTickerDetailsResponse,
+  TickerDetails,
 } from '../types/polygon-api.types';
 
 @Injectable()
@@ -256,11 +258,7 @@ export class PolygonApiService {
    * @param ticker - The ticker symbol
    * @returns Observable of ticker details or null
    */
-  getTickerDetails(ticker: string): Observable<{
-    name: string;
-    locale: string;
-    currency_name: string;
-  } | null> {
+  getTickerDetails(ticker: string): Observable<TickerDetails | null> {
     this.logger.log(`Fetching details for ticker: ${ticker}`);
 
     const params = {
@@ -268,11 +266,12 @@ export class PolygonApiService {
     };
 
     return this.httpService
-      .get<{
-        results: { name: string; locale: string; currency_name: string };
-      }>(`${this.baseUrl}/reference/tickers/${ticker}`, {
-        params,
-      })
+      .get<PolygonTickerDetailsResponse>(
+        `${this.baseUrl}/reference/tickers/${ticker}`,
+        {
+          params,
+        },
+      )
       .pipe(
         map((response) => {
           return response.data.results;
