@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import OpenAI from 'openai';
-import { ChatOpenAI } from '@langchain/openai';
+import { createXai, XaiProvider } from '@ai-sdk/xai';
+import { generateText } from 'ai';
 import { GrokModels } from '../types/grok-models.enum';
 
 export interface GrokUsageMetadata {
@@ -15,24 +15,51 @@ export interface GrokResponse {
   usage: GrokUsageMetadata;
 }
 
+interface AISDKUsage {
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+}
+
+interface WebSearchSource {
+  url: string;
+}
+
+interface XSearchSource {
+  id: string;
+}
+
+export interface XSearchOptions {
+  fromDate?: string;
+  toDate?: string;
+  allowedXHandles?: string[];
+  excludedXHandles?: string[];
+}
+
+export interface XSearchResponse {
+  text: string;
+  sources: string[];
+  usage: GrokUsageMetadata;
+}
+
 /**
  * GrokLlmService
  *
- * Wrapper around xAI's Grok API using OpenAI-compatible SDK.
+ * Wrapper around xAI's Grok API using Vercel AI SDK (@ai-sdk/xai).
  * Provides:
- * - Lazy client initialization
+ * - Lazy provider initialization
  * - Token usage extraction
  * - Automatic retry with exponential backoff
- * - Structured response format
+ * - xSearch for real-time X platform data
  */
 @Injectable()
 export class GrokLlmService {
-  private client: OpenAI | null = null;
+  private xai: XaiProvider | null = null;
   private readonly logger = new Logger(GrokLlmService.name);
   private readonly defaultModel: string;
   private readonly maxRetries = 3;
-  private readonly retryDelays = [1000, 2000, 4000]; // Exponential backoff in ms
-  private static readonly XAI_BASE_URL = 'https://api.x.ai/v1';
+  private readonly retryDelays = [1000, 2000, 4000];
+  private readonly responsesModel = 'grok-4-fast'; // For xSearch/agentic tools
 
   constructor(private readonly configService: ConfigService) {
     const envModel = this.configService.get<string>('GROK_MODEL');
@@ -40,11 +67,10 @@ export class GrokLlmService {
   }
 
   /**
-   * Lazy initialization of OpenAI client configured for xAI
-   * Only creates client when first needed, not at service instantiation
+   * Lazy initialization of xAI provider
    */
-  private getClient(): OpenAI {
-    if (!this.client) {
+  private getProvider(): XaiProvider {
+    if (!this.xai) {
       const apiKey = this.configService.get<string>('XAI_API_KEY');
 
       if (!apiKey) {
@@ -53,35 +79,21 @@ export class GrokLlmService {
         );
       }
 
-      this.logger.debug('Initializing xAI (Grok) API client');
-      this.client = new OpenAI({
-        apiKey,
-        baseURL: GrokLlmService.XAI_BASE_URL,
-      });
+      this.logger.debug('Initializing xAI provider');
+      this.xai = createXai({ apiKey });
     }
 
-    return this.client;
+    return this.xai;
   }
 
   /**
-   * Extract usage metadata from OpenAI-style response
+   * Convert AI SDK usage to our format
    */
-  private extractUsage(
-    usage: OpenAI.Completions.CompletionUsage | undefined,
-  ): GrokUsageMetadata {
-    if (!usage) {
-      this.logger.warn('No usage metadata in Grok response');
-      return {
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 0,
-      };
-    }
-
+  private mapUsage(usage?: AISDKUsage): GrokUsageMetadata {
     return {
-      promptTokens: usage.prompt_tokens || 0,
-      completionTokens: usage.completion_tokens || 0,
-      totalTokens: usage.total_tokens || 0,
+      promptTokens: usage?.promptTokens ?? 0,
+      completionTokens: usage?.completionTokens ?? 0,
+      totalTokens: usage?.totalTokens ?? 0,
     };
   }
 
@@ -89,7 +101,7 @@ export class GrokLlmService {
    * Generate content with automatic retry logic
    *
    * @param prompt - The prompt to send to Grok
-   * @param model - Optional model override (defaults to GROK_MODEL env var)
+   * @param model - Optional model override
    * @returns Generated text and token usage metadata
    */
   async generateContent(prompt: string, model?: string): Promise<GrokResponse> {
@@ -97,31 +109,29 @@ export class GrokLlmService {
     this.logger.log(`Generating content with Grok model: ${modelToUse}`);
 
     let lastError: Error | null = null;
-    const client = this.getClient();
+    const xai = this.getProvider();
 
     for (let attempt = 0; attempt < this.maxRetries; attempt++) {
       try {
-        const response = await client.chat.completions.create({
-          model: modelToUse,
-          messages: [{ role: 'user', content: prompt }],
+        const result = await generateText({
+          model: xai(modelToUse),
+          prompt,
         });
 
-        const text = response.choices[0]?.message?.content;
-        const usage = this.extractUsage(response.usage);
+        const usage = this.mapUsage(result.usage);
 
         this.logger.debug(
           `Grok API call successful. Tokens: ${usage.totalTokens} ` +
             `(prompt: ${usage.promptTokens}, completion: ${usage.completionTokens})`,
         );
 
-        return { text: text || '', usage };
+        return { text: result.text, usage };
       } catch (error) {
         lastError = error as Error;
         this.logger.warn(
           `Grok API call failed (attempt ${attempt + 1}/${this.maxRetries}): ${lastError.message}`,
         );
 
-        // If not the last attempt, wait before retrying
         if (attempt < this.maxRetries - 1) {
           const delay = this.retryDelays[attempt];
           this.logger.debug(`Retrying in ${delay}ms...`);
@@ -130,7 +140,6 @@ export class GrokLlmService {
       }
     }
 
-    // All retries exhausted
     this.logger.error(
       `Grok API call failed after ${this.maxRetries} attempts: ${lastError?.message}`,
     );
@@ -138,38 +147,132 @@ export class GrokLlmService {
   }
 
   /**
-   * Get a LangChain-compatible ChatModel instance configured for xAI Grok
-   * This allows sharing the configured LLM instance with LangGraph nodes
+   * Generate content with X platform search (xSearch)
+   *
+   * Uses xAI's server-side agentic tools for real-time X data.
+   *
+   * @param prompt - The prompt to send (e.g., "Analyze sentiment for $NVDA on X")
+   * @param options - Optional xSearch parameters (date range, handles)
+   * @returns Text response, sources, and usage
    */
-  getChatModel(
-    options: {
-      streaming?: boolean;
-      temperature?: number;
-      maxTokens?: number;
-      model?: GrokModels;
-    } = {},
-  ): ChatOpenAI {
-    const apiKey = this.configService.get<string>('XAI_API_KEY');
-    if (!apiKey) {
-      throw new Error('XAI_API_KEY not configured');
-    }
+  async generateWithXSearch(
+    prompt: string,
+    options?: XSearchOptions,
+  ): Promise<XSearchResponse> {
+    this.logger.log(`Generating with xSearch: ${prompt.substring(0, 50)}...`);
 
-    return new ChatOpenAI({
-      openAIApiKey: apiKey,
-      modelName: options.model ?? this.defaultModel,
-      temperature: options.temperature ?? 0.7,
-      maxTokens: options.maxTokens ?? 1024,
-      streaming: options.streaming ?? false,
-      configuration: {
-        baseURL: GrokLlmService.XAI_BASE_URL,
-      },
-    });
+    const xai = this.getProvider();
+
+    try {
+      const result = await generateText({
+        model: xai.responses(this.responsesModel),
+        prompt,
+        tools: {
+          x_search: xai.tools.xSearch({
+            fromDate: options?.fromDate,
+            toDate: options?.toDate,
+            allowedXHandles: options?.allowedXHandles,
+            excludedXHandles: options?.excludedXHandles,
+          }),
+        },
+      });
+
+      const sources: string[] = [];
+      if (result.sources) {
+        for (const source of result.sources) {
+          if (typeof source === 'string') {
+            sources.push(source);
+          } else if (source && typeof source === 'object') {
+            if (
+              'url' in source &&
+              typeof (source as WebSearchSource).url === 'string'
+            ) {
+              sources.push((source as WebSearchSource).url);
+            } else if (
+              'id' in source &&
+              typeof (source as XSearchSource).id === 'string'
+            ) {
+              sources.push((source as XSearchSource).id);
+            }
+          }
+        }
+      }
+
+      this.logger.log(`xSearch returned ${sources.length} sources`);
+
+      return {
+        text: result.text,
+        sources,
+        usage: this.mapUsage(result.usage),
+      };
+    } catch (error) {
+      this.logger.error(`xSearch failed: ${(error as Error).message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate content with web search
+   *
+   * @param prompt - The prompt to send
+   * @param allowedDomains - Optional list of domains to restrict search
+   * @returns Text response, sources, and usage
+   */
+  async generateWithWebSearch(
+    prompt: string,
+    allowedDomains?: string[],
+  ): Promise<XSearchResponse> {
+    this.logger.log(
+      `Generating with web search: ${prompt.substring(0, 50)}...`,
+    );
+
+    const xai = this.getProvider();
+
+    try {
+      const result = await generateText({
+        model: xai.responses(this.responsesModel),
+        prompt,
+        tools: {
+          web_search: xai.tools.webSearch({
+            allowedDomains,
+          }),
+        },
+      });
+
+      const sources: string[] = [];
+      if (result.sources) {
+        for (const source of result.sources) {
+          if (typeof source === 'string') {
+            sources.push(source);
+          } else if (source && typeof source === 'object') {
+            if (
+              'url' in source &&
+              typeof (source as WebSearchSource).url === 'string'
+            ) {
+              sources.push((source as WebSearchSource).url);
+            } else if (
+              'id' in source &&
+              typeof (source as XSearchSource).id === 'string'
+            ) {
+              sources.push((source as XSearchSource).id);
+            }
+          }
+        }
+      }
+
+      return {
+        text: result.text,
+        sources,
+        usage: this.mapUsage(result.usage),
+      };
+    } catch (error) {
+      this.logger.error(`Web search failed: ${(error as Error).message}`);
+      throw error;
+    }
   }
 
   /**
    * Estimate token count for a prompt
-   * Note: xAI provides a /v1/tokenize-text endpoint, but for simplicity
-   * we use a rough estimate based on word count (approximation)
    *
    * @param contents - The text to estimate tokens for
    * @returns Token count metadata (estimate)

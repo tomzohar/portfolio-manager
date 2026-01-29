@@ -37,6 +37,7 @@ import { createTechnicalAnalystTool } from './tools/technical-analyst.tool';
 import { createFundamentalAnalystTool } from './tools/fundamental-analyst.tool';
 import { createEarningsCalendarTool } from './tools/earnings-calendar.tool';
 import { getCurrentTimeTool } from './tools/time.tool';
+import { createNewsSentimentTool } from './tools/news-sentiment.tool';
 
 @Module({
   imports: [
@@ -86,7 +87,8 @@ export class AgentsModule {
     private readonly geminiService: GeminiLlmService,
     private readonly portfolioService: PortfolioService,
     private readonly transactionsService: TransactionsService,
-    private readonly conversationService: ConversationService, // Injected
+    private readonly conversationService: ConversationService,
+    private readonly grokService: GrokLlmService,
   ) {
     this.registerDefaultTools();
   }
@@ -142,5 +144,9 @@ export class AgentsModule {
       createEarningsCalendarTool(this.finnhubService),
     );
     this.logger.log('Registered earnings_calendar tool');
+    this.toolRegistry.registerTool(
+      createNewsSentimentTool(this.polygonService, this.grokService),
+    );
+    this.logger.log('Registered news_sentiment_scanner tool');
   }
 }
