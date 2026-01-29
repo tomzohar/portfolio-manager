@@ -38,4 +38,4 @@ import { AgentsModule } from '../agents/agents.module';
   providers: [ConversationService],
   exports: [ConversationService],
 })
-export class ConversationsModule { }
+export class ConversationsModule {}

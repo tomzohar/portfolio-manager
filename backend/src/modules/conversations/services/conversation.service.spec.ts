@@ -113,8 +113,12 @@ describe('ConversationService', () => {
       const longContent = 'A'.repeat(50);
       const params = { ...baseParams, content: longContent };
       mockRepository.findOne.mockResolvedValue(null);
-      mockRepository.create.mockReturnValue({ sequence: 0 } as ConversationMessage);
-      mockRepository.save.mockResolvedValue({ sequence: 0 } as ConversationMessage);
+      mockRepository.create.mockReturnValue({
+        sequence: 0,
+      } as ConversationMessage);
+      mockRepository.save.mockResolvedValue({
+        sequence: 0,
+      } as ConversationMessage);
 
       // Act
       await service.saveUserMessage(params);
@@ -251,10 +255,16 @@ describe('ConversationService', () => {
       // Arrange
       const lastMessage = { sequence: 0 } as ConversationMessage;
       mockRepository.findOne.mockResolvedValue(lastMessage);
-      mockRepository.create.mockReturnValue({ sequence: 1 } as ConversationMessage);
-      mockRepository.save.mockResolvedValue({ sequence: 1 } as ConversationMessage);
+      mockRepository.create.mockReturnValue({
+        sequence: 1,
+      } as ConversationMessage);
+      mockRepository.save.mockResolvedValue({
+        sequence: 1,
+      } as ConversationMessage);
 
-      const refineSpy = jest.spyOn(service as any, 'refineConversationTitle').mockResolvedValue(undefined);
+      const refineSpy = jest
+        .spyOn(service as any, 'refineConversationTitle')
+        .mockResolvedValue(undefined);
 
       // Act
       await service.saveAssistantMessage(baseParams);

@@ -1,4 +1,10 @@
-import { Inject, Injectable, Logger, NotFoundException, forwardRef } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindManyOptions, Repository } from 'typeorm';
 import { ConversationMessage } from '../entities/conversation-message.entity';
@@ -108,10 +114,11 @@ export class ConversationService {
 
     // Heuristic: Set initial title if this is the first message
     if (sequence === 0) {
-      const draftTitle = params.content.length > 30
-        ? params.content.substring(0, 27) + '...'
-        : params.content;
-      await this.conversationRepo.update({ id: params.threadId }, { title: draftTitle });
+      const draftTitle = params.content;
+      await this.conversationRepo.update(
+        { id: params.threadId },
+        { title: draftTitle },
+      );
     }
     this.logger.debug(
       `User message saved: ${saved.id} (thread: ${params.threadId}, seq: ${sequence})`,
@@ -154,7 +161,9 @@ export class ConversationService {
     // LLM Refinement: Refine title after the first response (sequence 1)
     if (sequence === 1) {
       this.refineConversationTitle(params.threadId).catch((err) =>
-        this.logger.warn(`Failed to refine conversation title for ${params.threadId}: ${err.message}`),
+        this.logger.warn(
+          `Failed to refine conversation title for ${params.threadId}: ${(err as Error).message}`,
+        ),
       );
     }
 
@@ -462,7 +471,9 @@ export class ConversationService {
     const assistantMessage = messages[1].content;
 
     const NamingSchema = z.object({
-      title: z.string().describe('Concise, professional 3-5 word title for the conversation'),
+      title: z
+        .string()
+        .describe('Concise, professional 3-5 word title for the conversation'),
     });
 
     const llm = this.geminiService.getChatModel({
@@ -486,11 +497,19 @@ export class ConversationService {
       const { title: parsedTitle } = z.parse(NamingSchema, { title });
 
       if (parsedTitle) {
-        await this.conversationRepo.update({ id: threadId }, { title: parsedTitle });
-        this.logger.debug(`Conversation title refined for ${threadId}: ${parsedTitle}`);
+        await this.conversationRepo.update(
+          { id: threadId },
+          { title: parsedTitle },
+        );
+        this.logger.debug(
+          `Conversation title refined for ${threadId}: ${parsedTitle}`,
+        );
       }
-    } catch (error) {
-      this.logger.error(`Failed to generate title for ${threadId}: ${error.message}`);
+    } catch (e) {
+      const error = e as Error;
+      this.logger.error(
+        `Failed to generate title for ${threadId}: ${error.message}`,
+      );
     }
   }
 
