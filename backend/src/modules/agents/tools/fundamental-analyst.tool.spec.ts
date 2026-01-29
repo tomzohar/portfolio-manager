@@ -5,6 +5,7 @@ import { of } from 'rxjs';
 import {
   PolygonFinancialsResponse,
   PolygonSnapshotResponse,
+  TickerDetails,
 } from '../../assets/types/polygon-api.types';
 import { FundamentalAnalysisResult } from '../types/fundamental-analyst.types';
 
@@ -130,6 +131,62 @@ describe('FundamentalAnalystTool', () => {
     );
   });
 
+  it('should fetch TTM and fallback to Annual for growth', async () => {
+    const mockTtmFinancials = {
+      results: [
+        {
+          timeframe: 'ttm',
+          financials: { income_statement: { revenues: { value: 200 } } },
+        },
+      ],
+      count: 1,
+    } as unknown as PolygonFinancialsResponse;
+    const mockAnnualFinancials = {
+      results: [
+        {
+          timeframe: 'annual',
+          financials: { income_statement: { revenues: { value: 150 } } },
+        },
+        {
+          timeframe: 'annual',
+          financials: { income_statement: { revenues: { value: 100 } } },
+        },
+      ],
+      count: 2,
+    } as unknown as PolygonFinancialsResponse;
+
+    polygonService.getFinancials
+      .mockReturnValueOnce(of(mockTtmFinancials)) // first call for TTM
+      .mockReturnValueOnce(of(mockAnnualFinancials)); // second call for Annual fallback
+
+    polygonService.getTickerDetails.mockReturnValue(
+      of({ name: 'TTM Co' } as unknown as TickerDetails),
+    );
+    polygonService.getTickerSnapshot.mockReturnValue(of(null));
+
+    const result = (await tool.invoke({
+      ticker: 'TTMTEST',
+      period: 'ttm',
+    })) as string;
+    const parsedResult = JSON.parse(result) as FundamentalAnalysisResult;
+
+    // Growth should be calculated using the 2nd annual result (index 1) as previous
+    // (200 - 100) / 100 = 100%
+    expect(parsedResult.growth.revenue_growth_yoy).toBe(100);
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(polygonService.getFinancials).toHaveBeenCalledWith(
+      'TTMTEST',
+      1,
+      'ttm',
+    );
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(polygonService.getFinancials).toHaveBeenCalledWith(
+      'TTMTEST',
+      2,
+      'annual',
+    );
+  });
+
   it('should handle missing financials gracefully', async () => {
     polygonService.getFinancials.mockReturnValue(
       of({
@@ -148,7 +205,7 @@ describe('FundamentalAnalystTool', () => {
         type: 'CS',
         active: true,
         currency_name: 'usd',
-      } as any),
+      } as unknown as TickerDetails),
     );
 
     const result = (await tool.invoke({ ticker: 'INVALID' })) as string;
@@ -192,7 +249,7 @@ describe('FundamentalAnalystTool', () => {
         type: 'CS',
         active: true,
         currency_name: 'usd',
-      } as any),
+      } as unknown as TickerDetails),
     );
     polygonService.getTickerSnapshot.mockReturnValue(of(null));
 
@@ -239,7 +296,7 @@ describe('FundamentalAnalystTool', () => {
         type: 'CS',
         active: true,
         currency_name: 'usd',
-      } as any),
+      } as unknown as TickerDetails),
     );
     polygonService.getTickerSnapshot.mockReturnValue(of(null));
 
@@ -286,7 +343,7 @@ describe('FundamentalAnalystTool', () => {
         type: 'CS',
         active: true,
         currency_name: 'usd',
-      } as any),
+      } as unknown as TickerDetails),
     );
     polygonService.getTickerSnapshot.mockReturnValue(
       of(mockSnapshot as any as PolygonSnapshotResponse),
@@ -333,7 +390,7 @@ describe('FundamentalAnalystTool', () => {
         type: 'CS',
         active: true,
         currency_name: 'usd',
-      } as any),
+      } as unknown as TickerDetails),
     );
     polygonService.getTickerSnapshot.mockReturnValue(
       of(mockSnapshot as any as PolygonSnapshotResponse),

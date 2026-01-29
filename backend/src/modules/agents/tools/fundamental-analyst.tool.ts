@@ -36,40 +36,94 @@ export function createFundamentalAnalystTool(
     schema: FundamentalAnalystSchema,
     func: async ({ ticker, period }: FundamentalAnalystInput) => {
       try {
-        const [financialsResponse, details, snapshot] = await Promise.all([
-          firstValueFrom(polygonService.getFinancials(ticker, 2, period)),
-          firstValueFrom(polygonService.getTickerDetails(ticker)).catch(
-            () => null,
-          ),
-          firstValueFrom(polygonService.getTickerSnapshot(ticker)).catch(
-            () => null,
-          ),
-        ]);
+        let financialsResponse: PolygonFinancialsResponse | null;
+        let growthReports: StockFinancial[] = [];
 
-        if (
-          !financialsResponse ||
-          !financialsResponse.results ||
-          financialsResponse.results.length === 0
-        ) {
-          return JSON.stringify({
+        const detailsPromise = firstValueFrom(
+          polygonService.getTickerDetails(ticker),
+        ).catch(() => null);
+        const snapshotPromise = firstValueFrom(
+          polygonService.getTickerSnapshot(ticker),
+        ).catch(() => null);
+
+        if (period === 'ttm') {
+          // For TTM, we need the current TTM report plus annual reports for growth fallback
+          const [ttmRes, annualRes, details, snapshot]: [
+            PolygonFinancialsResponse | null,
+            PolygonFinancialsResponse | null,
+            TickerDetails | null,
+            PolygonSnapshotResponse | null,
+          ] = await Promise.all([
+            firstValueFrom(polygonService.getFinancials(ticker, 1, 'ttm')),
+            firstValueFrom(
+              polygonService.getFinancials(ticker, 2, 'annual'),
+            ).catch(() => null),
+            detailsPromise,
+            snapshotPromise,
+          ]);
+          financialsResponse = ttmRes;
+          if (annualRes?.results) {
+            growthReports = annualRes.results;
+          }
+          // In formatResults call site
+          const currentReport = financialsResponse?.results?.[0];
+          if (!currentReport) {
+            return JSON.stringify({
+              ticker,
+              error: `No fundamental data available for ${ticker}. The company might be private or not covered by our data provider.`,
+            });
+          }
+          const result = formatResults(
             ticker,
-            error: `No fundamental data available for ${ticker}. The company might be private or not covered by our data provider.`,
-          });
+            details,
+            period,
+            currentReport,
+            snapshot,
+            growthReports[1], // For TTM, use second annual as fallback for growth
+          );
+          return JSON.stringify(result);
+        } else {
+          const limit = period === 'quarterly' ? 5 : 2;
+          const [res, details, snapshot]: [
+            PolygonFinancialsResponse | null,
+            TickerDetails | null,
+            PolygonSnapshotResponse | null,
+          ] = await Promise.all([
+            firstValueFrom(polygonService.getFinancials(ticker, limit, period)),
+            detailsPromise,
+            snapshotPromise,
+          ]);
+          financialsResponse = res;
+          if (financialsResponse?.results) {
+            growthReports = financialsResponse.results;
+          }
+
+          if (
+            !financialsResponse ||
+            !financialsResponse.results ||
+            financialsResponse.results.length === 0
+          ) {
+            return JSON.stringify({
+              ticker,
+              error: `No fundamental data available for ${ticker}. The company might be private or not covered by our data provider.`,
+            });
+          }
+
+          const currentReport = financialsResponse.results[0];
+          // For growth, we compare with the 4th previous for quarterly, or 1st previous for annual
+          const previousReport =
+            period === 'quarterly' ? growthReports[4] : growthReports[1];
+
+          const result = formatResults(
+            ticker,
+            details,
+            period,
+            currentReport,
+            snapshot,
+            previousReport,
+          );
+          return JSON.stringify(result);
         }
-
-        const currentReport = financialsResponse.results[0];
-        const previousReport = financialsResponse.results[1];
-
-        const result = formatResults(
-          ticker,
-          details,
-          period,
-          currentReport,
-          snapshot,
-          previousReport,
-        );
-
-        return JSON.stringify(result);
       } catch (error: unknown) {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
