@@ -120,4 +120,87 @@ describe('FundamentalAnalystTool', () => {
       'No fundamental data available for INVALID',
     );
   });
+
+  it('should handle partial financial data by returning null for missing metrics', async () => {
+    const mockPartialFinancials = {
+      results: [
+        {
+          company_name: 'Partial Co',
+          fiscal_period: 'Q1',
+          fiscal_year: '2024',
+          financials: {
+            income_statement: {
+              revenues: { value: 1000000 },
+              // net_income_loss is missing
+            },
+            balance_sheet: {
+              assets: { value: 5000000 },
+            },
+          },
+        },
+      ],
+      status: 'OK',
+      request_id: 'req_partial',
+      count: 1,
+    } as unknown as PolygonFinancialsResponse;
+
+    polygonService.getFinancials.mockReturnValue(of(mockPartialFinancials));
+    polygonService.getTickerDetails.mockReturnValue(
+      of({ name: 'Partial Co' } as any as {
+        name: string;
+        locale: string;
+        currency_name: string;
+      }),
+    );
+    polygonService.getTickerSnapshot.mockReturnValue(of(null));
+
+    const result = (await tool.invoke({ ticker: 'PARTIAL' })) as string;
+    const parsedResult = JSON.parse(result) as FundamentalAnalysisResult;
+
+    expect(parsedResult.profitability.net_margin).toBeNull();
+    expect(parsedResult.profitability.gross_margin).toBeNull();
+    expect(parsedResult.financial_health.current_ratio).toBeNull();
+    expect(parsedResult.valuation.pe_ratio).toBeNull();
+  });
+
+  it('should return null for price-dependent metrics if snapshot fetch fails', async () => {
+    const mockFinancials = {
+      results: [
+        {
+          company_name: 'No Price Co',
+          fiscal_period: 'FY',
+          fiscal_year: '2023',
+          financials: {
+            income_statement: {
+              revenues: { value: 1000000 },
+              basic_earnings_per_share: { value: 5.0 },
+            },
+            balance_sheet: {
+              equity: { value: 10000000 },
+              basic_common_shares_outstanding: { value: 1000000 },
+            },
+          },
+        },
+      ],
+      status: 'OK',
+      request_id: 'req_no_price',
+      count: 1,
+    } as unknown as PolygonFinancialsResponse;
+
+    polygonService.getFinancials.mockReturnValue(of(mockFinancials));
+    polygonService.getTickerDetails.mockReturnValue(
+      of({ name: 'No Price Co' } as any as {
+        name: string;
+        locale: string;
+        currency_name: string;
+      }),
+    );
+    polygonService.getTickerSnapshot.mockReturnValue(of(null));
+
+    const result = (await tool.invoke({ ticker: 'NOPRICE' })) as string;
+    const parsedResult = JSON.parse(result) as FundamentalAnalysisResult;
+
+    expect(parsedResult.valuation.pe_ratio).toBeNull();
+    expect(parsedResult.valuation.market_cap).toBeNull();
+  });
 });
