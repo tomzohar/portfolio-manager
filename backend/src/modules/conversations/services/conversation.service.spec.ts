@@ -7,6 +7,7 @@ import { ConversationMessageType } from '../types/conversation-message-type.enum
 import { ConversationService } from './conversation.service';
 import { User } from 'src/modules/users/entities/user.entity';
 import { LLMModels } from '../../agents/types/lll-models.enum';
+import { GeminiLlmService } from '../../agents/services/gemini-llm.service';
 
 describe('ConversationService', () => {
   let service: ConversationService;
@@ -18,7 +19,17 @@ describe('ConversationService', () => {
     findOne: jest.fn(),
     count: jest.fn(),
     delete: jest.fn(),
+    update: jest.fn(),
     createQueryBuilder: jest.fn(),
+  };
+
+  const mockGeminiService = {
+    generateContent: jest.fn(),
+    getChatModel: jest.fn().mockReturnValue({
+      withStructuredOutput: jest.fn().mockReturnValue({
+        invoke: jest.fn(),
+      }),
+    }),
   };
 
   const mockQueryBuilder = {
@@ -40,6 +51,10 @@ describe('ConversationService', () => {
         {
           provide: getRepositoryToken(Conversation),
           useValue: mockRepository,
+        },
+        {
+          provide: GeminiLlmService,
+          useValue: mockGeminiService,
         },
       ],
     }).compile();
@@ -66,7 +81,7 @@ describe('ConversationService', () => {
       content: 'Analyze AAPL stock',
     };
 
-    it('should save user message with sequence 0 for new thread', async () => {
+    it('should save user message with sequence 0 for new thread and set heuristic title', async () => {
       // Arrange - no previous messages in thread
       mockRepository.findOne.mockResolvedValue(null);
 
@@ -87,19 +102,28 @@ describe('ConversationService', () => {
 
       // Assert
       expect(result.sequence).toBe(0);
-      expect(result.type).toBe(ConversationMessageType.USER);
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { threadId: baseParams.threadId },
-        order: { sequence: 'DESC' },
-      });
-      expect(mockRepository.create).toHaveBeenCalledWith({
-        threadId: baseParams.threadId,
-        userId: baseParams.userId,
-        type: ConversationMessageType.USER,
-        content: baseParams.content,
-        sequence: 0,
-        metadata: {},
-      });
+      expect(mockRepository.update).toHaveBeenCalledWith(
+        { id: baseParams.threadId },
+        { title: baseParams.content },
+      );
+    });
+
+    it('should truncate heuristic title if content is too long', async () => {
+      // Arrange
+      const longContent = 'A'.repeat(50);
+      const params = { ...baseParams, content: longContent };
+      mockRepository.findOne.mockResolvedValue(null);
+      mockRepository.create.mockReturnValue({ sequence: 0 } as ConversationMessage);
+      mockRepository.save.mockResolvedValue({ sequence: 0 } as ConversationMessage);
+
+      // Act
+      await service.saveUserMessage(params);
+
+      // Assert
+      expect(mockRepository.update).toHaveBeenCalledWith(
+        { id: params.threadId },
+        { title: 'A'.repeat(27) + '...' },
+      );
     });
 
     it('should increment sequence for subsequent messages', async () => {
@@ -221,6 +245,22 @@ describe('ConversationService', () => {
       // Assert
       expect(result.type).toBe(ConversationMessageType.ASSISTANT);
       expect(result.metadata?.traceIds).toEqual(baseParams.traceIds);
+    });
+
+    it('should trigger title refinement on sequence 1', async () => {
+      // Arrange
+      const lastMessage = { sequence: 0 } as ConversationMessage;
+      mockRepository.findOne.mockResolvedValue(lastMessage);
+      mockRepository.create.mockReturnValue({ sequence: 1 } as ConversationMessage);
+      mockRepository.save.mockResolvedValue({ sequence: 1 } as ConversationMessage);
+
+      const refineSpy = jest.spyOn(service as any, 'refineConversationTitle').mockResolvedValue(undefined);
+
+      // Act
+      await service.saveAssistantMessage(baseParams);
+
+      // Assert
+      expect(refineSpy).toHaveBeenCalledWith(baseParams.threadId);
     });
 
     it('should save assistant message with modelUsed in metadata', async () => {
@@ -704,7 +744,7 @@ describe('ConversationService', () => {
       expect(mockRepository.find).toHaveBeenCalledWith({
         where: { userId },
         order: { createdAt: 'DESC' },
-        select: ['id'],
+        select: ['id', 'title', 'createdAt'],
       });
       expect(result).toEqual(mockConversations);
     });
@@ -724,7 +764,7 @@ describe('ConversationService', () => {
       expect(mockRepository.find).toHaveBeenCalledWith({
         where: { userId },
         order: { createdAt: 'DESC' },
-        select: ['id'],
+        select: ['id', 'title', 'createdAt'],
         take: 5,
       });
       expect(result).toEqual(mockConversations);

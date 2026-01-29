@@ -51,7 +51,7 @@ export class ChatHistoryListComponent {
     listItems = computed<ListItem[]>(() => {
         return this.conversations().map(conv => ({
             id: conv.id,
-            label: conv.id,
+            label: conv.title || 'New Chat',
             subLabel: this.transformDate(conv.createdAt) || '',
             icon: 'chat_bubble_outline',
             selected: this.activeThreadId() === conv.id

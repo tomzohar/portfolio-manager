@@ -488,6 +488,7 @@ export interface ConversationConfig {
 export interface Conversation {
   id: string; // matches threadId
   userId: string;
+  title?: string | null;
   config: ConversationConfig;
   createdAt: string;
   updatedAt: string;

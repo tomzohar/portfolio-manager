@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindManyOptions, Repository } from 'typeorm';
 import { ConversationMessage } from '../entities/conversation-message.entity';
@@ -8,6 +8,8 @@ import {
 } from '../entities/conversation.entity';
 import { ConversationMessageType } from '../types/conversation-message-type.enum';
 import { ConversationMessageMetadata } from '../types/conversation-message-metadata.interface';
+import { GeminiLlmService } from '../../agents/services/gemini-llm.service';
+import { z } from 'zod';
 
 /** Parameters for saving a user message */
 export interface SaveUserMessageParams {
@@ -73,6 +75,8 @@ export class ConversationService {
     private readonly messageRepo: Repository<ConversationMessage>,
     @InjectRepository(Conversation)
     private readonly conversationRepo: Repository<Conversation>,
+    @Inject(forwardRef(() => GeminiLlmService))
+    private readonly geminiService: GeminiLlmService,
   ) { }
 
   /**
@@ -101,6 +105,14 @@ export class ConversationService {
     });
 
     const saved = await this.messageRepo.save(message);
+
+    // Heuristic: Set initial title if this is the first message
+    if (sequence === 0) {
+      const draftTitle = params.content.length > 30
+        ? params.content.substring(0, 27) + '...'
+        : params.content;
+      await this.conversationRepo.update({ id: params.threadId }, { title: draftTitle });
+    }
     this.logger.debug(
       `User message saved: ${saved.id} (thread: ${params.threadId}, seq: ${sequence})`,
     );
@@ -138,6 +150,13 @@ export class ConversationService {
     this.logger.debug(
       `Assistant message saved: ${saved.id} (thread: ${params.threadId}, seq: ${sequence})`,
     );
+
+    // LLM Refinement: Refine title after the first response (sequence 1)
+    if (sequence === 1) {
+      this.refineConversationTitle(params.threadId).catch((err) =>
+        this.logger.warn(`Failed to refine conversation title for ${params.threadId}: ${err.message}`),
+      );
+    }
 
     return saved;
   }
@@ -415,7 +434,7 @@ export class ConversationService {
     const query: FindManyOptions<Conversation> = {
       where: { userId },
       order: { createdAt: 'DESC' },
-      select: ['id'],
+      select: ['id', 'title', 'createdAt'],
     };
 
     if (limit) {
@@ -423,6 +442,56 @@ export class ConversationService {
     }
 
     return this.conversationRepo.find(query);
+  }
+  /**
+   * Refine conversation title using LLM.
+   * Generates a concise 3-5 word title based on the first interaction.
+   *
+   * @param threadId - The thread ID to refine title for
+   */
+  async refineConversationTitle(threadId: string): Promise<void> {
+    const messages = await this.messageRepo.find({
+      where: { threadId },
+      order: { sequence: 'ASC' },
+      take: 2,
+    });
+
+    if (messages.length < 2) return;
+
+    const userMessage = messages[0].content;
+    const assistantMessage = messages[1].content;
+
+    const NamingSchema = z.object({
+      title: z.string().describe('Concise, professional 3-5 word title for the conversation'),
+    });
+
+    const llm = this.geminiService.getChatModel({
+      temperature: 0.1,
+      maxOutputTokens: 64,
+    });
+
+    const structuredLlm = llm.withStructuredOutput(NamingSchema);
+
+    const prompt = `
+    Based on the following exchange, generate a concise, professional title for the conversation.
+    The title should be 3-5 words long and summarize the main topic.
+
+    User: ${userMessage}
+    Assistant: ${assistantMessage.substring(0, 500)}...
+    `;
+
+    try {
+      const response = await structuredLlm.invoke(prompt);
+      const title = response.title.trim().replace(/^["']|["']$/g, '');
+      const { title: parsedTitle } = z.parse(NamingSchema, { title });
+
+      if (parsedTitle) {
+        await this.conversationRepo.update({ id: threadId }, { title: parsedTitle });
+        this.logger.debug(`Conversation title refined for ${threadId}: ${parsedTitle}`);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to generate title for ${threadId}: ${error.message}`);
+    }
   }
 
   /**

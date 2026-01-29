@@ -183,12 +183,15 @@ export class ChatPageComponent implements OnDestroy {
    */
   conversationTitle = computed(() => {
     const thread = this.threadId();
-    if (!thread) {
-      return 'New Conversation';
+    const conversation = this.facade.conversations().find(conv => conv.id === thread);
+    if (conversation) {
+      return conversation.title;
     }
-    // Show friendly short ID
-    const shortId = thread.length > 8 ? thread.slice(-8) : thread;
-    return `Chat ${shortId}`;
+    return 'New Conversation';
+
+    // // Show friendly short ID
+    // const shortId = thread.length > 8 ? thread.slice(-8) : thread;
+    // return `Chat ${shortId}`;
   });
 
   /**

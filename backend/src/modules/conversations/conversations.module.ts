@@ -7,6 +7,7 @@ import { ConversationService } from './services/conversation.service';
 import { ConversationsController } from './conversations.controller';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
+import { AgentsModule } from '../agents/agents.module';
 
 /**
  * Conversations Module
@@ -31,9 +32,10 @@ import { UsersModule } from '../users/users.module';
     JwtModule,
     forwardRef(() => AuthModule),
     forwardRef(() => UsersModule),
+    forwardRef(() => AgentsModule),
   ],
   controllers: [ConversationsController],
   providers: [ConversationService],
   exports: [ConversationService],
 })
-export class ConversationsModule {}
+export class ConversationsModule { }

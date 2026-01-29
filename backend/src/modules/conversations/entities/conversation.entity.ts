@@ -25,6 +25,9 @@ export class Conversation {
   @Column({ type: 'jsonb', default: {} })
   config: ConversationConfig;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  title: string | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
