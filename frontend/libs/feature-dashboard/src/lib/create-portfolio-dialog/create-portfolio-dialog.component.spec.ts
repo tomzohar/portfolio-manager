@@ -40,7 +40,6 @@ describe('CreatePortfolioDialogComponent', () => {
     await createComponent({
       name: 'AI Growth',
       description: 'Leverages AI to rebalance weekly.',
-      initialInvestment: 5000,
       riskProfile: PortfolioRiskProfile.AGGRESSIVE,
     });
   });
@@ -52,7 +51,6 @@ describe('CreatePortfolioDialogComponent', () => {
   it('should initialize form with provided dialog data', () => {
     expect(component.nameControl.value).toBe('AI Growth');
     expect(component.descriptionControl.value).toContain('AI');
-    expect(component.initialInvestmentControl.value).toBe(5000);
     expect(component.riskProfileControl.value).toBe('aggressive');
   });
 
@@ -62,13 +60,11 @@ describe('CreatePortfolioDialogComponent', () => {
 
     expect(component.nameControl.value).toBe('');
     expect(component.descriptionControl.value).toBe('');
-    expect(component.initialInvestmentControl.value).toBe(10000);
     expect(component.riskProfileControl.value).toBe('moderate');
   });
 
   it('should mark form invalid when required fields are empty', () => {
     component.nameControl.setValue('');
-    component.initialInvestmentControl.setValue('');
 
     expect(component.isFormValid()).toBe(false);
   });
@@ -84,7 +80,6 @@ describe('CreatePortfolioDialogComponent', () => {
     component.form.setValue({
       name: '  Quantum Fund  ',
       description: '  Multi-strategy focus ',
-      initialInvestment: 12500,
       riskProfile: 'moderate',
     });
 
@@ -93,7 +88,6 @@ describe('CreatePortfolioDialogComponent', () => {
     expect(mockDialogRef.close).toHaveBeenCalledWith({
       name: 'Quantum Fund',
       description: 'Multi-strategy focus',
-      initialInvestment: 12500,
       riskProfile: 'moderate',
     });
   });

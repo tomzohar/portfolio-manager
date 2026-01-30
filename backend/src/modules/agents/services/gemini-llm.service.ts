@@ -125,7 +125,7 @@ export class GeminiLlmService {
 
         this.logger.debug(
           `Gemini API call successful. Tokens: ${usage.totalTokens} ` +
-          `(prompt: ${usage.promptTokens}, completion: ${usage.completionTokens})`,
+            `(prompt: ${usage.promptTokens}, completion: ${usage.completionTokens})`,
         );
 
         return { text: text || '', usage };

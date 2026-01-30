@@ -19,7 +19,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
 export interface CreatePortfolioDialogData {
   name?: string;
   description?: string;
-  initialInvestment?: number;
   riskProfile?: PortfolioRiskProfile;
 }
 
@@ -44,7 +43,6 @@ const RiskLevelIcons = {
   [PortfolioRiskProfile.AGGRESSIVE]: 'bolt',
 }
 
-const DEFAULT_INITIAL_INVESTMENT = 10000;
 const RISK_PROFILE_OPTIONS: RiskProfileOption[] = [
   {
     value: PortfolioRiskProfile.CONSERVATIVE,
@@ -103,10 +101,6 @@ export class CreatePortfolioDialogComponent {
       this.data?.description ?? '',
       [Validators.maxLength(400)],
     ],
-    initialInvestment: [
-      this.data?.initialInvestment ?? DEFAULT_INITIAL_INVESTMENT,
-      [Validators.required, Validators.min(100)],
-    ],
     riskProfile: [
       this.data?.riskProfile ?? PortfolioRiskProfile.MODERATE,
       [Validators.required],
@@ -156,22 +150,6 @@ export class CreatePortfolioDialogComponent {
     };
   }
 
-  get initialInvestmentInputConfig(): InputConfig {
-    return {
-      control: this.initialInvestmentControl,
-      label: 'Initial Investment',
-      type: 'number',
-      min: 100,
-      step: 100,
-      required: true,
-      prefixIcon: 'attach_money',
-      fullWidth: true,
-      errorMessages: {
-        required: 'Initial investment is required',
-        min: 'Initial investment must be at least $100',
-      },
-    };
-  }
 
   onCancel(): void {
     this.dialogRef.close();
@@ -186,16 +164,10 @@ export class CreatePortfolioDialogComponent {
     const value = this.form.value;
     const name = (value.name ?? '').trim();
     const description = value.description?.trim();
-    const investmentRaw = value.initialInvestment;
-    const investment =
-      investmentRaw === null || investmentRaw === undefined || investmentRaw === ''
-        ? undefined
-        : Number(investmentRaw);
 
     const result: CreatePortfolioDialogResult = {
       name,
       description: description || undefined,
-      initialInvestment: Number.isFinite(investment) ? investment : undefined,
       riskProfile: value.riskProfile as PortfolioRiskProfile,
     };
 
@@ -219,9 +191,6 @@ export class CreatePortfolioDialogComponent {
     return this.form.get('description') as FormControl;
   }
 
-  get initialInvestmentControl(): FormControl {
-    return this.form.get('initialInvestment') as FormControl;
-  }
 
   get riskProfileControl(): FormControl {
     return this.form.get('riskProfile') as FormControl;

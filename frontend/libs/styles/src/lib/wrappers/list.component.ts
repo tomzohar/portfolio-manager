@@ -1,12 +1,12 @@
 import { Component, input, output, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, NgTemplateOutlet } from '@angular/common';
 import { MatListModule } from '@angular/material/list';
-import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { ListConfig } from '../types/list-config';
 import { ListItem } from '../types/list-item';
 import { ButtonComponent } from './button.component';
 import { IconComponent } from './icon.component';
+import { RouterLink } from '@angular/router';
 
 /**
  * List Component
@@ -32,6 +32,8 @@ import { IconComponent } from './icon.component';
         MatDividerModule,
         ButtonComponent,
         IconComponent,
+        NgTemplateOutlet,
+        RouterLink,
     ],
     templateUrl: './list.component.html',
     styleUrl: './list.component.scss',

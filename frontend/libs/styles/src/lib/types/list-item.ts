@@ -43,6 +43,12 @@ export interface ListItem {
      * Whether the item is currently selected
      */
     selected?: boolean;
+
+
+    /**
+     * when populated item click will use router-link to navigate
+     */
+    navigation?: string;
 }
 
 /**

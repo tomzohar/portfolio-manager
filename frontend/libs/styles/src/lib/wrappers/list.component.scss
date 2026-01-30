@@ -6,8 +6,13 @@
   width: 100%;
   padding: 0;
 
+  a {
+    display: flex;
+  }
+
   .mat-mdc-list-item {
     max-height: 40px;
+    color: var(--color-text-subtle);
 
     &.clickable {
       cursor: pointer;
@@ -36,6 +41,17 @@
     .mdc-list-item__start {
       margin-left: 0;
       margin-right: var(--spacing-sm, 8px);
+    }
+
+    ::ng-deep {
+
+      .mdc-list-item__secondary-text {
+        display: flex;
+
+        &::before {
+          display: none;
+        }
+      }
     }
   }
 
@@ -74,12 +90,25 @@
     --mdc-list-list-item-leading-icon-size: 32px;
   }
 
+  a {
+
+    .mdc-list-item__content,
+    .list-item__icon,
+    .list-item__title,
+    .list-item__sub-label,
+    .list-item__sub-label {
+      color: var(--color-text-subtle);
+      font-size: var(--font-size-xs);
+    }
+  }
+
+
   .mdc-list-item__content,
   .list-item__icon,
   .list-item__title,
   .list-item__sub-label,
   .list-item__sub-label {
-    color: inherit;
+    color: var(--color-text-subtle);
     font-size: var(--font-size-xs);
   }
 }

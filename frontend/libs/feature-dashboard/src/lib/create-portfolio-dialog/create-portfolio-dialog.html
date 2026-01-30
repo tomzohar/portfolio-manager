@@ -2,26 +2,13 @@
 
 <mat-dialog-content>
   <div class="dialog-wrapper">
-    <p class="dialog-subtitle">
-      {{ subtitle }}
-    </p>
+    <p class="dialog-subtitle">{{ subtitle }}</p>
 
     <form class="dialog-form" [formGroup]="form" novalidate>
       <div class="form-stack">
         <lib-input [config]="portfolioNameInputConfig" />
         <lib-input [config]="descriptionInputConfig" />
       </div>
-
-      <section class="investment-card">
-        <div class="section-heading">
-          <div>
-            <p class="section-label">Funding</p>
-            <h3>Initial Investment</h3>
-          </div>
-          <span class="section-helper">Used to seed the initial allocation baseline.</span>
-        </div>
-        <lib-input [config]="initialInvestmentInputConfig" />
-      </section>
 
       <section class="risk-section">
         <div class="section-heading">
@@ -36,21 +23,21 @@
 
         <div class="risk-options">
           @for (option of riskProfiles; track option.value) {
-            <button
-              type="button"
-              class="risk-option"
-              [class.selected]="isSelectedRiskProfile(option.value)"
-              (click)="selectRiskProfile(option.value)"
-              [attr.aria-pressed]="isSelectedRiskProfile(option.value)"
-            >
-              <span class="risk-icon">
-                <mat-icon>{{ option.icon }}</mat-icon>
-              </span>
-              <span class="risk-copy">
-                <span class="risk-label">{{ option.label }}</span>
-                <span class="risk-description">{{ option.description }}</span>
-              </span>
-            </button>
+          <button
+            type="button"
+            class="risk-option"
+            [class.selected]="isSelectedRiskProfile(option.value)"
+            (click)="selectRiskProfile(option.value)"
+            [attr.aria-pressed]="isSelectedRiskProfile(option.value)"
+          >
+            <span class="risk-icon">
+              <mat-icon>{{ option.icon }}</mat-icon>
+            </span>
+            <span class="risk-copy">
+              <span class="risk-label">{{ option.label }}</span>
+              <span class="risk-description">{{ option.description }}</span>
+            </span>
+          </button>
           }
         </div>
       </section>
@@ -63,8 +50,5 @@
     [config]="{ label: 'Cancel', variant: 'flat' }"
     (clicked)="onCancel()"
   />
-  <lib-button
-    [config]="createButtonConfig()"
-    (clicked)="onSubmit()"
-  />
+  <lib-button [config]="createButtonConfig()" (clicked)="onSubmit()" />
 </mat-dialog-actions>

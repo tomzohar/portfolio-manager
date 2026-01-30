@@ -52,13 +52,8 @@ export class ChatHistoryListComponent {
         return this.conversations().map(conv => ({
             id: conv.id,
             label: conv.title || 'New Chat',
-            subLabel: this.transformDate(conv.createdAt) || '',
             icon: 'chat_bubble_outline',
-            selected: this.activeThreadId() === conv.id
+            navigation: `/chat/${conv.id}`
         }));
     });
-
-    onSelect(item: ListItem): void {
-        this.conversationSelected.emit(item.id.toString());
-    }
 }

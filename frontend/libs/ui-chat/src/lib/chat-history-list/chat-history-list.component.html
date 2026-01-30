@@ -1,12 +1,8 @@
 @if (conversations().length > 0) {
-  <lib-list
-    class="chats-list"
-    [config]="listConfig()"
-    (itemClicked)="onSelect($event)"
-  />
+<lib-list class="chats-list" [config]="listConfig()" />
 } @else {
-  <div class="empty-state">
-    <span class="material-icons-outlined empty-icon">history</span>
-    <p>No conversation history yet.</p>
-  </div>
+<div class="empty-state">
+  <span class="material-icons-outlined empty-icon">history</span>
+  <p>No conversation history yet.</p>
+</div>
 }
