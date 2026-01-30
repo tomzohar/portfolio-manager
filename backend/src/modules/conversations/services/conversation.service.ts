@@ -83,7 +83,7 @@ export class ConversationService {
     private readonly conversationRepo: Repository<Conversation>,
     @Inject(forwardRef(() => GeminiLlmService))
     private readonly geminiService: GeminiLlmService,
-  ) { }
+  ) {}
 
   /**
    * Save user message when conversation starts.

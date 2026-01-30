@@ -38,10 +38,10 @@ export async function performanceAttributionNode(
   // Get services from config
   const configurable = config.configurable as
     | {
-      performanceService?: PerformanceService;
-      portfolioService?: PortfolioService;
-      sectorAttributionService?: SectorAttributionService;
-    }
+        performanceService?: PerformanceService;
+        portfolioService?: PortfolioService;
+        sectorAttributionService?: SectorAttributionService;
+      }
     | undefined;
 
   const performanceService = configurable?.performanceService;
@@ -235,11 +235,11 @@ async function getDeepAttributionAnalysis(
     const { sectorBreakdown, topPerformers, bottomPerformers } =
       sectorAttributionService
         ? await getAttributionFromService(
-          sectorAttributionService,
-          holdings,
-          portfolioId,
-          userId,
-        )
+            sectorAttributionService,
+            holdings,
+            portfolioId,
+            userId,
+          )
         : getAttributionInline(holdings);
 
     // Generate deep analysis message
@@ -344,7 +344,6 @@ function getAttributionInline(
 /**
  * Extract timeframe from natural language query
  */
-
 
 /**
  * Calculate average return for a specific sector
