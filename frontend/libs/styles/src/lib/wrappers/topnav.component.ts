@@ -3,9 +3,8 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { ActionMenuComponent } from './action-menu.component';
 import { BrandIconComponent } from './brand-icon.component';
 import { TopNavConfig } from '../types/topnav-config';
-import { ActionMenuConfig } from '../types/action-menu-config';
 import { MenuItem } from '../types/menu-config';
-import { USER_ICONS } from '../constants/material-icons';
+import { ButtonComponent } from "./button.component";
 
 /**
  * TopNavComponent
@@ -31,7 +30,7 @@ import { USER_ICONS } from '../constants/material-icons';
 @Component({
   selector: 'lib-topnav',
   standalone: true,
-  imports: [MatToolbarModule, ActionMenuComponent, BrandIconComponent],
+  imports: [MatToolbarModule, ActionMenuComponent, BrandIconComponent, ButtonComponent],
   template: `
     <mat-toolbar color="primary" class="lib-topnav">
       <div class="topnav-left">
@@ -41,14 +40,24 @@ import { USER_ICONS } from '../constants/material-icons';
         <span class="topnav-title">{{ config().title }}</span>
       </div>
       <span class="spacer"></span>
-      
-      @if (shouldShowUserMenu()) {
-        <lib-action-menu
-          [config]="userMenuConfig()"
-          (itemSelected)="onUserMenuItemSelected($event)"
-          class="topnav-user-menu"
-        />
-      }
+
+      <div class="topnav-right">
+        @for (button of config().buttons; track button.id) {
+          <lib-button 
+            [config]="button" 
+            (clicked)="buttonClicked.emit(button.id)"
+            class="topnav-button"
+          />
+        }
+        
+        @if (config().actions) {
+          <lib-action-menu
+            [config]="config().actions!"
+            (itemSelected)="actionItemSelected.emit($event)"
+            class="topnav-actions"
+          />
+        }
+      </div>
     </mat-toolbar>
   `,
   styleUrl: './topnav.component.scss',
@@ -60,9 +69,14 @@ export class TopNavComponent {
   config = input.required<TopNavConfig>();
 
   /**
-   * Emitted when user clicks sign out
+   * Emitted when a button is clicked
    */
-  signOut = output<void>();
+  buttonClicked = output<string>();
+
+  /**
+   * Emitted when an action menu item is selected
+   */
+  actionItemSelected = output<MenuItem>();
 
   /**
    * Determine if icon should be shown
@@ -70,49 +84,4 @@ export class TopNavComponent {
   shouldShowIcon = computed(() => {
     return !!this.config().icon;
   });
-
-  /**
-   * Determine if user menu should be shown
-   */
-  shouldShowUserMenu = computed(() => {
-    return this.config().user !== null;
-  });
-
-  /**
-   * User menu configuration
-   */
-  userMenuConfig = computed<ActionMenuConfig>(() => {
-    const user = this.config().user;
-    const email = user?.email || '';
-    
-    return {
-      button: {
-        label: email,
-        icon: USER_ICONS.PERSON,
-        variant: 'flat',
-        color: 'primary',
-        ariaLabel: 'User menu',
-        iconPosition: 'left',
-      },
-      menu: {
-        items: [
-          {
-            id: 'sign-out',
-            label: 'Sign Out',
-            icon: USER_ICONS.LOGOUT,
-          },
-        ],
-        ariaLabel: 'User menu options',
-      },
-    };
-  });
-
-  /**
-   * Handle user menu item selection
-   */
-  onUserMenuItemSelected(item: MenuItem): void {
-    if (item.id === 'sign-out') {
-      this.signOut.emit();
-    }
-  }
 }

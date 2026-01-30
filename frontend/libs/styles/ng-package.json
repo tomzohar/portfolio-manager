@@ -7,8 +7,7 @@
     "@angular/material",
     "@angular/common",
     "@angular/platform-browser",
-    "@angular/router",
-    "@stocks-researcher/types"
+    "@angular/router"
   ],
   "lib": {
     "entryFile": "src/index.ts",

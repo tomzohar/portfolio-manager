@@ -267,7 +267,11 @@ export class DailySnapshotCalculationService {
       }
 
       // 4. Track last known prices for each ticker to handle weekends/holidays
-      const lastKnownPrices = new Map<string, number>();
+      // Initialize with latest market data before startDate to avoid falling back to transaction prices
+      const lastKnownPrices = await this.getLatestMarketPricesBeforeDate(
+        uniqueTickers,
+        startDate,
+      );
 
       // 5. Calculate snapshot for each day sequentially
       for (const date of dateRange) {
@@ -554,7 +558,6 @@ export class DailySnapshotCalculationService {
 
     // 3. Calculate end equity using batched market data
     let stockValue = 0;
-    let missingPricesCount = 0;
 
     for (const [ticker, quantity] of positions.entries()) {
       if (ticker === CASH_TICKER) {
@@ -569,74 +572,30 @@ export class DailySnapshotCalculationService {
         price = lastKnownPrices.get(ticker);
       }
 
+      // If market data and last known price are missing, try transaction price fallback
       if (price === undefined) {
-        // Critical: Missing market data
-        // During backfill, this should rarely happen as data is pre-fetched
-        this.logger.error(
-          `Portfolio ${portfolioId}: No market data for ${ticker} on ${dateStr}. ` +
-            `Performance calculations may be inaccurate. Verify market data backfill completed successfully.`,
+        const fallbackPrice = await this.getLastTransactionPrice(
+          portfolioId,
+          ticker,
+          date,
+          queryRunner,
         );
-        missingPricesCount++;
-        continue;
+        if (fallbackPrice !== null) {
+          price = fallbackPrice;
+        }
+      }
+
+      if (price === undefined) {
+        // Critical: Missing data even after fallback
+        this.logger.warn(
+          `Skipping snapshot for ${dateStr}: No price data for ${ticker} (Market: MISSING, LastKnown: MISSING, Transaction: MISSING).`,
+        );
+        return; // SKIP THIS DAY COMPLETELY to avoid partial data drops
       }
 
       // Update last known price
       lastKnownPrices.set(ticker, price);
       stockValue += quantity * price;
-    }
-
-    // If we are missing prices for ALL non-cash tickers, and we have non-cash tickers,
-    // we need to handle this carefully.
-    // CRITICAL FIX: Use transaction prices as fallback when market data is unavailable
-    const nonCashTickers = Array.from(positions.keys()).filter(
-      (t) => t !== CASH_TICKER,
-    );
-
-    if (
-      nonCashTickers.length > 0 &&
-      missingPricesCount === nonCashTickers.length
-    ) {
-      // Try to use transaction prices as fallback for ALL tickers
-      this.logger.warn(
-        `No market data available for ${dateStr} - using transaction/last-known prices as fallback.`,
-      );
-
-      stockValue = 0;
-      let fallbackPricesFound = 0;
-
-      for (const [ticker, quantity] of positions.entries()) {
-        if (ticker === CASH_TICKER) continue;
-
-        // First try last known price from previous days
-        let price: number | null | undefined = lastKnownPrices.get(ticker);
-
-        // If no last known price, try to get transaction price
-        if (price === undefined) {
-          price = await this.getLastTransactionPrice(
-            portfolioId,
-            ticker,
-            date,
-            queryRunner,
-          );
-          if (price) {
-            lastKnownPrices.set(ticker, price);
-          }
-        }
-
-        if (price !== undefined) {
-          stockValue += quantity * (price ?? 0);
-          fallbackPricesFound++;
-        }
-      }
-
-      // If we found fallback prices for all tickers, proceed with snapshot
-      // Otherwise skip this day
-      if (fallbackPricesFound < nonCashTickers.length) {
-        this.logger.debug(
-          `Skipping snapshot for ${dateStr} - no price data available even after fallback attempt.`,
-        );
-        return;
-      }
     }
 
     const cashBalance = positions.get(CASH_TICKER) ?? 0;
@@ -698,6 +657,43 @@ export class DailySnapshotCalculationService {
       // Don't throw - we don't want to fail the transaction creation
       // Users can manually trigger backfill if needed
     }
+  }
+
+  /**
+   * Get the latest market prices for tickers before a specific date
+   * Used to initialize lastKnownPrices when starting backfill mid-history
+   */
+  private async getLatestMarketPricesBeforeDate(
+    tickers: string[],
+    date: Date,
+  ): Promise<Map<string, number>> {
+    const prices = new Map<string, number>();
+    if (tickers.length === 0) {
+      return prices;
+    }
+
+    const latestPrices = await this.marketDataRepo
+      .createQueryBuilder('md')
+      .select(['md.ticker', 'md.closePrice'])
+      .where('md.ticker IN (:...tickers)', { tickers })
+      .andWhere((qb) => {
+        const subQuery = qb
+          .subQuery()
+          .select('MAX(sub_md.date)')
+          .from(MarketDataDaily, 'sub_md')
+          .where('sub_md.ticker = md.ticker')
+          .andWhere('sub_md.date < :date')
+          .getQuery();
+        return 'md.date = ' + subQuery;
+      })
+      .setParameter('date', date)
+      .getMany();
+
+    for (const data of latestPrices) {
+      prices.set(data.ticker, Number(data.closePrice));
+    }
+
+    return prices;
   }
 
   /**

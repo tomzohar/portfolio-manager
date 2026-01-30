@@ -3,20 +3,20 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { TopNavComponent } from './topnav.component';
 import { TopNavConfig } from '../types/topnav-config';
 import { MenuItem } from '../types/menu-config';
-import { User } from '@stocks-researcher/types';
 
 describe('TopNavComponent', () => {
   let component: TopNavComponent;
   let fixture: ComponentFixture<TopNavComponent>;
 
-  const mockUser: User = {
-    id: '1',
-    email: 'test@example.com',
-  };
-
   const defaultConfig: TopNavConfig = {
     title: 'Test Page',
-    user: mockUser,
+    actions: {
+      button: { label: 'test@example.com', icon: 'person', variant: 'flat' },
+      menu: { items: [{ id: 'sign-out', label: 'Sign Out', icon: 'logout' }], ariaLabel: 'User menu options' }
+    },
+    buttons: [
+      { id: 'chat', label: '', icon: 'smart_toy', variant: 'fab', size: 'sm', color: 'accent' }
+    ]
   };
 
   beforeEach(async () => {
@@ -39,124 +39,82 @@ describe('TopNavComponent', () => {
     it('should display the title', () => {
       const compiled = fixture.nativeElement as HTMLElement;
       const titleElement = compiled.querySelector('.topnav-title');
-      
+
       expect(titleElement?.textContent?.trim()).toBe('Test Page');
     });
 
-    it('should show user menu when user is provided', () => {
+    it('should show actions menu when actions config is provided', () => {
       const compiled = fixture.nativeElement as HTMLElement;
-      const userMenu = compiled.querySelector('.topnav-user-menu');
-      
-      expect(userMenu).toBeTruthy();
+      const actions = compiled.querySelector('.topnav-actions');
+
+      expect(actions).toBeTruthy();
     });
 
-    it('should hide user menu when user is null', () => {
+    it('should hide actions menu when actions config is null', () => {
       fixture.componentRef.setInput('config', {
         title: 'Test Page',
-        user: null,
+        actions: undefined,
       });
       fixture.detectChanges();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      const userMenu = compiled.querySelector('.topnav-user-menu');
-      
-      expect(userMenu).toBeFalsy();
+      const actions = compiled.querySelector('.topnav-actions');
+
+      expect(actions).toBeFalsy();
     });
 
     it('should show icon when icon config is provided', () => {
       fixture.componentRef.setInput('config', {
         title: 'Test Page',
-        user: mockUser,
         icon: { icon: 'trending_up', size: 'sm' },
       });
       fixture.detectChanges();
 
       const compiled = fixture.nativeElement as HTMLElement;
       const brandIcon = compiled.querySelector('lib-brand-icon');
-      
+
       expect(brandIcon).toBeTruthy();
     });
 
     it('should hide icon when no icon config is provided', () => {
       const compiled = fixture.nativeElement as HTMLElement;
       const brandIcon = compiled.querySelector('lib-brand-icon');
-      
+
       expect(brandIcon).toBeFalsy();
     });
   });
 
-  describe('User Menu Config', () => {
-    it('should create user menu config with user email', () => {
-      const menuConfig = component.userMenuConfig();
-      
-      expect(menuConfig.button.label).toBe('test@example.com');
-      expect(menuConfig.button.icon).toBe('person');
-      expect(menuConfig.menu.items).toHaveLength(1);
-      expect(menuConfig.menu.items[0].id).toBe('sign-out');
-    });
+  describe('Buttons', () => {
+    it('should render buttons based on config', () => {
+      const compiled = fixture.nativeElement as HTMLElement;
+      const buttons = compiled.querySelectorAll('.topnav-button');
 
-    it('should handle null user gracefully', () => {
-      fixture.componentRef.setInput('config', {
-        title: 'Test Page',
-        user: null,
-      });
-      fixture.detectChanges();
-
-      const menuConfig = component.userMenuConfig();
-      expect(menuConfig.button.label).toBe('');
+      expect(buttons).toHaveLength(1);
     });
   });
 
   describe('Events', () => {
-    it('should emit signOut when sign-out menu item is clicked', () => {
-      const signOutSpy = jest.fn();
-      component.signOut.subscribe(signOutSpy);
+    it('should emit actionItemSelected when an action item is clicked', () => {
+      const itemSpy = jest.fn();
+      component.actionItemSelected.subscribe(itemSpy);
 
-      const signOutItem: MenuItem = {
+      const item: MenuItem = {
         id: 'sign-out',
         label: 'Sign Out',
-        icon: 'logout',
       };
 
-      component.onUserMenuItemSelected(signOutItem);
+      component.actionItemSelected.emit(item);
 
-      expect(signOutSpy).toHaveBeenCalledTimes(1);
+      expect(itemSpy).toHaveBeenCalledWith(item);
     });
 
-    it('should not emit signOut for other menu items', () => {
-      const signOutSpy = jest.fn();
-      component.signOut.subscribe(signOutSpy);
+    it('should emit buttonClicked when a button is clicked', () => {
+      const buttonSpy = jest.fn();
+      component.buttonClicked.subscribe(buttonSpy);
 
-      const otherItem: MenuItem = {
-        id: 'other-action',
-        label: 'Other Action',
-      };
+      component.buttonClicked.emit('chat');
 
-      component.onUserMenuItemSelected(otherItem);
-
-      expect(signOutSpy).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('shouldShowUserMenu computed', () => {
-    it('should return true when user is provided', () => {
-      fixture.componentRef.setInput('config', {
-        title: 'Test',
-        user: mockUser,
-      });
-      fixture.detectChanges();
-
-      expect(component.shouldShowUserMenu()).toBe(true);
-    });
-
-    it('should return false when user is null', () => {
-      fixture.componentRef.setInput('config', {
-        title: 'Test',
-        user: null,
-      });
-      fixture.detectChanges();
-
-      expect(component.shouldShowUserMenu()).toBe(false);
+      expect(buttonSpy).toHaveBeenCalledWith('chat');
     });
   });
 
@@ -164,7 +122,6 @@ describe('TopNavComponent', () => {
     it('should return true when icon is provided', () => {
       fixture.componentRef.setInput('config', {
         title: 'Test',
-        user: mockUser,
         icon: { icon: 'trending_up' },
       });
       fixture.detectChanges();
@@ -175,7 +132,6 @@ describe('TopNavComponent', () => {
     it('should return false when no icon is provided', () => {
       fixture.componentRef.setInput('config', {
         title: 'Test',
-        user: mockUser,
       });
       fixture.detectChanges();
 
