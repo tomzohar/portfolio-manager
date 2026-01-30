@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import {
   Component,
   OnDestroy,
+  Signal,
   computed,
   effect,
   inject,
@@ -181,10 +182,10 @@ export class ChatPageComponent implements OnDestroy {
   /**
    * Conversation title (can be enhanced later with actual titles)
    */
-  conversationTitle = computed(() => {
+  conversationTitle: Signal<string> = computed(() => {
     const thread = this.threadId();
     const conversation = this.facade.conversations().find(conv => conv.id === thread);
-    if (conversation) {
+    if (conversation && conversation.title) {
       return conversation.title;
     }
     return 'New Conversation';
