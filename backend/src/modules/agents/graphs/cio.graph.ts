@@ -39,6 +39,7 @@ const CIOStateAnnotation = Annotation.Root({
   }),
   iteration: Annotation<number>,
   maxIterations: Annotation<number>,
+  performanceAnalysis: Annotation<any>,
 });
 
 /**

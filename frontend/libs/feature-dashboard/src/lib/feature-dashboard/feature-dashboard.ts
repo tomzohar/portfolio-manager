@@ -2,13 +2,13 @@ import { Component, inject, OnInit, effect, computed } from '@angular/core';
 import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
 import { PortfolioFacade } from '@frontend/data-access-portfolio';
 import { PerformanceAttributionFacade } from '@stocks-researcher/data-access-dashboard';
-import { 
-  TabsComponent, 
-  TabsConfig, 
-  PageHeaderComponent, 
+import {
+  TabsComponent,
+  TabsConfig,
+  PageHeaderComponent,
   PageHeaderConfig,
   ACTION_ICONS,
-  MenuItem 
+  MenuItem
 } from '@stocks-researcher/styles';
 import {
   ConfirmationDialogComponent,
@@ -114,7 +114,7 @@ export class FeatureDashboardComponent implements OnInit {
           {
             id: 'manage-cash',
             label: 'Deposit/Withdraw Cash',
-            icon: 'account_balance_wallet',
+            icon: 'paid',
           },
           {
             id: 'delete-portfolio',
@@ -132,7 +132,7 @@ export class FeatureDashboardComponent implements OnInit {
    */
   tabsConfig = computed<TabsConfig>(() => {
     const portfolioId = this.selectedPortfolioId();
-    
+
     return {
       tabs: [
         {

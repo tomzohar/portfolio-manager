@@ -208,6 +208,19 @@ describe('Agents Performance (e2e)', () => {
           transactionDate,
         })
         .expect(201);
+
+      // Backfill market data for the portfolio holdings
+      await request(app.getHttpServer())
+        .post(`/performance/${portfolioId}/admin/backfill-market-data`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(201);
+
+      // Backfill performance snapshots
+      await request(app.getHttpServer())
+        .post(`/performance/${portfolioId}/admin/backfill`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .query({ force: true })
+        .expect(201);
     });
 
     it('should return deep attribution with sector breakdown for allocation queries', async () => {

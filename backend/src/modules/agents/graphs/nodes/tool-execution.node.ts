@@ -319,6 +319,7 @@ function createErrorMessage(
 }
 
 import { EarningsCalendarResult } from '../../tools/earnings-calendar.tool';
+import { PerformanceAttributionResult } from '../../tools/performance-attribution.tool';
 
 /**
  * Check for imminent earnings risk for technical/fundamental analysis tools
@@ -536,7 +537,37 @@ export async function toolExecutionNode(
     state.userId,
   );
 
-  return {
+  const stateUpdate: StateUpdate = {
     messages: toolMessages,
   };
+
+  // Specialized State Updates: Extract structured data from tool outputs
+  // This ensures E2E tests and potentially frontend can access structured results
+  for (const msg of toolMessages) {
+    if (msg.name === 'performance_attribution') {
+      try {
+        const result = JSON.parse(
+          typeof msg.content === 'string'
+            ? msg.content
+            : JSON.stringify(msg.content),
+        ) as PerformanceAttributionResult;
+
+        stateUpdate.performanceAnalysis = {
+          timeframe: result.timeframe,
+          portfolioReturn: result.portfolioReturn,
+          benchmarkReturn: result.benchmarkReturn,
+          alpha: result.alpha,
+          sectorBreakdown: result.sectorBreakdown,
+          topPerformers: result.topPerformers,
+          bottomPerformers: result.bottomPerformers,
+        };
+      } catch (error) {
+        toolExecutionLogger.debug(
+          `Failed to parse performance_attribution result for state update: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
+      }
+    }
+  }
+
+  return stateUpdate;
 }

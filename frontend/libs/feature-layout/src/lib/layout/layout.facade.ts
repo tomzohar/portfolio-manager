@@ -1,7 +1,7 @@
 import { inject, Injectable, computed } from '@angular/core';
 import { Router, ActivatedRoute, NavigationEnd, Data } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { filter, map } from 'rxjs/operators';
+import { filter, map, startWith } from 'rxjs/operators';
 import { AuthFacade } from '@frontend/data-access-auth';
 import {
     TopNavConfig,
@@ -32,15 +32,23 @@ export class LayoutFacade {
     private readonly routeData = toSignal<Data>(
         this.router.events.pipe(
             filter((event) => event instanceof NavigationEnd),
-            map(() => {
-                let route = this.activatedRoute;
-                while (route.firstChild) {
-                    route = route.firstChild;
-                }
-                return route.snapshot.data;
-            })
+            map(() => this.extractRouteData()),
+            startWith(this.extractRouteData())
         )
     );
+
+    /**
+     * Helper to extract merged route data from the current route tree
+     */
+    private extractRouteData(): Data {
+        let route = this.router.routerState.snapshot.root;
+        let data: Data = { ...route.data };
+        while (route.firstChild) {
+            route = route.firstChild;
+            data = { ...data, ...route.data };
+        }
+        return data;
+    }
 
     /**
      * Title from route data or default
@@ -57,12 +65,19 @@ export class LayoutFacade {
         const data = this.routeData();
         const iconName = data?.['icon'] as BrandIconName;
 
-        if (!iconName) return undefined;
+        if (!iconName) {
+            return {
+                icon: getBrandIcon('chart-bars'),
+                isMaterialIcon: false,
+                size: 'sm',
+                ariaLabel: 'Default page icon',
+            };
+        }
 
         return {
             icon: getBrandIcon(iconName),
             isMaterialIcon: false,
-            size: 'xs',
+            size: 'sm',
             ariaLabel: 'Page icon',
         };
     });
