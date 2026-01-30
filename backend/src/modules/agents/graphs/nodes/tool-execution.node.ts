@@ -473,7 +473,7 @@ async function executeToolCalls(
   if (failureCount > 0) {
     toolExecutionLogger.warn(
       `Completed ${results.length} tool(s) in ${totalDuration}ms | ` +
-      `Success: ${successCount}, Failed: ${failureCount}`,
+        `Success: ${successCount}, Failed: ${failureCount}`,
     );
   } else {
     toolExecutionLogger.log(

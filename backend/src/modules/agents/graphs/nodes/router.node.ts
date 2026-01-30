@@ -89,8 +89,6 @@ export function routerNode(state: CIOState): string {
     return 'hitl_test';
   }
 
-
-
   // Default: Route all user queries to reasoning
   // The LLM will decide if it needs tools or can respond directly
   // based on prompt guidance (greetings, help, analysis, etc.)
