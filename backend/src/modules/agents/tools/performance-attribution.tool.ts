@@ -177,7 +177,7 @@ async function getDeepAttributionAnalysis(
       bottomPerformers,
       deepAnalysisMessage,
     };
-  } catch (error) {
+  } catch {
     // Fallback if detail analysis fails
     return {};
   }

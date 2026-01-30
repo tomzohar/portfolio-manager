@@ -18,16 +18,16 @@ describe('PerformanceAttributionTool', () => {
   beforeEach(() => {
     mockPerformanceService = {
       getBenchmarkComparison: jest.fn(),
-    } as any;
+    } as unknown as jest.Mocked<PerformanceService>;
 
     mockPortfolioService = {
       getHoldingsWithSectorData: jest.fn(),
-    } as any;
+    } as unknown as jest.Mocked<PortfolioService>;
 
     mockSectorAttributionService = {
       calculateSectorWeights: jest.fn(),
       getTopPerformers: jest.fn(),
-    } as any;
+    } as unknown as jest.Mocked<SectorAttributionService>;
 
     tool = createPerformanceAttributionTool(
       mockPerformanceService,
@@ -93,7 +93,14 @@ describe('PerformanceAttributionTool', () => {
     ]);
 
     const result = await tool.invoke(input);
-    const parsed = JSON.parse(result);
+    const parsed = JSON.parse(result) as {
+      portfolioId: string;
+      timeframe: Timeframe;
+      portfolioReturn: number;
+      benchmarkReturn: number;
+      alpha: number;
+      summary: string;
+    };
 
     expect(parsed).toMatchObject({
       portfolioId: 'p123',
@@ -130,7 +137,14 @@ describe('PerformanceAttributionTool', () => {
     mockPortfolioService.getHoldingsWithSectorData.mockResolvedValue([]);
 
     const result = await tool.invoke(input);
-    const parsed = JSON.parse(result);
+    const parsed = JSON.parse(result) as {
+      portfolioId: string;
+      timeframe: Timeframe;
+      portfolioReturn: number;
+      benchmarkReturn: number;
+      alpha: number;
+      summary: string;
+    };
 
     expect(parsed.alpha).toBe(-0.05);
     expect(parsed.summary).toContain('underperforming');

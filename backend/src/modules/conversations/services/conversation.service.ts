@@ -114,7 +114,10 @@ export class ConversationService {
 
     // Heuristic: Set initial title if this is the first message
     if (sequence === 0) {
-      const draftTitle = params.content;
+      let draftTitle = params.content;
+      if (draftTitle.length > 30) {
+        draftTitle = draftTitle.substring(0, 27) + '...';
+      }
       await this.conversationRepo.update(
         { id: params.threadId },
         { title: draftTitle },
