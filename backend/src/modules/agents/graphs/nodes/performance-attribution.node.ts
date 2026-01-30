@@ -1,5 +1,7 @@
 import { RunnableConfig } from '@langchain/core/runnables';
 import { AIMessage } from '@langchain/core/messages';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+import { z } from 'zod';
 import {
   CIOState,
   StateUpdate,
@@ -14,6 +16,16 @@ import { MissingDataException } from '../../../performance/exceptions/missing-da
 import { getSP500Weight } from '../../../portfolio/constants/sector-mapping';
 
 /**
+ * Zod schema for timeframe extraction
+ */
+const TimeframeExtractionSchema = z.object({
+  timeframe: z
+    .nativeEnum(Timeframe)
+    .nullable()
+    .describe('The timeframe for performance analysis'),
+});
+
+/**
  * Performance attribution node
  *
  * Extracts timeframe from user query, calculates portfolio performance,
@@ -26,10 +38,10 @@ export async function performanceAttributionNode(
   // Get services from config
   const configurable = config.configurable as
     | {
-        performanceService?: PerformanceService;
-        portfolioService?: PortfolioService;
-        sectorAttributionService?: SectorAttributionService;
-      }
+      performanceService?: PerformanceService;
+      portfolioService?: PortfolioService;
+      sectorAttributionService?: SectorAttributionService;
+    }
     | undefined;
 
   const performanceService = configurable?.performanceService;
@@ -48,42 +60,58 @@ export async function performanceAttributionNode(
   }
 
   try {
-    // Extract timeframe from user query
+    // Extract timeframe from user query using LLM
     const lastMessage = state.messages[state.messages.length - 1];
     const content = lastMessage.content;
-    const query = (
-      typeof content === 'string' ? content : JSON.stringify(content)
-    ).toLowerCase();
+    const query =
+      typeof content === 'string' ? content : JSON.stringify(content);
 
-    let timeframe = extractTimeframeFromQuery(query);
+    // Use LLM to extract timeframe
+    const model = new ChatGoogleGenerativeAI({
+      model: 'gemini-2.0-flash-exp',
+      apiKey: process.env.GEMINI_API_KEY,
+      temperature: 0,
+    });
+    const extractor = model.withStructuredOutput(TimeframeExtractionSchema);
 
-    // For allocation/sector comparison queries without explicit timeframe, default to 1Y
-    if (
-      !timeframe &&
-      (query.includes('allocation') ||
-        query.includes('sector') ||
-        query.includes('compare') ||
-        query.includes('concentration'))
-    ) {
-      timeframe = Timeframe.ONE_YEAR;
+    const extractionResult = await extractor.invoke([
+      {
+        role: 'system',
+        content: `You are an expert financial analyst assistant. 
+        Extract the performance analysis timeframe from the user's query.
+        Valid timeframes are: 1M, 3M, 6M, 1Y, YTD, ALL_TIME.
+        
+        Examples:
+        - "how did I do last month?" -> 1M
+        - "performance since inception" -> ALL_TIME
+        - "year to date returns" -> YTD
+        - "last quarter output" -> 3M
+        
+        If no specific timeframe is mentioned but the user asks for performance, return null.`,
+      },
+      { role: 'user', content: query },
+    ]);
+
+    let timeframe = extractionResult.timeframe;
+
+    // If no timeframe found, default to YTD instead of blocking
+    if (!timeframe) {
+      timeframe = Timeframe.YEAR_TO_DATE;
     }
 
-    // If no timeframe found, ask user
-    if (!timeframe) {
+    // Get portfolio ID from state
+    const portfolioId = state.portfolio?.id;
+
+    if (!portfolioId) {
       return {
-        performanceAnalysis: {
-          needsTimeframeInput: true,
-        },
+        errors: [`No portfolio selected. Please select a portfolio first.`],
         messages: [
           new AIMessage(
-            'What timeframe would you like to analyze? Please specify one of: 1M (1 month), 3M (3 months), 6M (6 months), 1Y (1 year), YTD (year-to-date), or ALL_TIME (since inception).',
+            'I cannot analyze performance without a selected portfolio. Please select a portfolio first.',
           ),
         ],
       };
     }
-
-    // Get portfolio ID from state
-    const portfolioId = state.portfolio?.id || 'default-portfolio-id';
 
     // Compare against S&P 500 (SPY) - this internally calculates portfolio performance
     const benchmarkComparison = await performanceService.getBenchmarkComparison(
@@ -207,11 +235,11 @@ async function getDeepAttributionAnalysis(
     const { sectorBreakdown, topPerformers, bottomPerformers } =
       sectorAttributionService
         ? await getAttributionFromService(
-            sectorAttributionService,
-            holdings,
-            portfolioId,
-            userId,
-          )
+          sectorAttributionService,
+          holdings,
+          portfolioId,
+          userId,
+        )
         : getAttributionInline(holdings);
 
     // Generate deep analysis message
@@ -316,73 +344,7 @@ function getAttributionInline(
 /**
  * Extract timeframe from natural language query
  */
-function extractTimeframeFromQuery(query: string): Timeframe | null {
-  const lowerQuery = query.toLowerCase();
 
-  // ALL_TIME patterns
-  if (
-    lowerQuery.includes('all time') ||
-    lowerQuery.includes('since inception') ||
-    lowerQuery.includes('total') ||
-    lowerQuery.includes('lifetime')
-  ) {
-    return Timeframe.ALL_TIME;
-  }
-
-  // YTD patterns
-  if (
-    lowerQuery.includes('ytd') ||
-    lowerQuery.includes('year to date') ||
-    lowerQuery.includes('this year')
-  ) {
-    return Timeframe.YEAR_TO_DATE;
-  }
-
-  // 1Y patterns
-  if (
-    lowerQuery.includes('last year') ||
-    lowerQuery.includes('1 year') ||
-    lowerQuery.includes('annual') ||
-    lowerQuery.includes('12 months') ||
-    lowerQuery.includes('1y')
-  ) {
-    return Timeframe.ONE_YEAR;
-  }
-
-  // 6M patterns
-  if (
-    lowerQuery.includes('6 months') ||
-    lowerQuery.includes('six months') ||
-    lowerQuery.includes('half year') ||
-    lowerQuery.includes('6m')
-  ) {
-    return Timeframe.SIX_MONTHS;
-  }
-
-  // 3M patterns
-  if (
-    lowerQuery.includes('3 months') ||
-    lowerQuery.includes('three months') ||
-    lowerQuery.includes('quarterly') ||
-    lowerQuery.includes('quarter') ||
-    lowerQuery.includes('3m')
-  ) {
-    return Timeframe.THREE_MONTHS;
-  }
-
-  // 1M patterns
-  if (
-    lowerQuery.includes('last month') ||
-    lowerQuery.includes('1 month') ||
-    lowerQuery.includes('monthly') ||
-    lowerQuery.includes('1m')
-  ) {
-    return Timeframe.ONE_MONTH;
-  }
-
-  // No timeframe found
-  return null;
-}
 
 /**
  * Calculate average return for a specific sector
