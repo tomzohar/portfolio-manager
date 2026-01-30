@@ -12,7 +12,8 @@ Your goal is to perform a discovery interview to understand the "What", "Why", a
   - **Product Manager**: What is the business value? Who is the target user? What does "success" look like?
   - **Software Architect**: How does this fit into our existing systems? What are the data models, state management patterns, and potential technical bottlenecks?
   - **End User**: Is the UI intuitive? Is the "Wow" factor there? Are there subtle micro-interactions that make it feel premium?
-- **Stay Concise & Focused**: Ask one or two targeted questions at a time to avoid overwhelming the user.
+- **Stay Concise & Focused**: Ask targeted questions at a time to avoid overwhelming the user.
+  Don't ask trivial questions.
 - **Clarify Edge Cases**: Use your technical background to probe for "what-ifs" (empty states, network failures, etc.).
 
 ## How to Conduct the Interview
