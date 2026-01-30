@@ -12,28 +12,28 @@ describe('routerNode', () => {
     maxIterations: 10,
   });
 
-  it('should route to performance_attribution for performance queries', () => {
+  it('should route to reasoning for performance queries', () => {
     const state = createState('How did my portfolio perform last month?');
     const route = routerNode(state);
-    expect(route).toBe('performance_attribution');
+    expect(route).toBe('reasoning');
   });
 
-  it('should route to performance_attribution for return queries', () => {
+  it('should route to reasoning for return queries', () => {
     const state = createState("What's my return this year?");
     const route = routerNode(state);
-    expect(route).toBe('performance_attribution');
+    expect(route).toBe('reasoning');
   });
 
-  it('should route to performance_attribution for alpha queries', () => {
+  it('should route to reasoning for alpha queries', () => {
     const state = createState('Did I beat the S&P 500?');
     const route = routerNode(state);
-    expect(route).toBe('performance_attribution');
+    expect(route).toBe('reasoning');
   });
 
-  it('should route to performance_attribution for YTD queries', () => {
+  it('should route to reasoning for YTD queries', () => {
     const state = createState('Show me my YTD performance');
     const route = routerNode(state);
-    expect(route).toBe('performance_attribution');
+    expect(route).toBe('reasoning');
   });
 
   it('should route to reasoning for analysis queries', () => {
@@ -75,7 +75,7 @@ describe('routerNode', () => {
   it('should be case insensitive', () => {
     const state = createState('SHOW ME MY PERFORMANCE');
     const route = routerNode(state);
-    expect(route).toBe('performance_attribution');
+    expect(route).toBe('reasoning');
   });
 
   describe('Approval Gate Routing (guarded by env var)', () => {
@@ -219,17 +219,11 @@ describe('routerNode', () => {
       });
     });
 
-    it('should keep performance_attribution routing', () => {
-      // This specialized node stays
-      expect(routerNode(createState('YTD performance'))).toBe(
-        'performance_attribution',
-      );
-      expect(routerNode(createState('portfolio returns'))).toBe(
-        'performance_attribution',
-      );
-      expect(routerNode(createState('alpha vs SPY'))).toBe(
-        'performance_attribution',
-      );
+    it('should route performance queries to reasoning (to use tool)', () => {
+      // This specialized node is gone, now uses tool via reasoning
+      expect(routerNode(createState('YTD performance'))).toBe('reasoning');
+      expect(routerNode(createState('portfolio returns'))).toBe('reasoning');
+      expect(routerNode(createState('alpha vs SPY'))).toBe('reasoning');
     });
 
     it('should route tool messages to reasoning', () => {

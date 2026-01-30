@@ -119,6 +119,7 @@
   border-radius: var(--radius-lg);
   width: var(--chat-min-width);
   position: absolute;
+  z-index: var(--z-index-sticky);
   bottom: var(--spacing-lg);
   left: calc(50% - calc(var(--chat-min-width) / 2));
 }

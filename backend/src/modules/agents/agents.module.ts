@@ -40,6 +40,9 @@ import { createFundamentalAnalystTool } from './tools/fundamental-analyst.tool';
 import { createEarningsCalendarTool } from './tools/earnings-calendar.tool';
 import { getCurrentTimeTool } from './tools/time.tool';
 import { createNewsSentimentTool } from './tools/news-sentiment.tool';
+import { createPerformanceAttributionTool } from './tools/performance-attribution.tool';
+import { PerformanceService } from '../performance/performance.service';
+import { SectorAttributionService } from '../performance/services/sector-attribution.service';
 
 @Module({
   imports: [
@@ -85,10 +88,12 @@ export class AgentsModule {
     private readonly polygonService: PolygonApiService,
     private readonly fredService: FredService,
     private readonly newsService: NewsService,
-    private readonly finnhubService: FinnhubApiService, // New service injected
-    private readonly fmpService: FmpApiService, // Injected FMP Service
+    private readonly finnhubService: FinnhubApiService,
+    private readonly fmpService: FmpApiService,
     private readonly geminiService: GeminiLlmService,
     private readonly portfolioService: PortfolioService,
+    private readonly performanceService: PerformanceService, // Injected PerformanceService
+    private readonly sectorAttributionService: SectorAttributionService, // Injected SectorAttributionService
     private readonly transactionsService: TransactionsService,
     private readonly conversationService: ConversationService,
     private readonly grokService: GrokLlmService,
@@ -155,5 +160,13 @@ export class AgentsModule {
       createStockScreenerTool(this.fmpService, this.polygonService),
     );
     this.logger.log('Registered stock_screener tool');
+    this.toolRegistry.registerTool(
+      createPerformanceAttributionTool(
+        this.performanceService,
+        this.portfolioService,
+        this.sectorAttributionService,
+      ),
+    );
+    this.logger.log('Registered performance_attribution tool');
   }
 }

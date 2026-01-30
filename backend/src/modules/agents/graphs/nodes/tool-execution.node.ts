@@ -319,6 +319,7 @@ function createErrorMessage(
 }
 
 import { EarningsCalendarResult } from '../../tools/earnings-calendar.tool';
+import { PerformanceAttributionResult } from '../../tools/performance-attribution.tool';
 
 /**
  * Check for imminent earnings risk for technical/fundamental analysis tools
@@ -378,6 +379,7 @@ async function checkEarningsRisk(
 async function executeSingleTool(
   toolCall: ToolCallStructure,
   toolRegistry: ToolRegistry,
+  userId: string,
 ): Promise<ToolExecutionResult> {
   const startTime = Date.now();
 
@@ -401,11 +403,15 @@ async function executeSingleTool(
       };
     }
 
+    // Inject system context (userId) if tool accepts it
+    // We do this by creating a new args object
+    const args = { ...toolCall.args, userId };
+
     // Execute tool
     toolExecutionLogger.debug(
       `Invoking ${toolCall.name}(${JSON.stringify(toolCall.args).substring(0, 100)}...)`,
     );
-    const result = await tool.invoke(toolCall.args);
+    const result = await tool.invoke(args);
     const duration = Date.now() - startTime;
 
     return {
@@ -429,6 +435,7 @@ async function executeSingleTool(
 async function executeToolCalls(
   toolCalls: ToolCallStructure[],
   toolRegistry: ToolRegistry,
+  userId: string,
 ): Promise<ToolMessage[]> {
   toolExecutionLogger.log(
     `Executing ${toolCalls.length} tool(s): ${toolCalls.map((tc) => tc.name).join(', ')}`,
@@ -436,7 +443,9 @@ async function executeToolCalls(
 
   const startTime = Date.now();
   const results = await Promise.all(
-    toolCalls.map((toolCall) => executeSingleTool(toolCall, toolRegistry)),
+    toolCalls.map((toolCall) =>
+      executeSingleTool(toolCall, toolRegistry, userId),
+    ),
   );
 
   // Proactive check: Add earnings warnings to technical/fundamental analysis results
@@ -525,9 +534,40 @@ export async function toolExecutionNode(
   const toolMessages = await executeToolCalls(
     toolCalls,
     toolRegistryOrError as ToolRegistry,
+    state.userId,
   );
 
-  return {
+  const stateUpdate: StateUpdate = {
     messages: toolMessages,
   };
+
+  // Specialized State Updates: Extract structured data from tool outputs
+  // This ensures E2E tests and potentially frontend can access structured results
+  for (const msg of toolMessages) {
+    if (msg.name === 'performance_attribution') {
+      try {
+        const result = JSON.parse(
+          typeof msg.content === 'string'
+            ? msg.content
+            : JSON.stringify(msg.content),
+        ) as PerformanceAttributionResult;
+
+        stateUpdate.performanceAnalysis = {
+          timeframe: result.timeframe,
+          portfolioReturn: result.portfolioReturn,
+          benchmarkReturn: result.benchmarkReturn,
+          alpha: result.alpha,
+          sectorBreakdown: result.sectorBreakdown,
+          topPerformers: result.topPerformers,
+          bottomPerformers: result.bottomPerformers,
+        };
+      } catch (error) {
+        toolExecutionLogger.debug(
+          `Failed to parse performance_attribution result for state update: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
+      }
+    }
+  }
+
+  return stateUpdate;
 }

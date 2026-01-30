@@ -78,6 +78,18 @@ export const mockGeminiLlmService = {
       }
 
       const prompt = promptStr.toLowerCase();
+      if (process.env.NODE_ENV === 'test') {
+        console.log(
+          'DEBUG LLM MOCK PROMPT (start):',
+          prompt.substring(0, 200) + '...',
+        );
+        if (prompt.length > 500) {
+          console.log(
+            'DEBUG LLM MOCK PROMPT (end):',
+            prompt.substring(prompt.length - 500) + '...',
+          );
+        }
+      }
 
       // Check for tool outputs in the prompt history to detect if tool has already run
       // We check for MULTIPLE unique fields to ensure it's not just the system prompt description
@@ -95,7 +107,10 @@ export const mockGeminiLlmService = {
         // Trigger callbacks for the final answer
         if (config?.callbacks) {
           try {
-            for (const callback of config.callbacks) {
+            const callbacks = Array.isArray(config.callbacks)
+              ? config.callbacks
+              : [config.callbacks];
+            for (const callback of callbacks) {
               if (callback.handleLLMStart)
                 await callback.handleLLMStart(
                   { name: LLMModels.GEMINI_PRO_LATEST },
@@ -128,7 +143,98 @@ export const mockGeminiLlmService = {
       let responseMessage: AIMessage;
 
       // Conditional logic to trigger tools based on prompt keywords
-      if (prompt.includes('analyze aapl') || prompt.includes('analyze tsla')) {
+      // PRIORITY: performance queries (must come before analyze aapl to avoid system prompt example matches)
+      const isPerformanceQuery =
+        prompt.includes('performance') ||
+        prompt.includes('return') ||
+        prompt.includes('beat') ||
+        prompt.includes('portfolio') ||
+        prompt.includes('attribution');
+
+      if (isPerformanceQuery) {
+        // PREVENTION: If we already have a tool result or error in the prompt, DON'T call it again
+        if (
+          prompt.includes('error analyzing') ||
+          prompt.includes('portfolio not found') ||
+          prompt.includes('invalid input syntax') ||
+          prompt.includes('portfolio analysis:') ||
+          prompt.includes('historical returns:') ||
+          prompt.includes('"portfolioreturn"')
+        ) {
+          if (process.env.NODE_ENV === 'test') {
+            console.log(
+              'DEBUG MOCK: Loop breaker triggered! Terminating tool call chain.',
+            );
+          }
+          return new AIMessage({
+            content:
+              "I've analyzed your portfolio performance. Due to some technical limitations in the test environment, I've provided the best summary possible. Is there anything else you'd like to dive into?",
+          });
+        }
+
+        const callId = `call_${Date.now()}`;
+
+        // Extract portfolioId and userId from prompt context if possible
+        const uuidRegex =
+          /([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i;
+
+        const portfolioIdMatch = prompt.match(
+          new RegExp(`portfolio id:?\\s*${uuidRegex.source}`, 'i'),
+        );
+        const userIdMatch =
+          prompt.match(new RegExp(`user id:?\\s*${uuidRegex.source}`, 'i')) ||
+          prompt.match(new RegExp(`userid="${uuidRegex.source}"`, 'i')) ||
+          prompt.match(new RegExp(`threadid="${uuidRegex.source}:`, 'i'));
+
+        let portfolioId = portfolioIdMatch ? portfolioIdMatch[1] : 'unknown';
+        const userId = userIdMatch ? userIdMatch[1] : 'unknown';
+
+        if (portfolioId === 'unknown' && userId !== 'unknown') {
+          portfolioId = userId;
+        }
+
+        if (process.env.NODE_ENV === 'test') {
+          console.log(
+            `DEBUG MOCK EXTRACTED: portfolioId=${portfolioId}, userId=${userId}`,
+          );
+          if (
+            portfolioId === 'unknown' ||
+            (portfolioId !== 'unknown' && portfolioId.length < 30)
+          ) {
+            console.log('DEBUG MOCK PROMPT (FULL):', prompt);
+          }
+        }
+
+        responseMessage = new AIMessage({
+          content: '',
+          tool_calls: [
+            {
+              name: 'performance_attribution',
+              args: { portfolioId, userId, timeframe: 'YTD' },
+              id: callId,
+            },
+          ],
+          additional_kwargs: {
+            tool_calls: [
+              {
+                function: {
+                  name: 'performance_attribution',
+                  arguments: JSON.stringify({
+                    portfolioId,
+                    userId,
+                    timeframe: 'YTD',
+                  }),
+                },
+                type: 'function',
+                id: callId,
+              },
+            ],
+          },
+        });
+      } else if (
+        prompt.includes('analyze aapl') ||
+        prompt.includes('analyze tsla')
+      ) {
         const ticker = prompt.includes('aapl') ? 'AAPL' : 'TSLA';
         const callId = `call_${Date.now()}`;
 
@@ -154,11 +260,6 @@ export const mockGeminiLlmService = {
             ],
           },
         });
-
-        // FORCE explicit assignment to ensure property exists if needed by some older logic,
-        // but AIMessage ctor above should handle it.
-        // If strict mode complains about checking properties on AIMessage that might not be in the interface:
-        // AIMessage from langchain/core should have tool_calls.
       } else if (
         prompt.includes('market outlook') ||
         prompt.includes('macro')
@@ -202,7 +303,10 @@ export const mockGeminiLlmService = {
       // Simulate callbacks for tracing (CRITICAL for E2E tests relying on SSE)
       if (config?.callbacks) {
         try {
-          for (const callback of config.callbacks) {
+          const callbacks = Array.isArray(config.callbacks)
+            ? config.callbacks
+            : [config.callbacks];
+          for (const callback of callbacks) {
             // 1. Start event
             if (callback.handleLLMStart) {
               await callback.handleLLMStart(

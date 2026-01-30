@@ -1,7 +1,12 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { DataSource, Repository, QueryRunner } from 'typeorm';
+import {
+  DataSource,
+  Repository,
+  QueryRunner,
+  SelectQueryBuilder,
+} from 'typeorm';
 import { DailySnapshotCalculationService } from './daily-snapshot-calculation.service';
 import { PortfolioDailyPerformance } from '../entities/portfolio-daily-performance.entity';
 import { MarketDataDaily } from '../entities/market-data-daily.entity';
@@ -81,6 +86,18 @@ describe('DailySnapshotCalculationService', () => {
           provide: getRepositoryToken(MarketDataDaily),
           useValue: {
             find: jest.fn(),
+            findOne: jest.fn(),
+            createQueryBuilder: jest.fn(() => ({
+              select: jest.fn().mockReturnThis(),
+              where: jest.fn().mockReturnThis(),
+              andWhere: jest.fn().mockReturnThis(),
+              orderBy: jest.fn().mockReturnThis(),
+              setParameter: jest.fn().mockReturnThis(),
+              subQuery: jest.fn().mockReturnThis(),
+              from: jest.fn().mockReturnThis(),
+              getQuery: jest.fn().mockReturnValue('SUBQUERY'),
+              getMany: jest.fn().mockResolvedValue([]),
+            })),
           },
         },
         {
@@ -1070,6 +1087,75 @@ describe('DailySnapshotCalculationService', () => {
 
       // Verify market data was refetched
       expect(findSpy).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('Backfill with Mid-History Start', () => {
+    it('should initialize lastKnownPrices from market data before startDate', async () => {
+      const startDate = new Date('2024-06-01');
+
+      // Mock transactions
+      const mockTransactions = [
+        {
+          id: 'tx-1',
+          ticker: 'AAPL',
+          transactionDate: new Date('2023-01-01'), // Early transaction
+        },
+      ] as Transaction[];
+
+      jest.spyOn(transactionRepo, 'find').mockResolvedValue(mockTransactions);
+
+      // Mock historical market data (used for initialization)
+      // 2024-05-31 price is 200.
+      const mockLastMarketData = {
+        ticker: 'AAPL',
+        date: new Date('2024-05-31'),
+        closePrice: 200,
+      } as MarketDataDaily;
+
+      // Mock createQueryBuilder result
+      const mockQueryBuilder: Partial<
+        Record<keyof SelectQueryBuilder<MarketDataDaily>, jest.Mock>
+      > = {
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        setParameter: jest.fn().mockReturnThis(),
+        subQuery: jest.fn().mockReturnThis(),
+        from: jest.fn().mockReturnThis(),
+        getQuery: jest.fn().mockReturnValue('SUBQUERY'),
+        getMany: jest.fn().mockResolvedValue([mockLastMarketData]),
+      };
+      jest
+        .spyOn(marketDataRepo, 'createQueryBuilder')
+        .mockReturnValue(
+          mockQueryBuilder as unknown as SelectQueryBuilder<MarketDataDaily>,
+        );
+
+      // jest.spyOn(marketDataRepo, 'findOne').mockResolvedValue(mockLastMarketData);
+
+      // Mock market data for the backfill period (missing data to trigger fallback)
+      jest.spyOn(marketDataRepo, 'find').mockResolvedValue([]);
+
+      // Mock query runner setup
+      const saveSpy = jest.fn().mockResolvedValue({});
+      mockQueryRunner.manager!.save = saveSpy;
+
+      mockQueryRunner.manager!.findOne = jest.fn().mockResolvedValue({
+        // Mock previous snapshot (yesterday)
+        date: new Date('2024-05-31'),
+        totalEquity: 10000,
+        cashBalance: 0,
+        // positions are calculated from transactions
+      });
+
+      await service.recalculateFromDate(mockPortfolioId, startDate);
+
+      // Updated expectation: createQueryBuilder should be called instead of findOne
+      expect(marketDataRepo.createQueryBuilder).toHaveBeenCalledWith('md');
+      // We can't easily verify chain calls with partial mocks, but we verify findOne is NOT called
+      expect(marketDataRepo.findOne).not.toHaveBeenCalled();
     });
   });
 });

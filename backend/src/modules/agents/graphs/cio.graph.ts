@@ -11,7 +11,6 @@ import {
   reasoningRouter,
   toolExecutionRouter,
 } from './nodes/router.node';
-import { performanceAttributionNode } from './nodes/performance-attribution.node';
 import { hitlTestNode } from './nodes/hitl-test.node';
 import { approvalGateNode } from './nodes/approval-gate.node';
 import { guardrailNode } from './nodes/guardrail.node';
@@ -21,7 +20,6 @@ import { summarizationNode } from './nodes/summarization.node'; // Added
 import { errorNode } from './nodes/error.node'; // Added error node
 import { StateService } from '../services/state.service';
 import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
-import { Timeframe } from '../../performance/types/timeframe.types';
 
 /**
  * Define the graph state schema using LangGraph Annotation
@@ -41,13 +39,7 @@ const CIOStateAnnotation = Annotation.Root({
   }),
   iteration: Annotation<number>,
   maxIterations: Annotation<number>,
-  performanceAnalysis: Annotation<{
-    timeframe?: Timeframe;
-    portfolioReturn?: number;
-    benchmarkReturn?: number;
-    alpha?: number;
-    needsTimeframeInput?: boolean;
-  }>,
+  performanceAnalysis: Annotation<any>,
 });
 
 /**
@@ -65,7 +57,6 @@ export function buildCIOGraph(stateService: StateService) {
     .addNode('summarization', summarizationNode)
     .addNode('reasoning', reasoningNode)
     .addNode('tool_execution', toolExecutionNode)
-    .addNode('performance_attribution', performanceAttributionNode)
     .addNode('error_handler', errorNode) as any; // Add error handler node
 
   // Add approval gate node if enabled (production HITL)
@@ -84,7 +75,6 @@ export function buildCIOGraph(stateService: StateService) {
     .addEdge('guardrail', 'summarization') // Guardrail -> Summarization
     .addConditionalEdges('summarization', routerNode, {
       // Summarization -> Router
-      performance_attribution: 'performance_attribution',
       reasoning: 'reasoning',
       tool_execution: 'tool_execution',
       end: 'end',
@@ -102,8 +92,7 @@ export function buildCIOGraph(stateService: StateService) {
       end: 'end',
       error: 'error_handler', // Route failures from tools
     })
-    .addEdge('error_handler', 'end') // Error handler -> End
-    .addEdge('performance_attribution', 'end');
+    .addEdge('error_handler', 'end'); // Error handler -> End
 
   // Add edge for approval gate node only if enabled
   if (enableApprovalGate) {

@@ -1,5 +1,9 @@
 @if (isAuthenticated()) {
-  <lib-topnav [config]="topNavConfig()" (signOut)="onSignOut()" />
+<lib-topnav
+  [config]="topNavConfig()"
+  (actionItemSelected)="onActionItemSelected($event)"
+  (buttonClicked)="onButtonClicked($event)"
+/>
 }
 
 <div class="layout-content">

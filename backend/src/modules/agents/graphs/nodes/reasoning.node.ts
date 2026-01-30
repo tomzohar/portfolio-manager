@@ -119,7 +119,7 @@ async function constructHistory(
           ? msg.content
           : JSON.stringify(msg.content);
 
-    if (geminiService) {
+    if (geminiService && typeof geminiService.countTokens === 'function') {
       const metadata = await geminiService.countTokens(content);
       return metadata.totalTokens;
     }

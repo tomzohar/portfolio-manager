@@ -89,21 +89,6 @@ export function routerNode(state: CIOState): string {
     return 'hitl_test';
   }
 
-  // Performance attribution has complex specialized logic - keep as dedicated node
-  if (
-    content.includes('performance') ||
-    content.includes('perform') ||
-    content.includes('return') ||
-    content.includes('alpha') ||
-    content.includes('ytd') ||
-    content.includes('year to date') ||
-    content.includes('beat') ||
-    content.includes('outperform') ||
-    content.includes('underperform')
-  ) {
-    return 'performance_attribution';
-  }
-
   // Default: Route all user queries to reasoning
   // The LLM will decide if it needs tools or can respond directly
   // based on prompt guidance (greetings, help, analysis, etc.)

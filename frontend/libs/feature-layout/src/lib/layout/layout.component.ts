@@ -1,31 +1,17 @@
-import { Component, computed, inject } from '@angular/core';
-import { Router, ActivatedRoute, NavigationEnd, Data } from '@angular/router';
-import { AuthFacade } from '@frontend/data-access-auth';
-import {
-  TopNavComponent,
-  TopNavConfig,
-  BrandIconConfig,
-  getBrandIcon,
-  BrandIconName,
-} from '@stocks-researcher/styles';
-import { filter, map } from 'rxjs/operators';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Component, inject } from '@angular/core';
+import { TopNavComponent, MenuItem } from '@stocks-researcher/styles';
+import { LayoutFacade } from './layout.facade';
 
 /**
  * LayoutComponent
  *
  * Smart component that manages the application layout structure.
- * Handles state management for the TopNav component and wraps the router outlet.
+ * Uses LayoutFacade to handle layout state and TopNav configuration.
  *
  * Responsibilities:
- * - Derives page title from route data
- * - Provides user email from auth state to TopNav
- * - Handles sign out action
- * - Conditionally shows TopNav only when authenticated
- *
- * This component follows the Smart/Dumb component pattern where:
- * - This component (Smart) manages state and business logic
- * - TopNavComponent (Dumb) handles presentation only
+ * - Delegates state management to LayoutFacade
+ * - Renders TopNav with configuration from facade
+ * - Connects TopNav events to facade handlers
  */
 @Component({
   selector: 'lib-layout',
@@ -35,73 +21,29 @@ import { toSignal } from '@angular/core/rxjs-interop';
   styleUrl: './layout.component.scss',
 })
 export class LayoutComponent {
-  private readonly authFacade = inject(AuthFacade);
-  private readonly router = inject(Router);
-  private readonly activatedRoute = inject(ActivatedRoute);
+  private readonly facade = inject(LayoutFacade);
 
   /**
-   * Current route data from route configuration
-   * Listens to navigation events and extracts route data
+   * TopNav configuration from facade
    */
-  private readonly routeData = toSignal<Data>(
-    this.router.events.pipe(
-      filter((event) => event instanceof NavigationEnd),
-      map(() => {
-        let route = this.activatedRoute;
-        while (route.firstChild) {
-          route = route.firstChild;
-        }
-        return route.snapshot.data;
-      })
-    )
-  );
+  readonly topNavConfig = this.facade.config;
 
   /**
-   * Current route title from route data
+   * Authenticated state from facade
    */
-  private readonly routeTitle = computed(() => {
-    const data = this.routeData();
-    if (!data || !data['title']) {
-      return 'Portfolio Manager';
-    }
-    return data['title'] as string;
-  });
+  readonly isAuthenticated = this.facade.isAuthenticated;
 
   /**
-   * Current route icon from route data
-   * Returns undefined if no icon is specified in route
+   * Handle generic menu item selection
    */
-  private readonly routeIcon = computed<BrandIconConfig | undefined>(() => {
-    const data = this.routeData();
-    if (!data || !data['icon']) {
-      return undefined;
-    }
-    return {
-      icon: getBrandIcon(data['icon'] as BrandIconName),
-      isMaterialIcon: false,
-      size: 'xs',
-      ariaLabel: 'Portfolio Mind logo',
-    };
-  });
+  onActionItemSelected(item: MenuItem): void {
+    this.facade.handleActionItem(item);
+  }
 
   /**
-   * TopNav configuration derived from auth state and route data
+   * Handle generic button click
    */
-  readonly topNavConfig = computed<TopNavConfig>(() => ({
-    title: this.routeTitle(),
-    user: this.authFacade.user(),
-    icon: this.routeIcon(),
-  }));
-
-  /**
-   * Expose isAuthenticated for template
-   */
-  readonly isAuthenticated = this.authFacade.isAuthenticated;
-
-  /**
-   * Handle sign out action from TopNav
-   */
-  onSignOut(): void {
-    this.authFacade.logout();
+  onButtonClicked(buttonId: string): void {
+    this.facade.handleButtonClick(buttonId);
   }
 }

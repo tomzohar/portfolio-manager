@@ -46,7 +46,7 @@ export class ChatPageComponent implements OnDestroy {
   private readonly router = inject(Router);
   private readonly facade = inject(ChatFacade);
 
-  sidebarOpen = signal(true);
+  sidebarOpen = signal(false);
 
   toggleSidebar() {
     this.sidebarOpen.update((v) => !v);

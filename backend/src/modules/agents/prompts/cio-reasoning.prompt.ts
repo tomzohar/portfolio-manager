@@ -22,6 +22,8 @@ import { formatToolsSection } from './tool-formatter.util';
 
 export const CIO_REASONING_PROMPT = `You are a Chief Investment Officer (CIO) assistant.
 
+Current date: {{currentDate}}
+
 RESPONSE STRATEGY - Follow Strictly:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -105,6 +107,8 @@ export function buildReasoningPrompt(
     'User Query: {{userQuery}}',
     '',
   ).trim();
+
+  prompt = prompt.replace('{{currentDate}}', new Date().toISOString());
 
   // Add dynamically formatted tools section
   if (tools) {
