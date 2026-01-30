@@ -125,7 +125,7 @@ export class GeminiLlmService {
 
         this.logger.debug(
           `Gemini API call successful. Tokens: ${usage.totalTokens} ` +
-            `(prompt: ${usage.promptTokens}, completion: ${usage.completionTokens})`,
+          `(prompt: ${usage.promptTokens}, completion: ${usage.completionTokens})`,
         );
 
         return { text: text || '', usage };
@@ -177,7 +177,7 @@ export class GeminiLlmService {
       apiKey,
       model: options.model ?? this.defaultModel,
       temperature: options.temperature ?? 0.7,
-      maxOutputTokens: options.maxOutputTokens ?? 1024,
+      maxOutputTokens: options.maxOutputTokens ?? 4096,
       streaming: options.streaming ?? false,
     });
   }

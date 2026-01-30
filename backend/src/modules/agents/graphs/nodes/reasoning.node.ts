@@ -35,7 +35,7 @@ function initializeLLM(config: RunnableConfig): ChatGoogleGenerativeAI {
     return geminiService.getChatModel({
       streaming: true,
       temperature: 0.2,
-      maxOutputTokens: 2048,
+      maxOutputTokens: 8192,
     });
   }
 
@@ -47,7 +47,7 @@ function initializeLLM(config: RunnableConfig): ChatGoogleGenerativeAI {
     apiKey,
     model: getDefaultModel(),
     temperature: 0.2,
-    maxOutputTokens: 2048,
+    maxOutputTokens: 8192,
     streaming: true,
   });
 }
