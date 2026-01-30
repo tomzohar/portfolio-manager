@@ -7,9 +7,13 @@ import {
   SidebarFooterComponent,
   SidebarSectionComponent
 } from '@frontend/ui-sidebar';
-import { ButtonComponent, ButtonConfig, IconComponent } from '@stocks-researcher/styles';
+import { ButtonComponent, ButtonConfig, IconComponent, ListComponent, ListConfig, ListItem } from '@stocks-researcher/styles';
 import { ChatFacade } from '@stocks-researcher/data-access-chat';
 import { ChatHistoryListComponent } from '@stocks-researcher/ui-chat';
+
+enum SidebarLinks {
+  portfolios = 'portfolios'
+}
 
 /**
  * ChatSidebarComponent
@@ -28,7 +32,8 @@ import { ChatHistoryListComponent } from '@stocks-researcher/ui-chat';
     SidebarSectionComponent,
     ButtonComponent,
     IconComponent,
-    ChatHistoryListComponent
+    ChatHistoryListComponent,
+    ListComponent
   ],
   templateUrl: './chat-sidebar.component.html',
   styleUrls: ['./chat-sidebar.component.scss'],
@@ -61,6 +66,18 @@ export class ChatSidebarComponent implements OnInit {
     variant: 'icon',
   };
 
+  readonly sidebarLinksConfig: ListConfig = {
+    clickable: true,
+    size: 'sm',
+    items: [
+      {
+        id: SidebarLinks.portfolios,
+        label: 'Portfolios',
+        icon: 'folder',
+      }
+    ]
+  };
+
   ngOnInit(): void {
     // Initial load of conversation history
     this.facade.loadConversations(30);
@@ -68,8 +85,16 @@ export class ChatSidebarComponent implements OnInit {
 
   /**
    * Navigate to a selected conversation thread
-   */
+  */
   onConversationSelected(threadId: string): void {
     this.router.navigate(['/chat', threadId]);
+  }
+
+  onLinkClicked({ id }: ListItem) {
+    switch (id) {
+      case SidebarLinks.portfolios:
+        this.router.navigate(['/portfolios']);
+        break;
+    }
   }
 }

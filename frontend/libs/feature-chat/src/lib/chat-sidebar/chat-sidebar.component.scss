@@ -53,3 +53,8 @@
     overflow-y: auto;
   }
 }
+
+.sidebar-links {
+  display: block;
+  margin-top: var(--spacing-xl);
+}
