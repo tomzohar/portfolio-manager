@@ -28,6 +28,7 @@ import { CitationService } from '../../citations/services/citation.service';
 import { ConversationService } from '../../conversations/services/conversation.service';
 import { GeminiLlmService } from './gemini-llm.service';
 import { getDefaultModel } from '../utils/model.utils';
+import { A2UICatalogService } from './a2ui-catalog.service';
 
 // ============================================================================
 // Types & Interfaces
@@ -84,6 +85,7 @@ export class OrchestratorService {
     private readonly tracingService: TracingService,
     private readonly conversationService: ConversationService,
     private readonly geminiLlmService: GeminiLlmService,
+    private readonly a2uiCatalogService: A2UICatalogService,
     @Optional()
     @Inject(CitationService)
     private readonly citationService?: CitationService,
@@ -366,6 +368,7 @@ export class OrchestratorService {
         portfolioService: this.portfolioService,
         sectorAttributionService: this.sectorAttributionService,
         geminiLlmService: this.geminiLlmService,
+        a2uiCatalogService: this.a2uiCatalogService,
       },
       recursionLimit: RECURSION_LIMIT,
       metadata: {

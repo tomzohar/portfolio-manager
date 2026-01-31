@@ -111,18 +111,8 @@ export function buildReasoningPrompt(
   prompt = prompt.replace('{{currentDate}}', new Date().toISOString());
 
   // Add dynamically formatted tools section
-  if (tools) {
-    const toolsSection = formatToolsSection(tools);
-    prompt = prompt.replace('{{tools}}', toolsSection);
-  } else {
-    // Fallback to hardcoded tools for backward compatibility
-    const hardcodedTools = `**Available Tools:**
-- technical_analyst(ticker): Technical indicators, price trends
-- macro_analyst(): Market regime, economic conditions
-- risk_manager(portfolioId, userId): Portfolio risk metrics
-  - IMPORTANT: When analyzing a user's portfolio, the portfolioId and userId are ALREADY AVAILABLE in the portfolio context below. Use those values directly - DO NOT ask the user to provide them.`;
-    prompt = prompt.replace('{{tools}}', hardcodedTools);
-  }
+  const toolsSection = tools ? formatToolsSection(tools) : '';
+  prompt = prompt.replace('{{tools}}', toolsSection);
 
   // Add portfolio context if available
   if (portfolio) {

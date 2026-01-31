@@ -270,6 +270,9 @@ export enum SSEEventType {
   NODE_START = 'node.start',
   NODE_COMPLETE = 'node.complete',
   GRAPH_COMPLETE = 'graph.complete',
+  A2UI_SURFACE_CREATE = 'a2ui.surface.create',
+  A2UI_SURFACE_UPDATE_COMPONENTS = 'a2ui.surface.updateComponents',
+  A2UI_SURFACE_UPDATE_DATA_MODEL = 'a2ui.surface.updateDataModel',
   ERROR = 'error',
 }
 

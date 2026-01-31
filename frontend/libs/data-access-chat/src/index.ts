@@ -3,6 +3,8 @@
 // Services
 export * from './lib/services/sse.service';
 export * from './lib/services/reasoning-trace-api.service';
+export * from './lib/services/a2ui-surface-api.service';
+export * from './lib/services/conversation-api.service';
 
 // State Management
 export * from './lib/+state/chat.actions';

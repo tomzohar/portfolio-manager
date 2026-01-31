@@ -22,6 +22,7 @@ import { AgentsController } from './agents.controller';
 import { createStockScreenerTool } from './tools/stock-screener.tool';
 import { ReasoningTrace } from './entities/reasoning-trace.entity';
 import { TokenUsage } from './entities/token-usage.entity';
+import { UISurface } from './entities/ui-surface.entity';
 import { GeminiLlmService } from './services/gemini-llm.service';
 import { GrokLlmService } from './services/grok-llm.service';
 import { GraphExecutorService } from './services/graph-executor.service';
@@ -31,6 +32,9 @@ import { StateService } from './services/state.service';
 import { TokenUsageService } from './services/token-usage.service';
 import { ToolRegistryService } from './services/tool-registry.service';
 import { TracingService } from './services/tracing.service';
+import { A2UICatalogService } from './services/a2ui-catalog.service';
+import { UISurfaceService } from './services/ui-surface.service';
+import { DataNormalizationService } from './services/data-normalization.service';
 import { createMacroAnalystTool } from './tools/macro-analyst.tool';
 import { createRiskManagerTool } from './tools/risk-manager.tool';
 import { createSearchHistoryTool } from './tools/search-history.tool';
@@ -43,10 +47,11 @@ import { createNewsSentimentTool } from './tools/news-sentiment.tool';
 import { createPerformanceAttributionTool } from './tools/performance-attribution.tool';
 import { PerformanceService } from '../performance/performance.service';
 import { SectorAttributionService } from '../performance/services/sector-attribution.service';
+import { ManageUISurfaceTool } from './tools/manage-ui-surface.tool';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([TokenUsage, ReasoningTrace]),
+    TypeOrmModule.forFeature([TokenUsage, ReasoningTrace, UISurface]),
     ConfigModule,
     JwtModule, // Import JwtModule for JwtService (set to global in AuthModule)
     forwardRef(() => AuthModule), // Import AuthModule for JwtAuthGuard
@@ -69,6 +74,10 @@ import { SectorAttributionService } from '../performance/services/sector-attribu
     InterruptHandlerService,
     OrchestratorService,
     JwtAuthGuard,
+    A2UICatalogService,
+    UISurfaceService,
+    DataNormalizationService,
+    ManageUISurfaceTool, // Added ManageUISurfaceTool
   ],
   exports: [
     OrchestratorService,
@@ -77,6 +86,8 @@ import { SectorAttributionService } from '../performance/services/sector-attribu
     TokenUsageService,
     TracingService,
     StateService,
+    UISurfaceService,
+    DataNormalizationService,
   ],
 })
 export class AgentsModule {
@@ -97,6 +108,7 @@ export class AgentsModule {
     private readonly transactionsService: TransactionsService,
     private readonly conversationService: ConversationService,
     private readonly grokService: GrokLlmService,
+    private readonly manageUISurfaceTool: ManageUISurfaceTool, // Injected ManageUISurfaceTool
   ) {
     this.registerDefaultTools();
   }
@@ -113,6 +125,8 @@ export class AgentsModule {
         this.logger.warn(`Failed to setup checkpoint tables: ${errorMessage}`);
       }
     }
+    this.toolRegistry.registerTool(this.manageUISurfaceTool); // Registered ManageUISurfaceTool
+    this.logger.log('Registered manage_ui_surface tool'); // Added log for ManageUISurfaceTool
   }
 
   private registerDefaultTools() {

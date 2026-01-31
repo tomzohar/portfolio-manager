@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { SSEConnectionStatus, SSEEvent, SSEEventType } from '@stocks-researcher/types';
 import { AuthStorageService } from '@frontend/data-access-auth';
-import { BehaviorSubject, Observable, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, throwError } from 'rxjs';
 
 /**
  * SSEService
@@ -42,6 +42,10 @@ export class SSEService {
   private readonly connectionStatus$ = new BehaviorSubject<SSEConnectionStatus>(
     SSEConnectionStatus.DISCONNECTED
   );
+
+  private readonly eventsSubject = new Subject<SSEEvent>();
+  /** Multicast stream of all SSE events */
+  public readonly events$ = this.eventsSubject.asObservable();
 
   private eventSource: EventSource | null = null;
   private reconnectAttempts = 0;
@@ -90,7 +94,9 @@ export class SSEService {
 
               // Validate event structure
               if (this.isValidSSEEvent(data)) {
-                observer.next(data as SSEEvent);
+                const sseEvent = data as SSEEvent;
+                observer.next(sseEvent);
+                this.eventsSubject.next(sseEvent); // Broadcast to multicast stream
               } else {
                 console.warn('Invalid SSE event structure:', data);
               }

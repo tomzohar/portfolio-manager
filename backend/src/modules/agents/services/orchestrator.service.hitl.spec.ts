@@ -13,6 +13,7 @@ import { ToolRegistryService } from './tool-registry.service';
 import { TracingService } from './tracing.service';
 import { ConversationService } from '../../conversations/services/conversation.service';
 import { GeminiLlmService } from './gemini-llm.service';
+import { A2UICatalogService } from './a2ui-catalog.service';
 
 /**
  * HITL (Human-in-the-Loop) Test Suite for OrchestratorService
@@ -168,6 +169,10 @@ describe('OrchestratorService - HITL (Interrupt & Suspend)', () => {
         {
           provide: GeminiLlmService,
           useValue: mockGeminiLlmService,
+        },
+        {
+          provide: A2UICatalogService,
+          useValue: { getSystemInstructions: jest.fn() },
         },
       ],
     }).compile();

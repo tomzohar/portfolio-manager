@@ -2,6 +2,7 @@ import { Component, input, output, computed, signal, effect } from '@angular/cor
 import { CommonModule } from '@angular/common';
 import { AssistantMessage } from '@stocks-researcher/types';
 import { ButtonComponent, IconComponent, ButtonConfig, TypewriterDirective } from '@stocks-researcher/styles';
+import { A2UISurfaceRendererComponent } from '../a2ui/a2ui-surface-renderer.component';
 
 /**
  * AIMessageComponent
@@ -26,7 +27,7 @@ import { ButtonComponent, IconComponent, ButtonConfig, TypewriterDirective } fro
 @Component({
   selector: 'app-ai-message',
   standalone: true,
-  imports: [CommonModule, ButtonComponent, IconComponent, TypewriterDirective],
+  imports: [CommonModule, ButtonComponent, IconComponent, TypewriterDirective, A2UISurfaceRendererComponent],
   template: `
     <div class="ai-message" [class.loading]="isLoading()">
       <div class="message-header">
@@ -46,7 +47,13 @@ import { ButtonComponent, IconComponent, ButtonConfig, TypewriterDirective } fro
             <div class="skeleton-line skeleton-line-3"></div>
           </div>
         } @else {
-          <pre class="formatted-response" [typewriter]="animatedContent()" [speed]="10" [skipAnimation]="shouldSkipAnimation()"></pre>
+          @for (segment of segments(); track $index) {
+            @if (segment.type === 'text') {
+              <pre class="formatted-response" [typewriter]="segment.content" [speed]="10" [skipAnimation]="shouldSkipAnimation()"></pre>
+            } @else if (segment.type === 'surface') {
+              <app-a2ui-surface-renderer [surfaceId]="segment.content" />
+            }
+          }
         }
       </div>
       @if (!isLoading() && hasTraces() && isTracesFeatureEnabled()) {
@@ -98,6 +105,48 @@ export class AIMessageComponent {
    * True for existing messages (loaded on refresh), false for new messages
    */
   shouldSkipAnimation = signal<boolean>(true); // Default to true, will be false for new messages
+
+  /**
+   * Parsed message segments (text or A2UI surfaces)
+   */
+  segments = computed(() => {
+    const content = this.message()?.content || '';
+    if (!content) return [];
+
+    const segments: { type: 'text' | 'surface'; content: string }[] = [];
+    const surfaceRegex = /<a2ui-surface id="([^"]+)" \/>/g;
+
+    let lastIndex = 0;
+    let match;
+
+    while ((match = surfaceRegex.exec(content)) !== null) {
+      // Add text leading up to the surface
+      if (match.index > lastIndex) {
+        segments.push({
+          type: 'text',
+          content: content.substring(lastIndex, match.index),
+        });
+      }
+
+      // Add the surface ID
+      segments.push({
+        type: 'surface',
+        content: match[1],
+      });
+
+      lastIndex = surfaceRegex.lastIndex;
+    }
+
+    // Add remaining text
+    if (lastIndex < content.length) {
+      segments.push({
+        type: 'text',
+        content: content.substring(lastIndex),
+      });
+    }
+
+    return segments;
+  });
 
   constructor() {
     // Watch for loading state changes to trigger animation

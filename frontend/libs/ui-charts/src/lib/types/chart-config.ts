@@ -26,6 +26,7 @@ export interface ChartAxisConfig {
     show?: boolean;
     color?: string;
   };
+  categories?: string[];
 }
 
 export interface ChartLegendConfig {
