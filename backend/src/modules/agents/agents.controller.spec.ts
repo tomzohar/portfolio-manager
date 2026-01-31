@@ -13,6 +13,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { PortfolioService } from '../portfolio/portfolio.service';
+import { UISurfaceService } from './services/ui-surface.service';
 import { ConversationService } from '../conversations/services/conversation.service';
 
 describe('AgentsController', () => {
@@ -99,6 +100,14 @@ describe('AgentsController', () => {
     getThreadMessages: jest.fn(),
   };
 
+  const mockUISurfaceService = {
+    getSurfaceOrFail: jest.fn(),
+    createSurface: jest.fn(),
+    updateSurface: jest.fn(),
+    updateDataModel: jest.fn(),
+    updateComponents: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -128,6 +137,10 @@ describe('AgentsController', () => {
         {
           provide: ConversationService,
           useValue: mockConversationService,
+        },
+        {
+          provide: UISurfaceService,
+          useValue: mockUISurfaceService,
         },
       ],
     })

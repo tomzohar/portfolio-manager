@@ -10,15 +10,11 @@ describe('CIO Reasoning Prompt', () => {
   describe('buildReasoningPrompt', () => {
     // Tests for user query replacement removed as userQuery is no longer part of this prompt function.
 
-    it('should preserve prompt structure with tools', () => {
+    it('should preserve prompt structure', () => {
       const result = buildReasoningPrompt();
 
       expect(result).toContain('Chief Investment Officer');
-      expect(result).toContain('Available Tools');
-      // Should contain default hardcoded tools if no tools provided
-      expect(result).toContain('technical_analyst');
-      expect(result).toContain('macro_analyst');
-      expect(result).toContain('risk_manager');
+      expect(result).not.toContain('{{tools}}');
     });
 
     it('should include portfolio context when provided', () => {
@@ -169,9 +165,8 @@ describe('CIO Reasoning Prompt', () => {
 
     it('should handle undefined tools parameter', () => {
       const result = buildReasoningPrompt(undefined, undefined, undefined);
-      // Should fall back to hardcoded tools
-      expect(result).toContain('Available Tools');
-      expect(result).toContain('technical_analyst');
+      // Should remove {{tools}} placeholder
+      expect(result).not.toContain('{{tools}}');
     });
 
     it('should include tool metadata notes', () => {

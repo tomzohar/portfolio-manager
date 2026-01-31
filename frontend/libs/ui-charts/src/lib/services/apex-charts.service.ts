@@ -70,25 +70,27 @@ export class ApexChartsService extends ChartService {
         },
         background: 'transparent',
       },
-      series: series.map(s => ({
-        name: s.name,
-        data: s.data,
-        color: s.color,
-        type: s.type,
+      series: (series || []).map(s => ({
+        name: s?.name || 'Series',
+        data: s?.data || [],
+        color: s?.color,
+        type: s?.type,
       })),
       xaxis: {
+        type: options.xAxis?.show === false ? undefined : 'category',
+        categories: options.xAxis?.categories,
         labels: {
           style: {
             colors: options.xAxis?.labels?.style?.colors || '#9e9e9e',
             fontSize: options.xAxis?.labels?.style?.fontSize || '10px',
           },
           formatter: options.xAxis?.labels?.formatter,
-          rotate: -45, // Angle labels for better readability
+          rotate: -45,
           rotateAlways: false,
           hideOverlappingLabels: true,
           trim: true,
         },
-        tickAmount: 8, // Show max 8 ticks on X-axis (reduces crowding)
+        tickAmount: 8,
         axisBorder: {
           show: false,
         },
@@ -133,12 +135,29 @@ export class ApexChartsService extends ChartService {
         mode: options.theme || 'dark',
       },
       stroke: {
-        curve: 'smooth',
-        width: 2,
+        curve: type === 'bar' ? 'straight' : (options.theme === 'dark' ? 'smooth' : 'smooth'),
+        width: type === 'bar' ? 0 : 2,
       },
-      responsive: options.responsive?.map(r => ({
+      plotOptions: {
+        bar: {
+          borderRadius: 4,
+          horizontal: false,
+          columnWidth: '55%',
+        },
+      },
+      responsive: (options.responsive || []).map(r => ({
         breakpoint: r.breakpoint,
-        options: this.transformConfigToApexOptions({ type, series, options: r.options }).chart,
+        options: {
+          chart: {
+            height: r.options?.height,
+            width: r.options?.width,
+          },
+          legend: {
+            show: r.options?.legend?.show,
+            position: r.options?.legend?.position,
+          },
+          // Drop deep recursion for now to avoid complexity/bugs
+        },
       })),
     };
   }

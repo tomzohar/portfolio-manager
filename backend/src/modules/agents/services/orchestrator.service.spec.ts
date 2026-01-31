@@ -14,6 +14,7 @@ import { HumanMessage } from '@langchain/core/messages';
 import { GuardrailException } from '../graphs/nodes/guardrail.node';
 import { ConversationService } from '../../conversations/services/conversation.service';
 import { GeminiLlmService } from './gemini-llm.service';
+import { A2UICatalogService } from './a2ui-catalog.service';
 
 describe('OrchestratorService', () => {
   let service: OrchestratorService;
@@ -136,6 +137,10 @@ describe('OrchestratorService', () => {
         {
           provide: GeminiLlmService,
           useValue: mockGeminiLlmService,
+        },
+        {
+          provide: A2UICatalogService,
+          useValue: { getSystemInstructions: jest.fn() },
         },
       ],
     }).compile();

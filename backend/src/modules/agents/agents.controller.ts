@@ -31,6 +31,7 @@ import { GraphResponseDto } from './dto/graph-response.dto';
 import { TracesResponseDto, TraceDto } from './dto/traces-response.dto';
 import { TracingService } from './services/tracing.service';
 import { StateService } from './services/state.service';
+import { UISurfaceService } from './services/ui-surface.service';
 import { ResumeGraphDto } from './dto/resume-graph.dto';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { PortfolioRiskProfile } from './graphs/types';
@@ -53,6 +54,7 @@ export class AgentsController {
     private readonly stateService: StateService,
     private readonly portfolioService: PortfolioService,
     private readonly conversationService: ConversationService,
+    private readonly uiSurfaceService: UISurfaceService,
   ) {}
 
   @Post('run')
@@ -453,5 +455,43 @@ export class AgentsController {
         listeners.forEach((cleanup) => cleanup());
       };
     });
+  }
+
+  @Get('surfaces/:id')
+  @ApiOperation({
+    summary: 'Get A2UI surface state',
+    description:
+      'Retrieves the complete state of an A2UI surface for hydration',
+  })
+  @ApiParam({ name: 'id', description: 'Surface ID' })
+  @ApiResponse({ status: 200, description: 'Surface state retrieved' })
+  async getUISurface(@CurrentUser() user: User, @Param('id') id: string) {
+    return this.uiSurfaceService.getSurfaceOrFail(id, user.id);
+  }
+
+  @Post('surfaces/:id/events')
+  @ApiOperation({
+    summary: 'Send A2UI user event',
+    description:
+      'Sends a user action event from an A2UI component back to the agent',
+  })
+  @ApiParam({ name: 'id', description: 'Surface ID' })
+  @HttpCode(200)
+  async handleUISurfaceEvent(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Body() dto: { type: string; name: string; context?: any },
+  ) {
+    const surface = await this.uiSurfaceService.getSurfaceOrFail(id, user.id);
+
+    // Emit the event so the orchestrator/agent can receive it
+    this.eventEmitter.emit('a2ui.surface.event', {
+      threadId: surface.threadId,
+      userId: user.id,
+      surfaceId: id,
+      event: dto,
+    });
+
+    return { success: true };
   }
 }
