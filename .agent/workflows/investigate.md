@@ -9,7 +9,8 @@ description: Investigate conversations and reasoning traces
 # TOOLS:
 
 1. **investigate.ts**: Query the database for app-level conversations.
-2. **grep**: Search through agent artifacts (`brain/` directory) for past work context.
+2. **dump-traces.ts**: Show traces for thread
+3. **grep**: Search through agent artifacts (`brain/` directory) for past work context.
 
 # WORKFLOW:
 

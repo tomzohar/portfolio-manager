@@ -18,6 +18,7 @@ import { TransactionsService } from '../portfolio/transactions.service';
 import { UsersModule } from '../users/users.module';
 import { FinnhubApiService } from '../assets/services/finnhub-api.service';
 import { FmpApiService } from '../assets/services/fmp-api.service';
+import { TechnicalIndicatorsService } from '../assets/services/technical-indicators.service';
 import { AgentsController } from './agents.controller';
 import { createStockScreenerTool } from './tools/stock-screener.tool';
 import { ReasoningTrace } from './entities/reasoning-trace.entity';
@@ -45,6 +46,7 @@ import { createEarningsCalendarTool } from './tools/earnings-calendar.tool';
 import { getCurrentTimeTool } from './tools/time.tool';
 import { createNewsSentimentTool } from './tools/news-sentiment.tool';
 import { createPerformanceAttributionTool } from './tools/performance-attribution.tool';
+import { createChartBuilderTool } from './tools/chart-builder.tool';
 import { PerformanceService } from '../performance/performance.service';
 import { SectorAttributionService } from '../performance/services/sector-attribution.service';
 import { ManageUISurfaceTool } from './tools/manage-ui-surface.tool';
@@ -101,6 +103,7 @@ export class AgentsModule {
     private readonly newsService: NewsService,
     private readonly finnhubService: FinnhubApiService,
     private readonly fmpService: FmpApiService,
+    private readonly indicatorService: TechnicalIndicatorsService,
     private readonly geminiService: GeminiLlmService,
     private readonly portfolioService: PortfolioService,
     private readonly performanceService: PerformanceService, // Injected PerformanceService
@@ -109,6 +112,8 @@ export class AgentsModule {
     private readonly conversationService: ConversationService,
     private readonly grokService: GrokLlmService,
     private readonly manageUISurfaceTool: ManageUISurfaceTool, // Injected ManageUISurfaceTool
+    private readonly uiSurfaceService: UISurfaceService,
+    private readonly catalogService: A2UICatalogService,
   ) {
     this.registerDefaultTools();
   }
@@ -132,7 +137,7 @@ export class AgentsModule {
   private registerDefaultTools() {
     this.toolRegistry.registerTool(getCurrentTimeTool);
     this.toolRegistry.registerTool(
-      createTechnicalAnalystTool(this.polygonService),
+      createTechnicalAnalystTool(this.polygonService, this.indicatorService),
     );
     this.logger.log('Registered technical_analyst tool');
     this.toolRegistry.registerTool(
@@ -171,7 +176,11 @@ export class AgentsModule {
     );
     this.logger.log('Registered news_sentiment_scanner tool');
     this.toolRegistry.registerTool(
-      createStockScreenerTool(this.fmpService, this.polygonService),
+      createStockScreenerTool(
+        this.fmpService,
+        this.polygonService,
+        this.indicatorService,
+      ),
     );
     this.logger.log('Registered stock_screener tool');
     this.toolRegistry.registerTool(
@@ -182,5 +191,14 @@ export class AgentsModule {
       ),
     );
     this.logger.log('Registered performance_attribution tool');
+    this.toolRegistry.registerTool(
+      createChartBuilderTool(
+        this.polygonService,
+        this.indicatorService,
+        this.uiSurfaceService,
+        this.catalogService,
+      ),
+    );
+    this.logger.log('Registered chart_builder tool');
   }
 }

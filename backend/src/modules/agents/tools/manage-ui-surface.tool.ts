@@ -18,12 +18,12 @@ export class ManageUISurfaceTool extends DynamicStructuredTool {
   ) {
     super({
       name: 'manage_ui_surface',
-      description: `Create or update a UI surface to display interactive components.
+      description: `Create or update a generic UI surface to display interactive components.
             
 COMPONENTS:
 - Text: { "component": "Text", "props": { "text": string, "variant": "h1"|"h2"|"body"|"caption" } }
-- Chart: { "component": "Chart", "props": { "type": "line"|"bar"|"pie", "title": string }, "bindings": { "series": "/path" } }
 - Button: { "component": "Button", "props": { "label": string, "action": string, "context": object } }
+- Chart: Use 'chart_builder' tool for automatic chart generation.
 
 PROCESS:
 1. Call this tool to get a 'surfaceId'.

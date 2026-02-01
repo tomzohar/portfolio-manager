@@ -8,10 +8,8 @@ import {
 } from '../../assets/services/fmp-api.service';
 import { PolygonApiService } from '../../assets/services/polygon-api.service';
 import { firstValueFrom } from 'rxjs';
-import {
-  TechnicalIndicators,
-  calculateTechnicalIndicators,
-} from './technical-analyst.tool';
+import { TechnicalIndicatorsService } from '../../assets/services/technical-indicators.service';
+import { TechnicalIndicators } from '../../assets/types/technical-indicators.types';
 
 export const StockScreenerSchema = z.object({
   sector: z
@@ -110,6 +108,7 @@ async function enrichWithTechnicals(
   candidates: EnrichedStock[],
   input: StockScreenerInput,
   polygonService: PolygonApiService,
+  indicatorService: TechnicalIndicatorsService,
 ): Promise<EnrichedStock[]> {
   const needTechnicalCheck =
     input.rsiMin !== undefined ||
@@ -123,10 +122,7 @@ async function enrichWithTechnicals(
   const techEnriched = await Promise.all(
     candidates.map(async (stock) => {
       // We need ~300 days for SMA200 and RSI
-      const to = new Date().toISOString().split('T')[0];
-      const fromDate = new Date();
-      fromDate.setDate(fromDate.getDate() - 400);
-      const from = fromDate.toISOString().split('T')[0];
+      const { from, to } = indicatorService.calculateDateRange(300);
 
       const bars = await firstValueFrom(
         polygonService.getAggregates(stock.symbol, from, to, 'day', 1, 'desc'),
@@ -135,14 +131,14 @@ async function enrichWithTechnicals(
       if (!bars || bars.length < 200) return { ...stock, tech_valid: false };
 
       const ascBars = [...bars].reverse();
-      const indicators = calculateTechnicalIndicators(ascBars);
+      const indicators = indicatorService.calculateTechnicalIndicators(ascBars);
 
       return {
         ...stock,
         ...indicators,
         tech_valid: true,
         current_price_poly: ascBars[ascBars.length - 1].close,
-      };
+      } as EnrichedStock;
     }),
   );
 
@@ -179,6 +175,7 @@ async function enrichWithTechnicals(
 export function createStockScreenerTool(
   fmpService: FmpApiService,
   polygonService: PolygonApiService,
+  indicatorService: TechnicalIndicatorsService,
 ): DynamicStructuredTool {
   return new DynamicStructuredTool({
     name: 'stock_screener',
@@ -217,6 +214,7 @@ export function createStockScreenerTool(
           processedCandidates,
           input,
           polygonService,
+          indicatorService,
         );
 
         // Limit results & Format

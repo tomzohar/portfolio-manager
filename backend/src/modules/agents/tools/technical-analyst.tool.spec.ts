@@ -2,6 +2,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { of, throwError } from 'rxjs';
 import { PolygonApiService } from '../../assets/services/polygon-api.service';
+import { TechnicalIndicatorsService } from '../../assets/services/technical-indicators.service';
 import { OHLCVBar } from '../../assets/types/polygon-api.types';
 import {
   createTechnicalAnalystTool,
@@ -28,6 +29,7 @@ jest.mock('technicalindicators', () => {
 
 describe('TechnicalAnalystTool', () => {
   let polygonService: jest.Mocked<PolygonApiService>;
+  let indicatorService: TechnicalIndicatorsService;
   let tool: ReturnType<typeof createTechnicalAnalystTool>;
 
   // Fixture: 250 days of realistic AAPL-like price data
@@ -36,6 +38,7 @@ describe('TechnicalAnalystTool', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        TechnicalIndicatorsService,
         {
           provide: PolygonApiService,
           useValue: {
@@ -47,7 +50,8 @@ describe('TechnicalAnalystTool', () => {
     }).compile();
 
     polygonService = module.get(PolygonApiService);
-    tool = createTechnicalAnalystTool(polygonService);
+    indicatorService = module.get(TechnicalIndicatorsService);
+    tool = createTechnicalAnalystTool(polygonService, indicatorService);
 
     // Default mock behavior
     polygonService.getTickerDetails.mockReturnValue(

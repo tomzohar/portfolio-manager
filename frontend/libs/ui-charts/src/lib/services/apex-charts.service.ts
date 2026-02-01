@@ -1,17 +1,29 @@
 import { Injectable } from '@angular/core';
-import ApexCharts from 'apexcharts';
+import ApexCharts, { ApexOptions } from 'apexcharts';
 import { ChartService } from './chart.service';
 import { ChartConfig, ChartInstance } from '../types';
+import { ChartTransformer } from './transformers/chart-transformer';
+import { CartesianTransformer } from './transformers/cartesian-transformer';
+import { RadialTransformer } from './transformers/radial-transformer';
+import { CandlestickTransformer } from './transformers/candlestick-transformer';
 
 /**
  * ApexCharts implementation of ChartService.
- * Transforms generic ChartConfig to ApexCharts-specific options.
+ * Transforms generic ChartConfig into ApexCharts-specific options using strategy pattern.
  */
 @Injectable({
   providedIn: 'root',
 })
 export class ApexChartsService extends ChartService {
   private chartIdCounter = 0;
+  private readonly transformers: Record<string, ChartTransformer> = {
+    line: new CartesianTransformer(),
+    bar: new CartesianTransformer(),
+    area: new CartesianTransformer(),
+    pie: new RadialTransformer(),
+    donut: new RadialTransformer(),
+    candlestick: new CandlestickTransformer(),
+  };
 
   createChart(containerElement: HTMLElement, config: ChartConfig): ChartInstance {
     const apexOptions = this.transformConfigToApexOptions(config);
@@ -37,9 +49,8 @@ export class ApexChartsService extends ChartService {
     if (instance._internalChart) {
       try {
         instance._internalChart.destroy();
-      } catch (error) {
-        // Silently catch destroy errors (can happen in test environment)
-        console.warn('Error destroying chart:', error);
+      } catch (e) {
+        // Ignore destroy errors (common in tests/unmounted states)
       }
       instance._internalChart = null;
     }
@@ -47,119 +58,62 @@ export class ApexChartsService extends ChartService {
 
   resizeChart(instance: ChartInstance): void {
     if (instance._internalChart) {
-      instance._internalChart.windowResizeHandler();
+      window.dispatchEvent(new Event('resize'));
     }
   }
 
-  /**
-   * Transform generic ChartConfig to ApexCharts-specific format
-   */
-  private transformConfigToApexOptions(config: ChartConfig): any {
-    const { type, series, options = {} } = config;
+  private transformConfigToApexOptions(config: ChartConfig): ApexOptions {
+    const { type, options = {} } = config;
 
+    // Default to Cartesian if type is unknown
+    const transformer = this.transformers[type] || this.transformers['line'];
+    const typeSpecificOptions = transformer.transform(config);
+
+    // Merge with common global options
     return {
+      ...typeSpecificOptions,
       chart: {
-        type: type === 'line' ? 'line' : type,
+        ...typeSpecificOptions.chart,
+        type: type === 'line' ? 'line' : (type as any),
         height: options.height || 300,
         width: options.width || '100%',
-        animations: {
-          enabled: options.animations !== false,
-        },
-        toolbar: {
-          show: options.toolbar?.show ?? false,
-        },
+        animations: { enabled: options.animations !== false },
+        toolbar: { show: options.toolbar?.show ?? false },
         background: 'transparent',
       },
-      series: (series || []).map(s => ({
-        name: s?.name || 'Series',
-        data: s?.data || [],
-        color: s?.color,
-        type: s?.type,
-      })),
-      xaxis: {
-        type: options.xAxis?.show === false ? undefined : 'category',
-        categories: options.xAxis?.categories,
-        labels: {
-          style: {
-            colors: options.xAxis?.labels?.style?.colors || '#9e9e9e',
-            fontSize: options.xAxis?.labels?.style?.fontSize || '10px',
-          },
-          formatter: options.xAxis?.labels?.formatter,
-          rotate: -45,
-          rotateAlways: false,
-          hideOverlappingLabels: true,
-          trim: true,
-        },
-        tickAmount: 8,
-        axisBorder: {
-          show: false,
-        },
-        axisTicks: {
-          show: false,
-        },
-      },
-      yaxis: {
-        labels: {
-          style: {
-            colors: options.yAxis?.labels?.style?.colors || '#71717b',
-            fontSize: options.yAxis?.labels?.style?.fontSize || '11px',
-          },
-          formatter: options.yAxis?.labels?.formatter,
-        },
-      },
-      grid: {
-        borderColor: options.xAxis?.grid?.color || '#27272a',
-        strokeDashArray: 0,
-      },
-      legend: {
-        show: options.legend?.show ?? true,
-        position: options.legend?.position || 'top',
-        fontSize: options.legend?.fontSize || '12px',
-        fontFamily: options.legend?.fontFamily || 'Inter',
-        labels: {
-          colors: options.legend?.colors || '#f4f4f5',
-        },
-      },
-      tooltip: {
-        enabled: options.tooltip?.enabled ?? true,
-        theme: options.tooltip?.theme || options.theme || 'dark',
-        style: {
-          fontSize: '12px',
-          fontFamily: 'Inter',
-        },
-        y: {
-          formatter: options.tooltip?.formatter,
-        },
-      },
-      theme: {
-        mode: options.theme || 'dark',
-      },
-      stroke: {
-        curve: type === 'bar' ? 'straight' : (options.theme === 'dark' ? 'smooth' : 'smooth'),
-        width: type === 'bar' ? 0 : 2,
-      },
-      plotOptions: {
-        bar: {
-          borderRadius: 4,
-          horizontal: false,
-          columnWidth: '55%',
-        },
-      },
-      responsive: (options.responsive || []).map(r => ({
-        breakpoint: r.breakpoint,
-        options: {
-          chart: {
-            height: r.options?.height,
-            width: r.options?.width,
-          },
-          legend: {
-            show: r.options?.legend?.show,
-            position: r.options?.legend?.position,
-          },
-          // Drop deep recursion for now to avoid complexity/bugs
-        },
-      })),
+      theme: { mode: options.theme || 'dark' },
+      tooltip: this.getTooltipOptions(options),
+      legend: this.getLegendOptions(options),
+      responsive: this.getResponsiveOptions(options),
     };
   }
-}
 
+  private getTooltipOptions(options: any): ApexTooltip {
+    return {
+      enabled: options.tooltip?.enabled ?? true,
+      theme: options.tooltip?.theme || options.theme || 'dark',
+      style: { fontSize: '12px', fontFamily: 'Inter' },
+      y: { formatter: options.tooltip?.formatter },
+    };
+  }
+
+  private getLegendOptions(options: any): ApexLegend {
+    return {
+      show: options.legend?.show ?? true,
+      position: options.legend?.position || 'top',
+      fontSize: options.legend?.fontSize || '12px',
+      fontFamily: options.legend?.fontFamily || 'Inter',
+      labels: { colors: options.legend?.colors || '#f4f4f5' },
+    };
+  }
+
+  private getResponsiveOptions(options: any): any[] {
+    return (options.responsive || []).map((r: any) => ({
+      breakpoint: r.breakpoint,
+      options: {
+        chart: { height: r.options?.height, width: r.options?.width },
+        legend: { show: r.options?.legend?.show, position: r.options?.legend?.position },
+      },
+    }));
+  }
+}
