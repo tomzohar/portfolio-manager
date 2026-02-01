@@ -11,22 +11,18 @@ import { GeminiLlmService } from '../../services/gemini-llm.service';
 import { ToolRegistryService } from '../../services/tool-registry.service';
 import { getDefaultModel } from '../../utils/model.utils';
 import { RunnableConfig } from '@langchain/core/runnables';
+import {
+  extractToolCalls,
+  normalizeAIMessage,
+  isAIMessage,
+  isToolMessage,
+  isSystemMessage,
+} from '../../utils/message.utils';
 
 /**
  * Reasoning Node
- *
- * Uses an LLM with streaming and tool calling enabled to generate thoughtful
- * responses to user queries. The LLM can autonomously call tools (technical_analyst,
- * macro_analyst, risk_manager) to gather data before responding.
- *
- * Key Features:
- * - Streaming enabled ({ streaming: true })
- * - Tool calling via bindTools() for agentic behavior
- * - Callbacks automatically invoke handleLLMNewToken for each token
- * - SSE endpoint receives real-time token events
- * - Returns AIMessage with potential tool_calls in additional_kwargs
  */
-// Helper to initialize LLM
+
 function initializeLLM(config: RunnableConfig): ChatGoogleGenerativeAI {
   const geminiService = config.configurable
     ?.geminiLlmService as GeminiLlmService;
@@ -39,7 +35,6 @@ function initializeLLM(config: RunnableConfig): ChatGoogleGenerativeAI {
     });
   }
 
-  // Manual fallback
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
 
@@ -53,64 +48,87 @@ function initializeLLM(config: RunnableConfig): ChatGoogleGenerativeAI {
 }
 
 /**
- * Sanitize messages for Google Gemini
- * Ensures all ToolMessages have a 'name' field, which is required by the API.
- * Infers name from preceding AIMessage tool calls if possible, or uses fallback.
+ * Normalize and sanitize messages for Google Gemini
  */
-function sanitizeMessages(messages: BaseMessage[]): BaseMessage[] {
+function normalizeMessages(messages: BaseMessage[]): BaseMessage[] {
   const toolCallNames = new Map<string, string>();
 
-  // First pass: Index tool calls from AIMessages to find names
+  // First pass: Index tool calls to find names for ToolMessages
   for (const msg of messages) {
-    if (
-      msg instanceof AIMessage &&
-      msg.tool_calls &&
-      msg.tool_calls.length > 0
-    ) {
-      for (const tc of msg.tool_calls) {
+    if (isAIMessage(msg)) {
+      const toolCalls = extractToolCalls(msg);
+      for (const tc of toolCalls) {
         if (tc.id) toolCallNames.set(tc.id, tc.name);
       }
     }
   }
 
-  // Second pass: Fix ToolMessages missing names
   return messages.map((msg) => {
-    if (msg instanceof ToolMessage && !msg.name) {
+    if (isAIMessage(msg)) {
+      return normalizeAIMessage(msg);
+    }
+
+    if (isToolMessage(msg) && !msg.name) {
+      const toolMsg = msg as unknown as {
+        artifact?: any;
+        status?: 'success' | 'error';
+      };
       const name = toolCallNames.get(msg.tool_call_id) || 'unknown_tool';
-      const message = msg as ToolMessage;
       return new ToolMessage({
-        content: message.content,
-        tool_call_id: message.tool_call_id,
+        content: msg.content,
+        tool_call_id: msg.tool_call_id,
         name: name,
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        artifact: message?.artifact,
-        status: message.status,
+        artifact: toolMsg.artifact,
+        status: toolMsg.status,
       });
     }
+
     return msg;
   });
 }
 
-// Helper to construct history with sliding window
+// Helper to construct history with sliding window and protocol safety
 async function constructHistory(
   state: CIOState,
   tools: any[],
   geminiService: GeminiLlmService | undefined,
 ): Promise<BaseMessage[]> {
-  // 1. Build System Message
-  const systemPromptContent = buildReasoningPrompt(
+  const allMessages = state.messages;
+
+  // 1. Collect and filter out SystemMessages from history
+  const historySystemContent: string[] = [];
+  const cleanMessages: BaseMessage[] = [];
+
+  for (const msg of allMessages) {
+    if (isSystemMessage(msg)) {
+      const content =
+        typeof msg.content === 'string'
+          ? msg.content
+          : JSON.stringify(msg.content);
+      if (content.trim()) historySystemContent.push(content);
+    } else {
+      cleanMessages.push(msg);
+    }
+  }
+
+  // 2. Build the main Session System Message
+  let sessionPrompt = buildReasoningPrompt(
     state.portfolio,
     state.userId,
     tools,
     state.threadId,
   );
-  const systemMessage = new SystemMessage(systemPromptContent);
 
-  // 2. Identify messages to include
-  const allMessages = state.messages;
-  const lastMessage = allMessages[allMessages.length - 1];
+  if (historySystemContent.length > 0) {
+    sessionPrompt +=
+      '\n\nAdditional Context from History:\n' +
+      historySystemContent.join('\n\n');
+  }
 
-  // Helper to count tokens
+  const mainSystemMessage = new SystemMessage(sessionPrompt);
+
+  // 3. Helper to count tokens
   const count = async (msg: string | BaseMessage) => {
     const content =
       typeof msg === 'string'
@@ -123,38 +141,55 @@ async function constructHistory(
       const metadata = await geminiService.countTokens(content);
       return metadata.totalTokens;
     }
-    // Fallback estimation (char/4)
     return Math.ceil(content.length / 4);
   };
 
-  let currentTokens = 0;
+  let currentTokens = await count(sessionPrompt);
   const TOKEN_LIMIT = 20000;
 
-  currentTokens += await count(systemPromptContent);
-  currentTokens += await count(lastMessage);
+  // 4. Select history messages from cleanMessages (reverse chronological)
+  // We must be careful not to bifurcate tool call/response sequences
+  const resultMessages: BaseMessage[] = [];
 
-  // 3. Select history messages (reverse chronological)
-  const historyMessages: BaseMessage[] = [];
+  if (cleanMessages.length > 0) {
+    const lastMsg = cleanMessages[cleanMessages.length - 1];
+    currentTokens += await count(lastMsg);
+    resultMessages.unshift(lastMsg);
 
-  // Iterate from second-to-last msg down to 0
-  for (let i = allMessages.length - 2; i >= 0; i--) {
-    const msg = allMessages[i];
-    const tokens = await count(msg);
+    let i = cleanMessages.length - 2;
+    while (i >= 0) {
+      const msg = cleanMessages[i];
+      const group: BaseMessage[] = [msg];
+      let j = i - 1;
 
-    if (currentTokens + tokens > TOKEN_LIMIT) {
-      break;
+      // Group tool messages with their preceding AIMessage
+      if (isToolMessage(msg)) {
+        while (
+          j >= 0 &&
+          (isToolMessage(cleanMessages[j]) || isAIMessage(cleanMessages[j]))
+        ) {
+          group.unshift(cleanMessages[j]);
+          if (isAIMessage(cleanMessages[j])) {
+            j--;
+            break;
+          }
+          j--;
+        }
+      }
+
+      let groupTokens = 0;
+      for (const groupMsg of group) groupTokens += await count(groupMsg);
+
+      if (currentTokens + groupTokens > TOKEN_LIMIT) break;
+
+      currentTokens += groupTokens;
+      resultMessages.unshift(...group);
+      i = j;
     }
-
-    currentTokens += tokens;
-    historyMessages.unshift(msg);
   }
 
-  return [systemMessage, ...historyMessages, lastMessage];
+  return [mainSystemMessage, ...resultMessages];
 }
-
-/**
- * Reasoning Node
- */
 
 export async function reasoningNode(
   state: CIOState,
@@ -165,18 +200,30 @@ export async function reasoningNode(
     const geminiService = config.configurable
       ?.geminiLlmService as GeminiLlmService;
 
-    // Get tools
     const toolRegistry = config.configurable
       ?.toolRegistry as ToolRegistryService;
     const tools = toolRegistry?.getTools() || [];
     const llmWithTools =
       tools.length > 0 ? bucketLLM.bindTools(tools) : bucketLLM;
 
-    // Construct prompt with history
+    // 1. Construct prompt and atomic history
     const rawMessages = await constructHistory(state, tools, geminiService);
 
-    // Sanitize messages to ensure ToolMessages have names (required by Gemini)
-    const finalMessages = sanitizeMessages(rawMessages);
+    // 2. Normalize for Gemini protocol (restore tool_calls, ensure names)
+    const finalMessages = normalizeMessages(rawMessages);
+
+    // 3. Last stand safety check: if we somehow ended with an AIMessage that has tool calls
+    // but no responses, Gemini will fail. We should ideally never reach this with our grouping logic.
+    const lastMsg = finalMessages[finalMessages.length - 1];
+    if (isAIMessage(lastMsg)) {
+      const toolCalls = extractToolCalls(lastMsg);
+      if (toolCalls.length > 0) {
+        console.warn(
+          '[ReasoningNode] Detected AIMessage with unresponded tool calls at history end. Trimming.',
+        );
+        finalMessages.pop();
+      }
+    }
 
     // Invoke LLM
     const response = await llmWithTools.invoke(finalMessages, {

@@ -55,9 +55,27 @@ export async function summarizationNode(
     }
 
     // 2. Identify chunk to summarize
+    // Important: Do not summarize if history ends in an open tool sequence
     const RECENT_KEEP_COUNT = 10;
     if (messages.length <= RECENT_KEEP_COUNT + 1) {
       return {};
+    }
+
+    // Skip summarization if it would bifurcate an AI-Tool sequence
+    const lastMsg = messages[messages.length - 1];
+    interface MessageWithToolCalls {
+      type?: string;
+      tool_calls?: unknown[]; // Changed from any to unknown[] for safety
+      _getType?: () => string;
+    }
+    const lastMsgTyped = lastMsg as unknown as MessageWithToolCalls;
+
+    if (
+      lastMsgTyped._getType?.() === 'ai' ||
+      lastMsgTyped.type === 'ai' ||
+      (lastMsgTyped.tool_calls && lastMsgTyped.tool_calls.length > 0)
+    ) {
+      return {}; // Wait for tool execution to finish
     }
 
     const messagesToSummarize = messages.slice(0, -RECENT_KEEP_COUNT);
@@ -82,10 +100,15 @@ export async function summarizationNode(
 
     const conversationText = messagesToSummarize
       .map((m) => {
-        const role = m._getType();
+        const msgTyped = m as unknown as {
+          type?: string;
+          _getType?: () => string;
+          content: unknown;
+        };
+        const role = msgTyped._getType?.() || msgTyped.type || 'unknown';
         const content =
           typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
-        return `${role.toUpperCase()}: ${content}`;
+        return `${String(role).toUpperCase()}: ${content}`;
       })
       .join('\n');
 

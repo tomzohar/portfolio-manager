@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ChartComponent } from '@stocks-researcher/ui-charts';
 import { ChartConfig } from '@stocks-researcher/ui-charts'; // Fixed import
 import { resolveJsonPointer } from './json-pointer.util';
+import { formatChartSeries } from './a2ui-data.util';
 
 @Component({
   selector: 'app-a2ui-chart',
@@ -25,13 +26,20 @@ export class A2UIChartComponent {
 
   chartConfig = computed((): ChartConfig => {
     const rawData = resolveJsonPointer(this.dataModel(), this.bindings().series);
+    const chartType = this.props().type || 'line';
+    const isPieChart = chartType === 'pie' || chartType === 'donut';
+
+    const formattedSeries = formatChartSeries({
+      rawData,
+      dataModel: this.dataModel(),
+      isPieChart,
+      defaultTitle: this.props().title,
+    });
+
     const categories = resolveJsonPointer(this.dataModel(), `${this.bindings().series}_categories`);
 
-    // The data is now pre-normalized by the backend into series format
-    const formattedSeries = Array.isArray(rawData) ? rawData : [];
-
     return {
-      type: this.props().type || 'line',
+      type: chartType,
       series: formattedSeries,
       options: {
         ...this.props().options,
@@ -46,4 +54,5 @@ export class A2UIChartComponent {
       }
     };
   });
+
 }

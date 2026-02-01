@@ -38,7 +38,11 @@ import { ApexChartsService } from '../services/apex-charts.service';
       position: relative;
     }
   `],
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[style.display]': "'block'",
+    '[style.height]': "'100%'",
+    '[style.width]': "'100%'"
+  },
   providers: [
     { provide: ChartService, useClass: ApexChartsService },
   ],
@@ -65,10 +69,17 @@ export class ChartComponent implements OnDestroy {
 
       if (!containerEl) return;
 
-      if (this.chartInstance) {
+      const typeChanged = this.chartInstance && this.chartInstance.config.type !== config.type;
+
+      if (this.chartInstance && !typeChanged) {
         // Update existing chart
         this.chartService.updateChart(this.chartInstance, config);
       } else {
+        // Destroy old chart if type changed
+        if (this.chartInstance) {
+          this.chartService.destroyChart(this.chartInstance);
+          this.chartInstance = null;
+        }
         // Create new chart
         this.chartInstance = this.chartService.createChart(containerEl, config);
       }

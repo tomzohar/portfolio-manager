@@ -1,6 +1,7 @@
 import { createStockScreenerTool } from './stock-screener.tool';
 import { FmpApiService } from '../../assets/services/fmp-api.service';
 import { PolygonApiService } from '../../assets/services/polygon-api.service';
+import { TechnicalIndicatorsService } from '../../assets/services/technical-indicators.service';
 import { of } from 'rxjs';
 
 // Mock Interfaces matching the real ones
@@ -48,6 +49,7 @@ describe('StockScreenerTool', () => {
   let tool: ReturnType<typeof createStockScreenerTool>;
   let fmpService: FmpApiService;
   let polygonService: PolygonApiService;
+  let indicatorService: TechnicalIndicatorsService;
 
   beforeEach(() => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -62,7 +64,13 @@ describe('StockScreenerTool', () => {
       getAggregates: jest.fn().mockReturnValue(of(mockBars)),
     } as any;
 
-    tool = createStockScreenerTool(fmpService, polygonService);
+    indicatorService = new TechnicalIndicatorsService();
+
+    tool = createStockScreenerTool(
+      fmpService,
+      polygonService,
+      indicatorService,
+    );
   });
 
   interface ScreenerResult {

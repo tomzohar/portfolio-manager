@@ -9,6 +9,7 @@ import { FredService } from './services/fred.service';
 import { NewsService } from './services/news.service';
 import { FinnhubApiService } from './services/finnhub-api.service';
 import { FmpApiService } from './services/fmp-api.service';
+import { TechnicalIndicatorsService } from './services/technical-indicators.service';
 
 @Module({
   imports: [HttpModule, JwtModule, UsersModule],
@@ -20,6 +21,7 @@ import { FmpApiService } from './services/fmp-api.service';
     NewsService,
     FinnhubApiService,
     FmpApiService,
+    TechnicalIndicatorsService,
   ],
   exports: [
     AssetsService,
@@ -28,6 +30,7 @@ import { FmpApiService } from './services/fmp-api.service';
     NewsService,
     FinnhubApiService,
     FmpApiService,
+    TechnicalIndicatorsService,
   ],
 })
 export class AssetsModule {}
