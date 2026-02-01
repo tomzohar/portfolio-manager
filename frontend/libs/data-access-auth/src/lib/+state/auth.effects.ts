@@ -22,7 +22,7 @@ export class AuthEffects {
         if (!token) {
           return of(AuthActions.checkAuthFailure());
         }
-        
+
         return this.authApi.verifyToken(token).pipe(
           map((response) => AuthActions.checkAuthSuccess({ response })),
           catchError(() => {
@@ -68,7 +68,7 @@ export class AuthEffects {
         ofType(AuthActions.loginSuccess),
         tap(({ response }) => {
           this.authStorage.setToken(response.token);
-          this.router.navigate(['/portfolios']);
+          this.router.navigate(['/chat']);
         })
       ),
     { dispatch: false }
@@ -80,7 +80,7 @@ export class AuthEffects {
         ofType(AuthActions.signupSuccess),
         tap(({ response }) => {
           this.authStorage.setToken(response.token);
-          this.router.navigate(['/portfolios']);
+          this.router.navigate(['/chat']);
         })
       ),
     { dispatch: false }
@@ -120,7 +120,7 @@ export class AuthEffects {
           // If already on login/signup, redirect to dashboard
           const currentUrl = this.router.url;
           if (currentUrl === '/login' || currentUrl === '/signup') {
-            this.router.navigate(['/portfolios']);
+            this.router.navigate(['/chat']);
           }
         })
       ),

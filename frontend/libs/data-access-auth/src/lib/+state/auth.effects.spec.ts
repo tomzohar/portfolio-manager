@@ -61,7 +61,7 @@ describe('AuthEffects', () => {
     it('should return checkAuthSuccess when token is valid', (done) => {
       const token = 'valid-token';
       const response = { token, user: { id: '1', email: 'test@example.com' } };
-      
+
       authStorage.getToken.mockReturnValue(token);
       authApi.verifyToken.mockReturnValue(of(response));
 
@@ -90,7 +90,7 @@ describe('AuthEffects', () => {
 
     it('should return checkAuthFailure and remove token when verification fails', (done) => {
       const token = 'invalid-token';
-      
+
       authStorage.getToken.mockReturnValue(token);
       authApi.verifyToken.mockReturnValue(throwError(() => new Error('Invalid token')));
 
@@ -108,7 +108,7 @@ describe('AuthEffects', () => {
     it('should return loginSuccess when login is successful', (done) => {
       const credentials = { email: 'test@example.com', password: 'password' };
       const response = { token: 'test-token', user: { id: '1', email: credentials.email } };
-      
+
       authApi.login.mockReturnValue(of(response));
 
       actions$ = of(AuthActions.login({ credentials }));
@@ -123,7 +123,7 @@ describe('AuthEffects', () => {
     it('should return loginFailure when login fails', (done) => {
       const credentials = { email: 'test@example.com', password: 'wrong' };
       const error = new Error('Invalid credentials');
-      
+
       authApi.login.mockReturnValue(throwError(() => error));
 
       actions$ = of(AuthActions.login({ credentials }));
@@ -139,7 +139,7 @@ describe('AuthEffects', () => {
     it('should return signupSuccess when signup is successful', (done) => {
       const credentials = { email: 'test@example.com', password: 'password' };
       const response = { token: 'test-token', user: { id: '1', email: credentials.email } };
-      
+
       authApi.signup.mockReturnValue(of(response));
 
       actions$ = of(AuthActions.signup({ credentials }));
@@ -154,7 +154,7 @@ describe('AuthEffects', () => {
     it('should return signupFailure when signup fails', (done) => {
       const credentials = { email: 'test@example.com', password: 'password' };
       const error = new Error('Email already exists');
-      
+
       authApi.signup.mockReturnValue(throwError(() => error));
 
       actions$ = of(AuthActions.signup({ credentials }));
@@ -167,7 +167,7 @@ describe('AuthEffects', () => {
   });
 
   describe('loginSuccess$', () => {
-    it('should store token and navigate to portfolios', (done) => {
+    it('should store token and navigate to /chat', (done) => {
       const response = { token: 'test-token', user: { id: '1', email: 'test@example.com' } };
 
       actions$ = of(AuthActions.loginSuccess({ response }));
@@ -175,7 +175,7 @@ describe('AuthEffects', () => {
       effects.loginSuccess$.subscribe({
         complete: () => {
           expect(authStorage.setToken).toHaveBeenCalledWith(response.token);
-          expect(router.navigate).toHaveBeenCalledWith(['/portfolios']);
+          expect(router.navigate).toHaveBeenCalledWith(['/chat']);
           done();
         }
       });
@@ -183,7 +183,7 @@ describe('AuthEffects', () => {
   });
 
   describe('signupSuccess$', () => {
-    it('should store token and navigate to portfolios', (done) => {
+    it('should store token and navigate to /chat', (done) => {
       const response = { token: 'test-token', user: { id: '1', email: 'test@example.com' } };
 
       actions$ = of(AuthActions.signupSuccess({ response }));
@@ -191,7 +191,7 @@ describe('AuthEffects', () => {
       effects.signupSuccess$.subscribe({
         complete: () => {
           expect(authStorage.setToken).toHaveBeenCalledWith(response.token);
-          expect(router.navigate).toHaveBeenCalledWith(['/portfolios']);
+          expect(router.navigate).toHaveBeenCalledWith(['/chat']);
           done();
         }
       });
@@ -228,7 +228,7 @@ describe('AuthEffects', () => {
   });
 
   describe('checkAuthSuccess$', () => {
-    it('should navigate to portfolios when on login page', (done) => {
+    it('should navigate to /chat when on login page', (done) => {
       Object.defineProperty(router, 'url', {
         get: jest.fn().mockReturnValue('/login'),
         configurable: true,
@@ -240,13 +240,13 @@ describe('AuthEffects', () => {
 
       effects.checkAuthSuccess$.subscribe({
         complete: () => {
-          expect(router.navigate).toHaveBeenCalledWith(['/portfolios']);
+          expect(router.navigate).toHaveBeenCalledWith(['/chat']);
           done();
         }
       });
     });
 
-    it('should navigate to portfolios when on signup page', (done) => {
+    it('should navigate to /chat when on signup page', (done) => {
       Object.defineProperty(router, 'url', {
         get: jest.fn().mockReturnValue('/signup'),
         configurable: true,
@@ -258,7 +258,7 @@ describe('AuthEffects', () => {
 
       effects.checkAuthSuccess$.subscribe({
         complete: () => {
-          expect(router.navigate).toHaveBeenCalledWith(['/portfolios']);
+          expect(router.navigate).toHaveBeenCalledWith(['/chat']);
           done();
         }
       });
